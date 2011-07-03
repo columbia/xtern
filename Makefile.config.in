@@ -20,9 +20,13 @@ PROJ_OBJ_ROOT = $(subst //,/,@abs_top_builddir@)
 # Set the root directory of this project's install prefix
 PROJ_INSTALL_ROOT = @prefix@
 
+# Include LLVM's Master Makefile config
+include $(LLVM_OBJ_ROOT)/Makefile.config
+
+# Override LLVM's Make config
 # Full pathnames of LLVM C/C++ binaries:
-override LLVMGCC  = @LLVMGCC@
-override LLVMGXX  = @LLVMGXX@
-override LOPT     = @LOPT@
-override LLVMLD   = @LLVMLD@
-override LLVM_CONFIG = @LLVM_CONFIG@
+LLVMGCC     := @LLVMGCC@
+LLVMGXX     := @LLVMGXX@
+LOPT        := @LOPT@
+LLVMLD      := @LLVMLD@
+LLVM_CONFIG := @LLVM_CONFIG@
