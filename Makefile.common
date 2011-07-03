@@ -1,0 +1,7 @@
+# -*- Makefile -*-
+
+include $(LEVEL)/Makefile.config
+
+# Include LLVM's Master Makefile config and rules.
+include $(LLVM_OBJ_ROOT)/Makefile.config
+include $(LLVM_SRC_ROOT)/Makefile.rules
