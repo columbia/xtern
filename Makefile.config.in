@@ -21,8 +21,8 @@ PROJ_OBJ_ROOT = $(subst //,/,@abs_top_builddir@)
 PROJ_INSTALL_ROOT = @prefix@
 
 # Full pathnames of LLVM C/C++ binaries:
-LLVMGCC  = @LLVMGCC@
-LLVMGXX  = @LLVMGXX@
-LOPT     = @LOPT@
-LLVMLD   = @LLVMLD@
+override LLVMGCC  = @LLVMGCC@
+override LLVMGXX  = @LLVMGXX@
+override LOPT     = @LOPT@
+override LLVMLD   = @LLVMLD@
 override LLVM_CONFIG = @LLVM_CONFIG@
