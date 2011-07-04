@@ -7,7 +7,7 @@
 # Set up variables for building a unit test.
 ifdef TESTNAME
 
-include $(LLVM_OBJ_ROOT)/Makefile.common
+#include $(LLVM_OBJ_ROOT)/Makefile.common
 
 LLVMUnitTestExe = $(BuildMode)/$(TESTNAME)Tests$(EXEEXT)
 
@@ -23,8 +23,6 @@ CPP.Flags += -DGTEST_HAS_RTTI=0
 CPP.Flags += -DGTEST_HAS_TR1_TUPLE=0
 
 TESTLIBS = -lGoogleTest -lUnitTestMain
-
-LIBGOOGLETEST = $(LLVM_OBJ_ROOT)/$(BuildMode)/libGoogleTest.a
 
 ifeq ($(ENABLE_SHARED), 1)
   # Add the absolute path to the dynamic library.  This is ok because

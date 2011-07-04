@@ -23,7 +23,7 @@ PROJ_INSTALL_ROOT = @prefix@
 # Include LLVM's Master Makefile config
 include $(LLVM_OBJ_ROOT)/Makefile.config
 
-# Override LLVM's Make config
+# Override LLVM's Make.config
 # Full pathnames of LLVM C/C++ binaries:
 LLVMGCC     := @LLVMGCC@
 LLVMGXX     := @LLVMGXX@

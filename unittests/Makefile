@@ -1,5 +1,5 @@
-LEVEL = ..
-DIRS  = recorder
+LEVEL := ..
+DIRS  := recorder
 
 include $(LEVEL)/Makefile.common
 

@@ -1,5 +1,5 @@
-LEVEL = ../../
-DIRS  =
+LEVEL := ../..
+DIRS  :=
 
 include $(LEVEL)/Makefile.common
 

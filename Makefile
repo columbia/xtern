@@ -1,14 +1,14 @@
 #
 # Indicates our relative path to the top of the project's root directory.
 #
-LEVEL = .
+LEVEL := .
 
-DIRS = common recorder analyzer replayer tools
-EXTRA_DIST = 
+DIRS := common recorder analyzer replayer tools
+EXTRA_DIST := 
 
 ifeq ($(MAKECMDGOALS),unittests)
   DIRS += unittests
-  OPTIONAL_DIRS =
+  OPTIONAL_DIRS :=
 endif
 
 #

@@ -7,8 +7,8 @@
 # 
 #===------------------------------------------------------------------------===#
 
-LEVEL  = ..
-DIRS   = 
+LEVEL := ..
+DIRS  := 
 
 #
 # Make Dejagnu the default for testing
@@ -34,10 +34,10 @@ check-local:: site.exp
 endif
 
 ifdef TESTONE
-CLEANED_TESTONE = $(patsubst %/,%,$(TESTONE))
-CLEANED_TESTONE = $(patsubst test/%,%,$(CLEANED_TESTONE))
-SUBDIR = $(shell dirname $(CLEANED_TESTONE))
-TESTPATH = $(PROJ_SRC_ROOT)/test/$(CLEANED_TESTONE)
+CLEANED_TESTONE := $(patsubst %/,%,$(TESTONE))
+CLEANED_TESTONE := $(patsubst test/%,%,$(CLEANED_TESTONE))
+SUBDIR := $(shell dirname $(CLEANED_TESTONE))
+TESTPATH := $(PROJ_SRC_ROOT)/test/$(CLEANED_TESTONE)
 check-one: site.exp $(TCLSH)
 	$(Verb)( echo "source $(PROJ_OBJ_ROOT)/test/site.exp" ; \
 	  echo "set subdir $(SUBDIR)" ; \
