@@ -112,7 +112,6 @@ LLVMGCC="$WITH_LLVMBINDIR/llvm-gcc"
 LLVMGXX="$WITH_LLVMBINDIR/llvm-g++"
 LOPT="$WITH_LLVMBINDIR/opt"
 LLVMLD="$WITH_LLVMBINDIR/llvm-ld"
-LLVM_CONFIG="$WITH_LLVMBINDIR/llvm-config"
 
 dnl Validate llvm-gcc/llvm-g++/opt triple
 if test ! -f "${LLVMGCC}"; then
@@ -127,15 +126,12 @@ fi
 if test ! -f "$LLVMLD"; then
    AC_MSG_ERROR([Unable to find llvm-ld.  Use --with-llvmbindir]);
 fi
-if test ! -f "$LLVM_CONFIG"; then
-   AC_MSG_ERROR([Unable to find llvm-config.  Use --with-llvmbindir]);
-fi
 
+AC_SUBST(LLVMCC_OPTION,llvm-gcc)
 AC_SUBST(LLVMGCC,$LLVMGCC)
 AC_SUBST(LLVMGXX,$LLVMGXX)
 AC_SUBST(LOPT,$LOPT)
 AC_SUBST(LLVMLD,$LLVMLD)
-AC_SUBST(LLVM_CONFIG,$LLVM_CONFIG)
 
 dnl **************************************************************************
 dnl * Create the output files
@@ -147,7 +143,6 @@ AC_CONFIG_MAKEFILE(Makefile.common)
 AC_CONFIG_MAKEFILE(test/Makefile)
 AC_CONFIG_MAKEFILE(test/Makefile.tests)
 AC_CONFIG_MAKEFILE(unittests/Makefile)
-AC_CONFIG_MAKEFILE(unittests/Makefile.unittest)
 
 dnl This must be last
 AC_OUTPUT

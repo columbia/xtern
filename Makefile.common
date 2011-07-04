@@ -5,8 +5,9 @@ include $(LEVEL)/Makefile.config
 # Include LLVM's Master Makefile rules.
 include $(LLVM_SRC_ROOT)/Makefile.rules
 
-# Check Build Mode against LLVM's Build Mode
+# Emit a warning if can't find llvm-config 
 LLVMBuildMode := $(shell $(LLVM_CONFIG) --build-mode)
-ifneq ($(LLVMBuildMode),$(BuildMode))
-  $(error build mode ($(BuildMode)) differs from LLVM $(LLVMBuildMode))
+ifeq ($(strip $(LLVMBuildMode)),)
+  $(error Unable to find llvm-config. \
+   Build Mode ($(BuildMode)) must be the same as LLVM Build Mode.)
 endif

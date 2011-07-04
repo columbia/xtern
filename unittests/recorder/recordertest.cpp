@@ -9,5 +9,6 @@ TEST(recordertest, log) {
   tern_log_init();
   tern_log_i64(insid, addr, data);
 
+  // TODO: create some real unitests
   EXPECT_EQ(insid, 33);
 }
