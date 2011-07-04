@@ -6,8 +6,8 @@ TEST(recordertest, log) {
   void *addr = (void*)0xdeadbeef;
   long long data = 12345;
 
-  xtern_log_init();
-  xtern_log_i64(insid, addr, data);
+  tern_log_init();
+  tern_log_i64(insid, addr, data);
 
   EXPECT_EQ(insid, 33);
 }

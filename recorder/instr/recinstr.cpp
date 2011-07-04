@@ -6,7 +6,7 @@
 using namespace llvm;
 using namespace std;
 
-namespace xtern 
+namespace tern 
 {
   char RecInstr::ID = 0;
 
@@ -27,7 +27,7 @@ namespace xtern
     for(unsigned i=0; i<ARRAY_LEN(dataTypes); ++i) {
       char name[32];
       int width = 8*(1<<i);
-      const char* logfunc = "xtern_log_i";
+      const char* logfunc = "tern_log_i";
       const FunctionType *functype = getFuncTy(width);
 
       dataTypes[i] = getIntTy(width);
@@ -142,7 +142,7 @@ namespace xtern
     // store function type in function metadata
     //   app
     //   lib
-    //   xtern
+    //   tern
 
     //  summarized
     return true;
@@ -192,6 +192,6 @@ namespace xtern
 
 namespace 
 {
-  static RegisterPass<xtern::RecInstr> 
+  static RegisterPass<tern::RecInstr> 
   X("recinstr", "instrumentation for recoding", false, false);
 }

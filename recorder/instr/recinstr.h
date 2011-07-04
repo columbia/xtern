@@ -1,14 +1,14 @@
 /* -*- Mode: C++ -*- */
 
-#ifndef __XTERN_RECORDER_RECINSTR_H
-#define __XTERN_RECORDER_RECINSTR_H
+#ifndef __TERN_RECORDER_RECINSTR_H
+#define __TERN_RECORDER_RECINSTR_H
 
 #include "llvm/Pass.h"
 #include "llvm/Module.h"
 #include "llvm/Target/TargetData.h"
 #include "llvm/Support/raw_ostream.h"
 
-namespace xtern 
+namespace tern 
 {
   struct RecInstr: public llvm::ModulePass 
   {

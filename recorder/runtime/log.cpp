@@ -23,7 +23,7 @@ static unsigned off = 0;
 static int fd = -1;
 static off_t foff = 0;
 
-static inline void xtern_log_map()
+static inline void tern_log_map()
 {
   if(buf)
     munmap(buf, TRUNK_SIZE);
@@ -40,7 +40,7 @@ static inline void xtern_log_map()
 }
 
 template<typename T>
-static inline void xtern_log_i(int insid, void* addr, T data)
+static inline void tern_log_i(int insid, void* addr, T data)
 {
   // TODO: allocate new log space
   assert(off + sizeof(insid) + sizeof(addr) 
@@ -55,38 +55,38 @@ static inline void xtern_log_i(int insid, void* addr, T data)
   off += sizeof data;
 }
 
-void xtern_log_i8(int insid, void* addr, unsigned char data)
+void tern_log_i8(int insid, void* addr, unsigned char data)
 {
-  xtern_log_i<char>(insid, addr, data);
+  tern_log_i<char>(insid, addr, data);
 }
 
-void xtern_log_i16(int insid, void* addr, unsigned short data)
+void tern_log_i16(int insid, void* addr, unsigned short data)
 {
-  xtern_log_i<short>(insid, addr, data);
+  tern_log_i<short>(insid, addr, data);
 }
 
-void xtern_log_i32(int insid, void* addr, unsigned int data)
+void tern_log_i32(int insid, void* addr, unsigned int data)
 {
-  xtern_log_i<int>(insid, addr, data);
+  tern_log_i<int>(insid, addr, data);
 }
 
-void xtern_log_i64(int insid, void* addr, unsigned long long data)
+void tern_log_i64(int insid, void* addr, unsigned long long data)
 {
-  xtern_log_i<long long>(insid, addr, data);
+  tern_log_i<long long>(insid, addr, data);
 }
 
-void xtern_log_init(void)
+void tern_log_init(void)
 {
   char name[64];
-  sprintf(name, "xtern-log-tid-%d", 0); // TODO: get thread id
+  sprintf(name, "tern-log-tid-%d", 0); // TODO: get thread id
   fd = open(name, O_RDWR|O_CREAT, 0600);  assert(fd >= 0);
   ftruncate(fd, LOG_SIZE);
-  xtern_log_map();
+  tern_log_map();
 }
 
-void xtern_log_exit(void)
+void tern_log_exit(void)
 {
-  fprintf(stderr, "xtern_log_exit()");
+  fprintf(stderr, "tern_log_exit()");
   if(buf)
     munmap(buf, TRUNK_SIZE);
   if(fd >= 0)
@@ -97,16 +97,16 @@ void xtern_log_exit(void)
 
 int main() 
 {
-  xtern_log_init();
+  tern_log_init();
 
   for(int i=0; i<10000; ++i) {
-    xtern_log_i8 (0, (void*)0xdeadbeef, 0xAA);
-    xtern_log_i16(0, (void*)0xdeadbeef, 0xBBBB);
-    xtern_log_i32(0, (void*)0xdeadbeef, 0xCCCCCCCC);
-    xtern_log_i64(0, (void*)0xdeadbeef, 0xDDDDDDDDDDDDDDDD);
+    tern_log_i8 (0, (void*)0xdeadbeef, 0xAA);
+    tern_log_i16(0, (void*)0xdeadbeef, 0xBBBB);
+    tern_log_i32(0, (void*)0xdeadbeef, 0xCCCCCCCC);
+    tern_log_i64(0, (void*)0xdeadbeef, 0xDDDDDDDDDDDDDDDD);
   }
 
-  xtern_log_exit();
+  tern_log_exit();
   return 0;
 }
 
