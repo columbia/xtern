@@ -67,6 +67,7 @@ site.exp: Makefile $(LEVEL)/Makefile.config
 	@echo 'set objroot "$(PROJ_OBJ_ROOT)"' >>site.tmp
 	@echo 'set srcdir "$(PROJ_SRC_ROOT)/test"' >>site.tmp
 	@echo 'set objdir "$(PROJ_OBJ_ROOT)/test"' >>site.tmp
+	@echo 'set llvmlibdir "$(LLVMLibDir)"' >>site.tmp
 	@echo 'set projlibdir "$(PROJ_OBJ_ROOT)/$(BuildMode)/lib"' >>site.tmp
 	@echo 'set projbindir "$(PROJ_OBJ_ROOT)/$(BuildMode)/bin"' >>site.tmp
 	@echo 'set llvmgcc "$(LLVMGCC) -I$(PROJ_SRC_ROOT)/include"' >> site.tmp
