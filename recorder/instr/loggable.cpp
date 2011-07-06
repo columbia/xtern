@@ -29,17 +29,17 @@ namespace tern
     return GetMetadata(I, "loggable");
   }
 
-  void SetLoggable(LLVMContext &context, Instruction *I)
+  void SetLoggable(LLVMContext &C, Instruction *I)
   {
-    Value *const data = ConstantInt::get(Type::getInt1Ty(context), 1);
-    I->setMetadata("loggable", MDNode::get(context, &data, 1));
+    Value *const data = ConstantInt::get(Type::getInt1Ty(C), 1);
+    I->setMetadata("loggable", MDNode::get(C, &data, 1));
   }
 
   static bool LoggableHelper(Instruction *ins)
   {
     Value *insid = GetInsID(ins);
     if(!insid) return false;
-    
+
     switch(ins->getOpcode()) {
         case Instruction::Load:
         case Instruction::Store:
@@ -63,11 +63,15 @@ namespace tern
     // single-entry, single-exit?
     int npred = 0, nsucc = 0;
     pred_iterator pi = pred_begin(BB);
-    while(pi != pred_end(BB))
-      npred ++;
+    while(pi != pred_end(BB)) {
+      ++ pi;
+      ++ npred;
+    }
     succ_iterator si = succ_begin(BB);
-    while(si != succ_end(BB))
-      nsucc ++;
+    while(si != succ_end(BB)) {
+      ++ si;
+      ++ nsucc;
+    }
     if(npred == 1 && nsucc == 1)
       return false;
 
@@ -79,7 +83,7 @@ namespace tern
     return true;
   }
 
-  bool LoggableFunc(Function *func)
+  bool LoggableCallToFunc(Function *func)
   {
     // TODO: summarized function ==> true
     // 
@@ -91,7 +95,11 @@ namespace tern
     //   use conservative summary for ext
     //   instr app and lib
 
-    return func->isDeclaration(); // external
+
+    unsigned iid = func->getIntrinsicID();
+    if(iid != Intrinsic::not_intrinsic)
+      return false; // don't log intrinsic
+    return func->isDeclaration(); // log external functions
   }
 
   bool LoggableCall(Instruction *call)
@@ -103,7 +111,7 @@ namespace tern
 
     Function *func = cs.getCalledFunction();
     if(func)
-      return LoggableFunc(func);
+      return LoggableCallToFunc(func);
 
     // indirect call, must log
     return true;

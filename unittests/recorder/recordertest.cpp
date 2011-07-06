@@ -7,7 +7,7 @@ TEST(recordertest, log) {
   long long data = 12345;
 
   tern_log_init();
-  tern_log(insid, addr, data);
+  tern_log_loadstore(insid, addr, data);
 
   // TODO: create some real unitests
   EXPECT_EQ(insid, 33);

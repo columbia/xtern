@@ -8,9 +8,12 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "logdefs.h"
 #include "log.h"
 
 // #define DEBUG
+
+using namespace tern;
 
 static __thread char* buf = NULL;
 static __thread unsigned off = 0;
@@ -35,28 +38,55 @@ static inline void tern_log_map()
   foff += TRUNK_SIZE;
 }
 
-void tern_log(int insid, void* addr, uint64_t data)
+static inline void check_log()
 {
   // TODO: check log buf size and allocate new space if necessary
-  assert(off + sizeof(insid) + sizeof(addr) 
-         + sizeof(data) <= TRUNK_SIZE);
-
-  *(int*)(buf+off) = insid;
-  off += sizeof insid;
-  *(void**)(buf+off) = addr;
-  off += sizeof addr;
-  *(uint64_t*)(buf+off) = data;
-  off += sizeof data;
-
-  off = (off+RECORD_SIZE-1)&~(RECORD_SIZE-1);
+  assert(off + RECORD_SIZE  <= TRUNK_SIZE);
 }
 
-void tern_log_call(int insid, int narg, void* func, ...)
+void tern_log_insid(int insid)
 {
+  check_log();
+  *(int*)(buf+off) = insid | (InsidTy<<29);
+  off += RECORD_SIZE;
 }
 
-void tern_log_ret(int insid, void* func, int narg, int data)
+void tern_log_loadstore(int insid, void* addr, uint64_t data)
 {
+  check_log();
+
+  int len = 0;
+  *(int*)(buf+off+len) = insid;
+  len += sizeof insid;
+  *(void**)(buf+off+len) = addr;
+  len += sizeof addr;
+  *(uint64_t*)(buf+off+len) = data;
+
+  off += RECORD_SIZE;
+}
+
+void tern_log_call(int insid, short narg, void* func, ...)
+{
+  check_log();
+}
+
+void tern_log_ret(int insid, short narg, void* func, uint64_t data)
+{
+  check_log();
+
+  int len = 0;
+  short seq = NumExtraArgsRecord(narg) + 1;
+  *(int*)(buf+off+len) = insid;
+  len += sizeof insid;
+  *(short*)(buf+off+len) = seq;
+  len += sizeof seq;
+  *(short*)(buf+off+len) = narg;
+  len += sizeof narg;
+  *(void**)(buf+off+len) = func;
+  len += sizeof func;
+  *(uint64_t*)(buf+off+len) = data;
+
+  off += RECORD_SIZE;
 }
 
 void tern_log_init(void)

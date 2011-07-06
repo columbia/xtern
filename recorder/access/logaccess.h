@@ -3,30 +3,31 @@
 #ifndef __TERN_RECORDER_LOGACCESS_H
 #define __TERN_RECORDER_LOGACCESS_H
 
-#include "recorder/runtime/log.h"
+#include "recorder/runtime/logdefs.h"
 
 namespace tern
 {
   struct Log {
 
-    struct Record
+    struct Insid
     {
-      int      insid;
-    };
+      unsigned type   : 3;
+      unsigned insid  :29;
+    } __attribute__ ((aligned (RECORD_SIZE)));
 
-    struct Load: public Record
+    struct Load: public Insid
     {
       void*    addr;
       uint64_t data;
     } __attribute__ ((aligned (RECORD_SIZE)));
 
-    struct Store: public Record
+    struct Store: public Insid
     {
       void*    addr;
       uint64_t data;
     } __attribute__ ((aligned (RECORD_SIZE)));
 
-    struct Call: public Record
+    struct Call: public Insid
     {
       short    seq;
       short    narg;
@@ -34,14 +35,14 @@ namespace tern
       unit64_t args[NUM_INLINE_ARGS];
     } __attribute__ ((aligned (RECORD_SIZE)));
 
-    struct ExtraArgs: public Record
+    struct ExtraArgs: public Insid
     {
       short    seq;
       short    narg;
-      uint64_t arg[NUM_EXTRA_ARGS];
+      uint64_t args[NUM_EXTRA_ARGS];
     } __attribute__ ((aligned (RECORD_SIZE)));
 
-    struct Return: public Record
+    struct Return: public Insid
     {
       short    seq;
       short    narg;
