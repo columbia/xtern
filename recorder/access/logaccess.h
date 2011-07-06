@@ -11,33 +11,43 @@ namespace tern
 
     struct Record
     {
-      int insid;
+      int      insid;
     };
 
     struct Load: public Record
     {
-      void* addr;
+      void*    addr;
       uint64_t data;
-    } __attribute__ ((aligned (LOG_ALIGN)));
+    } __attribute__ ((aligned (RECORD_SIZE)));
 
     struct Store: public Record
     {
-      void* addr;
+      void*    addr;
       uint64_t data;
-    } __attribute__ ((aligned (LOG_ALIGN)));
+    } __attribute__ ((aligned (RECORD_SIZE)));
 
-    struct Arg: public Record
+    struct Call: public Record
     {
-      void *addr
-      int size;
-      int type;
-    } __attribute__ ((aligned (LOG_ALIGN)));
+      short    seq;
+      short    narg;
+      void*    func;
+      unit64_t args[NUM_INLINE_ARGS];
+    } __attribute__ ((aligned (RECORD_SIZE)));
+
+    struct ExtraArgs: public Record
+    {
+      short    seq;
+      short    narg;
+      uint64_t arg[NUM_EXTRA_ARGS];
+    } __attribute__ ((aligned (RECORD_SIZE)));
 
     struct Return: public Record
     {
-      void* func;
+      short    seq;
+      short    narg;
+      void*    func;
       uint64_t data;
-    } __attribute__ ((aligned (LOG_ALIGN)));
+    } __attribute__ ((aligned (RECORD_SIZE)));
     
     struct iterator {};
     struct reverse_iterator {};

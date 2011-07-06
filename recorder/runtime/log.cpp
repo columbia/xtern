@@ -48,7 +48,15 @@ void tern_log(int insid, void* addr, uint64_t data)
   *(uint64_t*)(buf+off) = data;
   off += sizeof data;
 
-  off = (off+LOG_ALIGN-1)&~(LOG_ALIGN-1);
+  off = (off+RECORD_SIZE-1)&~(RECORD_SIZE-1);
+}
+
+void tern_log_call(int insid, int narg, void* func, ...)
+{
+}
+
+void tern_log_ret(int insid, void* func, int narg, int data)
+{
 }
 
 void tern_log_init(void)

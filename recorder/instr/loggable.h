@@ -8,10 +8,13 @@
 
 namespace tern
 {
-  llvm::Value* getInsID(const llvm::Instruction *I);
-  bool loggable(llvm::Instruction *ins);
-  bool loggableFunc(llvm::Function *func);
-  bool loggableCall(llvm::Instruction *call);
+  llvm::Value* GetInsID(const llvm::Instruction *I);
+  llvm::Value* GetLoggable(const llvm::Instruction *I);
+  llvm::Value* SetLoggable(llvm::Instruction *I);
+
+  bool Loggable(llvm::Instruction *ins);
+  bool LoggableFunc(llvm::Function *func);
+  bool LoggableCall(llvm::Instruction *call);
 }
 
 #endif

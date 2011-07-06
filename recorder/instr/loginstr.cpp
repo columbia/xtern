@@ -28,24 +28,12 @@ namespace tern
     const FunctionType *functype = 
       TypeBuilder<void (types::i<32>, types::i<8>*, 
                         types::i<64>), false>::get(*context);
-    logFunc = M.getOrInsertFunction("tern_log", functype);
+    logFunc = dyn_cast<Value>(M.getOrInsertFunction("tern_log", functype));
 
     forallfunc(M, fi) {
-      // 
-      // functions with body: app, lib, tern
-      // external functions without body
-      // 
-      // if summary exists, use
-      // else 
-      //   use conservative summary for ext
-      //   instr app and lib
-      //
-      //if(summaries.get(fi->getName()))
-      //  continue;
-      //errs() << "instrFunc " << fi->getName() << "\n";
-      instrFunc(*fi);
+      if(LoggableFunc(fi))
+        instrFunc(*fi);
     }
-
     return true;
   }
 
@@ -53,31 +41,32 @@ namespace tern
   {
     forall(Function, BB, F) {
       BasicBlock::iterator cur, prv;
-      bool hasInstr = false;
       for(cur=BB->begin(); cur!=BB->end();) {
         prv = cur;
         cur ++;
 
+        if(!Loggable(prv))
+          continue;
+
+        // mark instruction loggable
+        SetLoggable(prv);
         switch(prv->getOpcode()) {
         case Instruction::Load:
-          hasInstr |= instrLoad(dyn_cast<LoadInst>(prv));
+          instrLoad(dyn_cast<LoadInst>(prv));
           break;
         case Instruction::Store:
-          hasInstr |= instrStore(dyn_cast<StoreInst>(prv));
+          instrStore(dyn_cast<StoreInst>(prv));
           break;
         case Instruction::Call:
-          hasInstr |= instrCall(dyn_cast<CallInst>(prv));
+          instrCall(dyn_cast<CallInst>(prv));
           break;
         case Instruction::Invoke:
-          hasInstr |= instrInvoke(dyn_cast<InvokeInst>(prv));
+          instrInvoke(dyn_cast<InvokeInst>(prv));
           break;
-        default:
-          break;
+        default: // no other ins loggable, log FirstNonPHI
+          instrFirstNonPHI(prv);
         }
       }
-      // if no instruction logged in this BB, add a log record for this BB
-      // so that we know it is executed
-      if(!hasInstr) instrBB(BB);
     }
   }
 
@@ -104,63 +93,68 @@ namespace tern
     CallInst::Create(func, args.begin(), args.end(), "", insert_ins);
   }
 
-  bool LogInstr::instrLoad(LoadInst *load) 
+  void LogInstr::instrLoad(LoadInst *load) 
   {
-    Value *insid = getInsID(load);
+    Value *insid = GetInsID(load); assert(insid);
     Value *addr = load->getPointerOperand();
     Value *data = load;
-
-    if(!insid) return false;
-
     instrInstruction(insid, addr, data, load);
-    return true;
   }
 
-  bool LogInstr::instrStore(StoreInst *store) 
+  void LogInstr::instrStore(StoreInst *store) 
   {
-    Value *insid = getInsID(store);
+    Value *insid = GetInsID(store); assert(insid);
     Value *addr = store->getPointerOperand();
     Value *data = store->getOperand(0);
-
-    if(!insid) return false;
-
     instrInstruction(insid, addr, data, store);
-    return true;
   }
 
-  bool LogInstr::instrBB(BasicBlock *BB)
+  void LogInstr::instrFirstNonPHI(Instruction *ins)
   {
-    Instruction *ins = BB->getFirstNonPHI();
-    Value *insid = getInsID(ins);
+    assert(ins == ins->getParent()->getFirstNonPHI());
+    Value *insid = GetInsID(ins); assert(insid);
     Value *addr = Constant::getNullValue(Type::getInt8PtrTy(*context));
     Value *data = Constant::getNullValue(Type::getInt64Ty(*context));
-
-    if(!insid) return false;
-
     instrInstruction(insid, addr, data, ins, false);
-    return true;
   }
 
-  bool LogInstr::instrCall(CallInst *call) 
+  void LogInstr::instrCall(CallInst *call) 
   {
-    // call
-    // record_load
-    // record_store
-    // record_ret
+    CallSite cs(call);
+    Value *insid = GetInsID(call); assert(insid);
+    unsigned narg = cs.arg_end() - cs.arg_begin();
+    Value *nargval = ConstantInt::get(Type::getInt32Ty(*context), narg);
 
-    //if(!summaries.get(fi->getName()))
-    //  return false;
+    Value *func = cs.getCalledValue();
+    if(func->getType() != addrType)
+      func = CastInst::CreateZExtOrBitCast(func, addrType, "", call);
 
-    // if external w/o summary
-    //   conservatively assume read/write all pointers (what about length?)
+    // log call
+    vector<Value*> args;
+    args.push_back(insid);
+    args.push_back(nargval);
+    args.push_back(func);
+    for(CallSite::arg_iterator ai=cs.arg_begin(); ai!=cs.arg_end(); ++ai) {
+      Value *arg = ai->get();
+      if(arg->getType() != dataType)
+        arg = CastInst::CreateZExtOrBitCast(arg, dataType, "", call);
+      args.push_back(arg);
+    }
+    CallInst::Create(logCallFunc, args.begin(), args.end(), "", call);
 
-    // store function type in function metadata
-    //   app
-    //   lib
-    //   tern
+    // log return
+    BasicBlock::iterator ii = call;
+    Instruction *next_ins = ++ii;  // can't be NULL; every BB has a terminator
+    Value *data = call;
+    if(data->getType() != dataType)
+      data = CastInst::CreateZExtOrBitCast(data, dataType, "", next_ins);
 
-    //  summarized
-    return true;
+    args.clear();
+    args.push_back(insid);
+    args.push_back(nargval);
+    args.push_back(func);
+    args.push_back(data);
+    CallInst::Create(logRetFunc, args.begin(), args.end(), "", call);
   }
 
 }

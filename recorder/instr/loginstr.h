@@ -18,20 +18,22 @@ namespace tern
 
     const llvm::PointerType *addrType;
     const llvm::IntegerType *dataType;
-    const llvm::Value       *logFunc;
+    llvm::Value       *logFunc;
+    llvm::Value       *logCallFunc;
+    llvm::Value       *logRetFunc;
 
     LogInstr(): ModulePass(&ID) {}
     virtual bool runOnModule(llvm::Module &M);
     virtual void getAnalysisUsage(llvm::AnalysisUsage &AU) const;
 
     void instrFunc(llvm::Function &F);
-    bool instrLoad(llvm::LoadInst *load);
-    bool instrStore(llvm::StoreInst *store);
+    void instrLoad(llvm::LoadInst *load);
+    void instrStore(llvm::StoreInst *store);
     void instrInstruction(llvm::Value *insid, llvm::Value *addr, 
            llvm::Value *data, llvm::Instruction *ins, bool after=true);
-    bool instrCall(llvm::CallInst *call);
-    bool instrInvoke(llvm::InvokeInst *invoke);
-    bool instrBB(llvm::BasicBlock *BB);
+    void instrCall(llvm::CallInst *call);
+    void instrInvoke(llvm::InvokeInst *invoke);
+    void instrFirstNonPHI(llvm::Instruction *ins);
   };
 }
 
