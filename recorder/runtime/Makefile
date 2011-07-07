@@ -4,10 +4,10 @@
 LEVEL := ../..
 
 # x86 archive
-LIBRARYNAME := recorder-runtime
+LIBRARYNAME := recruntime
 BUILD_ARCHIVE := 1
 
 # bc module
-MODULE_NAME := recorder-runtime
+MODULE_NAME := recruntime
 
 include $(LEVEL)/Makefile.common

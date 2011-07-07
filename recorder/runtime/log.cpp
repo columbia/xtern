@@ -6,122 +6,172 @@
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdarg.h>
 #include <string.h>
 
 #include "logdefs.h"
 #include "log.h"
 
-// #define DEBUG
+#define min(x, y) ((x)<(y)? (x) : (y))
 
 using namespace tern;
 
-static __thread char* buf = NULL;
-static __thread unsigned off = 0;
+static __thread char* _buf = NULL;
+static __thread unsigned _off = 0;
 
-static __thread int fd = -1;
-static __thread off_t foff = 0;
+static __thread int _tid = -1;
 
-static __thread int tid = -1;
+static __thread int _fd = -1;
+static __thread off_t _foff = 0;
+static __thread char _logfile[64];
 
-static inline void tern_log_map()
-{
-  if(buf)
-    munmap(buf, TRUNK_SIZE);
+static inline void log_map() {
+  if(_buf)
+    munmap(_buf, TRUNK_SIZE);
 
-  buf = (char*)mmap(0, TRUNK_SIZE, PROT_WRITE|PROT_READ, MAP_SHARED, fd, off); 
-  if(buf == MAP_FAILED) {
+  _buf = (char*)mmap(0, TRUNK_SIZE, PROT_WRITE|PROT_READ,
+                     MAP_SHARED, _fd, _foff);
+
+  if(_buf == MAP_FAILED) {
     perror("mmap");
-    exit(1);
+    abort();
   }
 
-  off = 0;
-  foff += TRUNK_SIZE;
+  _off = 0;
+  _foff += TRUNK_SIZE;
 }
 
-static inline void check_log()
-{
-  // TODO: check log buf size and allocate new space if necessary
-  assert(off + RECORD_SIZE  <= TRUNK_SIZE);
+static inline void check_log() {
+  // TODO: check log buffer size and allocate new space if necessary
+  assert(_off + RECORD_SIZE  <= TRUNK_SIZE);
 }
 
-void tern_log_insid(int insid)
-{
-  check_log();
-  *(int*)(buf+off) = insid | (InsidTy<<29);
-  off += RECORD_SIZE;
-}
-
-void tern_log_loadstore(int insid, void* addr, uint64_t data)
-{
+void tern_log_insid(int insid) {
   check_log();
 
-  int len = 0;
-  *(int*)(buf+off+len) = insid;
-  len += sizeof insid;
-  *(void**)(buf+off+len) = addr;
-  len += sizeof addr;
-  *(uint64_t*)(buf+off+len) = data;
+  InsidRec *rec = (InsidRec*)(_buf+_off);
+  rec->insid = insid;
+  rec->type = InsidRecTy;
 
-  off += RECORD_SIZE;
+  _off += RECORD_SIZE;
 }
 
-void tern_log_call(int insid, short narg, void* func, ...)
-{
-  check_log();
+static inline void log_loadstore(int type, int insid,
+                                 void* addr, uint64_t data) {
 }
 
-void tern_log_ret(int insid, short narg, void* func, uint64_t data)
-{
+void tern_log_load(int insid, void* addr, uint64_t data) {
   check_log();
 
-  int len = 0;
-  short seq = NumExtraArgsRecord(narg) + 1;
-  *(int*)(buf+off+len) = insid;
-  len += sizeof insid;
-  *(short*)(buf+off+len) = seq;
-  len += sizeof seq;
-  *(short*)(buf+off+len) = narg;
-  len += sizeof narg;
-  *(void**)(buf+off+len) = func;
-  len += sizeof func;
-  *(uint64_t*)(buf+off+len) = data;
+  LoadRec *rec = (LoadRec*)(_buf+_off);
+  rec->insid = insid;
+  rec->type = LoadRecTy;
+  rec->addr = addr;
+  rec->data = data;
 
-  off += RECORD_SIZE;
+  _off += RECORD_SIZE;
 }
 
-void tern_log_init(void)
-{
-  char name[64];
-  tid = 0; // TODO: get thread id from scheduler
-  sprintf(name, "tern-log-tid-%d", tid); // TODO: get log dir
-  fd = open(name, O_RDWR|O_CREAT, 0600);  assert(fd >= 0);
-  ftruncate(fd, LOG_SIZE);
-  tern_log_map();
+void tern_log_store(int insid, void* addr, uint64_t data) {
+  check_log();
+
+  StoreRec *rec = (StoreRec*)(_buf+_off);
+  rec->insid = insid;
+  rec->type = StoreRecTy;
+  rec->addr = addr;
+  rec->data = data;
+
+  _off += RECORD_SIZE;
 }
 
-void tern_log_exit(void)
-{
-  if(buf)
-    munmap(buf, TRUNK_SIZE);
-  if(fd >= 0)
-    close(fd);
-}
+void tern_log_call(int insid, short narg, void* func, ...) {
+  check_log();
 
-#ifdef DEBUG
+  short nextra = NumExtraArgsRecords(narg);
+  short seq = 0;
 
-int main()
-{
-  tern_log_init();
+  CallRec *call = (CallRec*)(_buf+_off);
+  call->insid = insid;
+  call->type = CallRecTy;
+  call->seq = seq;
+  call->narg = narg;
+  call->func = func;
 
-  for(int i=0; i<10000; ++i) {
-    tern_log_i8 (0, (void*)0xdeadbeef, 0xAA);
-    tern_log_i16(0, (void*)0xdeadbeef, 0xBBBB);
-    tern_log_i32(0, (void*)0xdeadbeef, 0xCCCCCCCC);
-    tern_log_i64(0, (void*)0xdeadbeef, 0xDDDDDDDDDDDDDDDD);
+  short i, rec_narg;
+  va_list vl;
+
+  va_start(vl, func);
+
+  // inlined args
+  rec_narg = min(narg, (short)MAX_INLINE_ARGS);
+  for(i=0; i<rec_narg; ++i)
+    call->args[i] = va_arg(vl, uint64_t);
+
+  _off += RECORD_SIZE;
+
+  // extra args
+  for(++seq; seq<=nextra; ++seq) {
+    ExtraArgsRec *extra = (ExtraArgsRec*)(_buf+_off);
+    extra->insid = insid;
+    extra->type = ExtraArgsRecTy;
+    extra->seq = seq;
+    extra->narg = narg;
+
+    short rec_i = 0;
+    rec_narg = min(narg, (short)(MAX_INLINE_ARGS+MAX_EXTRA_ARGS*seq));
+    while(i<rec_narg) {
+      extra->args[rec_i] = va_arg(vl, uint64_t);
+      ++ rec_i;
+      ++ i;
+    }
+    _off += RECORD_SIZE;
   }
-
-  tern_log_exit();
-  return 0;
+  va_end(vl);
 }
 
-#endif
+void tern_log_ret(int insid, short narg, void* func, uint64_t data) {
+  check_log();
+
+  short seq = NumExtraArgsRecords(narg) + 1;
+
+  ReturnRec *ret = (ReturnRec*)(_buf+_off);
+  ret->insid = insid;
+  ret->type = ReturnRecTy;
+  ret->seq = seq;
+  ret->narg = narg;
+  ret->func = func;
+  ret->data = data;
+
+  _off += RECORD_SIZE;
+}
+
+void tern_log_init(int tid) {
+  _tid = tid;
+  // TODO: get log output directory
+  sprintf(_logfile, "tern-log-tid-%d", _tid);
+  _fd = open(_logfile, O_RDWR|O_CREAT, 0600);  assert(_fd >= 0);
+  ftruncate(_fd, LOG_SIZE);
+  log_map();
+}
+
+const char* tern_log_name(void) {
+  return _logfile;
+}
+
+void tern_log_exit(void) {
+  if(_buf)
+    munmap(_buf, TRUNK_SIZE);
+
+  // truncate unused portion of log
+  off_t size = _foff - TRUNK_SIZE + _off;
+  ftruncate(_fd, size);
+
+  if(_fd >= 0)
+    close(_fd);
+
+  _buf = NULL;
+  _off = 0;
+  _tid = 01;
+  _fd = -1;
+  _foff = 0;
+}

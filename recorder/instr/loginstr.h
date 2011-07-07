@@ -8,36 +8,40 @@
 #include "llvm/Target/TargetData.h"
 #include "llvm/Support/raw_ostream.h"
 
-namespace tern 
-{
-  struct LogInstr: public llvm::ModulePass 
-  {
-    static char ID;
-    llvm::TargetData *targetData;
-    llvm::LLVMContext *context;
+namespace tern {
 
-    const llvm::PointerType *addrType;
-    const llvm::IntegerType *dataType;
-    llvm::Value       *logInsid;
-    llvm::Value       *logLoadStore;
-    llvm::Value       *logCall;
-    llvm::Value       *logRet;
+struct LogInstr: public llvm::ModulePass {
+  static char ID;
+  llvm::TargetData *targetData;
+  llvm::LLVMContext *context;
 
-    LogInstr(): ModulePass(&ID) {}
-    virtual bool runOnModule(llvm::Module &M);
-    virtual void getAnalysisUsage(llvm::AnalysisUsage &AU) const;
-    
-    llvm::Value *castIfNecessary(llvm::Value *data, const llvm::Type *dst, 
+  const llvm::PointerType *addrType;
+  const llvm::IntegerType *dataType;
+  llvm::Value       *logInsid;
+  llvm::Value       *logLoad;
+  llvm::Value       *logStore;
+  llvm::Value       *logCall;
+  llvm::Value       *logRet;
+
+  LogInstr(): ModulePass(&ID) {}
+  virtual bool runOnModule(llvm::Module &M);
+  virtual void getAnalysisUsage(llvm::AnalysisUsage &AU) const;
+
+  llvm::Value *castIfNecessary(llvm::Value *data, const llvm::Type *dst,
                                  llvm::Instruction *insert);
-    void instrFunc(llvm::Function &F);
-    void instrLoad(llvm::LoadInst *load);
-    void instrStore(llvm::StoreInst *store);
-    void instrLoadStore(llvm::Value *insid, llvm::Value *addr, 
-                        llvm::Value *data, llvm::Instruction *ins);
-    void instrCall(llvm::CallInst *call);
-    void instrInvoke(llvm::InvokeInst *invoke);
-    void instrFirstNonPHI(llvm::Instruction *ins);
-  };
-}
+  void instrFunc(llvm::Function &F);
+  void instrLoad(llvm::LoadInst *load);
+  void instrStore(llvm::StoreInst *store);
+  void instrLoadStore(llvm::Value *insid, llvm::Value *addr,
+                      llvm::Value *data, llvm::Instruction *ins, bool isload);
+  void instrCall(llvm::CallInst *call);
+  void instrInvoke(llvm::InvokeInst *invoke);
+  void instrFirstNonPHI(llvm::Instruction *ins);
+
+  static inline void foo() {
+  }
+};
+
+} // namespace tern
 
 #endif

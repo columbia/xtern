@@ -6,15 +6,16 @@
 #include <vector>
 #include "llvm/Instruction.h"
 
-namespace tern
-{
-  llvm::Value* GetInsID(const llvm::Instruction *I);
-  llvm::Value* GetLoggable(const llvm::Instruction *I);
-  void SetLoggable(llvm::LLVMContext &C, llvm::Instruction *I);
+namespace tern {
 
-  bool Loggable(llvm::Instruction *ins);
-  bool LoggableCallToFunc(llvm::Function *func);
-  bool LoggableCall(llvm::Instruction *call);
+llvm::Value* GetInsID(const llvm::Instruction *I);
+llvm::Value* GetLoggable(const llvm::Instruction *I);
+void SetLoggable(llvm::LLVMContext &C, llvm::Instruction *I);
+
+bool Loggable(llvm::Instruction *ins);
+bool LoggableCallToFunc(llvm::Function *func);
+bool LoggableCall(llvm::Instruction *call);
+
 }
 
 #endif
