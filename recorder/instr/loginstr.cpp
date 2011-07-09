@@ -3,6 +3,8 @@
 #include "loginstr.h"
 #include "llvm/LLVMContext.h"
 #include "llvm/Support/TypeBuilder.h"
+#include "llvm/Support/IRBuilder.h"
+#include "llvm/Support/IRBuilder.h"
 
 using namespace llvm;
 using namespace std;
@@ -12,11 +14,12 @@ namespace tern {
 char LogInstr::ID = 0;
 
 void LogInstr::getAnalysisUsage(AnalysisUsage &AU) const {
-  AU.setPreservesAll();
+  AU.setPreservesCFG();
   ModulePass::getAnalysisUsage(AU);
 }
 
 bool LogInstr::runOnModule(Module &M) {
+
   const FunctionType *functype;
 
   targetData = getAnalysisIfAvailable<TargetData>();
@@ -24,6 +27,9 @@ bool LogInstr::runOnModule(Module &M) {
 
   addrType = Type::getInt8PtrTy(*context);
   dataType = Type::getInt64Ty(*context);
+
+  getEscapeFuncs(M);
+  markLoggableCallees(M);
 
   functype = TypeBuilder<void (types::i<32>), false>::get(*context);
   logInsid = dyn_cast<Value>(M.getOrInsertFunction("tern_log_insid", functype));
@@ -33,19 +39,69 @@ bool LogInstr::runOnModule(Module &M) {
                              ("tern_log_load", functype));
   logStore = dyn_cast<Value>(M.getOrInsertFunction
                              ("tern_log_store", functype));
-  functype = TypeBuilder<void (types::i<32>, types::i<32>, types::i<8>*,
-                               ...), false>::get(*context);
+  functype = TypeBuilder<void (types::i<32>, types::i<32>, types::i<32>,
+                               types::i<8>*, ...), false>::get(*context);
   logCall = dyn_cast<Value>(M.getOrInsertFunction("tern_log_call", functype));
-  functype = TypeBuilder<void (types::i<32>, types::i<32>, types::i<8>*,
-                             types::i<64>), false>::get(*context);
+  functype = TypeBuilder<void (types::i<32>, types::i<32>, types::i<32>,
+                               types::i<8>*, types::i<64>), false>::get(*context);
   logRet = dyn_cast<Value>(M.getOrInsertFunction("tern_log_ret", functype));
 
   forallfunc(M, fi) {
-    // instr func if not logging its callsites
-    if(!LoggableCallToFunc(fi))
+    // instr function @fi if it is loggable
+    if(LoggableFunc(fi))
       instrFunc(*fi);
   }
+
   return true;
+}
+
+void LogInstr::getEscapeFuncs(Module &M) {
+  unsigned funcid = Intrinsic::num_intrinsics;
+  forallfunc(M, fi) {
+    if(!LoggableCallee(fi))
+      continue;
+    for(Value::use_iterator ui=fi->use_begin(), E=fi->use_end();
+        ui != E; ++ui) {
+      if(isa<CallInst>(*ui) || isa<InvokeInst>(*ui)) { // use is call
+        CallSite cs(dyn_cast<Instruction>(*ui));
+        for(CallSite::arg_iterator ai=cs.arg_begin(); ai!=cs.arg_end(); ++ai)
+          if(*ai == fi) {// use is argument of a call ==> escape
+            escape_funcs[fi] = ++funcid;
+          }
+      } else { // any other use ==> escape
+        escape_funcs[fi] = ++funcid;
+      }
+    }
+  }
+}
+
+/// create function tern_all_loggable_callees() and mark loggable callees
+void LogInstr::markLoggableCallees(Module &M) {
+  const char *markall_name = "tern_all_loggable_callees";
+  const FunctionType *functype = TypeBuilder<void (void), false>::get(*context);
+
+  Function *markall = dyn_cast<Function>
+    (M.getOrInsertFunction(markall_name, functype));
+  BasicBlock *entry = BasicBlock::Create(*context, "entry", markall);
+
+  const char *markone_name = "tern_loggable_callee";
+  functype = TypeBuilder<void (types::i<8>*, types::i<32>),
+    false>::get(*context);
+  Function *markone = dyn_cast<Function>
+    (M.getOrInsertFunction(markone_name, functype));
+
+  IRBuilder<> builder(entry);
+  forall(escape_map_t, fi, escape_funcs) {
+    Value *args[2];
+    args[0] = builder.CreateBitCast(fi->first, addrType, "tern_funcast");
+    args[1] = ConstantInt::get(Type::getInt32Ty(*context), fi->second);
+    builder.CreateCall2(markone, args[0], args[1]);
+  }
+
+  BasicBlock *ret = BasicBlock::Create(*context, "ret", markall);
+  builder.CreateBr(ret);
+  builder.SetInsertPoint(ret);
+  builder.CreateRetVoid();
 }
 
 void LogInstr::instrFunc(Function &F) {
@@ -54,7 +110,7 @@ void LogInstr::instrFunc(Function &F) {
     for(cur=BB->begin(); cur!=BB->end();) {
       prv = cur;
       cur ++;
-      if(!Loggable(prv))
+      if(!LoggableInstruction(prv))
         continue;
       // mark instruction loggable
       SetLoggable(*context, prv);
@@ -66,10 +122,8 @@ void LogInstr::instrFunc(Function &F) {
         instrStore(dyn_cast<StoreInst>(prv));
         break;
       case Instruction::Call:
-        instrCall(dyn_cast<CallInst>(prv));
-        break;
       case Instruction::Invoke:
-        instrInvoke(dyn_cast<InvokeInst>(prv));
+        instrCall(prv);
         break;
       default: // no other ins loggable, log FirstNonPHI
         instrFirstNonPHI(prv);
@@ -83,8 +137,8 @@ Value *LogInstr::castIfNecessary(Value *srcval, const Type *dst,
   const Type *src = srcval->getType();
   if(src == dst) return srcval;
   if(src->isPointerTy())
-    return CastInst::CreatePointerCast(srcval, dst, "", insert);
-  return CastInst::CreateZExtOrBitCast(srcval, dst, "", insert);
+    return CastInst::CreatePointerCast(srcval, dst, "tern_ptrcast", insert);
+  return CastInst::CreateZExtOrBitCast(srcval, dst, "tern_valcast", insert);
 }
 
 void LogInstr::instrLoadStore(Value *insid, Value *addr,
@@ -127,7 +181,8 @@ void LogInstr::instrFirstNonPHI(Instruction *ins) {
   CallInst::Create(logInsid, args.begin(), args.end(), "", ins);
 }
 
-void LogInstr::instrCall(CallInst *call) {
+// FIXME: InvokeInst may throw an exception, which we currently don't log
+void LogInstr::instrCall(Instruction *call) {
   CallSite cs(call);
   Value *insid = GetInsID(call); assert(insid);
   unsigned narg = cs.arg_end() - cs.arg_begin();
@@ -136,8 +191,14 @@ void LogInstr::instrCall(CallInst *call) {
   Value *func = cs.getCalledValue();
   func = castIfNecessary(func, addrType, call);
 
+  Value *indir;
+  indir = (cs.getCalledFunction() ?
+           ConstantInt::get(Type::getInt32Ty(*context), 0)
+           : ConstantInt::get(Type::getInt32Ty(*context), 1));
+
   // log call
   vector<Value*> args;
+  args.push_back(indir);
   args.push_back(insid);
   args.push_back(nargval);
   args.push_back(func);
@@ -158,6 +219,7 @@ void LogInstr::instrCall(CallInst *call) {
   else
     data = Constant::getNullValue(dataType);
   args.clear();
+  args.push_back(indir);
   args.push_back(insid);
   args.push_back(nargval);
   args.push_back(func);

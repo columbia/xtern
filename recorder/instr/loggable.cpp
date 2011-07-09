@@ -1,6 +1,7 @@
 #include "util.h"
 #include "loggable.h"
 #include "llvm/Support/CFG.h"
+#include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
 using namespace std;
@@ -22,12 +23,12 @@ Value* GetInsID(const Instruction *I) {
 }
 
 Value* GetLoggable(const Instruction *I) {
-  return GetMetadata(I, "loggable");
+  return GetMetadata(I, "log");
 }
 
 void SetLoggable(LLVMContext &C, Instruction *I) {
   Value *const data = ConstantInt::get(Type::getInt1Ty(C), 1);
-  I->setMetadata("loggable", MDNode::get(C, &data, 1));
+  I->setMetadata("log", MDNode::get(C, &data, 1));
 }
 
 static bool LoggableHelper(Instruction *ins) {
@@ -45,7 +46,10 @@ static bool LoggableHelper(Instruction *ins) {
   return false;
 }
 
-bool Loggable(Instruction *ins) {
+bool LoggableInstruction(Instruction *ins) {
+  Value *insid = GetInsID(ins);
+  if(!insid) return false;
+
   if(LoggableHelper(ins))
     return true;
 
@@ -76,35 +80,63 @@ bool Loggable(Instruction *ins) {
   return true;
 }
 
-bool LoggableCallToFunc(Function *func) {
-  // TODO: summarized function ==> true
-  //
-  // functions with body: app, lib, tern
-  // external functions without body
-  //
-  // if summary exists, use
-  // else
-  //   use conservative summary for ext
-  //   instr app and lib
+//
+//                              App+Lib            intrinsic   Tern    External
+//                   has summaries   no summary
+//  instr func?           No            Yes          No         No        No
+//  instr call to func?   Yes           No           No         No        Yes
 
-  // TODO: necessary to log intrinsics?
-  unsigned iid = func->getIntrinsicID();
-  if(iid != Intrinsic::not_intrinsic)
+// TODO: summarized function ==> true
+//
+// functions with body: app, lib, tern
+// external functions without body
+//
+// if summary exists, use
+// else
+//   use conservative summary for ext
+//   instr app and lib
+//
+// TODO: necessary to log intrinsic calls?
+//
+bool LoggableFunc(Function *func) {
+  if(func->getIntrinsicID() != Intrinsic::not_intrinsic)
     return false;
-  return func->isDeclaration(); // log external functions
+
+  if(func->getName().startswith("tern"))
+    return false;
+
+  if(func->isDeclaration())
+    return false;
+
+  return true;
+}
+
+bool LoggableCallee(Function *func) {
+  if(func->getIntrinsicID() != Intrinsic::not_intrinsic)
+    return false;
+
+  if(func->getName().startswith("tern"))
+    return false;
+
+  if(func->isDeclaration())
+    return true;
+
+  return false;
 }
 
 bool LoggableCall(Instruction *call) {
   Value *insid = GetInsID(call);
-  if(!insid) return false;
+  if(!insid)
+    return false;
 
   CallSite cs(call);
 
   Function *func = cs.getCalledFunction();
   if(func)
-    return LoggableCallToFunc(func);
+    return LoggableCallee(func);
 
   // indirect call, must log
+  // TODO: query alias and log only if may point to a loggable func
   return true;
 }
 

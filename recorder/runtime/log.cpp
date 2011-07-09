@@ -8,12 +8,13 @@
 #include <stdlib.h>
 #include <stdarg.h>
 #include <string.h>
-
+#include <tr1/unordered_map>
 #include "logdefs.h"
 #include "log.h"
 
 #define min(x, y) ((x)<(y)? (x) : (y))
 
+using namespace std;
 using namespace tern;
 
 static __thread char* _buf = NULL;
@@ -24,6 +25,20 @@ static __thread int _tid = -1;
 static __thread int _fd = -1;
 static __thread off_t _foff = 0;
 static __thread char _logfile[64];
+
+typedef tr1::unordered_map<void*, unsigned> escape_map_t;
+static escape_map_t _loggable_callees;
+static bool is_loggable_callee(void* func) {
+  return _loggable_callees.find(func) != _loggable_callees.end();
+}
+
+void tern_loggable_callee(void* func, unsigned funcid) {
+  _loggable_callees[func] = funcid;
+}
+
+void tern_all_loggable_callees(void) {
+  // empty function; will be replaced by loginstr
+}
 
 static inline void log_map() {
   if(_buf)
@@ -84,7 +99,11 @@ void tern_log_store(int insid, void* addr, uint64_t data) {
   _off += RECORD_SIZE;
 }
 
-void tern_log_call(int insid, short narg, void* func, ...) {
+void tern_log_call(int indir, int insid, short narg, void* func, ...) {
+
+  if(indir && !is_loggable_callee(func))
+    return;
+
   check_log();
 
   short nextra = NumExtraArgsRecords(narg);
@@ -129,7 +148,10 @@ void tern_log_call(int insid, short narg, void* func, ...) {
   va_end(vl);
 }
 
-void tern_log_ret(int insid, short narg, void* func, uint64_t data) {
+void tern_log_ret(int indir, int insid, short narg, void* func, uint64_t data) {
+  if(indir && !is_loggable_callee(func))
+    return;
+
   check_log();
 
   short seq = NumExtraArgsRecords(narg) + 1;
@@ -145,7 +167,15 @@ void tern_log_ret(int insid, short narg, void* func, uint64_t data) {
   _off += RECORD_SIZE;
 }
 
-void tern_log_init(int tid) {
+void tern_log_init() {
+  extern void tern_all_loggable_callees(void);
+  tern_all_loggable_callees();
+}
+
+void tern_log_exit() {
+}
+
+void tern_log_thread_init(int tid) {
   _tid = tid;
   // TODO: get log output directory
   sprintf(_logfile, "tern-log-tid-%d", _tid);
@@ -158,7 +188,7 @@ const char* tern_log_name(void) {
   return _logfile;
 }
 
-void tern_log_exit(void) {
+void tern_log_thread_exit(void) {
   if(_buf)
     munmap(_buf, TRUNK_SIZE);
 

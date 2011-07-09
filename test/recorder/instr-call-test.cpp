@@ -1,6 +1,6 @@
 // RUN: %llvmgcc %s -O0 -c -o %t1.ll -S
-// RUN: %opt < %t1.ll -load %llvmlibdir/id-manager.so -tag-id -S > %t2.ll
-// RUN: %opt < %t2.ll -load %projlibdir/recinstr.so -loginstr -S > %t3.ll
+// RUN: opt < %t1.ll -load %llvmlibdir/id-manager.so -tag-id -S > %t2.ll
+// RUN: opt < %t2.ll -load %projlibdir/recinstr.so -loginstr -S > %t3.ll
 
 #include <unistd.h>
 #include <stdint.h>
@@ -37,6 +37,10 @@ int main() {
   fp1 = &read;
   fp1(1, buf, sizeof(buf));
 
+  void *fp2;
+
+  fp2 = (void*)read;
+
   // no args
   bar();
 
@@ -51,4 +55,5 @@ int main() {
 
   // int64 return
   int64ret(buf, sizeof(buf));
+
 }

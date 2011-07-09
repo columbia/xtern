@@ -14,4 +14,5 @@ LOADABLE_MODULE := 1
 
 include $(LEVEL)/Makefile.common
 
-CXXFLAGS += -I$(LLVM_ROOT) -I$(LLVM_ROOT)/common/include
+CXXFLAGS += -I$(LLVM_ROOT) -I$(LLVM_ROOT)/common/include \
+	    -I$(PROJ_SRC_ROOT)/common/include

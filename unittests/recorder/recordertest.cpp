@@ -37,11 +37,21 @@ call calls[5] = {
   {10000,(void*)(intptr_t)strcpy, 2, 0xadbeefde, {0x88888800, 0x99999900}},
 };
 
+static inline
+std::ostream& operator<<(std::ostream& os, const Log::reverse_rec_iterator& ri) {
+  return os << &*ri;
+}
+
+static inline
+std::ostream& operator<<(std::ostream& os, const Log::reverse_iterator& ri) {
+  return os << &*ri;
+}
 
 TEST(recordertest, rec_iterator) {
   const unsigned num = 10000;
 
-  tern_log_init(0);
+  tern_log_init();
+  tern_log_thread_init(0);
 
   for(unsigned j=0; j<num; ++j) {
     unsigned i = j % (sizeof(loadstores)/sizeof(loadstores[0]));
@@ -55,6 +65,7 @@ TEST(recordertest, rec_iterator) {
     }
   }
 
+  tern_log_thread_exit();
   tern_log_exit();
 
   Log log(tern_log_name());
@@ -80,14 +91,38 @@ TEST(recordertest, rec_iterator) {
   InsidRec &recref = *ri;
   EXPECT_EQ(recp, &recref);
   EXPECT_EQ(recp->insid, ri->insid);
+
+  Log::reverse_rec_iterator rri, rrj;
+
+  rri = log.rec_rbegin();
+  rri += 10;
+  rrj = rri + 100;
+  rrj -= 50;
+  rri = rrj - 50;
+
+  EXPECT_LT(rri, rrj);
+  EXPECT_LE(rri, rrj);
+  EXPECT_GT(rrj, rri);
+  EXPECT_GE(rrj, rri);
+
+  for(int i=0; i<50; ++i)
+    rri ++;
+  EXPECT_EQ(rri, rrj);
+  EXPECT_LE(rri, rrj);
+  EXPECT_GE(rri, rrj);
+
+  InsidRec *rrecp = &*rri;
+  InsidRec &rrecref = *rri;
+  EXPECT_EQ(rrecp, &rrecref);
+  EXPECT_EQ(rrecp->insid, rri->insid);
 }
 
 
-TEST(recordertest, loadstore) {
-
+TEST(recordertest, iterator) {
   const unsigned num = 10000;
 
-  tern_log_init(0);
+  tern_log_init();
+  tern_log_thread_init(0);
 
   for(unsigned j=0; j<num; ++j) {
     unsigned i = j % (sizeof(loadstores)/sizeof(loadstores[0]));
@@ -101,6 +136,34 @@ TEST(recordertest, loadstore) {
     }
   }
 
+  tern_log_thread_exit();
+  tern_log_exit();
+
+  Log log(tern_log_name());
+  Log::iterator ii, ij;
+}
+
+
+TEST(recordertest, loadstore) {
+
+  const unsigned num = 10000;
+
+  tern_log_init();
+  tern_log_thread_init(0);
+
+  for(unsigned j=0; j<num; ++j) {
+    unsigned i = j % (sizeof(loadstores)/sizeof(loadstores[0]));
+    switch(loadstores[i].type) {
+    case LoadRecTy:
+      tern_log_load(loadstores[i].insid, loadstores[i].addr, loadstores[i].data);
+      break;
+    case StoreRecTy:
+      tern_log_store(loadstores[i].insid, loadstores[i].addr, loadstores[i].data);
+      break;
+    }
+  }
+
+  tern_log_thread_exit();
   tern_log_exit();
 
   Log log(tern_log_name());
@@ -157,59 +220,61 @@ TEST(recordertest, call) {
 
   const unsigned num = 10000;
 
-  tern_log_init(0);
+  tern_log_init();
+  tern_log_thread_init(0);
 
   for(unsigned j=0; j<num; ++j) {
     unsigned i = j % (sizeof(calls)/sizeof(calls[0]));
     switch(calls[i].narg) {
     case 0:
-      tern_log_call(calls[i].insid, 0, calls[i].func);
+      tern_log_call(0, calls[i].insid, 0, calls[i].func);
       break;
     case 1:
-      tern_log_call(calls[i].insid, 1, calls[i].func, calls[i].args[0]);
+      tern_log_call(0, calls[i].insid, 1, calls[i].func, calls[i].args[0]);
       break;
     case 2:
-      tern_log_call(calls[i].insid, 2, calls[i].func, calls[i].args[0],
+      tern_log_call(0, calls[i].insid, 2, calls[i].func, calls[i].args[0],
                     calls[i].args[1]);
       break;
     case 3:
-      tern_log_call(calls[i].insid, 3, calls[i].func, calls[i].args[0],
+      tern_log_call(0, calls[i].insid, 3, calls[i].func, calls[i].args[0],
                     calls[i].args[1], calls[i].args[2]);
       break;
     case 4:
-      tern_log_call(calls[i].insid, 4, calls[i].func, calls[i].args[0],
+      tern_log_call(0, calls[i].insid, 4, calls[i].func, calls[i].args[0],
                     calls[i].args[1], calls[i].args[2], calls[i].args[3]);
       break;
     case 5:
-      tern_log_call(calls[i].insid, 5, calls[i].func, calls[i].args[0],
+      tern_log_call(0, calls[i].insid, 5, calls[i].func, calls[i].args[0],
                     calls[i].args[1], calls[i].args[2], calls[i].args[3],
                     calls[i].args[4]);
       break;
     case 6:
-      tern_log_call(calls[i].insid, 6, calls[i].func, calls[i].args[0],
+      tern_log_call(0, calls[i].insid, 6, calls[i].func, calls[i].args[0],
                     calls[i].args[1], calls[i].args[2], calls[i].args[3],
                     calls[i].args[4], calls[i].args[5]);
       break;
     case 7:
-      tern_log_call(calls[i].insid, 7, calls[i].func, calls[i].args[0],
+      tern_log_call(0, calls[i].insid, 7, calls[i].func, calls[i].args[0],
                     calls[i].args[1], calls[i].args[2], calls[i].args[3],
                     calls[i].args[4], calls[i].args[5], calls[i].args[6]);
       break;
     case 8:
-      tern_log_call(calls[i].insid, 8, calls[i].func, calls[i].args[0],
+      tern_log_call(0, calls[i].insid, 8, calls[i].func, calls[i].args[0],
                     calls[i].args[1], calls[i].args[2], calls[i].args[3],
                     calls[i].args[4], calls[i].args[5], calls[i].args[6],
                     calls[i].args[7]);
       break;
     case 9:
-      tern_log_call(calls[i].insid, 9, calls[i].func, calls[i].args[0],
+      tern_log_call(0, calls[i].insid, 9, calls[i].func, calls[i].args[0],
                     calls[i].args[1], calls[i].args[2], calls[i].args[3],
                     calls[i].args[4], calls[i].args[5], calls[i].args[6],
                     calls[i].args[7], calls[i].args[8]);
     }
-    tern_log_ret(calls[i].insid, calls[i].narg, calls[i].func, calls[i].data);
+    tern_log_ret(0, calls[i].insid, calls[i].narg, calls[i].func, calls[i].data);
   }
 
+  tern_log_thread_exit();
   tern_log_exit();
 
   Log log(tern_log_name());
@@ -274,4 +339,5 @@ TEST(recordertest, call) {
     }
   }
 }
+
 
