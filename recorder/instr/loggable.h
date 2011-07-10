@@ -8,18 +8,17 @@
 
 namespace tern {
 
-llvm::Value* GetInsID(const llvm::Instruction *I);
-llvm::Value* GetLoggable(const llvm::Instruction *I);
-void SetLoggable(llvm::LLVMContext &C, llvm::Instruction *I);
+llvm::Value* getLoggable(const llvm::Instruction *I);
+void setLoggable(llvm::LLVMContext &C, llvm::Instruction *I);
 
-bool LoggableInstruction(llvm::Instruction *ins);
+bool loggableInstruction(llvm::Instruction *ins);
 
 /// are instructions in @func loggable?
-bool LoggableFunc(llvm::Function *func);
+bool loggableFunc(llvm::Function *func);
 /// is call to @func loggable?
-bool LoggableCallee(llvm::Function *func);
+bool loggableCallee(llvm::Function *func);
 /// is this call loggable?
-bool LoggableCall(llvm::Instruction *call);
+bool loggableCall(llvm::Instruction *call);
 
 }
 

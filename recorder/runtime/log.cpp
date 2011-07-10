@@ -9,10 +9,9 @@
 #include <stdarg.h>
 #include <string.h>
 #include <tr1/unordered_map>
+#include "runtime-interface.h"
 #include "logdefs.h"
 #include "log.h"
-
-#define min(x, y) ((x)<(y)? (x) : (y))
 
 using namespace std;
 using namespace tern;
@@ -122,7 +121,7 @@ void tern_log_call(int indir, int insid, short narg, void* func, ...) {
   va_start(vl, func);
 
   // inlined args
-  rec_narg = min(narg, (short)MAX_INLINE_ARGS);
+  rec_narg = std::min(narg, (short)MAX_INLINE_ARGS);
   for(i=0; i<rec_narg; ++i)
     call->args[i] = va_arg(vl, uint64_t);
 
@@ -137,7 +136,7 @@ void tern_log_call(int indir, int insid, short narg, void* func, ...) {
     extra->narg = narg;
 
     short rec_i = 0;
-    rec_narg = min(narg, (short)(MAX_INLINE_ARGS+MAX_EXTRA_ARGS*seq));
+    rec_narg = std::min(narg, (short)(MAX_INLINE_ARGS+MAX_EXTRA_ARGS*seq));
     while(i<rec_narg) {
       extra->args[rec_i] = va_arg(vl, uint64_t);
       ++ rec_i;

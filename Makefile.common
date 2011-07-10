@@ -2,8 +2,20 @@
 
 include $(LEVEL)/Makefile.config
 
+ifdef EXCLUDED_SOURCES
+  SOURCES := $(notdir $(wildcard $(PROJ_SRC_DIR)/*.cpp \
+             $(PROJ_SRC_DIR)/*.cc $(PROJ_SRC_DIR)/*.c))
+  SOURCES := $(filter-out $(EXCLUDED_SOURCES),$(SOURCES))
+	endif
+
 # Include LLVM's Master Makefile rules.
 include $(LLVM_SRC_ROOT)/Makefile.rules
+
+AdditionalIncludes = -I$(LLVM_ROOT) -I$(LLVM_ROOT)/common/include \
+	             -I$(PROJ_SRC_ROOT) -I$(PROJ_SRC_ROOT)/common/include
+
+CFLAGS   += -Wno-variadic-macros $(AdditionalIncludes)
+CXXFLAGS += -Wno-variadic-macros $(AdditionalIncludes)
 
 # Emit a warning if can't find llvm-config 
 LLVMBuildMode := $(shell $(LLVM_CONFIG) --build-mode)
@@ -11,3 +23,5 @@ ifeq ($(strip $(LLVMBuildMode)),)
   $(error Unable to find llvm-config. \
    Build Mode ($(BuildMode)) must be the same as LLVM Build Mode.)
 endif
+
+

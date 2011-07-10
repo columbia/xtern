@@ -2,8 +2,6 @@
 #include "recorder/runtime/log.h"
 #include "recorder/access/logaccess.h"
 
-#define min(x, y) ((x)<(y)? (x) : (y))
-
 using namespace tern;
 
 struct loadstore {
@@ -302,7 +300,7 @@ TEST(recordertest, call) {
       EXPECT_EQ(call->func, calls[i].func);
 
       // inline args
-      rec_narg = min(calls[i].narg, (short)MAX_INLINE_ARGS);
+      rec_narg = std::min(calls[i].narg, (short)MAX_INLINE_ARGS);
       for(argnr=0; argnr<rec_narg; ++argnr)
         EXPECT_EQ(call->args[argnr], calls[i].args[argnr]);
 
@@ -315,7 +313,7 @@ TEST(recordertest, call) {
         EXPECT_EQ(extra->type, ExtraArgsRecTy);
         EXPECT_EQ(extra->seq, seq);
         EXPECT_EQ(extra->narg, calls[i].narg);
-        rec_narg = min(extra->narg, (short)(MAX_INLINE_ARGS+MAX_EXTRA_ARGS*seq));
+        rec_narg = std::min(extra->narg, (short)(MAX_INLINE_ARGS+MAX_EXTRA_ARGS*seq));
 
         for(; argnr<rec_narg; ++argnr) {
           rec_argnr = argnr - MAX_INLINE_ARGS-MAX_EXTRA_ARGS*(seq-1);

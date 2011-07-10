@@ -1,4 +1,5 @@
 #include "util.h"
+#include "common/instr/instrutil.h"
 #include "loggable.h"
 #include "llvm/Support/CFG.h"
 #include "llvm/Support/raw_ostream.h"
@@ -8,31 +9,17 @@ using namespace std;
 
 namespace tern {
 
-static Value* GetMetadata(const Instruction *I, const char* key) {
-  MDNode *Node = I->getMetadata(key);
-  if (!Node)
-    return NULL;
-  assert(Node->getNumOperands() == 1);
-  ConstantInt *CI = dyn_cast<ConstantInt>(Node->getOperand(0));
-  assert(CI);
-  return CI;
+Value* getLoggable(const Instruction *I) {
+  return getIntMetadata(I, "log");
 }
 
-Value* GetInsID(const Instruction *I) {
-  return GetMetadata(I, "ins_id");
-}
-
-Value* GetLoggable(const Instruction *I) {
-  return GetMetadata(I, "log");
-}
-
-void SetLoggable(LLVMContext &C, Instruction *I) {
+void setLoggable(LLVMContext &C, Instruction *I) {
   Value *const data = ConstantInt::get(Type::getInt1Ty(C), 1);
   I->setMetadata("log", MDNode::get(C, &data, 1));
 }
 
-static bool LoggableHelper(Instruction *ins) {
-  Value *insid = GetInsID(ins);
+static bool loggableHelper(Instruction *ins) {
+  Value *insid = getInsID(ins);
   if(!insid) return false;
 
   switch(ins->getOpcode()) {
@@ -41,16 +28,16 @@ static bool LoggableHelper(Instruction *ins) {
     return true;
   case Instruction::Call:
   case Instruction::Invoke:
-    return LoggableCall(ins);
+    return loggableCall(ins);
   }
   return false;
 }
 
-bool LoggableInstruction(Instruction *ins) {
-  Value *insid = GetInsID(ins);
+bool loggableInstruction(Instruction *ins) {
+  Value *insid = getInsID(ins);
   if(!insid) return false;
 
-  if(LoggableHelper(ins))
+  if(loggableHelper(ins))
     return true;
 
   BasicBlock *BB = ins->getParent();
@@ -75,7 +62,7 @@ bool LoggableInstruction(Instruction *ins) {
   // if no other instructions in this BB is logged, must log FirstNonPHI
   BasicBlock::iterator ii = ins;
   for(++ii; ii!=BB->end(); ++ii)
-    if(LoggableHelper(ii))
+    if(loggableHelper(ii))
       return false;
   return true;
 }
@@ -98,7 +85,7 @@ bool LoggableInstruction(Instruction *ins) {
 //
 // TODO: necessary to log intrinsic calls?
 //
-bool LoggableFunc(Function *func) {
+bool loggableFunc(Function *func) {
   if(func->getIntrinsicID() != Intrinsic::not_intrinsic)
     return false;
 
@@ -111,7 +98,7 @@ bool LoggableFunc(Function *func) {
   return true;
 }
 
-bool LoggableCallee(Function *func) {
+bool loggableCallee(Function *func) {
   if(func->getIntrinsicID() != Intrinsic::not_intrinsic)
     return false;
 
@@ -124,8 +111,8 @@ bool LoggableCallee(Function *func) {
   return false;
 }
 
-bool LoggableCall(Instruction *call) {
-  Value *insid = GetInsID(call);
+bool loggableCall(Instruction *call) {
+  Value *insid = getInsID(call);
   if(!insid)
     return false;
 
@@ -133,7 +120,7 @@ bool LoggableCall(Instruction *call) {
 
   Function *func = cs.getCalledFunction();
   if(func)
-    return LoggableCallee(func);
+    return loggableCallee(func);
 
   // indirect call, must log
   // TODO: query alias and log only if may point to a loggable func

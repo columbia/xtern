@@ -1,6 +1,5 @@
 // RUN: %llvmgcc %s -O0 -c -o %t1.ll -S
-// RUN: opt < %t1.ll -load %llvmlibdir/id-manager.so -tag-id -S > %t2.ll
-// RUN: opt < %t2.ll -load %projlibdir/recinstr.so -loginstr -S > %t3.ll
+// RUN: %projbindir/tern-instr < %t1.ll -S > %t2.ll
 
 #include <unistd.h>
 #include <stdint.h>

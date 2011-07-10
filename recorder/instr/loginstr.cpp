@@ -1,4 +1,5 @@
 #include "util.h"
+#include "common/instr/instrutil.h"
 #include "loggable.h"
 #include "loginstr.h"
 #include "llvm/LLVMContext.h"
@@ -48,7 +49,7 @@ bool LogInstr::runOnModule(Module &M) {
 
   forallfunc(M, fi) {
     // instr function @fi if it is loggable
-    if(LoggableFunc(fi))
+    if(loggableFunc(fi))
       instrFunc(*fi);
   }
 
@@ -58,7 +59,7 @@ bool LogInstr::runOnModule(Module &M) {
 void LogInstr::getEscapeFuncs(Module &M) {
   unsigned funcid = Intrinsic::num_intrinsics;
   forallfunc(M, fi) {
-    if(!LoggableCallee(fi))
+    if(!loggableCallee(fi))
       continue;
     for(Value::use_iterator ui=fi->use_begin(), E=fi->use_end();
         ui != E; ++ui) {
@@ -110,10 +111,10 @@ void LogInstr::instrFunc(Function &F) {
     for(cur=BB->begin(); cur!=BB->end();) {
       prv = cur;
       cur ++;
-      if(!LoggableInstruction(prv))
+      if(!loggableInstruction(prv))
         continue;
       // mark instruction loggable
-      SetLoggable(*context, prv);
+      setLoggable(*context, prv);
       switch(prv->getOpcode()) {
       case Instruction::Load:
         instrLoad(dyn_cast<LoadInst>(prv));
@@ -159,14 +160,14 @@ void LogInstr::instrLoadStore(Value *insid, Value *addr,
 }
 
 void LogInstr::instrLoad(LoadInst *load) {
-  Value *insid = GetInsID(load); assert(insid);
+  Value *insid = getInsID(load); assert(insid);
   Value *addr = load->getPointerOperand();
   Value *data = load;
   instrLoadStore(insid, addr, data, load, true);
 }
 
 void LogInstr::instrStore(StoreInst *store) {
-  Value *insid = GetInsID(store); assert(insid);
+  Value *insid = getInsID(store); assert(insid);
   Value *addr = store->getPointerOperand();
   Value *data = store->getOperand(0);
   instrLoadStore(insid, addr, data, store, false);
@@ -174,7 +175,7 @@ void LogInstr::instrStore(StoreInst *store) {
 
 void LogInstr::instrFirstNonPHI(Instruction *ins) {
   assert(ins == ins->getParent()->getFirstNonPHI());
-  Value *insid = GetInsID(ins); assert(insid);
+  Value *insid = getInsID(ins); assert(insid);
 
   vector<Value*> args;
   args.push_back(insid);
@@ -184,7 +185,7 @@ void LogInstr::instrFirstNonPHI(Instruction *ins) {
 // FIXME: InvokeInst may throw an exception, which we currently don't log
 void LogInstr::instrCall(Instruction *call) {
   CallSite cs(call);
-  Value *insid = GetInsID(call); assert(insid);
+  Value *insid = getInsID(call); assert(insid);
   unsigned narg = cs.arg_end() - cs.arg_begin();
   Value *nargval = ConstantInt::get(Type::getInt32Ty(*context), narg);
 

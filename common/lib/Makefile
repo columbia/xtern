@@ -1,9 +1,6 @@
 LEVEL := ../..
-DIRS  :=
 
-# x86 archive
-LIBRARYNAME := recaccess
+LIBRARYNAME := common
 BUILD_ARCHIVE := 1
 
 include $(LEVEL)/Makefile.common
-
