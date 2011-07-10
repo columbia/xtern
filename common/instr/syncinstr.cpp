@@ -1,3 +1,4 @@
+/* Author: Junfeng Yang (junfeng@cs.columbia.edu) */
 #include <stdint.h>
 #include <dlfcn.h>
 #include "syncfuncs.h"

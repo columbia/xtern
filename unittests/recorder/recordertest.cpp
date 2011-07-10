@@ -1,3 +1,4 @@
+/* Author: Junfeng Yang (junfeng@cs.columbia.edu) */
 #include "gtest/gtest.h"
 #include "recorder/runtime/log.h"
 #include "recorder/access/logaccess.h"

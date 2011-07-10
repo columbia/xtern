@@ -1,3 +1,4 @@
+/* Author: Junfeng Yang (junfeng@cs.columbia.edu) */
 #ifndef __TERN_COMMON_RUNTIME_INTERFACE_H
 #define __TERN_COMMON_RUNTIME_INTERFACE_H
 

@@ -1,3 +1,4 @@
+/* Author: Junfeng Yang (junfeng@cs.columbia.edu) */
 // RUN: %llvmgcc %s -O0 -c -o %t1.ll -S
 // RUN: %projbindir/tern-instr < %t1.ll -S > %t2.ll
 

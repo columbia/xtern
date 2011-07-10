@@ -1,3 +1,4 @@
+/* Author: Junfeng Yang (junfeng@cs.columbia.edu) */
 /* -*- Mode: C++ -*- */
 
 #ifndef TERN_COMMON_SYNCFUNCS_H

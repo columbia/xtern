@@ -1,3 +1,4 @@
+/* Author: Junfeng Yang (junfeng@cs.columbia.edu) */
 #include "instrutil.h"
 #include "llvm/Metadata.h"
 #include "llvm/Constants.h"

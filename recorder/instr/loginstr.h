@@ -1,3 +1,4 @@
+/* Author: Junfeng Yang (junfeng@cs.columbia.edu) */
 /* -*- Mode: C++ -*- */
 
 #ifndef __TERN_RECORDER_LOGINSTR_H

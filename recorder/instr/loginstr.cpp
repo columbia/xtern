@@ -1,3 +1,4 @@
+/* Author: Junfeng Yang (junfeng@cs.columbia.edu) */
 #include "util.h"
 #include "common/instr/instrutil.h"
 #include "loggable.h"

@@ -1,3 +1,4 @@
+/* Author: Junfeng Yang (junfeng@cs.columbia.edu) */
 #include <string.h>
 #include <assert.h>
 #include <sys/stat.h>
