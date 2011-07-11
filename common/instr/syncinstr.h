@@ -1,5 +1,4 @@
-/* Author: Junfeng Yang (junfeng@cs.columbia.edu) */
-/* -*- Mode: C++ -*- */
+/* Author: Junfeng Yang (junfeng@cs.columbia.edu) -*- Mode: C++ -*- */
 
 #ifndef __TERN_COMMON_SYNCINSTR_H
 #define __TERN_COMMON_SYNCINSTR_H
@@ -21,7 +20,7 @@ struct SyncInstr: public llvm::ModulePass {
   llvm::Module *getTemplateModule(void);
   void initFuncTypes(llvm::Module &M);
   void replaceFunctionInCall(llvm::Module &M, llvm::Instruction *I, unsigned syncid);
-  void warnEscapeFuncs(void);
+  void warnEscapeFuncs(llvm::Module &M);
 
   typedef std::tr1::unordered_map<unsigned,
             const llvm::FunctionType*> functype_map_t;

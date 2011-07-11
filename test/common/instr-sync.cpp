@@ -21,7 +21,7 @@ void* thread_func(void*) {
   pthread_exit(NULL);
 }
 
-main() {
+int main(int argc, char **argv) {
   sem_t s;
   pthread_t tid;
   pthread_cond_t c;
@@ -32,7 +32,7 @@ main() {
 /* pthread synchronization operations */
   int ret = pthread_create(&tid, NULL, thread_func, NULL);
   if(ret < 0) {
-    perror("pthread_create"); 
+    perror("pthread_create");
     abort();
   }
 
@@ -73,4 +73,5 @@ main() {
   sigwait(NULL, NULL);
 
   exit(0);
+  return 0;
 }

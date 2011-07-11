@@ -26,14 +26,24 @@ static __thread int _fd = -1;
 static __thread off_t _foff = 0;
 static __thread char _logfile[64];
 
-typedef tr1::unordered_map<void*, unsigned> escape_map_t;
-static escape_map_t _loggable_callees;
-static bool is_loggable_callee(void* func) {
+typedef tr1::unordered_map<void*, unsigned> func_map_t;
+static func_map_t _loggable_callees;
+static func_map_t _escape_callees;
+
+static inline bool is_escape_callee(void* func) {
+  return _escape_callees.find(func) != _escape_callees.end();
+}
+
+static inline bool is_loggable_callee(void* func) {
   return _loggable_callees.find(func) != _loggable_callees.end();
 }
 
 void tern_loggable_callee(void* func, unsigned funcid) {
   _loggable_callees[func] = funcid;
+}
+
+void tern_escape_callee(void* func, unsigned funcid) {
+  _escape_callees[func] = funcid;
 }
 
 void tern_all_loggable_callees(void) {
@@ -101,7 +111,7 @@ void tern_log_store(int insid, void* addr, uint64_t data) {
 
 void tern_log_call(int indir, int insid, short narg, void* func, ...) {
 
-  if(indir && !is_loggable_callee(func))
+  if(indir && !is_escape_callee(func))
     return;
 
   check_log();
@@ -114,7 +124,8 @@ void tern_log_call(int indir, int insid, short narg, void* func, ...) {
   call->type = CallRecTy;
   call->seq = seq;
   call->narg = narg;
-  call->func = func;
+  assert(is_loggable_callee(func));
+  call->funcid = _loggable_callees[func];
 
   short i, rec_narg;
   va_list vl;
@@ -149,7 +160,7 @@ void tern_log_call(int indir, int insid, short narg, void* func, ...) {
 }
 
 void tern_log_ret(int indir, int insid, short narg, void* func, uint64_t data) {
-  if(indir && !is_loggable_callee(func))
+  if(indir && !is_escape_callee(func))
     return;
 
   check_log();
@@ -161,14 +172,14 @@ void tern_log_ret(int indir, int insid, short narg, void* func, uint64_t data) {
   ret->type = ReturnRecTy;
   ret->seq = seq;
   ret->narg = narg;
-  ret->func = func;
+  assert(is_loggable_callee(func));
+  ret->funcid = _loggable_callees[func];
   ret->data = data;
 
   _off += RECORD_SIZE;
 }
 
 void tern_log_init() {
-  extern void tern_all_loggable_callees(void);
   tern_all_loggable_callees();
 }
 

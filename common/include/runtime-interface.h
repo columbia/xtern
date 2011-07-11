@@ -1,22 +1,17 @@
-/* Author: Junfeng Yang (junfeng@cs.columbia.edu) */
+/* Author: Junfeng Yang (junfeng@cs.columbia.edu) -*- Mode: C++ -*- */
 #ifndef __TERN_COMMON_RUNTIME_INTERFACE_H
 #define __TERN_COMMON_RUNTIME_INTERFACE_H
 
-/* -*- Mode: C++ -*- */
-
-/* tern public methods used by a program; they are implemented by the
- * recorder and the replayer runtimes */
+/* runtime interface between tern and a multithreaded program; this
+ * interface is implemented by the recorder and the replayer runtimes */
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-  /* tern inserts this method to a program as the first static
-   * constructor.  This method initializes tern internal data and marks
-   * arguments passed to main() as symbolic */
-  void tern_prog_begin(int argc, char **argv);
-  /* cleans up tern internal data. @tern_prog_begin should call
-   * atexit(@tern_prog_end) to schedule the clean up. */
+  /* initializes tern internal data */
+  void tern_prog_begin(void);
+  /* cleans up tern internal data. */
   void tern_prog_end(void);
 
   /* methods that users can manually insert */

@@ -90,9 +90,17 @@ void SyncInstr::initFuncTypes(Module &M) {
   delete tmp;
 }
 
-void SyncInstr::warnEscapeFuncs(void) {
+void SyncInstr::warnEscapeFuncs(Module &M) {
+  forallfunc(M, fi) {
+    if(fi->isDeclaration()) {
+      unsigned syncid = syncfunc::getNameID(fi->getNameStr().c_str());
+      if(syncid != syncfunc::not_sync && !syncfunc::isTern(syncid)) {
+        if(funcEscapes(fi))
+          errs()<< "Function " << fi->getName() << " escapes!";
+      }
+    }
+  }
 }
-
 
 void SyncInstr::replaceFunctionInCall(Module &M, Instruction *I, unsigned syncid) {
 
@@ -100,7 +108,7 @@ void SyncInstr::replaceFunctionInCall(Module &M, Instruction *I, unsigned syncid
   InvokeInst *IV;
   Instruction *NI = NULL;
 
-  // find hook  function
+  // find hook function
   const FunctionType *functype = functypes[syncid]; assert(functype);
   const char *funcname = syncfunc::getTernName(syncid);
   Constant *C = M.getOrInsertFunction(funcname, functype);
@@ -147,7 +155,7 @@ bool SyncInstr::runOnModule(Module &M) {
 
   initFuncTypes(M);
 
-  warnEscapeFuncs();
+  warnEscapeFuncs(M);
 
   // replace calls to sync functions with calls to tern hooks
   forallbb(M, BB) {
@@ -179,7 +187,6 @@ bool SyncInstr::runOnModule(Module &M) {
 }
 
 } // namespace tern
-
 
 namespace {
 

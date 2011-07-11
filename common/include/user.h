@@ -1,10 +1,8 @@
-/* Author: Junfeng Yang (junfeng@cs.columbia.edu) */
-/* -*- Mode: C++ -*- */
+/* Author: Junfeng Yang (junfeng@cs.columbia.edu) -*- Mode: C++ -*- */
+#ifndef __TERN_COMMON_USER_H
+#define __TERN_COMMON_USER_H
 
-#ifndef __TERN_COMMON_TERN_USER_H
-#define __TERN_COMMON_TERN_USER_H
-
-/* users can manually insert these three methods to their programs */
+/* users can choose to manually insert these methods to their programs */
 
 #ifdef __cplusplus
 extern "C" {
@@ -12,7 +10,7 @@ extern "C" {
 
   /* mark memory [@addr, @addr+@nbytes) as symbolic; @symname names this
    * symbolic memory for debugging */
-  void tern_symbolic(void *addr, unsigned nbytes, const char *symname);
+  void tern_symbolic(void *addr, int nbytes, const char *symname);
 
   /* for server programs, users manually insert these two methods at the
    * beginning and the end of the processing of a user request.  @addr and
@@ -20,7 +18,7 @@ extern "C" {
    *
    * for batch programs, tern inserts these two methods automatically at
    * thread begin and end.  @addr is set to NULL.  */
-  void tern_task_begin(void *addr, unsigned nbytes, const char *name);
+  void tern_task_begin(void *addr, int nbytes, const char *name);
   void tern_task_end(void);
 
 #ifdef __cplusplus

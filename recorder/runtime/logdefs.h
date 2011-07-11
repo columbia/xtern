@@ -1,5 +1,4 @@
-/* Author: Junfeng Yang (junfeng@cs.columbia.edu) */
-/* -*- Mode: C++ -*- */
+/* Author: Junfeng Yang (junfeng@cs.columbia.edu) -*- Mode: C++ -*- */
 
 #ifndef __TERN_RECORDER_LOGDEFS_H
 #define __TERN_RECORDER_LOGDEFS_H
@@ -55,7 +54,7 @@ enum {
   struct CallRec: public InsidRec {
     short    seq;
     short    narg;
-    void*    func;
+    int      funcid;
     uint64_t args[MAX_INLINE_ARGS];
   };
   BOOST_STATIC_ASSERT(sizeof(CallRec)<=RECORD_SIZE);
@@ -70,7 +69,7 @@ enum {
   struct ReturnRec: public InsidRec {
     short    seq;
     short    narg;
-    void*    func;
+    int      funcid;
     uint64_t data;
   };
   BOOST_STATIC_ASSERT(sizeof(ReturnRec)<=RECORD_SIZE);

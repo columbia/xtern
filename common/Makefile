@@ -6,6 +6,6 @@ LEVEL := ..
 #
 # List all of the subdirectories that we will compile.
 #
-DIRS := lib instr
+DIRS := lib instr runtime
 
 include $(LEVEL)/Makefile.common

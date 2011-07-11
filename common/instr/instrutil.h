@@ -1,5 +1,4 @@
-/* Author: Junfeng Yang (junfeng@cs.columbia.edu) */
-/* -*- Mode: C++ -*- */
+/* Author: Junfeng Yang (junfeng@cs.columbia.edu) -*- Mode: C++ -*- */
 
 #ifndef __TERN_COMMON_INSTRUTIL_H
 #define __TERN_COMMON_INSTRUTIL_H
@@ -10,6 +9,7 @@ namespace tern {
 
 llvm::Value* getIntMetadata(const llvm::Instruction *I, const char* key);
 llvm::Value* getInsID(const llvm::Instruction *I);
+bool funcEscapes(llvm::Function* F);
 
 }
 

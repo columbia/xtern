@@ -2,6 +2,9 @@
 #include "instrutil.h"
 #include "llvm/Metadata.h"
 #include "llvm/Constants.h"
+#include "llvm/Function.h"
+#include "llvm/Support/CallSite.h"
+#include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
 
@@ -19,6 +22,29 @@ Value* getIntMetadata(const Instruction *I, const char* key) {
 
 Value* getInsID(const Instruction *I) {
   return getIntMetadata(I, "ins_id");
+}
+
+bool funcEscapes(Function* F) {
+  CallSite cs;
+  for(Value::use_iterator ui=F->use_begin(), E=F->use_end();
+      ui != E; ++ui) {
+    Instruction *I = dyn_cast<Instruction>(*ui);
+    if(!I) // used in any ways not as the function in a call ==> escape
+      return true;
+    switch(I->getOpcode()) {
+    case Instruction::Call:
+    case Instruction::Invoke: { // used in a call ...
+      CallSite cs(I);
+      for(CallSite::arg_iterator ai=cs.arg_begin(); ai!=cs.arg_end(); ++ai)
+        if(*ai == I) // but as an argument ==> escape
+          return true;
+    }
+      break;
+    default: // used in any other ways ==> escape
+      return true;
+    }
+  }
+  return false;
 }
 
 }

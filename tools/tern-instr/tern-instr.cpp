@@ -12,6 +12,7 @@
 
 #include "common/id-manager/IDTagger.h"
 
+#include "common/instr/initinstr.h"
 #include "common/instr/syncinstr.h"
 #include "recorder/instr/loginstr.h"
 
@@ -61,6 +62,7 @@ int main(int argc, char **argv) {
   Passes.add(new IDTagger);
   Passes.add(new SyncInstr);
   Passes.add(new LogInstr);
+  Passes.add(new InitInstr);
 
   // output analysis.bc
 

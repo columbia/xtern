@@ -6,7 +6,6 @@
 #include "llvm/LLVMContext.h"
 #include "llvm/Support/TypeBuilder.h"
 #include "llvm/Support/IRBuilder.h"
-#include "llvm/Support/IRBuilder.h"
 
 using namespace llvm;
 using namespace std;
@@ -30,7 +29,7 @@ bool LogInstr::runOnModule(Module &M) {
   addrType = Type::getInt8PtrTy(*context);
   dataType = Type::getInt64Ty(*context);
 
-  getEscapeFuncs(M);
+  getLoggableAndEscapeFuncs(M);
   markLoggableCallees(M);
 
   functype = TypeBuilder<void (types::i<32>), false>::get(*context);
@@ -57,21 +56,16 @@ bool LogInstr::runOnModule(Module &M) {
   return true;
 }
 
-void LogInstr::getEscapeFuncs(Module &M) {
+void LogInstr::getLoggableAndEscapeFuncs(Module &M) {
   unsigned funcid = Intrinsic::num_intrinsics;
   forallfunc(M, fi) {
-    if(!loggableCallee(fi))
-      continue;
-    for(Value::use_iterator ui=fi->use_begin(), E=fi->use_end();
-        ui != E; ++ui) {
-      if(isa<CallInst>(*ui) || isa<InvokeInst>(*ui)) { // use is call
-        CallSite cs(dyn_cast<Instruction>(*ui));
-        for(CallSite::arg_iterator ai=cs.arg_begin(); ai!=cs.arg_end(); ++ai)
-          if(*ai == fi) {// use is argument of a call ==> escape
-            escape_funcs[fi] = ++funcid;
-          }
-      } else { // any other use ==> escape
-        escape_funcs[fi] = ++funcid;
+    if(loggableCallee(fi)) {
+      func_map_t::iterator i = loggables.find(fi);
+      if(i == loggables.end()) {
+        ++ funcid;
+        loggables[fi] = funcid;
+        if(funcEscapes(fi))
+          escapes[fi] = funcid;
       }
     }
   }
@@ -85,15 +79,29 @@ void LogInstr::markLoggableCallees(Module &M) {
   Function *markall = dyn_cast<Function>
     (M.getOrInsertFunction(markall_name, functype));
   BasicBlock *entry = BasicBlock::Create(*context, "entry", markall);
+  IRBuilder<> builder(entry);
 
-  const char *markone_name = "tern_loggable_callee";
+  Function *markone;
+  const char *markone_name;
+
+  markone_name = "tern_loggable_callee";
   functype = TypeBuilder<void (types::i<8>*, types::i<32>),
     false>::get(*context);
-  Function *markone = dyn_cast<Function>
+  markone = dyn_cast<Function>
     (M.getOrInsertFunction(markone_name, functype));
+  forall(func_map_t, fi, loggables) {
+    Value *args[2];
+    args[0] = builder.CreateBitCast(fi->first, addrType, "tern_funcast");
+    args[1] = ConstantInt::get(Type::getInt32Ty(*context), fi->second);
+    builder.CreateCall2(markone, args[0], args[1]);
+  }
 
-  IRBuilder<> builder(entry);
-  forall(escape_map_t, fi, escape_funcs) {
+  markone_name = "tern_escape_callee";
+  functype = TypeBuilder<void (types::i<8>*, types::i<32>),
+    false>::get(*context);
+  markone = dyn_cast<Function>
+    (M.getOrInsertFunction(markone_name, functype));
+  forall(func_map_t, fi, escapes) {
     Value *args[2];
     args[0] = builder.CreateBitCast(fi->first, addrType, "tern_funcast");
     args[1] = ConstantInt::get(Type::getInt32Ty(*context), fi->second);

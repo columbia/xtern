@@ -1,5 +1,4 @@
-/* Author: Junfeng Yang (junfeng@cs.columbia.edu) */
-/* -*- Mode: C++ -*- */
+/* Author: Junfeng Yang (junfeng@cs.columbia.edu) -*- Mode: C++ -*- */
 
 #ifndef __TERN_RECORDER_LOGGABLE_H
 #define __TERN_RECORDER_LOGGABLE_H

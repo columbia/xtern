@@ -1,6 +1,4 @@
-/* Author: Junfeng Yang (junfeng@cs.columbia.edu) */
-/* -*- Mode: C++ -*- */
-
+/* Author: Junfeng Yang (junfeng@cs.columbia.edu) -*- Mode: C++ -*- */
 #ifndef __TERN_RECORDER_LOG_H
 #define __TERN_RECORDER_LOG_H
 
@@ -22,8 +20,10 @@ extern "C" {
   void tern_log_thread_exit(void);
   const char* tern_log_name(void);
 
-  // this function will be replace by loginstr
+  /* this function will be replaced by loginstr */
   void tern_all_loggable_callees(void) __attribute((weak));
+  void tern_loggable_callee(void* func, unsigned funcid);
+  void tern_escape_callee(void* func, unsigned funcid);
 
 #ifdef __cplusplus
 }

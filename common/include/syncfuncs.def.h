@@ -1,15 +1,15 @@
-/* Author: Junfeng Yang (junfeng@cs.columbia.edu) */
-/* -*- Mode: C++ -*- */
+/* Author: Junfeng Yang (junfeng@cs.columbia.edu) -*- Mode: C++ -*- */
 
 /* This is the central table that lists the synchronization functions and
  * blocking system calls that tern hooks, as well as tern builtin synch
  * functions. */
 
+/* intentionally no #ifdef guard */
+
 /* format:
  *   DEF(func, kind, ret_type, arg0, arg1, ...)
  *   DEFTERN(func)  for tern builtin sync events
  */
-
 
 /* pthread synchronization operations */
 DEF(pthread_create,         Synchronization, int, pthread_t *thread, pthread_attr_t *attr, void* (*start_routine)(void *), void *arg)
@@ -53,3 +53,5 @@ DEFTERN(tern_task_begin,   TernBuiltin)
 DEFTERN(tern_task_end,     TernBuiltin)
 DEFTERN(tern_fix_up,       TernBuiltin)
 DEFTERN(tern_fix_down,     TernBuiltin)
+DEFTERN(tern_symbolic,     TernBuiltin)
+

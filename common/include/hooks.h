@@ -1,8 +1,6 @@
-/* Author: Junfeng Yang (junfeng@cs.columbia.edu) */
+/* Author: Junfeng Yang (junfeng@cs.columbia.edu) -*- Mode: C++ -*- */
 #ifndef __TERN_COMMON_HOOKS_H
 #define __TERN_COMMON_HOOKS_H
-
-/* -*- Mode: C++ -*- */
 
 /* declare hooks to synchronization methods and blocking system calls. add
  *  one extra argument @insid to each hook for debugging */

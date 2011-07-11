@@ -22,7 +22,7 @@ loadstore loadstores[5] = {
 
 struct call {
   unsigned insid;
-  void *func;
+  void* func;
   short narg;
   uint64_t data;
   uint64_t args[10];
@@ -35,6 +35,31 @@ call calls[5] = {
   {100,  (void*)(intptr_t)mmap,   6, 0xefdeadbe, {0, 10000, PROT_WRITE|PROT_READ, MAP_SHARED, 20, 10000}},
   {10000,(void*)(intptr_t)strcpy, 2, 0xadbeefde, {0x88888800, 0x99999900}},
 };
+
+struct func {
+  void* func;
+  int id;
+};
+
+func funcs[5] = {
+  {(void*)(intptr_t)getpid, 600},
+  {(void*)(intptr_t)read, 601},
+  {(void*)(intptr_t)write, 602},
+  {(void*)(intptr_t)mmap, 603},
+  {(void*)(intptr_t)strcpy, 604},
+};
+
+void tern_all_loggable_callees(void) {
+  for(unsigned i=0; i<sizeof(funcs)/sizeof(funcs[0]); ++i)
+    tern_loggable_callee(funcs[i].func, funcs[i].id);
+}
+
+int find_func_id(void *func) {
+  for(unsigned i=0; i<sizeof(funcs)/sizeof(funcs[0]); ++i)
+    if(funcs[i].func == func)
+      return funcs[i].id;
+  return -1;
+}
 
 static inline
 std::ostream& operator<<(std::ostream& os, const Log::reverse_rec_iterator& ri) {
@@ -298,7 +323,7 @@ TEST(recordertest, call) {
       EXPECT_EQ(call->insid, calls[i].insid);
       EXPECT_EQ(call->seq, seq);
       EXPECT_EQ(call->narg, calls[i].narg);
-      EXPECT_EQ(call->func, calls[i].func);
+      EXPECT_EQ(call->funcid, find_func_id(calls[i].func));
 
       // inline args
       rec_narg = std::min(calls[i].narg, (short)MAX_INLINE_ARGS);
@@ -330,7 +355,7 @@ TEST(recordertest, call) {
       EXPECT_EQ(ret->type, ReturnRecTy);
       EXPECT_EQ(ret->seq, seq);
       EXPECT_EQ(ret->narg, calls[i].narg);
-      EXPECT_EQ(ret->func, calls[i].func);
+      EXPECT_EQ(ret->funcid, find_func_id(calls[i].func));
       EXPECT_EQ(ret->data, calls[i].data);
     }
       i = (i+1) % (sizeof(calls)/sizeof(calls[0]));  // next call in calls

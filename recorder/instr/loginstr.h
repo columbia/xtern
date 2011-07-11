@@ -1,5 +1,4 @@
-/* Author: Junfeng Yang (junfeng@cs.columbia.edu) */
-/* -*- Mode: C++ -*- */
+/* Author: Junfeng Yang (junfeng@cs.columbia.edu) -*- Mode: C++ -*- */
 
 #ifndef __TERN_RECORDER_LOGINSTR_H
 #define __TERN_RECORDER_LOGINSTR_H
@@ -25,8 +24,9 @@ struct LogInstr: public llvm::ModulePass {
   llvm::Value       *logCall;
   llvm::Value       *logRet;
 
-  typedef std::tr1::unordered_map<llvm::Function*, unsigned> escape_map_t;
-  escape_map_t       escape_funcs;
+  typedef std::tr1::unordered_map<llvm::Function*, unsigned> func_map_t;
+  func_map_t       escapes;
+  func_map_t       loggables;
 
   LogInstr(): ModulePass(&ID) {}
   virtual bool runOnModule(llvm::Module &M);
@@ -43,7 +43,7 @@ struct LogInstr: public llvm::ModulePass {
   void instrInvoke(llvm::InvokeInst *invoke);
   void instrFirstNonPHI(llvm::Instruction *ins);
 
-  void getEscapeFuncs(llvm::Module &M);
+  void getLoggableAndEscapeFuncs(llvm::Module &M);
   void markLoggableCallees(llvm::Module &M);
 };
 
