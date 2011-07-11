@@ -4,9 +4,7 @@
 
 #include <stdint.h>
 
-#ifdef __cplusplus
 extern "C" {
-#endif
 
   void tern_log_insid(int insid);
   void tern_log_load(int insid, void* addr, uint64_t data);
@@ -14,19 +12,17 @@ extern "C" {
   void tern_log_call(int indir, int insid, short narg, void* func, ...);
   void tern_log_ret(int indir, int insid, short narg, void* func, uint64_t ret);
 
-  void tern_log_init();
-  void tern_log_exit(void);
-  void tern_log_thread_init(int tid);
-  void tern_log_thread_exit(void);
+  void tern_log_begin();
+  void tern_log_end(void);
+  void tern_log_thread_begin(int tid);
+  void tern_log_thread_end(void);
   const char* tern_log_name(void);
 
   /* this function will be replaced by loginstr */
-  void tern_all_loggable_callees(void) __attribute((weak));
+  void tern_all_loggable_callees(void);
   void tern_loggable_callee(void* func, unsigned funcid);
   void tern_escape_callee(void* func, unsigned funcid);
 
-#ifdef __cplusplus
 }
-#endif
 
 #endif

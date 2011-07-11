@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <errno.h>
 
 #include "helper.h"
 #include "runtime-interface.h"
@@ -25,7 +26,7 @@ static void *__tern_thread_func(void *arg) {
   // call pthread_exit())
   delete[] (void**)arg;
 
-  tern_task_begin(NULL, 0, NULL);
+  tern_thread_begin(NULL, 0, NULL);
   ret_val = user_thread_func(user_thread_arg);
   tern_pthread_exit(-1, ret_val); // calls tern_task_end() and pthread_exit()
   assert(0 && "unreachable");
@@ -37,17 +38,30 @@ int __tern_pthread_create(pthread_t *thread,  pthread_attr_t *attr,
   void **args;
 
   // use heap because stack of this func may be deallocated before the
-  // created thread reads the args
+  // created thread reads the @args
   args = new void*[2];
   args[0] = (void*)(intptr_t)user_thread_func;
   args[1] = user_thread_arg;
 
-  return pthread_create(thread, attr, __tern_thread_func, (void*)args);
+  int saved_errno, ret;
+  ret = pthread_create(thread, attr, __tern_thread_func, (void*)args);
+  if(ret < 0) {
+    saved_errno = errno;
+    delete[] (void**)args; // clean up memory for @args
+    errno = saved_errno;
+  }
+  return ret;
 }
 
 void __tern_prog_begin(void) {
-  atexit(tern_prog_end);
+  atexit(__tern_prog_end);
   tern_prog_begin();
+  tern_thread_begin(NULL, 0, NULL);
+}
+
+void __tern_prog_end (void) {
+  tern_thread_end();
+  tern_prog_end();
 }
 
 void __tern_symbolic(void *addr, int nbytes, const char *symname) {
@@ -64,4 +78,28 @@ void __tern_symbolic_argv(int argc, char **argv) {
   }
 }
 
+namespace tern {
 
+void tid_manager::on_pthread_create(pthread_t pthread_tid) {
+  p_t_map[pthread_tid] = nthread;
+  t_p_map[nthread] = pthread_tid;
+  ++ nthread;
+}
+
+pthread_t tid_manager::get_pthread_tid(int tern_tid) {
+  tern_to_pthread_map::iterator it = t_p_map.find(tern_tid);
+  if(it!=t_p_map.end())
+    return it->second;
+  return InvalidTid;
+}
+
+int tid_manager::get_tern_tid(pthread_t pthread_tid) {
+  pthread_to_tern_map::iterator it = p_t_map.find(pthread_tid);
+  if(it!=p_t_map.end())
+    return it->second;
+  return InvalidTid;
+}
+
+__thread int tid = 0; // main thread has tid 0
+
+}

@@ -18,8 +18,8 @@ extern "C" {
    *
    * for batch programs, tern inserts these two methods automatically at
    * thread begin and end.  @addr is set to NULL.  */
-  void tern_task_begin(void *addr, int nbytes, const char *name);
-  void tern_task_end(void);
+  void tern_thread_begin(void *addr, int nbytes, const char *name);
+  void tern_thread_end(void);
 
 #ifdef __cplusplus
 }

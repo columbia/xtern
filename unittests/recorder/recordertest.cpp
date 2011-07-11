@@ -74,8 +74,8 @@ std::ostream& operator<<(std::ostream& os, const Log::reverse_iterator& ri) {
 TEST(recordertest, rec_iterator) {
   const unsigned num = 10000;
 
-  tern_log_init();
-  tern_log_thread_init(0);
+  tern_log_begin();
+  tern_log_thread_begin(0);
 
   for(unsigned j=0; j<num; ++j) {
     unsigned i = j % (sizeof(loadstores)/sizeof(loadstores[0]));
@@ -89,8 +89,8 @@ TEST(recordertest, rec_iterator) {
     }
   }
 
-  tern_log_thread_exit();
-  tern_log_exit();
+  tern_log_thread_end();
+  tern_log_end();
 
   Log log(tern_log_name());
   Log::rec_iterator ri, rj;
@@ -145,8 +145,8 @@ TEST(recordertest, rec_iterator) {
 TEST(recordertest, iterator) {
   const unsigned num = 10000;
 
-  tern_log_init();
-  tern_log_thread_init(0);
+  tern_log_begin();
+  tern_log_thread_begin(0);
 
   for(unsigned j=0; j<num; ++j) {
     unsigned i = j % (sizeof(loadstores)/sizeof(loadstores[0]));
@@ -160,8 +160,8 @@ TEST(recordertest, iterator) {
     }
   }
 
-  tern_log_thread_exit();
-  tern_log_exit();
+  tern_log_thread_end();
+  tern_log_end();
 
   Log log(tern_log_name());
   Log::iterator ii, ij;
@@ -172,8 +172,8 @@ TEST(recordertest, loadstore) {
 
   const unsigned num = 10000;
 
-  tern_log_init();
-  tern_log_thread_init(0);
+  tern_log_begin();
+  tern_log_thread_begin(0);
 
   for(unsigned j=0; j<num; ++j) {
     unsigned i = j % (sizeof(loadstores)/sizeof(loadstores[0]));
@@ -187,8 +187,8 @@ TEST(recordertest, loadstore) {
     }
   }
 
-  tern_log_thread_exit();
-  tern_log_exit();
+  tern_log_thread_end();
+  tern_log_end();
 
   Log log(tern_log_name());
 
@@ -244,8 +244,8 @@ TEST(recordertest, call) {
 
   const unsigned num = 10000;
 
-  tern_log_init();
-  tern_log_thread_init(0);
+  tern_log_begin();
+  tern_log_thread_begin(0);
 
   for(unsigned j=0; j<num; ++j) {
     unsigned i = j % (sizeof(calls)/sizeof(calls[0]));
@@ -298,8 +298,8 @@ TEST(recordertest, call) {
     tern_log_ret(0, calls[i].insid, calls[i].narg, calls[i].func, calls[i].data);
   }
 
-  tern_log_thread_exit();
-  tern_log_exit();
+  tern_log_thread_end();
+  tern_log_end();
 
   Log log(tern_log_name());
 

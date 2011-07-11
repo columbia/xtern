@@ -4,7 +4,7 @@
  * blocking system calls that tern hooks, as well as tern builtin synch
  * functions. */
 
-/* intentionally no #ifdef guard */
+/* intentionally no include guard */
 
 /* format:
  *   DEF(func, kind, ret_type, arg0, arg1, ...)
@@ -49,8 +49,8 @@ DEF(sigwait,                BlockingSyscall, int, const sigset_t *set, int *sig)
 /* DEF(syscall,                BlockingSyscall, tern_, int, int) */ /* FIXME: why include generic syscall entry point? */
 /* DEF(ap_mpm_pod_check,       BlockingSyscall, tern_) */ /* FIXME: ap_mpm_pod_check is not a real lib call; needed for apache */
 
-DEFTERN(tern_task_begin,   TernBuiltin)
-DEFTERN(tern_task_end,     TernBuiltin)
+DEFTERN(tern_thread_begin, TernBuiltin)
+DEFTERN(tern_thread_end,   TernBuiltin)
 DEFTERN(tern_fix_up,       TernBuiltin)
 DEFTERN(tern_fix_down,     TernBuiltin)
 DEFTERN(tern_symbolic,     TernBuiltin)

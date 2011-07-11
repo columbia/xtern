@@ -46,6 +46,7 @@ void tern_escape_callee(void* func, unsigned funcid) {
   _escape_callees[func] = funcid;
 }
 
+void tern_all_loggable_callees(void) __attribute((weak));
 void tern_all_loggable_callees(void) {
   // empty function; will be replaced by loginstr
 }
@@ -179,14 +180,14 @@ void tern_log_ret(int indir, int insid, short narg, void* func, uint64_t data) {
   _off += RECORD_SIZE;
 }
 
-void tern_log_init() {
+void tern_log_begin() {
   tern_all_loggable_callees();
 }
 
-void tern_log_exit() {
+void tern_log_end() {
 }
 
-void tern_log_thread_init(int tid) {
+void tern_log_thread_begin(int tid) {
   _tid = tid;
   // TODO: get log output directory
   sprintf(_logfile, "tern-log-tid-%d", _tid);
@@ -199,7 +200,7 @@ const char* tern_log_name(void) {
   return _logfile;
 }
 
-void tern_log_thread_exit(void) {
+void tern_log_thread_end(void) {
   if(_buf)
     munmap(_buf, TRUNK_SIZE);
 
