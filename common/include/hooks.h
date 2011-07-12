@@ -19,7 +19,8 @@ extern "C" {
 
 # undef DEF
 # undef DEFTERN
-# define DEF(func, kind, rettype, args...)  rettype tern_ ## func (unsigned insid, args);
+# define DEF(func, kind, rettype, args...) \
+    rettype tern_ ## func (int insid, args);
 # define DEFTERN(func, kind)
 # include "syncfuncs.def.h"
 # undef DEF

@@ -14,7 +14,7 @@ extern "C" {
 
   void tern_log_begin();
   void tern_log_end(void);
-  void tern_log_thread_begin(int tid);
+  void tern_log_thread_begin(void);
   void tern_log_thread_end(void);
   const char* tern_log_name(void);
 

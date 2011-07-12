@@ -7,10 +7,17 @@
 #include <string.h>
 #include <errno.h>
 
+#include "util.h"
 #include "helper.h"
-#include "runtime-interface.h"
+#include "runtime-c-interface.h"
 
 typedef void * (*thread_func_t)(void*);
+
+/// just a wrapper to tern_thread_end() and pthread_exit()
+void tern_pthread_exit(int insid, void *retval) {
+  tern_thread_end();
+  pthread_exit(retval);
+}
 
 static void *__tern_thread_func(void *arg) {
 
@@ -22,14 +29,14 @@ static void *__tern_thread_func(void *arg) {
   args = (void**)arg;
   user_thread_func = (thread_func_t)((intptr_t)args[0]);
   user_thread_arg = args[1];
-  // free arg before calling user_thread_func, as it may not return (i.e.,
-  // call pthread_exit())
+  // free arg before calling user_thread_func as it may not return (i.e.,
+  // it may call pthread_exit())
   delete[] (void**)arg;
 
-  tern_thread_begin(NULL, 0, NULL);
+  tern_thread_begin();
   ret_val = user_thread_func(user_thread_arg);
-  tern_pthread_exit(-1, ret_val); // calls tern_task_end() and pthread_exit()
-  assert(0 && "unreachable");
+  tern_pthread_exit(-1, ret_val); // calls tern_thread_end() and pthread_exit()
+  assert_unreachable();
 }
 
 int __tern_pthread_create(pthread_t *thread,  pthread_attr_t *attr,
@@ -43,24 +50,21 @@ int __tern_pthread_create(pthread_t *thread,  pthread_attr_t *attr,
   args[0] = (void*)(intptr_t)user_thread_func;
   args[1] = user_thread_arg;
 
-  int saved_errno, ret;
+  int ret;
   ret = pthread_create(thread, attr, __tern_thread_func, (void*)args);
-  if(ret < 0) {
-    saved_errno = errno;
+  if(ret < 0)
     delete[] (void**)args; // clean up memory for @args
-    errno = saved_errno;
-  }
   return ret;
 }
 
 void __tern_prog_begin(void) {
   atexit(__tern_prog_end);
   tern_prog_begin();
-  tern_thread_begin(NULL, 0, NULL);
+  tern_thread_begin(); // main thread begins
 }
 
 void __tern_prog_end (void) {
-  tern_thread_end();
+  tern_thread_end(); // main thread ends
   tern_prog_end();
 }
 
@@ -78,28 +82,3 @@ void __tern_symbolic_argv(int argc, char **argv) {
   }
 }
 
-namespace tern {
-
-void tid_manager::on_pthread_create(pthread_t pthread_tid) {
-  p_t_map[pthread_tid] = nthread;
-  t_p_map[nthread] = pthread_tid;
-  ++ nthread;
-}
-
-pthread_t tid_manager::get_pthread_tid(int tern_tid) {
-  tern_to_pthread_map::iterator it = t_p_map.find(tern_tid);
-  if(it!=t_p_map.end())
-    return it->second;
-  return InvalidTid;
-}
-
-int tid_manager::get_tern_tid(pthread_t pthread_tid) {
-  pthread_to_tern_map::iterator it = p_t_map.find(pthread_tid);
-  if(it!=p_t_map.end())
-    return it->second;
-  return InvalidTid;
-}
-
-__thread int tid = 0; // main thread has tid 0
-
-}

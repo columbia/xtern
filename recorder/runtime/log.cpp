@@ -10,17 +10,16 @@
 #include <stdarg.h>
 #include <string.h>
 #include <tr1/unordered_map>
-#include "runtime-interface.h"
 #include "logdefs.h"
 #include "log.h"
+#include "common/runtime/tid.h"
+
 
 using namespace std;
 using namespace tern;
 
 static __thread char* _buf = NULL;
 static __thread unsigned _off = 0;
-
-static __thread int _tid = -1;
 
 static __thread int _fd = -1;
 static __thread off_t _foff = 0;
@@ -187,10 +186,9 @@ void tern_log_begin() {
 void tern_log_end() {
 }
 
-void tern_log_thread_begin(int tid) {
-  _tid = tid;
+void tern_log_thread_begin(void) {
   // TODO: get log output directory
-  sprintf(_logfile, "tern-log-tid-%d", _tid);
+  sprintf(_logfile, "tern-log-tid-%d", tern::tid_manager::self());
   _fd = open(_logfile, O_RDWR|O_CREAT, 0600);  assert(_fd >= 0);
   ftruncate(_fd, LOG_SIZE);
   log_map();
@@ -213,7 +211,6 @@ void tern_log_thread_end(void) {
 
   _buf = NULL;
   _off = 0;
-  _tid = 01;
   _fd = -1;
   _foff = 0;
 }

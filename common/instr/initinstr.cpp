@@ -43,7 +43,8 @@ void InitInstr::addSymbolicArgv(llvm::Module &M, llvm::Function *mainfunc) {
 }
 
 void InitInstr::addSymbolic(llvm::Module &M) {
-  // TODO.  add a call to __tern_symbolic for each read() or recv()
+  // TODO.  add a call to __tern_symbolic for each read() (for batch
+  // programs) and recv() (for server programs).
 }
 
 void InitInstr::getAnalysisUsage(AnalysisUsage &AU) const {

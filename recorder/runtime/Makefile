@@ -11,3 +11,5 @@ BUILD_ARCHIVE := 1
 MODULE_NAME := recruntime
 
 include $(LEVEL)/Makefile.common
+
+CXXFLAGS += -g

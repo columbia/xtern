@@ -3,7 +3,7 @@
 // RUN: %projbindir/tern-instr < %t1.ll > %t2.bc
 // RUN: llvm-ld -o %t3 %t2.bc %projlibdir/commonruntime.bc %projlibdir/recruntime.bc
 // RUN: llc -o %t3.s %t3.bc
-// RUN: g++ -g -o %t3 %t3.s
+// RUN: g++ -g -o %t3 %t3.s -lpthread
 // RUN: ./%t3 | grep "this is a test. another test. "
 
 #include <stdio.h>

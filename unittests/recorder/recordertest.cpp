@@ -75,7 +75,7 @@ TEST(recordertest, rec_iterator) {
   const unsigned num = 10000;
 
   tern_log_begin();
-  tern_log_thread_begin(0);
+  tern_log_thread_begin();
 
   for(unsigned j=0; j<num; ++j) {
     unsigned i = j % (sizeof(loadstores)/sizeof(loadstores[0]));
@@ -146,7 +146,7 @@ TEST(recordertest, iterator) {
   const unsigned num = 10000;
 
   tern_log_begin();
-  tern_log_thread_begin(0);
+  tern_log_thread_begin();
 
   for(unsigned j=0; j<num; ++j) {
     unsigned i = j % (sizeof(loadstores)/sizeof(loadstores[0]));
@@ -173,7 +173,7 @@ TEST(recordertest, loadstore) {
   const unsigned num = 10000;
 
   tern_log_begin();
-  tern_log_thread_begin(0);
+  tern_log_thread_begin();
 
   for(unsigned j=0; j<num; ++j) {
     unsigned i = j % (sizeof(loadstores)/sizeof(loadstores[0]));
@@ -245,7 +245,7 @@ TEST(recordertest, call) {
   const unsigned num = 10000;
 
   tern_log_begin();
-  tern_log_thread_begin(0);
+  tern_log_thread_begin();
 
   for(unsigned j=0; j<num; ++j) {
     unsigned i = j % (sizeof(calls)/sizeof(calls[0]));
@@ -363,5 +363,4 @@ TEST(recordertest, call) {
     }
   }
 }
-
 
