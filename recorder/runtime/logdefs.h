@@ -13,7 +13,7 @@ namespace tern {
 #define REC_TYPE_BITS   (3U)
 
 enum {
-  TRUNK_SIZE      = 16*1024*1024U,   // 16MB
+  TRUNK_SIZE      = 1024*1024*1024U,   // 1GB
   LOG_SIZE        = 1*TRUNK_SIZE,
   MAX_INLINE_ARGS = 2U,
   MAX_EXTRA_ARGS  = 3U

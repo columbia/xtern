@@ -1,6 +1,6 @@
-/* Author: Junfeng Yang (junfeng@cs.columbia.edu) */
 // RUN: %llvmgcc %s -g -O0 -c -o %t1.ll -S
 // RUN: %projbindir/tern-instr < %t1.ll > %t2.bc
+// RUN: llvm-dis -f %t2.bc
 // RUN: llvm-ld -o %t3 %t2.bc %projlibdir/commonruntime.bc %projlibdir/recruntime.bc
 // RUN: llc -o %t3.s %t3.bc
 // RUN: g++ -g -o %t3 %t3.s -lpthread

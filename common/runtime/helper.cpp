@@ -7,18 +7,11 @@
 #include <string.h>
 #include <errno.h>
 
-#include "util.h"
+#include "hooks.h"
+#include "runtime.h"
 #include "helper.h"
-#include "runtime-c-interface.h"
 
 typedef void * (*thread_func_t)(void*);
-
-/// just a wrapper to tern_thread_end() and pthread_exit()
-void tern_pthread_exit(int insid, void *retval) {
-  tern_thread_end();
-  pthread_exit(retval);
-}
-
 static void *__tern_thread_func(void *arg) {
 
   void **args;
@@ -36,7 +29,7 @@ static void *__tern_thread_func(void *arg) {
   tern_thread_begin();
   ret_val = user_thread_func(user_thread_arg);
   tern_pthread_exit(-1, ret_val); // calls tern_thread_end() and pthread_exit()
-  assert_unreachable();
+  assert(0 && "unreachable!");
 }
 
 int __tern_pthread_create(pthread_t *thread,  pthread_attr_t *attr,
@@ -58,6 +51,7 @@ int __tern_pthread_create(pthread_t *thread,  pthread_attr_t *attr,
 }
 
 void __tern_prog_begin(void) {
+  tern::Runtime::install();
   atexit(__tern_prog_end);
   tern_prog_begin();
   tern_thread_begin(); // main thread begins
@@ -81,4 +75,3 @@ void __tern_symbolic_argv(int argc, char **argv) {
     tern_symbolic(argv[i], strlen(argv[i])+1, arg);
   }
 }
-

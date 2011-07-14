@@ -1,6 +1,22 @@
-/* Author: Junfeng Yang (junfeng@cs.columbia.edu) */
 // RUN: %llvmgcc %s -O0 -c -o %t1.ll -S
 // RUN: %projbindir/tern-instr < %t1.ll -S > %t2.ll
+
+// Test load instrumentation
+// RUN: grep tern_log_load %t2.ll | grep -v declare | wc -l > %t2.count1
+// RUN: grep " load " %t2.ll | wc -l > %t2.count2
+// RUN: diff %t2.count1  %t2.count2
+
+// Test store instrumentation
+// RUN: grep tern_log_store %t2.ll | grep -v declare | wc -l > %t2.count1
+// RUN: grep " store " %t2.ll | wc -l > %t2.count2
+// RUN: diff %t2.count1  %t2.count2
+
+// Test call and ret matches
+// RUN: grep tern_log_call instr-call-test.cpp.tmp2.ll  | grep -v declare | wc -l > %t2.count1
+// RUN: grep tern_log_ret instr-call-test.cpp.tmp2.ll  | grep -v declare | wc -l > %t2.count2
+// RUN: diff %t2.count1  %t2.count2
+
+// TODO: test that external functions are instrumented
 
 #include <unistd.h>
 #include <stdint.h>
@@ -28,7 +44,7 @@ int main() {
   read(1, buf, sizeof(buf));
   write(0, buf, sizeof(buf));
 
-  // internal
+  // internal, not instrumented
   foo(buf, sizeof(buf));
 
   // indirect
@@ -55,5 +71,4 @@ int main() {
 
   // int64 return
   int64ret(buf, sizeof(buf));
-
 }

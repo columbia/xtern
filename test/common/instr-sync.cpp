@@ -1,6 +1,10 @@
-/* Author: Junfeng Yang (junfeng@cs.columbia.edu) */
 // RUN: %llvmgcc %s -g -O0 -c -o %t1.ll -S
 // RUN: %projbindir/tern-instr < %t1.ll -S > %t2.ll
+
+// compare number of pthread calls and tern_pthread calls
+// grep pthread_ instr-sync.cpp.tmp1.ll  | grep call  | grep -v llvm.dbg.declare | wc > %t2.count1
+// grep "\(pthread_\|sem_\)" instr-sync.cpp.tmp2.ll  | grep tern_ | grep -v tern_log | grep call > %t2.count2
+// diff %t2.count1 %t2.count2
 
 #include <stdint.h>
 #include <pthread.h>

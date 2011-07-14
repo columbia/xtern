@@ -45,6 +45,8 @@ DEF(accept,                 BlockingSyscall, int, int sockfd, struct sockaddr *a
 DEF(select,                 BlockingSyscall, int, int nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds, struct timeval *timeout)
 DEF(epoll_wait,             BlockingSyscall, int, int epfd, struct epoll_event *events, int maxevents, int timeout)
 DEF(sigwait,                BlockingSyscall, int, const sigset_t *set, int *sig)
+/* should include sched_yield */
+
 /* DEF(exit,                   BlockingSyscall, void, int status) */
 /* DEF(syscall,                BlockingSyscall, tern_, int, int) */ /* FIXME: why include generic syscall entry point? */
 /* DEF(ap_mpm_pod_check,       BlockingSyscall, tern_) */ /* FIXME: ap_mpm_pod_check is not a real lib call; needed for apache */

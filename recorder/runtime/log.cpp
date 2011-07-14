@@ -12,7 +12,7 @@
 #include <tr1/unordered_map>
 #include "logdefs.h"
 #include "log.h"
-#include "common/runtime/tid.h"
+#include "common/runtime/scheduler.h"
 
 
 using namespace std;
@@ -188,7 +188,7 @@ void tern_log_end() {
 
 void tern_log_thread_begin(void) {
   // TODO: get log output directory
-  sprintf(_logfile, "tern-log-tid-%d", tern::tid_manager::self());
+  sprintf(_logfile, "tern-log-tid-%d", tern::Scheduler::self());
   _fd = open(_logfile, O_RDWR|O_CREAT, 0600);  assert(_fd >= 0);
   ftruncate(_fd, LOG_SIZE);
   log_map();

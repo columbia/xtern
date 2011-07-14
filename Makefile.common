@@ -17,6 +17,10 @@ AdditionalIncludes = -I$(LLVM_ROOT) -I$(LLVM_ROOT)/common/include \
 CFLAGS   += -Wno-variadic-macros $(AdditionalIncludes)
 CXXFLAGS += -Wno-variadic-macros $(AdditionalIncludes)
 
+ifeq ($(BuildMode),Debug)
+  DEBUG_RUNTIME = 1
+endif
+
 # Emit a warning if can't find llvm-config 
 LLVMBuildMode := $(shell $(LLVM_CONFIG) --build-mode)
 ifeq ($(strip $(LLVMBuildMode)),)
