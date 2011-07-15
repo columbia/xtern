@@ -47,7 +47,7 @@ void RRSchedulerCV::getTurnHelper(bool doLock, bool doUnlock) {
     pthread_cond_wait(&waitcv[tid], &lock);
 
   SELFCHECK;
-  dprintf("%d got turn\n", self());
+  dprintf("RRSchedulerCV: %d: got turn\n", self());
 
   if(doUnlock)
     pthread_mutex_unlock(&lock);
@@ -77,7 +77,7 @@ void RRSchedulerCV::waitHelper(void *chan, bool doLock, bool doUnlock) {
   while(waitvar[tid])
     pthread_cond_wait(&waitcv[tid], &lock);
 
-  dprintf("%d: wake up from %p\n", self(), chan);
+  dprintf("RRSchedulerCV: %d: wake up from %p\n", self(), chan);
 
   if(doUnlock)
     pthread_mutex_unlock(&lock);
@@ -92,7 +92,7 @@ void RRSchedulerCV::waitFirstHalf(void *chan, bool doLock) {
   if(doLock)
     pthread_mutex_lock(&lock);
 
-  dprintf("%d: waiting (no CV) on %p\n", self(), chan);
+  dprintf("RRSchedulerCV: %d: waiting (no CV) on %p\n", self(), chan);
 
   int tid = self();
   assert(waitvar[tid]==NULL && "thread already waits!");
@@ -114,7 +114,7 @@ void RRSchedulerCV::next(void) {
     int tid = runq.front();
     assert(tid>=0 && tid < Scheduler::nthread);
     pthread_cond_signal(&waitcv[tid]);
-    dprintf("%d gives turn to %d\n", self(), tid);
+    dprintf("RRSchedulerCV: %d gives turn to %d\n", self(), tid);
     SELFCHECK;
   }
 }
@@ -130,8 +130,8 @@ void RRSchedulerCV::signalHelper(void *chan, bool all,
 
   assert(chan && "can't signal/broadcast  NULL");
   assert(self() == runq.front());
-  const char* type = (all?"broadcast":"signal");
-  dprintf("%d: %s %p\n", self(), type, chan);
+  dprintf("RRSchedulerCV: %d: %s %p\n", 
+          self(), (all?"broadcast":"signal"), chan);
 
   // use delete-safe way of iterating the list in case @all is true
   for(cur=waitq.begin(); cur!=waitq.end();) {
@@ -144,7 +144,7 @@ void RRSchedulerCV::signalHelper(void *chan, bool all,
       waitq.erase(prv);
       runq.push_back(tid);
       pthread_cond_signal(&waitcv[tid]);
-      dprintf("%d: signaled %d(%p)\n", self(), tid, chan);
+      dprintf("RRSchedulerCV: %d: signaled %d(%p)\n", self(), tid, chan);
       if(!all)
         break;
     }

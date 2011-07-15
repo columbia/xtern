@@ -5,7 +5,11 @@
 // test the x86 .a libraries
 // RUN: llc -o %t2.s %t2.bc
 // RUN: g++ -g -o %t2 %t2.s -L %projlibdir -lcommonruntime -lrecruntime -lpthread
-// RUN: ./%t2
+// RUN: ./%t2 | sort > %t2.out
+// RUN: diff %t2.out %s.out > /dev/null
+
+// stress
+// RUN: ./%t2 && ./%t2 && ./%t2  && ./%t2  && ./%t2  && ./%t2  && ./%t2
 
 // test the LLVM .bc modules
 // RUN: llvm-ld -o %t3 %t2.bc %projlibdir/commonruntime.bc %projlibdir/recruntime.bc
@@ -13,7 +17,7 @@
 // RUN: llc -o %t3.s %t3.bc
 // RUN: g++ -g -o %t3 %t3.s -lpthread
 // RUN: ./%t3 | sort > %t3.out
-// RUN: diff %t3.out %s.out
+// RUN: diff %t3.out %s.out > /dev/null
 
 // stress
 // RUN: ./%t3 && ./%t3 && ./%t3  && ./%t3  && ./%t3  && ./%t3  && ./%t3

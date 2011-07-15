@@ -1,7 +1,7 @@
 // Authors: Junfeng Yang (junfeng@cs.columbia.edu).  Refactored from
 // Heming's Memoizer code
 
-#include "log.h"
+#include "logger.h"
 #include "recruntime.h"
 #include "recscheduler.h"
 
@@ -16,18 +16,18 @@ using namespace std;
 namespace tern {
 
 void InstallRuntime() {
-  //Runtime::the = new RecorderRT<FCFSScheduler>();
-  Runtime::the = new RecorderRT<RRSchedulerCV>();
+  Runtime::the = new RecorderRT<FCFSScheduler>();
+  //Runtime::the = new RecorderRT<RRSchedulerCV>();
 }
 
 template <typename _S>
 void RecorderRT<_S>::progBegin(void) {
-  tern_log_begin();
+  Logger::progBegin();
 }
 
 template <typename _S>
 void RecorderRT<_S>::progEnd(void) {
-  tern_log_end();
+  Logger::progEnd();
 }
 
 template <typename _S>
@@ -37,10 +37,10 @@ void RecorderRT<_S>::threadBegin(void) {
   sem_wait(&thread_create_sem);
 
   _S::threadBegin();
+  Logger::threadBegin(_S::self());
   syncid = tick();
   _S::putTurn();
 
-  tern_log_thread_begin();
   //logger.log(syncfunc::thread_begin, nsync);
 }
 
@@ -53,7 +53,7 @@ void RecorderRT<_S>::threadEnd() {
   _S::threadEnd();
 
   //logger.log(ins, syncfunc::thread_end, nsync);
-  tern_log_thread_end();
+  Logger::threadEnd();
 }
 
 /// We must assign logical tid of new thread while holding turn, or
@@ -284,7 +284,7 @@ int RecorderRT<_S>::pthreadCondSignal(int ins, pthread_cond_t *cv){
   int ret, syncid;
 
   _S::getTurnLN();
-  dprintf("%d: cond_signal(%p)\n", _S::self(), (void*)cv);
+  dprintf("RecorderRT: %d: cond_signal(%p)\n", _S::self(), (void*)cv);
   // use broadcast to wake up all waiters, so that we avoid pthread
   // nondeterministically wakes up an arbitrary thread.  If this thread is
   // different from the thread deterministically chosen by tern, we'll run
@@ -304,7 +304,7 @@ int RecorderRT<_S>::pthreadCondBroadcast(int ins, pthread_cond_t*cv){
   int ret, syncid;
 
   _S::getTurnLN();
-  dprintf("%d: cond_broadcast(%p)\n", _S::self(), (void*)cv);
+  dprintf("RecorderRT: %d: cond_broadcast(%p)\n", _S::self(), (void*)cv);
   ret = pthread_cond_broadcast(cv);
   assert(!ret && "failed sync calls are not yet supported!");
   _S::broadcastNN(cv);

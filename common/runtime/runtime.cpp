@@ -12,7 +12,9 @@ Runtime *Runtime::the = NULL;
 int __thread TidMap::self_tid  = -1;
 
 // make this a weak symbol so that a runtime implementation can replace it
-void __attribute((weak)) InstallRuntime();
+void __attribute((weak)) InstallRuntime() {
+  assert(0&&"A Runtime must define its own InstallRuntime() to instal itself!");
+}
 
 void tern_prog_begin() {
   tern::Runtime::the->progBegin();

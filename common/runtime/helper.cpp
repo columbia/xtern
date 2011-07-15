@@ -51,9 +51,6 @@ int __tern_pthread_create(pthread_t *thread,  pthread_attr_t *attr,
 }
 
 void __tern_prog_begin(void) {
-  //tern::Runtime::install();
-  assert(tern::InstallRuntime
-         && "A runtime must implement InstallRuntime() to install itself");
   tern::InstallRuntime();
   atexit(__tern_prog_end);
   tern_prog_begin();
