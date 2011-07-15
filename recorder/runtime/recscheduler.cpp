@@ -14,23 +14,24 @@ using namespace tern;
 #  define dprintf(fmt...)
 #endif
 
-void RRSchedulerCV::threadEnd() {
+void RRSchedulerCV::threadEnd(pthread_t self_th) {
   assert(self() == runq.front());
 
   pthread_mutex_lock(&lock);
-  signalHelper((void*)pthread_self(), OneThread, NoLock, NoUnlock);
+  signalHelper((void*)self_th, OneThread, NoLock, NoUnlock);
   next();
-  onThreadEnd();
+  Parent::threadEnd(self_th);
   pthread_mutex_unlock(&lock);
 }
 
-RRSchedulerCV::RRSchedulerCV() {
+RRSchedulerCV::RRSchedulerCV(pthread_t main_th): Parent(main_th) {
   pthread_mutex_init(&lock, NULL);
   for(unsigned i=0; i<MaxThreads; ++i) {
     pthread_cond_init(&waitcv[i], NULL);
     waitvar[i] = NULL;
   }
-  runq.push_back(MainThreadTid); // main thread
+  assert(self() == MainThreadTid && "tid hasn't been initialized!");
+  runq.push_back(self()); // main thread
 }
 
 /// check if current thread is head of runq; otherwise, wait on the cond

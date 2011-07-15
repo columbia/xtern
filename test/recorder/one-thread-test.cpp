@@ -1,10 +1,23 @@
 // RUN: %llvmgcc %s -g -O0 -c -o %t1.ll -S
 // RUN: %projbindir/tern-instr < %t1.ll > %t2.bc
 // RUN: llvm-dis -f %t2.bc
+
+// test the x86 .a libraries
+// RUN: llc -o %t2.s %t2.bc
+// RUN: g++ -g -o %t2 %t2.s -L %projlibdir -lcommonruntime -lrecruntime -lpthread
+// RUN: ./%t2 | grep "this is a test. another test. "
+
+// stress
+// RUN: ./%t2 && ./%t2 && ./%t2  && ./%t2  && ./%t2  && ./%t2  && ./%t2
+
+// test the LLVM .bc modules
 // RUN: llvm-ld -o %t3 %t2.bc %projlibdir/commonruntime.bc %projlibdir/recruntime.bc
 // RUN: llc -o %t3.s %t3.bc
 // RUN: g++ -g -o %t3 %t3.s -lpthread
 // RUN: ./%t3 | grep "this is a test. another test. "
+
+// stress
+// RUN: ./%t3 && ./%t3 && ./%t3  && ./%t3  && ./%t3  && ./%t3  && ./%t3
 
 #include <stdio.h>
 #include <stdlib.h>

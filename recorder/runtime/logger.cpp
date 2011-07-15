@@ -130,8 +130,7 @@ void Logger::logRet(int indir, int insid, short narg, void* func, uint64_t data)
 
 
 Logger::Logger(int tid) {
-  // TODO: get log output directory
-  sprintf(logFile, "tern-log-tid-%d", tid);
+  SetLogName(logFile, sizeof(logFile), tid);
   foff = 0;
   fd = open(logFile, O_RDWR|O_CREAT, 0600);
   assert(fd >= 0 && "can't open log file!");

@@ -18,43 +18,44 @@ struct TidMap {
   typedef std::tr1::unordered_set<pthread_t>      pthread_tid_set;
 
   /// create a new tern tid and map pthread_tid to this new id
-  int onThreadCreate(pthread_t pthread_tid) {
-    pthread_to_tern_map::iterator it = p_t_map.find(pthread_tid);
+  int threadCreate(pthread_t pthread_th) {
+    pthread_to_tern_map::iterator it = p_t_map.find(pthread_th);
     assert(it==p_t_map.end() && "pthread tid already in map!");
-    p_t_map[pthread_tid] = nthread;
-    t_p_map[nthread] = pthread_tid;
+    p_t_map[pthread_th] = nthread;
+    t_p_map[nthread] = pthread_th;
     return nthread++;
   }
 
   /// sets thread-local tern tid
-  void onThreadBegin() {
-    pthread_to_tern_map::iterator it = p_t_map.find(pthread_self());
+  void threadBegin(pthread_t self_th) {
+    pthread_to_tern_map::iterator it = p_t_map.find(self_th);
     assert(it!=p_t_map.end() && "pthread tid not in map!");
     self_tid = it->second;
   }
 
   /// remove thread @tern_tid from the maps
-  void onThreadEnd() {
+  void threadEnd(pthread_t self_th) {
     tern_to_pthread_map::iterator it = t_p_map.find(self());
     assert(it!=t_p_map.end() && "tern tid not in map!");
+    assert(self_th==it->second && "mismatch between pthread tid and tern tid!");
     zombies.insert(it->second);
     p_t_map.erase(it->second);
     t_p_map.erase(it);
   }
 
-  void onThreadJoin(pthread_t pthread_tid) {
-    zombies.erase(pthread_tid);
+  void threadJoin(pthread_t pthread_th) {
+    zombies.erase(pthread_th);
   }
 
-  int getTernTid(pthread_t pthread_tid) {
-    pthread_to_tern_map::iterator it = p_t_map.find(pthread_tid);
+  int getTernTid(pthread_t pthread_th) {
+    pthread_to_tern_map::iterator it = p_t_map.find(pthread_th);
     if(it!=p_t_map.end())
       return it->second;
     return InvalidTid;
   }
 
-  bool isZombie(pthread_t pthread_tid) {
-    pthread_tid_set::iterator it = zombies.find(pthread_tid);
+  bool isZombie(pthread_t pthread_th) {
+    pthread_tid_set::iterator it = zombies.find(pthread_th);
     return it!=zombies.end();
   }
 
@@ -62,9 +63,13 @@ struct TidMap {
   static int self() { return self_tid; }
   static __thread int self_tid;
 
-  TidMap() {
+  TidMap(pthread_t main_th) {
     nthread = 0;
-    onThreadCreate(pthread_self()); // main thread
+    // add tid mappings for main thread
+    threadCreate(main_th);
+    // initialize self_tid for main thread; main thread will actually call
+    // threadBegin() again, but the op is idempotent, so doesn't matter
+    threadBegin(main_th);
   }
 
   pthread_to_tern_map p_t_map;
@@ -113,13 +118,18 @@ struct Scheduler: public TidMap {
   void broadcast (void *chan) { }
 
   /// begin a thread & get the turn; called right after the thread begins
-  void threadBegin(void)  { }
+  void threadBegin(pthread_t self_th)  { TidMap:: threadBegin(self_th); }
 
   /// end a thread & give up turn; called right before the thread exits
-  void threadEnd(void)  { }
+  void threadEnd(pthread_t self_th)  { TidMap:: threadEnd(self_th); }
 
   /// thread @new_th is just created; must call with turn held
-  void threadCreate(pthread_t new_th) { }
+  void threadCreate(pthread_t new_th) { TidMap:: threadCreate(new_th); }
+
+  /// join thread @th; must call with turn held
+  void threadJoin(pthread_t th) { TidMap:: threadJoin(th); }
+
+  Scheduler(pthread_t main_th): TidMap(main_th) {}
 };
 
 

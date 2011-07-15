@@ -82,6 +82,10 @@ static inline int NumExtraArgsRecords(int narg) {
   return (((narg)-MAX_INLINE_ARGS+MAX_EXTRA_ARGS-1)/MAX_EXTRA_ARGS);
 }
 
+static inline int SetLogName(char *buf, size_t sz, int tid) {
+  return snprintf(buf, sz, "tern-log-tid-%d", tid);
+}
+
 } // namespace tern
 
 #endif

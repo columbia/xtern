@@ -1,6 +1,6 @@
-/* Author: Junfeng Yang (junfeng@cs.columbia.edu) */
 #include "gtest/gtest.h"
-#include "recorder/runtime/log.h"
+#include "recorder/runtime/loghooks.h"
+#include "recorder/runtime/logger.h"
 #include "recorder/access/logaccess.h"
 
 using namespace tern;
@@ -74,8 +74,8 @@ std::ostream& operator<<(std::ostream& os, const Log::reverse_iterator& ri) {
 TEST(recordertest, rec_iterator) {
   const unsigned num = 10000;
 
-  tern_log_begin();
-  tern_log_thread_begin();
+  Logger::progBegin();
+  Logger::threadBegin(0);
 
   for(unsigned j=0; j<num; ++j) {
     unsigned i = j % (sizeof(loadstores)/sizeof(loadstores[0]));
@@ -89,10 +89,13 @@ TEST(recordertest, rec_iterator) {
     }
   }
 
-  tern_log_thread_end();
-  tern_log_end();
+  Logger::threadEnd();
+  Logger::progEnd();
 
-  Log log(tern_log_name());
+  char file[64];
+  SetLogName(file, sizeof(file), 0);
+  Log log(file);
+
   Log::rec_iterator ri, rj;
 
   ri = log.rec_begin();
@@ -145,8 +148,8 @@ TEST(recordertest, rec_iterator) {
 TEST(recordertest, iterator) {
   const unsigned num = 10000;
 
-  tern_log_begin();
-  tern_log_thread_begin();
+  Logger::progBegin();
+  Logger::threadBegin(0);
 
   for(unsigned j=0; j<num; ++j) {
     unsigned i = j % (sizeof(loadstores)/sizeof(loadstores[0]));
@@ -160,10 +163,13 @@ TEST(recordertest, iterator) {
     }
   }
 
-  tern_log_thread_end();
-  tern_log_end();
+  Logger::threadEnd();
+  Logger::progEnd();
 
-  Log log(tern_log_name());
+  char file[64];
+  SetLogName(file, sizeof(file), 0);
+  Log log(file);
+
   Log::iterator ii, ij;
 }
 
@@ -172,8 +178,8 @@ TEST(recordertest, loadstore) {
 
   const unsigned num = 10000;
 
-  tern_log_begin();
-  tern_log_thread_begin();
+  Logger::progBegin();
+  Logger::threadBegin(0);
 
   for(unsigned j=0; j<num; ++j) {
     unsigned i = j % (sizeof(loadstores)/sizeof(loadstores[0]));
@@ -187,10 +193,12 @@ TEST(recordertest, loadstore) {
     }
   }
 
-  tern_log_thread_end();
-  tern_log_end();
+  Logger::threadEnd();
+  Logger::progEnd();
 
-  Log log(tern_log_name());
+  char file[64];
+  SetLogName(file, sizeof(file), 0);
+  Log log(file);
 
   Log::rec_iterator ri;
   unsigned j;
@@ -244,8 +252,8 @@ TEST(recordertest, call) {
 
   const unsigned num = 10000;
 
-  tern_log_begin();
-  tern_log_thread_begin();
+  Logger::progBegin();
+  Logger::threadBegin(0);
 
   for(unsigned j=0; j<num; ++j) {
     unsigned i = j % (sizeof(calls)/sizeof(calls[0]));
@@ -298,10 +306,12 @@ TEST(recordertest, call) {
     tern_log_ret(0, calls[i].insid, calls[i].narg, calls[i].func, calls[i].data);
   }
 
-  tern_log_thread_end();
-  tern_log_end();
+  Logger::threadEnd();
+  Logger::progEnd();
 
-  Log log(tern_log_name());
+  char file[64];
+  SetLogName(file, sizeof(file), 0);
+  Log log(file);
 
   Log::rec_iterator ri;
   unsigned i = 0;

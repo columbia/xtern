@@ -14,6 +14,8 @@
 namespace tern {
 
 struct FCFSScheduler: public Scheduler {
+  typedef Scheduler Parent;
+
   void getTurn(void) {
     pthread_mutex_lock(&lock);
   }
@@ -27,25 +29,21 @@ struct FCFSScheduler: public Scheduler {
 
   // no signal() or broadcast for FCFS
 
-  void threadBegin() {
+  void threadBegin(pthread_t self_th) {
     getTurn();
-    onThreadBegin();
+    Parent::threadBegin(self_th);
   }
 
-  void threadEnd() {
-    onThreadEnd();
+  void threadEnd(pthread_t self_th) {
+    Parent::threadEnd(self_th);
     putTurn();
-  }
-
-  void threadCreate(pthread_t new_th) {
-    onThreadCreate(new_th);
   }
 
   pthread_mutex_t *getLock() {
     return &lock;
   }
 
-  FCFSScheduler() {
+  FCFSScheduler(pthread_t main_th): Parent(main_th) {
     pthread_mutex_init(&lock, NULL);
   }
 
@@ -54,6 +52,7 @@ protected:
 };
 
 struct RRSchedulerCV: public Scheduler {
+  typedef Scheduler Parent;
 
   enum {Lock=true, NoLock=false, Unlock=true, NoUnlock=false,
         OneThread = false, AllThreads = true };
@@ -68,20 +67,20 @@ struct RRSchedulerCV: public Scheduler {
   /// must call with turn held
   void threadCreate(pthread_t new_th) {
     assert(self() == runq.front());
-    onThreadCreate(new_th);
+    Parent::threadCreate(new_th);
     runq.push_back(getTernTid(new_th));
   }
 
-  void threadBegin() {
+  void threadBegin(pthread_t self_th) {
     pthread_mutex_lock(&lock);
-    onThreadBegin();
+    Parent::threadBegin(self_th);
     getTurnHelper(false, false);
     pthread_mutex_unlock(&lock);
   }
 
   /// if any thread is waiting on our exit, wake it up, then give up turn
   /// and exit (not putting self back to the tail of runq)
-  void threadEnd();
+  void threadEnd(pthread_t self_th);
 
   /// deterministically wake up the first thread waiting on @chan on the
   /// wait queue; must call with the turn held
@@ -118,7 +117,7 @@ struct RRSchedulerCV: public Scheduler {
     return &lock;
   }
 
-  RRSchedulerCV();
+  RRSchedulerCV(pthread_t main_th);
 
 protected:
 

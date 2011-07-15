@@ -63,7 +63,7 @@ struct RecorderRT: public Runtime, public _Scheduler {
   /// this is just the turn count, so put in scheduler
   int tick() { return nsync++; }
 
-  RecorderRT() {
+  RecorderRT(): _Scheduler(pthread_self()) {
     int ret = sem_init(&thread_create_sem, 0, 1); // main thread
     assert(!ret && "can't initialize semaphore!");
   }

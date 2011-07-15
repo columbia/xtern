@@ -13,11 +13,18 @@
 
 using namespace std;
 
+namespace {
+// make sure templates are instantiated
+tern::RecorderRT<tern::FCFSScheduler> unused_fcfsRT;
+tern::RecorderRT<tern::RRSchedulerCV> unused_rrcvRT;
+}
+
 namespace tern {
 
+
 void InstallRuntime() {
-  Runtime::the = new RecorderRT<FCFSScheduler>();
-  //Runtime::the = new RecorderRT<RRSchedulerCV>();
+  // Runtime::the = new RecorderRT<FCFSScheduler>;
+  Runtime::the = new RecorderRT<RRSchedulerCV>;
 }
 
 template <typename _S>
@@ -36,7 +43,7 @@ void RecorderRT<_S>::threadBegin(void) {
 
   sem_wait(&thread_create_sem);
 
-  _S::threadBegin();
+  _S::threadBegin(pthread_self());
   Logger::threadBegin(_S::self());
   syncid = tick();
   _S::putTurn();
@@ -50,7 +57,7 @@ void RecorderRT<_S>::threadEnd() {
 
   _S::getTurn();
   syncid = tick();
-  _S::threadEnd();
+  _S::threadEnd(pthread_self());
 
   //logger.log(ins, syncfunc::thread_end, nsync);
   Logger::threadEnd();
@@ -114,7 +121,7 @@ int RecorderRT<_S>::pthreadJoin(int ins, pthread_t th, void **rv) {
   ret = pthread_join(th, rv);
   assert(!ret && "failed sync calls are not yet supported!");
 
-  _S::onThreadJoin(th);
+  _S::threadJoin(th);
   _S::putTurn();
 
   //logger.log(ins, syncfunc::pthread_join, syncid, tid);
