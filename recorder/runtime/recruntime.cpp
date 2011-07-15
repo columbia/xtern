@@ -5,53 +5,61 @@
 #include "recruntime.h"
 #include "recscheduler.h"
 
+#ifdef _DEBUG_RECORDER
+#  define dprintf(fmt...) fprintf(stderr, fmt)
+#else
+#  define dprintf(fmt...)
+#endif
+
 using namespace std;
 
 namespace tern {
 
-void Runtime::install() {
-  Runtime::the = new RecorderRuntime<FCFSScheduler>();
+void InstallRuntime() {
+  //Runtime::the = new RecorderRT<FCFSScheduler>();
+  Runtime::the = new RecorderRT<RRSchedulerCV>();
 }
 
-template <typename _Sched>
-void RecorderRuntime<_Sched>::progBegin(void) {
+template <typename _S>
+void RecorderRT<_S>::progBegin(void) {
   tern_log_begin();
 }
 
-template <typename _Sched>
-void RecorderRuntime<_Sched>::progEnd(void) {
+template <typename _S>
+void RecorderRT<_S>::progEnd(void) {
   tern_log_end();
 }
 
-template <typename _Sched>
-void RecorderRuntime<_Sched>::threadBegin(void) {
+template <typename _S>
+void RecorderRT<_S>::threadBegin(void) {
   int syncid;
 
   sem_wait(&thread_create_sem);
 
-  _Sched::threadBegin();
+  _S::threadBegin();
   syncid = tick();
-  _Sched::putTurn();
+  _S::putTurn();
 
   tern_log_thread_begin();
   //logger.log(syncfunc::thread_begin, nsync);
 }
 
-template <typename _Sched>
-void RecorderRuntime<_Sched>::threadEnd() {
+template <typename _S>
+void RecorderRT<_S>::threadEnd() {
   int syncid;
 
-  _Sched::getTurn();
+  _S::getTurn();
   syncid = tick();
-  _Sched::threadEnd();
+  _S::threadEnd();
 
   //logger.log(ins, syncfunc::thread_end, nsync);
+  tern_log_thread_end();
 }
 
-/// We must assign turn tid of new thread while holding turn, or multiple
-/// newly created thread could get their turn tids nondeterministically.
-/// consider the nondeterminism example below if we were to assign turn
-/// tid w/o holding the turn:
+/// We must assign logical tid of new thread while holding turn, or
+/// multiple newly created thread could get their logical tids
+/// nondeterministically.  Consider the nondeterminism example below if we
+/// were to assign turn tid w/o holding the turn:
 ///
 ///       t0        t1           t2            t3
 ///    getTurn();
@@ -71,129 +79,327 @@ void RecorderRuntime<_Sched>::threadEnd() {
 /// use pthread_create_sem to effectively create thread in suspended mode,
 /// until the parent thread applies a tid for the child.
 ///
-template <typename _Sched>
-int RecorderRuntime<_Sched>::pthreadCreate(int ins, pthread_t *thread,
+template <typename _S>
+int RecorderRT<_S>::pthreadCreate(int ins, pthread_t *thread,
          pthread_attr_t *attr, void *(*thread_func)(void*), void *arg) {
   int ret, syncid;
 
-  _Sched::getTurn();
+  _S::getTurn();
 
   ret = __tern_pthread_create(thread, attr, thread_func, arg);
-  assert(!ret && "logging of failed sync calls is not yet supported!");
-  _Sched::threadCreate(*thread);
+  assert(!ret && "failed sync calls are not yet supported!");
+  _S::threadCreate(*thread);
   sem_post(&thread_create_sem);
   syncid = tick();
 
-  _Sched::putTurn();
+  _S::putTurn();
 
   // logger.log(ins, syncfunc::pthread_create, syncid, tid);
 
   return ret;
 }
 
-template <typename _Sched>
-int RecorderRuntime<_Sched>::pthreadJoin(int ins, pthread_t th, void **rv) {
-  int tid, ret, syncid;
+template <typename _S>
+int RecorderRT<_S>::pthreadJoin(int ins, pthread_t th, void **rv) {
+  int ret, syncid;
 
   for(;;) {
-    _Sched::getTurn();
-    if(_Sched::validPthreadTid(th))
-      _Sched::wait((void*)tid);
+    _S::getTurn();
+    if(!_S::isZombie(th))
+      _S::wait((void*)th);
     else
       break;
   }
   syncid = tick();
   ret = pthread_join(th, rv);
-  assert(!ret && "logging of failed sync calls is not yet supported!");
+  assert(!ret && "failed sync calls are not yet supported!");
 
-  _Sched::putTurn();
+  _S::onThreadJoin(th);
+  _S::putTurn();
 
   //logger.log(ins, syncfunc::pthread_join, syncid, tid);
   return ret;
 }
 
 
-template <typename _Sched>
-void RecorderRuntime<_Sched>::pthreadMutexLockHelper(pthread_mutex_t *mu) {
+template <typename _S>
+void RecorderRT<_S>::pthreadMutexLockHelper(pthread_mutex_t *mu) {
   int ret;
   for(;;) {
     ret = pthread_mutex_trylock(mu);
     if(ret == EBUSY)
-      _Sched::wait(mu);
+      _S::wait(mu);
     else
       break;
-    _Sched::getTurn();
+    _S::getTurn();
   }
-  assert(!ret && "logging of failed sync calls is not yet supported!");
+  assert(!ret && "failed sync calls are not yet supported!");
 }
 
-template <typename _Sched>
-int RecorderRuntime<_Sched>::pthreadMutexLock(int ins, pthread_mutex_t *mu) {
+template <typename _S>
+int RecorderRT<_S>::pthreadMutexLock(int ins, pthread_mutex_t *mu) {
   int syncid;
 
-  _Sched::getTurn();
+  _S::getTurn();
   pthreadMutexLockHelper(mu);
   syncid = tick();
-  _Sched::putTurn();
+  _S::putTurn();
 
   //logger.log(ins, syncfunc::pthread_mutex_lock, syncid, tid);
   return 0;
 }
 
-template <typename _Sched>
-int RecorderRuntime<_Sched>::pthreadMutexTryLock(int ins, pthread_mutex_t *mu) {
+template <typename _S>
+int RecorderRT<_S>::pthreadMutexTryLock(int ins, pthread_mutex_t *mu) {
   int syncid, ret;
 
-  _Sched::getTurn();
+  _S::getTurn();
   ret = pthread_mutex_trylock(mu);
   assert((!ret || ret==EBUSY)
-         && "logging of failed sync calls is not yet supported!");
+         && "failed sync calls are not yet supported!");
   syncid = tick();
-  _Sched::putTurn();
+  _S::putTurn();
 
   //logger.log(ins, syncfunc::pthread_mutex_lock, syncid, tid);
   return ret;
 }
 
-template <typename _Sched>
-int RecorderRuntime<_Sched>::pthreadMutexTimedLock(int ins, pthread_mutex_t *mu,
+template <typename _S>
+int RecorderRT<_S>::pthreadMutexTimedLock(int ins, pthread_mutex_t *mu,
                                                 const struct timespec *abstime) {
   // FIXME: treat timed-lock as just lock
   return pthreadMutexLock(ins, mu);
 }
 
-template <typename _Sched>
-int RecorderRuntime<_Sched>::pthreadMutexUnlock(int ins, pthread_mutex_t *mu){
+template <typename _S>
+int RecorderRT<_S>::pthreadMutexUnlock(int ins, pthread_mutex_t *mu){
   int ret, syncid;
 
-  _Sched::getTurn();
+  _S::getTurn();
 
   ret = pthread_mutex_unlock(mu);
-  assert(!ret && "logging of failed sync calls is not yet supported!");
-  _Sched::signal(mu);
+  assert(!ret && "failed sync calls are not yet supported!");
+  _S::signal(mu);
 
   syncid = tick();
 
-  _Sched::putTurn();
+  _S::putTurn();
 
   //logger.log(ins, syncfunc::pthread_mutex_unlock, syncid, tid);
   return 0;
 }
 
-template <typename _Sched>
-void RecorderRuntime<_Sched>::symbolic(void *addr, int nbyte, const char *name){
+template <typename _S>
+int RecorderRT<_S>::pthreadBarrierInit(int ins, pthread_barrier_t *barrier,
+                                       unsigned count) {
+  int ret;
+  _S::getTurn();
+  ret = pthread_barrier_init(barrier, NULL, count);
+  assert(!ret && "failed sync calls are not yet supported!");
+  assert(barriers.find(barrier) == barriers.end()
+         && "barrier already initialized!");
+  barriers[barrier].count = count;
+  barriers[barrier].narrived = 1; // one for the last arriver
+  _S::putTurn();
+  return ret;
+}
+
+template <typename _S>
+int RecorderRT<_S>::pthreadBarrierWait(int ins, pthread_barrier_t *barrier) {
+  int ret, syncid1, syncid2;
+
+  _S::getTurn();
+  syncid1 = tick();
+  barrier_map::iterator bi = barriers.find(barrier);
+  assert(bi!=barriers.end() && "barrier is not initialized!");
+  barrier_t &b = bi->second;
+  if(b.count == b.narrived) {
+    b.narrived = 1; // barrier may be reused
+    _S::broadcast(barrier);
+    _S::putTurn();
+  } else {
+    ++ b.narrived;
+    _S::wait(barrier);
+  }
+
+  ret = pthread_barrier_wait(barrier);
+  assert((!ret || ret==PTHREAD_BARRIER_SERIAL_THREAD)
+         && "failed sync calls are not yet supported!");
+
+  _S::getTurn();
+  _S::signal(barrier);
+  syncid2 = tick();
+  _S::putTurn();
+
+  //logger.log(ins, syncfunc::pthread_barrier_wait, syncid1, syncid2);
+  return 0;
+}
+
+template <typename _S>
+int RecorderRT<_S>::pthreadBarrierDestroy(int ins, pthread_barrier_t *barrier) {
+  int ret;
+  _S::getTurn();
+  ret = pthread_barrier_destroy(barrier);
+  assert(!ret && "failed sync calls are not yet supported!");
+  barrier_map::iterator bi = barriers.find(barrier);
+  assert(bi != barriers.end() && "barrier not initialized!");
+  barriers.erase(bi);
+  _S::putTurn();
+  return ret;
+}
+
+template <typename _S>
+int RecorderRT<_S>::pthreadCondWait(int ins,
+                pthread_cond_t *cv, pthread_mutex_t *mu){
+  int syncid1, syncid2;
+
+  _S::getTurn();
+  pthread_mutex_unlock(mu);
+  syncid1 = tick();
+  _S::signal(mu);
+  _S::waitFirstHalf(cv);
+
+  pthread_cond_wait(cv, _S::getLock());
+
+  _S::getTurnNU();
+  pthreadMutexLockHelper(mu);
+  syncid2 = tick();
+  _S::putTurn();
+
+  //logger.log(ins, syncfunc::pthread_mutex_unlock, syncid1, syncid2, tid);
+  return 0;
+}
+
+template <typename _S>
+int RecorderRT<_S>::pthreadCondTimedWait(int ins,
+    pthread_cond_t *cv, pthread_mutex_t *mu, const struct timespec *abstime){
+
+  // FIXME: treat timed-wait as just wait
+  return pthreadCondWait(ins, cv, mu);
+}
+
+template <typename _S>
+int RecorderRT<_S>::pthreadCondSignal(int ins, pthread_cond_t *cv){
+
+  int ret, syncid;
+
+  _S::getTurnLN();
+  dprintf("%d: cond_signal(%p)\n", _S::self(), (void*)cv);
+  // use broadcast to wake up all waiters, so that we avoid pthread
+  // nondeterministically wakes up an arbitrary thread.  If this thread is
+  // different from the thread deterministically chosen by tern, we'll run
+  // into a deadlock
+  ret = pthread_cond_broadcast(cv);
+  assert(!ret && "failed sync calls are not yet supported!");
+  _S::signalNN(cv);
+  syncid = tick();
+  _S::putTurnNU();
+
+  //logger.log(ins, syncfunc::pthread_cond_signal, syncid, tid);
+  return 0;
+}
+
+template <typename _S>
+int RecorderRT<_S>::pthreadCondBroadcast(int ins, pthread_cond_t*cv){
+  int ret, syncid;
+
+  _S::getTurnLN();
+  dprintf("%d: cond_broadcast(%p)\n", _S::self(), (void*)cv);
+  ret = pthread_cond_broadcast(cv);
+  assert(!ret && "failed sync calls are not yet supported!");
+  _S::broadcastNN(cv);
+  syncid = tick();
+  _S::putTurnNU();
+
+  //logger.log(ins, syncfunc::pthread_cond_broadcast, syncid, tid);
+  return 0;
+}
+
+
+template <typename _S>
+int RecorderRT<_S>::semWait(int ins, sem_t *sem) {
+  int ret, syncid;
+
+  for(;;) {
+    _S::getTurn();
+    ret = sem_trywait(sem);
+    if(ret == EBUSY)
+      _S::wait(sem);
+    else
+      break;
+  }
+
+  syncid = tick();
+  _S::putTurn();
+
+  //logger.log(ins, syncfunc::sem_wait, syncid, tid);
+  return 0;
+}
+
+template <typename _S>
+int RecorderRT<_S>::semTryWait(int ins, sem_t *sem) {
+  int syncid, ret;
+
+  _S::getTurn();
+  ret = sem_trywait(sem);
+  if(ret < 0)
+    assert(errno==EAGAIN && "failed sync calls are not yet supported!");
+  syncid = tick();
+  _S::putTurn();
+
+  //logger.log(ins, syncfunc::sem_trywait, syncid, tid);
+  return ret;
+}
+
+template <typename _S>
+int RecorderRT<_S>::semTimedWait(int ins, sem_t *sem,
+                                     const struct timespec *abstime) {
+  // FIXME: treat timed-wait as just wait
+  return semWait(ins, sem);
+}
+
+template <typename _S>
+int RecorderRT<_S>::semPost(int ins, sem_t *sem){
+  int ret, syncid;
+
+  _S::getTurn();
+
+  ret = sem_post(sem);
+  assert(!ret && "failed sync calls are not yet supported!");
+  _S::signal(sem);
+
+  syncid = tick();
+
+  _S::putTurn();
+
+  //logger.log(ins, syncfunc::sem_post, syncid, tid);
+  return 0;
+}
+
+
+
+template <typename _S>
+void RecorderRT<_S>::symbolic(void *addr, int nbyte, const char *name){
   int syncid;
 
-  _Sched::getTurn();
+  _S::getTurn();
   syncid = tick();
-  _Sched::putTurn();
+  _S::putTurn();
 
   //logger.log(ins, syncfunc::tern_symbolic, syncid, addr, nbyte, name);
 }
 
+
+//////////////////////////////////////////////////////////////////////////
+// Partially specialize RecorderRT for scheduler FCFSScheduler.  The
+// FCFSScheduler does really care about the order of synchronization
+// operations, as long as the log faithfully records the actual order that
+// occurs.  Thus, we can simplify the implementation of pthread cond var
+// methods for FCFSScheduler.
+
 template <>
-int RecorderRuntime<FCFSScheduler>::pthreadCondWait(int ins,
-                     pthread_cond_t *cv, pthread_mutex_t *mu){
+int RecorderRT<FCFSScheduler>::pthreadCondWait(int ins,
+                pthread_cond_t *cv, pthread_mutex_t *mu){
   int syncid1, syncid2;
 
   FCFSScheduler::getTurn();
@@ -211,16 +417,7 @@ int RecorderRuntime<FCFSScheduler>::pthreadCondWait(int ins,
 }
 
 template <>
-int RecorderRuntime<FCFSScheduler>::pthreadCondTimedWait(int ins,
-      pthread_cond_t *cv, pthread_mutex_t *mu, const struct timespec *abstime){
-
-  // FIXME: treat timed-wait as just wait
-  return pthreadCondWait(ins, cv, mu);
-}
-
-template <>
-int RecorderRuntime<FCFSScheduler>::pthreadCondSignal(int ins,
-                                                      pthread_cond_t *cv){
+int RecorderRT<FCFSScheduler>::pthreadCondSignal(int ins, pthread_cond_t *cv){
 
   int syncid;
 
@@ -229,13 +426,12 @@ int RecorderRuntime<FCFSScheduler>::pthreadCondSignal(int ins,
   syncid = tick();
   FCFSScheduler::putTurn();
 
-  //logger.log(ins, syncfunc::pthread_mutex_unlock, syncid, tid);
+  //logger.log(ins, syncfunc::pthread_mutex_unlock, syncid1, syncid2, tid);
   return 0;
 }
 
 template <>
-int RecorderRuntime<FCFSScheduler>::pthreadCondBroadcast(int ins,
-                                                         pthread_cond_t*cv){
+int RecorderRT<FCFSScheduler>::pthreadCondBroadcast(int ins, pthread_cond_t*cv){
   int syncid;
 
   FCFSScheduler::getTurn();
@@ -247,7 +443,11 @@ int RecorderRuntime<FCFSScheduler>::pthreadCondBroadcast(int ins,
   return 0;
 }
 
+
+
 } // namespace tern
+
+
 
 
 
@@ -299,7 +499,12 @@ int RecorderRuntime<FCFSScheduler>::pthreadCondBroadcast(int ins,
   getTurn();
   pthread_mutex_unlock(&mu);
   signal(&mu);
-  putTurnWithoutUnlock(); // does not release schedulerLock
+
+  waitFirstHalf(&cv); // put self() to waitq for &cv, but don't wait on
+                      // any internal sync obj or release scheduler lock
+                      // because we'll wait on the cond var in user
+                      // program
+
   pthread_cond_wait(&cv, &schedulerLock);
   getTurnWithoutLock();
 
@@ -333,13 +538,13 @@ int RecorderRuntime<FCFSScheduler>::pthreadCondBroadcast(int ins,
 
   One fix is to replace pthread_cond_signal with pthread_cond_broadcast,
   which wakes up all threads, and then the thread that gets the turn first
-  would proceed first to get mu.  However, this is wrong because the other
-  threads can proceed after the first thread releases mu.  This differs
-  from the cond var semantics where one signal should only wake up one
-  thread.
+  would proceed first to get mu.  However, this changes the semantics of
+  pthread_cond_signal because all woken up threads can proceed after the
+  first thread releases mu.  This differs from the cond var semantics
+  where one signal should only wake up one thread.
 
-  However, this would not be an issue for mesa-style cond var because the
-  woken up thread has to re-check its condition anyway.
+  This may not be an issue for mesa-style cond var because the woken up
+  thread has to re-check its condition anyway.
 
   also man page says:
 
@@ -479,6 +684,30 @@ int RecorderRuntime<FCFSScheduler>::pthreadCondBroadcast(int ins,
   can be more aggressive and implement more stuff on our own (mutex,
   barrier, etc), but probably unnecessary.  skip sleep and barrier_wait
   help the most
+
+  -------------------
+
+  barrier has a similar problem.  we want to avoid the head of queue
+  block, so must call wait(ba) and give up turn before calling
+  pthread_barrier_wait.  However, when the last thread arrives, we must
+  wake up these waiting threads.
+
+  the signal op has to be done within the turn; otherwise two signal ops
+  from two independent barriers can be nondeterministic and add threads to
+  the queues in nondeterministic order.  e..g, suppose two barriers with
+  count 1.
+
+        t0                        t1
+
+  getTurn()
+  wait(ba1);
+                          getTurn()
+                          wait(ba1);
+  barrier_wait(ba1)
+                          barrier_wait(ba1)
+  signal()                signal()
+
+  these two signal() ops can be nondeterministic
 
   -------------------
 

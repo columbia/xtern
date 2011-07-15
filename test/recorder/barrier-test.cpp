@@ -27,24 +27,27 @@
 
 #define N (1000)
 
-pthread_mutex_t m = PTHREAD_MUTEX_INITIALIZER;
+pthread_barrier_t ba;
 
-void* thread_func(void *arg) {
+void* thread_func(void* arg) {
   char buf[64];
   int tid = (intptr_t)arg;
 
   for(unsigned i=0;i<100;++i)
     sched_yield();
 
-  sprintf(buf, "%03d RUNS\n", tid);
-  pthread_mutex_lock(&m);
+  sprintf(buf, "Arrived: %03d\n", tid);
   write(1, buf, strlen(buf));
-  pthread_mutex_unlock(&m);
+  pthread_barrier_wait(&ba);
+  sprintf(buf, "Left: %03d\n", tid);
+  write(1, buf, strlen(buf));
 }
 
 int main() {
   int ret;
   pthread_t th[N];
+
+  pthread_barrier_init(&ba, NULL, N);
 
   for(unsigned i=0; i<N; ++i) {
     ret  = pthread_create(&th[i], NULL, thread_func, (void*)i);
@@ -53,4 +56,8 @@ int main() {
 
   for(unsigned i=0; i<N; ++i)
     pthread_join(th[i], NULL);
+
+  pthread_barrier_destroy(&ba);
+
+  return 0;
 }

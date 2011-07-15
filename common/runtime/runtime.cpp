@@ -12,10 +12,7 @@ Runtime *Runtime::the = NULL;
 int __thread TidMap::self_tid  = -1;
 
 // make this a weak symbol so that a runtime implementation can replace it
-void __attribute((weak)) Runtime::install() {
-  assert(0 && "A runtime implementation must re-implement "\
-         "Runtime::install() to register itself.");
-}
+void __attribute((weak)) InstallRuntime();
 
 void tern_prog_begin() {
   tern::Runtime::the->progBegin();
@@ -79,6 +76,35 @@ int tern_pthread_cond_signal(int ins, pthread_cond_t *cv) {
 
 int tern_pthread_cond_broadcast(int ins, pthread_cond_t *cv) {
   return tern::Runtime::the->pthreadCondBroadcast(ins, cv);
+}
+
+int tern_pthread_barrier_init(int ins, pthread_barrier_t *barrier,
+                        const pthread_barrierattr_t * attr, unsigned count) {
+  return tern::Runtime::the->pthreadBarrierInit(ins, barrier, count);
+}
+
+int tern_pthread_barrier_wait(int ins, pthread_barrier_t *barrier) {
+  return tern::Runtime::the->pthreadBarrierWait(ins, barrier);
+}
+
+int tern_pthread_barrier_destroy(int ins, pthread_barrier_t *barrier) {
+  return tern::Runtime::the->pthreadBarrierDestroy(ins, barrier);
+}
+
+int tern_sem_wait(int ins, sem_t *sem) {
+  return tern::Runtime::the->semWait(ins, sem);
+}
+
+int tern_sem_trywait(int ins, sem_t *sem) {
+  return tern::Runtime::the->semTryWait(ins, sem);
+}
+
+int tern_sem_timedwait(int ins, sem_t *sem, const struct timespec *t) {
+  return tern::Runtime::the->semTimedWait(ins, sem, t);
+}
+
+int tern_sem_post(int ins, sem_t *sem) {
+  return tern::Runtime::the->semPost(ins, sem);
 }
 
 /// just a wrapper to tern_thread_end() and pthread_exit()

@@ -18,12 +18,15 @@
 // stress
 // RUN: ./%t3 && ./%t3 && ./%t3  && ./%t3  && ./%t3  && ./%t3  && ./%t3
 
+#include <sys/time.h>
+#include <time.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <pthread.h>
 #include <assert.h>
 #include <unistd.h>
+#include <errno.h>
 
 #define N (1000)
 
@@ -37,7 +40,31 @@ void* thread_func(void *arg) {
     sched_yield();
 
   sprintf(buf, "%03d RUNS\n", tid);
-  pthread_mutex_lock(&m);
+
+  int ret;
+  struct timespec   ts;
+  struct timeval    tp;
+
+  // test 3 different ways of acquiring a pthread mutex
+  switch(tid % 3) {
+  case 0:
+    pthread_mutex_lock(&m);
+    break;
+  case 1:
+    do{
+      ret = pthread_mutex_trylock(&m);
+    } while(ret==EBUSY);
+    break;
+  case 2:
+    do {
+      gettimeofday(&tp, NULL);
+      ts.tv_sec  = tp.tv_sec;
+      ts.tv_nsec = tp.tv_usec * 1000 + 100;
+      ret = pthread_mutex_timedlock(&m, &ts);
+    } while(ret == ETIMEDOUT);
+    break;
+  }
+
   write(1, buf, strlen(buf));
   pthread_mutex_unlock(&m);
 }
