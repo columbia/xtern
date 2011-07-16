@@ -1,5 +1,4 @@
 /* Author: Junfeng Yang (junfeng@cs.columbia.edu) -*- Mode: C++ -*- */
-
 #ifndef __TERN_RECORDER_LOGACCESS_H
 #define __TERN_RECORDER_LOGACCESS_H
 

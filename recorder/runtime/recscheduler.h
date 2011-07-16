@@ -18,6 +18,7 @@ struct FCFSScheduler: public Scheduler {
 
   void getTurn(void) {
     pthread_mutex_lock(&lock);
+    incTurnCount();
   }
   void putTurn(void) {
     pthread_mutex_unlock(&lock);
@@ -95,7 +96,7 @@ struct RRSchedulerCV: public Scheduler {
   ///     unlocks lock
   ///   this->signal()     wakes up from pthread_cond_wait()
   ///
-  void signal(void *chan) { signalHelper(chan, OneThread, Lock, Unlock); }
+  void signal(void *chan)     { signalHelper(chan, OneThread, Lock, Unlock); }
 
   /// deterministically wake up all threads waiting on @chan on the wait
   /// queue; must call with the turn held.

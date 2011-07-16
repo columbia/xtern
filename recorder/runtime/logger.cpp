@@ -27,8 +27,9 @@ __thread Logger* Logger::the = NULL;
 Logger::func_map Logger::loggableCallees;
 Logger::func_map Logger::escapeCallees;
 
-void Logger::logInsid(int insid) {
-  checkLogSize();
+void Logger::logInsid(unsigned insid) {
+  checkAndGrowLogSize();
+  checkAndSetInsid(insid);
 
   InsidRec *rec = (InsidRec*)(buf+off);
   rec->insid = insid;
@@ -37,8 +38,9 @@ void Logger::logInsid(int insid) {
   off += RECORD_SIZE;
 }
 
-void Logger::logLoad(int insid, void* addr, uint64_t data) {
-  checkLogSize();
+void Logger::logLoad(unsigned insid, void* addr, uint64_t data) {
+  checkAndGrowLogSize();
+  checkAndSetInsid(insid);
 
   LoadRec *rec = (LoadRec*)(buf+off);
   rec->insid = insid;
@@ -49,8 +51,9 @@ void Logger::logLoad(int insid, void* addr, uint64_t data) {
   off += RECORD_SIZE;
 }
 
-void Logger::logStore(int insid, void* addr, uint64_t data) {
-  checkLogSize();
+void Logger::logStore(unsigned insid, void* addr, uint64_t data) {
+  checkAndGrowLogSize();
+  checkAndSetInsid(insid);
 
   StoreRec *rec = (StoreRec*)(buf+off);
   rec->insid = insid;
@@ -61,11 +64,12 @@ void Logger::logStore(int insid, void* addr, uint64_t data) {
   off += RECORD_SIZE;
 }
 
-void Logger::logCall(int indir, int insid, short narg, void* func, va_list vl) {
+void Logger::logCall(int indir, unsigned insid, short narg, void* func, va_list vl) {
   if(indir && !isEscapeCallee(func))
     return;
 
-  checkLogSize();
+  checkAndGrowLogSize();
+  checkAndSetInsid(insid);
 
   short nextra = NumExtraArgsRecords(narg);
   short seq = 0;
@@ -89,7 +93,7 @@ void Logger::logCall(int indir, int insid, short narg, void* func, va_list vl) {
 
   // extra args
   for(++seq; seq<=nextra; ++seq) {
-    checkLogSize();
+    checkAndGrowLogSize();
 
     ExtraArgsRec *extra = (ExtraArgsRec*)(buf+off);
     extra->insid = insid;
@@ -108,11 +112,12 @@ void Logger::logCall(int indir, int insid, short narg, void* func, va_list vl) {
   }
 }
 
-void Logger::logRet(int indir, int insid, short narg, void* func, uint64_t data){
+void Logger::logRet(int indir, unsigned insid, short narg, void* func, uint64_t data){
   if(indir && !isEscapeCallee(func))
     return;
 
-  checkLogSize();
+  checkAndGrowLogSize();
+  checkAndSetInsid(insid);
 
   short seq = NumExtraArgsRecords(narg) + 1;
 
@@ -128,14 +133,37 @@ void Logger::logRet(int indir, int insid, short narg, void* func, uint64_t data)
   off += RECORD_SIZE;
 }
 
+void Logger::logSync(unsigned insid, unsigned short sync,
+                     unsigned turn, bool after, ...) {
+  checkAndGrowLogSize();
+  checkAndSetInsid(insid);
+
+  SyncRec *ret = (SyncRec*)(buf+off);
+  ret->insid = insid;
+  ret->type = SyncRecTy;
+  ret->turn = turn;
+  ret->after = after;
+
+  assert(NumSyncArgs(sync) <= (int)MAX_INLINE_ARGS);
+
+  va_list args;
+  va_start(args, after);
+  for(int i=0; i<NumSyncArgs(sync); ++i)
+    ret->args[i] = va_arg(args, uint64_t);
+  va_end(args);
+
+  off += RECORD_SIZE;
+}
 
 Logger::Logger(int tid) {
   SetLogName(logFile, sizeof(logFile), tid);
+
   foff = 0;
   fd = open(logFile, O_RDWR|O_CREAT, 0600);
   assert(fd >= 0 && "can't open log file!");
   ftruncate(fd, LOG_SIZE);
 
+  buf = NULL;
   mapLogTrunk();
 }
 
@@ -156,7 +184,6 @@ Logger::~Logger() {
   off = 0;
   fd = -1;
   foff = 0;
-
 }
 
 void Logger::mapLogTrunk(void) {
@@ -204,25 +231,26 @@ void tern_escape_callee(void* func, unsigned funcid) {
   tern::Logger::markEscapeCallee(func, funcid);
 }
 
-void tern_log_insid(int insid) {
+void tern_log_insid(unsigned insid) {
   tern::Logger::the->logInsid(insid);
 }
 
-void tern_log_load(int insid, void* addr, uint64_t data) {
+void tern_log_load(unsigned insid, void* addr, uint64_t data) {
   tern::Logger::the->logLoad(insid, addr, data);
 }
 
-void tern_log_store(int insid, void* addr, uint64_t data) {
+void tern_log_store(unsigned insid, void* addr, uint64_t data) {
   tern::Logger::the->logStore(insid, addr, data);
 }
 
-void tern_log_call(int indir, int insid, short narg, void* func, ...) {
+void tern_log_call(int indir, unsigned insid, short narg, void* func, ...) {
   va_list args;
   va_start(args, func);
   tern::Logger::the->logCall(indir, insid, narg, func, args);
   va_end(args);
 }
 
-void tern_log_ret(int indir, int insid, short narg, void* func, uint64_t ret) {
+void tern_log_ret(int indir, unsigned insid,
+                  short narg, void* func, uint64_t ret) {
   tern::Logger::the->logRet(indir, insid, narg, func, ret);
 }

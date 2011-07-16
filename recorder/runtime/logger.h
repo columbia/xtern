@@ -11,11 +11,13 @@ namespace tern {
 
 struct Logger {
   /// per-thread logging functions and data
-  void logInsid(int insid);
-  void logLoad(int insid, void* addr, uint64_t data);
-  void logStore(int insid, void* addr, uint64_t data);
-  void logCall(int indir, int insid, short narg, void* func, va_list args);
-  void logRet(int indir, int insid, short narg, void* func, uint64_t data);
+  void logInsid(unsigned insid);
+  void logLoad(unsigned insid, void* addr, uint64_t data);
+  void logStore(unsigned insid, void* addr, uint64_t data);
+  void logCall(int indir, unsigned insid, short narg, void* func, va_list args);
+  void logRet(int indir, unsigned insid, short narg, void* func, uint64_t data);
+  void logSync(unsigned insid, unsigned short sync,
+               unsigned turn, bool after = true, ...);
 
   Logger(int tid);
   ~Logger();
@@ -25,9 +27,14 @@ struct Logger {
 protected:
 
   void mapLogTrunk(void);
-  void checkLogSize(void) {
+  void checkAndGrowLogSize(void) {
     // TODO: check log buffer size and allocate new space if necessary
     assert(off + RECORD_SIZE <= TRUNK_SIZE);
+  }
+  void checkAndSetInsid(unsigned &insid) {
+    if(insid == INVALID_INSID)
+      insid &= (1<<REC_TYPE_BITS)-1;
+    assert(insid < MAX_INSID && "instruction id larger than (1U<<29)!");
   }
 
   char*      buf;

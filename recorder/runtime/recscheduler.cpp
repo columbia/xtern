@@ -49,6 +49,7 @@ void RRSchedulerCV::getTurnHelper(bool doLock, bool doUnlock) {
 
   SELFCHECK;
   dprintf("RRSchedulerCV: %d: got turn\n", self());
+  Parent::incTurnCount();
 
   if(doUnlock)
     pthread_mutex_unlock(&lock);

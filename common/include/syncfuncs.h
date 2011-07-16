@@ -3,6 +3,8 @@
 #define TERN_COMMON_SYNCFUNCS_H
 
 #include <cassert>
+#include <limits.h>
+#include <boost/static_assert.hpp>
 
 namespace tern {
 namespace syncfunc {
@@ -19,6 +21,7 @@ enum {
   num_syncs,
   not_sync = (unsigned)(-1)
 };
+BOOST_STATIC_ASSERT(num_syncs<USHRT_MAX);
 
 extern const int kind[];
 extern const char* name[];
