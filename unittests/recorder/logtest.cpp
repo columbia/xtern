@@ -51,7 +51,7 @@ func funcs[5] = {
 
 void tern_all_loggable_callees(void) {
   for(unsigned i=0; i<sizeof(funcs)/sizeof(funcs[0]); ++i)
-    tern_loggable_callee(funcs[i].func, funcs[i].id);
+    tern_loggable_callee(funcs[i].func, funcs[i].id, "");
 }
 
 int find_func_id(void *func) {

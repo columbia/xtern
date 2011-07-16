@@ -1,7 +1,7 @@
 LEVEL := ../../
 
 TESTNAME := recorder
-USEDLIBS := recaccess.a recruntime.a commonruntime.a
+USEDLIBS := recaccess.a recruntime.a commonruntime.a common.a
 LINK_COMPONENTS := support
 
 include $(LEVEL)/Makefile.config
