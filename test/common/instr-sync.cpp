@@ -1,5 +1,5 @@
 // RUN: %llvmgcc %s -g -O0 -c -o %t1.ll -S
-// RUN: %projbindir/tern-instr < %t1.ll -S > %t2.ll
+// RUN: %projbindir/tern-instr < %t1.ll -S -o %t2.ll
 
 // compare number of pthread calls and tern_pthread calls
 // grep pthread_ instr-sync.cpp.tmp1.ll  | grep call  | grep -v llvm.dbg.declare | wc > %t2.count1

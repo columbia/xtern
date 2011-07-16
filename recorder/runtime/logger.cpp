@@ -141,6 +141,7 @@ void Logger::logSync(unsigned insid, unsigned short sync,
   SyncRec *ret = (SyncRec*)(buf+off);
   ret->insid = insid;
   ret->type = SyncRecTy;
+  ret->sync = sync;
   ret->turn = turn;
   ret->after = after;
 
@@ -223,12 +224,12 @@ void __attribute((weak)) tern_all_loggable_callees(void) {
   // empty function; will be replaced by loginstr
 }
 
-void tern_loggable_callee(void* func, unsigned funcid) {
-  tern::Logger::markLoggableCallee(func, funcid);
+void tern_loggable_callee(void* func, unsigned funcid, const char* name) {
+  tern::Logger::markLoggableCallee(func, funcid, name);
 }
 
-void tern_escape_callee(void* func, unsigned funcid) {
-  tern::Logger::markEscapeCallee(func, funcid);
+void tern_escape_callee(void* func, unsigned funcid, const char* name) {
+  tern::Logger::markEscapeCallee(func, funcid, name);
 }
 
 void tern_log_insid(unsigned insid) {

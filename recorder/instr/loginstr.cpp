@@ -6,6 +6,7 @@
 #include "llvm/LLVMContext.h"
 #include "llvm/Support/TypeBuilder.h"
 #include "llvm/Support/IRBuilder.h"
+#include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
 using namespace std;
@@ -29,8 +30,9 @@ bool LogInstr::runOnModule(Module &M) {
   addrType = Type::getInt8PtrTy(*context);
   dataType = Type::getInt64Ty(*context);
 
-  getLoggableAndEscapeFuncs(M);
-  markLoggableCallees(M);
+  getFuncs(M);
+  markFuncs(M);
+  exportFuncs();
 
   functype = TypeBuilder<void (types::i<32>), false>::get(*context);
   logInsid = dyn_cast<Value>(M.getOrInsertFunction("tern_log_insid", functype));
@@ -56,7 +58,18 @@ bool LogInstr::runOnModule(Module &M) {
   return true;
 }
 
-void LogInstr::getLoggableAndEscapeFuncs(Module &M) {
+void LogInstr::exportFuncs(void) {
+  string ErrorInfo;
+  raw_fd_ostream f(func_map_file.c_str(), ErrorInfo);
+  assert(!f.has_error() && "can't open file for writing function name->id map!");
+  forall(func_map_t, fi, loggables) {
+    bool escape = (escapes.find(fi->first) == escapes.end());
+    f << fi->second << " " << fi->first->getName()
+      << "\t" << (escape? 1 : 0) << "\n";
+  }
+}
+
+void LogInstr::getFuncs(Module &M) {
   unsigned funcid = Intrinsic::num_intrinsics;
   forallfunc(M, fi) {
     if(loggableCallee(fi)) {
@@ -72,7 +85,7 @@ void LogInstr::getLoggableAndEscapeFuncs(Module &M) {
 }
 
 /// create function tern_all_loggable_callees() and mark loggable callees
-void LogInstr::markLoggableCallees(Module &M) {
+void LogInstr::markFuncs(Module &M) {
   const char *markall_name = "tern_all_loggable_callees";
   const FunctionType *functype = TypeBuilder<void (void), false>::get(*context);
 

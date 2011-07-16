@@ -29,7 +29,7 @@ InputFilename(cl::Positional, cl::desc("<input bitcode file>"),
 
 static cl::opt<std::string>
 OutputFilename("o", cl::desc("Override output filename"),
-               cl::value_desc("filename"), cl::init("-"));
+               cl::value_desc("filename"));
 
 static cl::opt<bool>
 OutputAssembly("S", cl::desc("Write output as LLVM assembly"));
@@ -48,20 +48,23 @@ int main(int argc, char **argv) {
     return 1;
   }
 
+  string FuncMap = OutputFilename + ".funcs";
+
   string ErrorInfo;
   raw_ostream *Out = new raw_fd_ostream(OutputFilename.c_str(), ErrorInfo,
                                         raw_fd_ostream::F_Binary);
+  assert(Out && "can't open output file!");
 
+  LogInstr *pass;
   PassManager Passes;
   const std::string &ModuleDataLayout = M.get()->getDataLayout();
   if (!ModuleDataLayout.empty())
     Passes.add(new TargetData(ModuleDataLayout));
 
   // TODO: all optimization passes
-
   Passes.add(new IDTagger);
   Passes.add(new SyncInstr);
-  Passes.add(new LogInstr);
+  Passes.add(pass = new LogInstr); pass->setFuncsExportFile(FuncMap);
   Passes.add(new InitInstr);
 
   // output analysis.bc

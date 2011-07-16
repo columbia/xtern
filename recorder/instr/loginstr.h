@@ -27,6 +27,7 @@ struct LogInstr: public llvm::ModulePass {
   typedef std::tr1::unordered_map<llvm::Function*, unsigned> func_map_t;
   func_map_t       escapes;
   func_map_t       loggables;
+  std::string      func_map_file;
 
   LogInstr(): ModulePass(&ID) {}
   virtual bool runOnModule(llvm::Module &M);
@@ -43,8 +44,13 @@ struct LogInstr: public llvm::ModulePass {
   void instrInvoke(llvm::InvokeInst *invoke);
   void instrFirstNonPHI(llvm::Instruction *ins);
 
-  void getLoggableAndEscapeFuncs(llvm::Module &M);
-  void markLoggableCallees(llvm::Module &M);
+  /// get loggable callees (i.e., calls to them must be logged); within
+  /// these functions, also computes escape functions (function address
+  /// taken) so that we can look for them when logging indirect calls.
+  void getFuncs(llvm::Module &M);
+  void markFuncs(llvm::Module &M);
+  void exportFuncs(void);
+  void setFuncsExportFile(const std::string& file) { func_map_file = file; }
 };
 
 } // namespace tern

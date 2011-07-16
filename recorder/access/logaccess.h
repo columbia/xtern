@@ -197,6 +197,15 @@ struct Log {
 struct LogManager {
 };
 
+llvm::raw_ostream &PrintRecord(llvm::raw_ostream &o, const InsidRec &rec);
+llvm::raw_ostream &operator<< (llvm::raw_ostream &o, const InsidRec &rec);
+llvm::raw_ostream &operator<< (llvm::raw_ostream &o, const LoadRec &rec);
+llvm::raw_ostream &operator<< (llvm::raw_ostream &o, const StoreRec &rec);
+llvm::raw_ostream &operator<< (llvm::raw_ostream &o, const CallRec &rec);
+llvm::raw_ostream &operator<< (llvm::raw_ostream &o, const ExtraArgsRec &rec);
+llvm::raw_ostream &operator<< (llvm::raw_ostream &o, const ReturnRec &rec);
+llvm::raw_ostream &operator<< (llvm::raw_ostream &o, const SyncRec &rec);
+
 } // namespace tern
 
 #endif

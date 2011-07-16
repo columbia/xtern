@@ -19,7 +19,8 @@ enum {
   MAX_INLINE_ARGS = 2U,
   MAX_EXTRA_ARGS  = 3U,
   MAX_INSID       = (1<<INSID_BITS),
-  INVALID_INSID   = (unsigned)(-1)
+  INVALID_INSID   = (unsigned)(-1),
+  INVALID_INSID_IN_REC = INVALID_INSID & ((1<<REC_TYPE_BITS)-1)
 };
 
 enum {
@@ -99,6 +100,15 @@ static inline int NumExtraArgsRecords(int narg) {
 
 static inline int NumSyncArgs(short sync) {
   return (sync == syncfunc::pthread_cond_wait)? 2 : 1;
+}
+
+static inline int NumRecordsForSync(short sync) {
+  switch(sync) {
+  case syncfunc::pthread_cond_wait:
+  case syncfunc::pthread_barrier_wait:
+    return 2;
+  }
+  return 1;
 }
 
 static inline int SetLogName(char *buf, size_t sz, int tid) {

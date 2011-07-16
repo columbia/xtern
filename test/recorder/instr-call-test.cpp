@@ -1,5 +1,5 @@
 // RUN: %llvmgcc %s -O0 -c -o %t1.ll -S
-// RUN: %projbindir/tern-instr < %t1.ll -S > %t2.ll
+// RUN: %projbindir/tern-instr < %t1.ll -S -o %t2.ll
 
 // Test load instrumentation
 // RUN: grep tern_log_load %t2.ll | grep -v declare | wc -l > %t2.count1

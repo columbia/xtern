@@ -45,10 +45,10 @@ protected:
 
   /// code and data shared by all loggers
 public:
-  static void markLoggableCallee(void *func, unsigned funcid) {
+  static void markLoggableCallee(void *func, unsigned funcid, const char* name) {
     loggableCallees[func] = funcid;
   }
-  static void markEscapeCallee(void *func, unsigned funcid) {
+  static void markEscapeCallee(void *func, unsigned funcid, const char* name) {
     escapeCallees[func] = funcid;
   }
   static bool isLoggableCallee(void *func) {

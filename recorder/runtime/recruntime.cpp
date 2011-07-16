@@ -40,26 +40,30 @@ void RecorderRT<_S>::progEnd(void) {
 template <typename _S>
 void RecorderRT<_S>::threadBegin(void) {
   unsigned nturn;
+  pthread_t th = pthread_self();
 
   sem_wait(&thread_create_sem);
 
-  _S::threadBegin(pthread_self());
+  _S::threadBegin(th);
   Logger::threadBegin(_S::self());
   nturn = _S::getTurnCount();
   _S::putTurn();
 
-  Logger::the->logSync(INVALID_INSID, syncfunc::tern_thread_begin, nturn);
+  Logger::the->logSync(INVALID_INSID, syncfunc::tern_thread_begin,
+                       nturn, true, (uint64_t)th);
 }
 
 template <typename _S>
 void RecorderRT<_S>::threadEnd() {
   unsigned nturn;
+  pthread_t th = pthread_self();
 
   _S::getTurn();
   nturn = _S::getTurnCount();
   _S::threadEnd(pthread_self());
 
-  Logger::the->logSync(INVALID_INSID, syncfunc::tern_thread_end, nturn);
+  Logger::the->logSync(INVALID_INSID, syncfunc::tern_thread_end,
+                       nturn, true, (uint64_t)th);
   Logger::threadEnd();
 }
 
@@ -101,8 +105,8 @@ int RecorderRT<_S>::pthreadCreate(unsigned ins, pthread_t *thread,
 
   _S::putTurn();
 
-  // logger.logSync(ins, syncfunc::pthread_create, nturn, tid);
-
+  Logger::the->logSync(ins, syncfunc::pthread_create, nturn,
+                       true, (uint64_t)*thread);
   return ret;
 }
 
@@ -244,9 +248,9 @@ int RecorderRT<_S>::pthreadBarrierWait(unsigned ins,
   _S::putTurn();
 
   Logger::the->logSync(ins, syncfunc::pthread_barrier_wait,
-                       nturn1, false, (uint64_t)barrier);
+                       nturn1, /* before */ false, (uint64_t)barrier);
   Logger::the->logSync(ins, syncfunc::pthread_barrier_wait,
-                       nturn2, true, (uint64_t)barrier);
+                       nturn2, /* after */ true, (uint64_t)barrier);
   return 0;
 }
 
@@ -282,10 +286,10 @@ int RecorderRT<_S>::pthreadCondWait(unsigned ins,
   nturn2 = _S::getTurnCount();
   _S::putTurn();
 
-  Logger::the->logSync(ins, syncfunc::pthread_mutex_unlock,
-                       nturn1, false, (uint64_t)cv, (uint64_t)mu);
-  Logger::the->logSync(ins, syncfunc::pthread_mutex_unlock,
-                       nturn2, true, (uint64_t)cv, (uint64_t)mu);
+  Logger::the->logSync(ins, syncfunc::pthread_cond_wait,
+                       nturn1, /* before */ false, (uint64_t)cv, (uint64_t)mu);
+  Logger::the->logSync(ins, syncfunc::pthread_cond_wait,
+                       nturn2, /* after */ true, (uint64_t)cv, (uint64_t)mu);
   return 0;
 }
 
@@ -438,9 +442,9 @@ int RecorderRT<FCFSScheduler>::pthreadCondWait(unsigned ins,
   nturn2 = FCFSScheduler::getTurnCount();
   FCFSScheduler::putTurn();
 
-  Logger::the->logSync(ins, syncfunc::pthread_mutex_unlock,
+  Logger::the->logSync(ins, syncfunc::pthread_cond_wait,
                        nturn1, false, (uint64_t)cv, (uint64_t)mu);
-  Logger::the->logSync(ins, syncfunc::pthread_mutex_unlock,
+  Logger::the->logSync(ins, syncfunc::pthread_cond_wait,
                        nturn2, true, (uint64_t)cv, (uint64_t)mu);
   return 0;
 }

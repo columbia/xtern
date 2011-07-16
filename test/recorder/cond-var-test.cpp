@@ -1,5 +1,5 @@
 // RUN: %llvmgcc %s -g -O0 -c -o %t1.ll -S
-// RUN: %projbindir/tern-instr < %t1.ll > %t2.bc
+// RUN: %projbindir/tern-instr < %t1.ll -o %t2.bc
 // RUN: llvm-dis -f %t2.bc
 
 // test the x86 .a libraries

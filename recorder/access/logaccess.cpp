@@ -8,8 +8,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "llvm/Support/raw_ostream.h"
 #include "logaccess.h"
+#include "logprint.h"
 
+using namespace std;
 using namespace llvm;
 
 namespace tern {
@@ -117,6 +120,76 @@ Log::reverse_iterator Log::rbegin() {
 
 Log::reverse_iterator Log::rend() {
   return reverse_iterator(begin());
+}
+
+
+static const char* recNames[] = {
+  "ins",
+  "load",
+  "store",
+  "call",
+  "arg",
+  "ret",
+  "sync",
+};
+
+raw_ostream& operator<<(raw_ostream& o, const InsidRec& rec) {
+  assert(rec.type <= LastRecTy && "invalid log record type!");
+  if(rec.insid == tern::INVALID_INSID_IN_REC)
+    o << "ins=n/a";
+  else
+    o << "ins= " << rec.insid;
+  return o << " " << recNames[rec.type];
+}
+
+raw_ostream &operator<<(raw_ostream &o, const LoadRec &rec) {
+  return o << (const InsidRec&)rec << " " << rec.addr << " = " << rec.data;
+}
+raw_ostream &operator<<(raw_ostream &o, const StoreRec &rec) {
+  return o << (const InsidRec&)rec << " " << rec.addr << ", " << rec.data;
+}
+raw_ostream &operator<<(raw_ostream &o, const CallRec &rec) {
+  return o << (const InsidRec&)rec << " func" << rec.funcid
+           << "(" << rec.narg << " args)";
+}
+raw_ostream &operator<<(raw_ostream &o, const ExtraArgsRec &rec) {
+  return o << (const InsidRec&)rec << "(...)";
+}
+raw_ostream &operator<<(raw_ostream &o, const ReturnRec &rec) {
+  return o << (const InsidRec&)rec << " func" << rec.funcid
+           << "() = " << rec.data;
+}
+raw_ostream &operator<<(raw_ostream &o, const SyncRec &rec) {
+  o << (const InsidRec&)rec << " " << syncfunc::getName(rec.sync) << "()";
+  if(NumRecordsForSync(rec.sync) == 2)
+     o << (rec.after?"after":"before");
+  return o << " turn = " << rec.turn;
+}
+
+raw_ostream & PrintRecord(raw_ostream &o, const InsidRec &rec) {
+  switch(rec.type) {
+  case InsidRecTy:
+    o << rec;
+    break;
+  case LoadRecTy:
+    o << (const LoadRec&)rec;
+    break;
+  case StoreRecTy:
+    o << (const StoreRec&)rec;
+    break;
+  case CallRecTy:
+    o << (const CallRec&)rec;
+    break;
+  case ExtraArgsRecTy:
+    o << (const ExtraArgsRec&)rec;
+    break;
+  case ReturnRecTy:
+    o << (const ReturnRec&)rec;
+    break;
+  case SyncRecTy:
+    o << (const SyncRec&)rec;
+    break;
+  }
 }
 
 } // namespace tern

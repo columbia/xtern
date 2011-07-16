@@ -109,7 +109,10 @@ void SyncInstr::replaceFunctionInCall(Module &M, Instruction *I, unsigned syncid
   Instruction *NI = NULL;
 
   // find hook function
-  const FunctionType *functype = functypes[syncid]; assert(functype);
+  const FunctionType *functype = functypes[syncid];
+  if(functype == NULL)
+    errs() << *I;
+  assert(functype);
   const char *funcname = syncfunc::getTernName(syncid);
   Constant *C = M.getOrInsertFunction(funcname, functype);
   assert (C && "cannot create hook function!");
@@ -178,6 +181,8 @@ bool SyncInstr::runOnModule(Module &M) {
       const char* name = F->getNameStr().c_str();
       unsigned syncid = syncfunc::getNameID(name);
       if(syncid == syncfunc::not_sync)
+        continue;
+      if(syncfunc::isTern(syncid))
         continue;
       replaceFunctionInCall(M, prv, syncid);
     }
