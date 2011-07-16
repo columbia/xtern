@@ -10,7 +10,6 @@
 
 #include "llvm/Support/raw_ostream.h"
 #include "logaccess.h"
-#include "logprint.h"
 
 using namespace std;
 using namespace llvm;
