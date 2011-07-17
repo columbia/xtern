@@ -44,6 +44,8 @@ BOOST_STATIC_ASSERT(LastRecTy<(1U<<REC_TYPE_BITS));
   struct InsidRec {
     unsigned insid  : INSID_BITS;
     unsigned type   : REC_TYPE_BITS;
+    bool validInsid()     { return insid != INVALID_INSID_IN_REC; }
+    unsigned getInsid() { return validInsid()? insid : INVALID_INSID; }
   };
   BOOST_STATIC_ASSERT(sizeof(InsidRec)<=RECORD_SIZE);
 
@@ -59,24 +61,24 @@ BOOST_STATIC_ASSERT(LastRecTy<(1U<<REC_TYPE_BITS));
   };
   BOOST_STATIC_ASSERT(sizeof(StoreRec)<=RECORD_SIZE);
 
-  struct CallRec: public InsidRec {
+  /// common prefix of call-related records---not a real record type
+  struct CallRecPrefix: public InsidRec{
     short    seq;
     short    narg;
+  };
+
+  struct CallRec: public CallRecPrefix {
     int      funcid;
     uint64_t args[MAX_INLINE_ARGS];
   };
   BOOST_STATIC_ASSERT(sizeof(CallRec)<=RECORD_SIZE);
 
-  struct ExtraArgsRec: public InsidRec {
-    short    seq;
-    short    narg;
+  struct ExtraArgsRec: public CallRecPrefix {
     uint64_t args[MAX_EXTRA_ARGS];
   };
   BOOST_STATIC_ASSERT(sizeof(ExtraArgsRec)<=RECORD_SIZE);
 
-  struct ReturnRec: public InsidRec {
-    short    seq;
-    short    narg;
+  struct ReturnRec: public CallRecPrefix {
     int      funcid;
     uint64_t data;
   };
@@ -96,6 +98,23 @@ BOOST_STATIC_ASSERT(LastRecTy<(1U<<REC_TYPE_BITS));
 
 static inline int NumExtraArgsRecords(int narg) {
   return (((narg)-MAX_INLINE_ARGS+MAX_EXTRA_ARGS-1)/MAX_EXTRA_ARGS);
+}
+
+static inline int NumRelatedRecords(const InsidRec& rec) {
+  switch(rec.type) {
+  case InsidRecTy:
+  case LoadRecTy:
+  case StoreRecTy:
+  case SyncRecTy:
+    return 1;
+  case CallRecTy:
+  case ExtraArgsRecTy:
+  case ReturnRecTy:
+    return 2 + NumExtraArgsRecords(((const CallRecPrefix&)rec).narg);
+  default:
+    assert(0 && "invalid raw record!");
+  }
+  return 1;
 }
 
 static inline int NumSyncArgs(short sync) {

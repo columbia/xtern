@@ -1,8 +1,11 @@
 LEVEL := ../..
 TOOLNAME = logprint
 
-LINK_COMPONENTS := support
-USEDLIBS := recaccess.a common.a
+LINK_COMPONENTS := core support
+USEDLIBS := recaccess.a recinstr.a common.a
 
 include $(LEVEL)/Makefile.common
 
+# FIXME: better way to link in our libraries in llvm/install/lib
+LIBS += $(LLVM_ROOT)/install/lib/libid-manager.a \
+	$(LLVM_ROOT)/install/lib/libLLVMSupport.a

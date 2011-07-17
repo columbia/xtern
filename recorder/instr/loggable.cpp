@@ -45,6 +45,13 @@ bool loggableInstruction(Instruction *ins) {
   if(ins != BB->getFirstNonPHI())
     return false;
 
+#if 0
+  // can probably use fancier algorithm (e.g., dominators or
+  // postdominators) to reduce the number of basic blocks logged.  i.e.,
+  // give B1 dominates B2, if B2 is logged, B1 must have executed.
+  // However, this complicates the reconstruction of instruction trace.
+  // Let's keep it simple for now.
+  //
   // single-entry, single-exit?
   int npred = 0, nsucc = 0;
   pred_iterator pi = pred_begin(BB);
@@ -59,12 +66,35 @@ bool loggableInstruction(Instruction *ins) {
   }
   if(npred == 1 && nsucc == 1)
     return false;
+#endif
 
-  // if no other instructions in this BB is logged, must log FirstNonPHI
-  BasicBlock::iterator ii = ins;
-  for(++ii; ii!=BB->end(); ++ii)
+  // If no other instructions in this BB before the first non-logged call
+  // instruction is logged, log FirstNonPHI so that it's easier to resolve
+  // branches when we reconstruct the instruction trace based on the
+  // load/store/external call log.
+  //
+  // Specifically, consider the example below:
+  //
+  //             BB0
+  //            /   \  BB2 branch
+  //           /     \   is taken
+  //         BB1      BB2:
+  //                   call foo (internal, so not logged)
+  //
+  // If we don't log any thing before the call to foo in BB2, the log may
+  // look like BB0's instructions -> foo:entry -> foo:ret -> BB2.  It is
+  // thus difficult to figure out where we went from BB0 without going
+  // across function boundaries or recomputing the branch value.
+  //
+  // To simplify this task, we log a marker before the call to foo in BB2.
+  //
+  for(BasicBlock::iterator ii=ins; ii!=BB->end(); ++ii) {
+    if(ii->getOpcode() == Instruction::Call) // first call instruction
+      return !loggableCall(ii); // if call not logged, log marker
     if(loggableHelper(ii))
-      return false;
+      return false; // if any inst before first call is logged, no marker
+
+  }
   return true;
 }
 

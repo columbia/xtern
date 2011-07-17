@@ -14,10 +14,10 @@ int main(int argc, char **argv) {
   cl::ParseCommandLineOptions(argc, argv,
     "Print contents of a log file\n");
 
-  Log log(InputFilename.c_str());
-  Log::rec_iterator ri;
+  RawLog log(InputFilename.c_str());
+  RawLog::iterator ri;
 
-  for(ri=log.rec_begin(); ri!=log.rec_end(); ++ri) {
+  for(ri=log.begin(); ri!=log.end(); ++ri) {
     PrintRecord(outs(), *ri) << "\n";
   }
 }

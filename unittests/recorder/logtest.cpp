@@ -62,7 +62,7 @@ int find_func_id(void *func) {
 }
 
 static inline
-std::ostream& operator<<(std::ostream& os, const Log::reverse_rec_iterator& ri) {
+std::ostream& operator<<(std::ostream& os, const Log::reverse_raw_iterator& ri) {
   return os << &*ri;
 }
 
@@ -71,7 +71,7 @@ std::ostream& operator<<(std::ostream& os, const Log::reverse_iterator& ri) {
   return os << &*ri;
 }
 
-TEST(recordertest, rec_iterator) {
+TEST(recordertest, raw_iterator) {
   const unsigned num = 10000;
 
   Logger::progBegin();
@@ -96,9 +96,9 @@ TEST(recordertest, rec_iterator) {
   SetLogName(file, sizeof(file), 0);
   Log log(file);
 
-  Log::rec_iterator ri, rj;
+  Log::raw_iterator ri, rj;
 
-  ri = log.rec_begin();
+  ri = log.raw_begin();
   ri += 10;
   rj = ri + 100;
   rj -= 50;
@@ -119,9 +119,9 @@ TEST(recordertest, rec_iterator) {
   EXPECT_EQ(recp, &recref);
   EXPECT_EQ(recp->insid, ri->insid);
 
-  Log::reverse_rec_iterator rri, rrj;
+  Log::reverse_raw_iterator rri, rrj;
 
-  rri = log.rec_rbegin();
+  rri = log.raw_rbegin();
   rri += 10;
   rrj = rri + 100;
   rrj -= 50;
@@ -200,9 +200,9 @@ TEST(recordertest, loadstore) {
   SetLogName(file, sizeof(file), 0);
   Log log(file);
 
-  Log::rec_iterator ri;
+  Log::raw_iterator ri;
   unsigned j;
-  for(ri=log.rec_begin(), j=0; ri!=log.rec_end(); ++ri, ++j) {
+  for(ri=log.raw_begin(), j=0; ri!=log.raw_end(); ++ri, ++j) {
     unsigned i = j % (sizeof(loadstores)/sizeof(loadstores[0]));
     InsidRec *recp = ri;
     LoadRec *load;
@@ -223,8 +223,8 @@ TEST(recordertest, loadstore) {
     }
   }
 
-  Log::reverse_rec_iterator rri;
-  for(rri=log.rec_rbegin(), j=num; rri!=log.rec_rend(); ++rri, --j) {
+  Log::reverse_raw_iterator rri;
+  for(rri=log.raw_rbegin(), j=num; rri!=log.raw_rend(); ++rri, --j) {
     unsigned i = (j-1) % (sizeof(loadstores)/sizeof(loadstores[0]));
     InsidRec *recp = &*rri;
     LoadRec *load;
@@ -313,9 +313,9 @@ TEST(recordertest, call) {
   SetLogName(file, sizeof(file), 0);
   Log log(file);
 
-  Log::rec_iterator ri;
+  Log::raw_iterator ri;
   unsigned i = 0;
-  for(ri=log.rec_begin(); ri!=log.rec_end(); ++ri) {
+  for(ri=log.raw_begin(); ri!=log.raw_end(); ++ri) {
     InsidRec *recp = ri;
     CallRec *call;
     ExtraArgsRec *extra;
@@ -324,8 +324,8 @@ TEST(recordertest, call) {
     switch(ri->type) {
     case CallRecTy: {
       short argnr;
-      short rec_narg;
-      short rec_argnr;
+      short raw_narg;
+      short raw_argnr;
       short seq = 0;
       short nextra;
 
@@ -336,24 +336,24 @@ TEST(recordertest, call) {
       EXPECT_EQ(call->funcid, find_func_id(calls[i].func));
 
       // inline args
-      rec_narg = std::min(calls[i].narg, (short)MAX_INLINE_ARGS);
-      for(argnr=0; argnr<rec_narg; ++argnr)
+      raw_narg = std::min(calls[i].narg, (short)MAX_INLINE_ARGS);
+      for(argnr=0; argnr<raw_narg; ++argnr)
         EXPECT_EQ(call->args[argnr], calls[i].args[argnr]);
 
       // other args
       nextra = NumExtraArgsRecords(calls[i].narg);
-      Log::rec_iterator r = ri + 1;
+      Log::raw_iterator r = ri + 1;
       for(++seq; seq<=nextra; ++seq, ++r) {
         extra = (ExtraArgsRec*)&*r;
         EXPECT_EQ(extra->insid, calls[i].insid);
         EXPECT_EQ(extra->type, ExtraArgsRecTy);
         EXPECT_EQ(extra->seq, seq);
         EXPECT_EQ(extra->narg, calls[i].narg);
-        rec_narg = std::min(extra->narg, (short)(MAX_INLINE_ARGS+MAX_EXTRA_ARGS*seq));
+        raw_narg = std::min(extra->narg, (short)(MAX_INLINE_ARGS+MAX_EXTRA_ARGS*seq));
 
-        for(; argnr<rec_narg; ++argnr) {
-          rec_argnr = argnr - MAX_INLINE_ARGS-MAX_EXTRA_ARGS*(seq-1);
-          EXPECT_EQ(extra->args[rec_argnr], calls[i].args[argnr]);
+        for(; argnr<raw_narg; ++argnr) {
+          raw_argnr = argnr - MAX_INLINE_ARGS-MAX_EXTRA_ARGS*(seq-1);
+          EXPECT_EQ(extra->args[raw_argnr], calls[i].args[argnr]);
         }
       }
       // all narg args should have been checked

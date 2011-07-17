@@ -64,8 +64,8 @@ void LogInstr::exportFuncs(void) {
   assert(!f.has_error() && "can't open file for writing function name->id map!");
   forall(func_map_t, fi, loggables) {
     bool escape = (escapes.find(fi->first) == escapes.end());
-    f << fi->second << " " << fi->first->getName()
-      << "\t" << (escape? 1 : 0) << "\n";
+    f << fi->second << " " << (escape? 1 : 0)
+      << " " << fi->first->getName()<< "\n";
   }
 }
 
@@ -148,6 +148,8 @@ void LogInstr::instrFunc(Function &F) {
       case Instruction::Invoke:
         instrCall(prv);
         break;
+        /// FIXME: can be a call instruction that shouldn't be logged, but
+        /// a marker
       default: // no other ins loggable, log FirstNonPHI
         instrFirstNonPHI(prv);
       }
