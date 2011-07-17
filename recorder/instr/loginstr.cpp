@@ -63,7 +63,7 @@ void LogInstr::exportFuncs(void) {
   raw_fd_ostream f(func_map_file.c_str(), ErrorInfo);
   assert(!f.has_error() && "can't open file for writing function name->id map!");
   forall(func_map_t, fi, loggables) {
-    bool escape = (escapes.find(fi->first) == escapes.end());
+    bool escape = (escapes.find(fi->first) != escapes.end());
     f << fi->second << " " << (escape? 1 : 0)
       << " " << fi->first->getName()<< "\n";
   }
