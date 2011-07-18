@@ -49,9 +49,9 @@ func funcs[5] = {
   {(void*)(intptr_t)strcpy, 604},
 };
 
-void tern_all_loggable_callees(void) {
+void tern_funcs_call_logged(void) {
   for(unsigned i=0; i<sizeof(funcs)/sizeof(funcs[0]); ++i)
-    tern_loggable_callee(funcs[i].func, funcs[i].id, "");
+    tern_func_call_logged(funcs[i].func, funcs[i].id, "");
 }
 
 int find_func_id(void *func) {
@@ -62,12 +62,8 @@ int find_func_id(void *func) {
 }
 
 static inline
-std::ostream& operator<<(std::ostream& os, const Log::reverse_raw_iterator& ri) {
-  return os << &*ri;
-}
-
-static inline
-std::ostream& operator<<(std::ostream& os, const Log::reverse_iterator& ri) {
+std::ostream& operator<<(std::ostream& os,
+                         const RawLog::reverse_iterator& ri) {
   return os << &*ri;
 }
 
@@ -94,11 +90,11 @@ TEST(recordertest, raw_iterator) {
 
   char file[64];
   SetLogName(file, sizeof(file), 0);
-  Log log(file);
+  RawLog log(file);
 
-  Log::raw_iterator ri, rj;
+  RawLog::iterator ri, rj;
 
-  ri = log.raw_begin();
+  ri = log.begin();
   ri += 10;
   rj = ri + 100;
   rj -= 50;
@@ -119,9 +115,9 @@ TEST(recordertest, raw_iterator) {
   EXPECT_EQ(recp, &recref);
   EXPECT_EQ(recp->insid, ri->insid);
 
-  Log::reverse_raw_iterator rri, rrj;
+  RawLog::reverse_iterator rri, rrj;
 
-  rri = log.raw_rbegin();
+  rri = log.rbegin();
   rri += 10;
   rrj = rri + 100;
   rrj -= 50;
@@ -168,9 +164,9 @@ TEST(recordertest, iterator) {
 
   char file[64];
   SetLogName(file, sizeof(file), 0);
-  Log log(file);
+  RawLog log(file);
 
-  Log::iterator ii, ij;
+  RawLog::iterator ii, ij;
 }
 
 
@@ -198,11 +194,11 @@ TEST(recordertest, loadstore) {
 
   char file[64];
   SetLogName(file, sizeof(file), 0);
-  Log log(file);
+  RawLog log(file);
 
-  Log::raw_iterator ri;
+  RawLog::iterator ri;
   unsigned j;
-  for(ri=log.raw_begin(), j=0; ri!=log.raw_end(); ++ri, ++j) {
+  for(ri=log.begin(), j=0; ri!=log.end(); ++ri, ++j) {
     unsigned i = j % (sizeof(loadstores)/sizeof(loadstores[0]));
     InsidRec *recp = ri;
     LoadRec *load;
@@ -223,8 +219,8 @@ TEST(recordertest, loadstore) {
     }
   }
 
-  Log::reverse_raw_iterator rri;
-  for(rri=log.raw_rbegin(), j=num; rri!=log.raw_rend(); ++rri, --j) {
+  RawLog::reverse_iterator rri;
+  for(rri=log.rbegin(), j=num; rri!=log.rend(); ++rri, --j) {
     unsigned i = (j-1) % (sizeof(loadstores)/sizeof(loadstores[0]));
     InsidRec *recp = &*rri;
     LoadRec *load;
@@ -311,11 +307,11 @@ TEST(recordertest, call) {
 
   char file[64];
   SetLogName(file, sizeof(file), 0);
-  Log log(file);
+  RawLog log(file);
 
-  Log::raw_iterator ri;
+  RawLog::iterator ri;
   unsigned i = 0;
-  for(ri=log.raw_begin(); ri!=log.raw_end(); ++ri) {
+  for(ri=log.begin(); ri!=log.end(); ++ri) {
     InsidRec *recp = ri;
     CallRec *call;
     ExtraArgsRec *extra;
@@ -342,7 +338,7 @@ TEST(recordertest, call) {
 
       // other args
       nextra = NumExtraArgsRecords(calls[i].narg);
-      Log::raw_iterator r = ri + 1;
+      RawLog::iterator r = ri + 1;
       for(++seq; seq<=nextra; ++seq, ++r) {
         extra = (ExtraArgsRec*)&*r;
         EXPECT_EQ(extra->insid, calls[i].insid);
