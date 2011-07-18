@@ -157,7 +157,6 @@ void LogInstr::instrFunc(Function &F) {
         instrCall(prv);
         break;
       default:
-        errs() << *prv << "\n";
         assert(0 && "unknown instruction that must be logged!");
       }
     }
@@ -170,10 +169,6 @@ Value *LogInstr::castIfNecessary(Value *srcval, const Type *dst,
   if(src == dst) return srcval;
   if(src->isPointerTy())
     return CastInst::CreatePointerCast(srcval, dst, "tern_ptrcast", insert);
-  if(!CastInst::castIsValid(Instruction::ZExt, srcval, dst)) {
-    errs() << *srcval << "\n";
-    errs() << *insert << "\n";
-  }
   return CastInst::CreateZExtOrBitCast(srcval, dst, "tern_valcast", insert);
 }
 

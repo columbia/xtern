@@ -10,6 +10,17 @@ using namespace llvm;
 
 namespace tern {
 
+static IDManager *IDM = NULL;
+
+void setIDManager(IDManager *idm) {
+  IDM = idm;
+}
+
+IDManager *getIDManager(void) {
+  assert(IDM && "IDManager hasn't been set!");
+  return IDM;
+}
+
 Value* getIntMetadata(const Instruction *I, const char* key) {
   MDNode *Node = I->getMetadata(key);
   if (!Node)

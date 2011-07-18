@@ -112,8 +112,8 @@ LogMDTag instLogged(Instruction *ins) {
 //
 //                              App+Lib            intrinsic   Tern    External
 //                   has summaries   no summary
-//  instr func?           No            Yes          No         No        No
-//  instr call to func?   Yes           No           No         No        Yes
+// func body logged?       No            Yes          No         No        No
+// call to func logged?   Yes            No           No         No       Yes
 
 // TODO: summarized function ==> true
 //
@@ -152,6 +152,16 @@ LogMDTag funcCallLogged(Function *func) {
 
   return NotLogged;
 }
+
+
+/// for every direct call, we check if the function is one of those whose
+/// calls have to be logged (external or summarize).
+///
+/// for every indirect call, we instrument the call and check whether we
+/// have to log it at runtime.  the invariant here is: for each indirect
+/// call, either the first BB of the call target is logged, or there is a
+/// call-extraargs-ret record for the call
+///
 
 LogMDTag callLogged(Instruction *call) {
   Value *insid = getInsID(call);

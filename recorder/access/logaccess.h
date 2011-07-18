@@ -11,8 +11,6 @@
 #include "llvm/BasicBlock.h"
 #include "llvm/Support/CallSite.h"
 #include "recorder/runtime/logdefs.h"
-#include "common/id-manager/IDManager.h"
-
 
 namespace tern {
 
@@ -144,7 +142,6 @@ struct RawLog {
   char *_buf;
 };
 
-
 struct InstLog {
 
   struct ExecutedInstID {
@@ -154,24 +151,30 @@ struct InstLog {
 
   typedef RawLog::iterator            raw_iterator;
   typedef RawLog::reverse_iterator    reverse_raw_iterator;
+  typedef std::vector<ExecutedInstID> InstVec;
+  typedef InstVec::iterator           iterator;
+  typedef InstVec::reverse_iterator   reverse_iterator;
 
   enum { DefaultInstNum = 1024*1024*1024 };
 
-  raw_iterator raw_begin() { return rawLog->begin(); }
-  raw_iterator raw_end()   { return rawLog->end();   }
+  raw_iterator raw_begin()          { return rawLog->begin();  }
+  raw_iterator raw_end()            { return rawLog->end();    }
   reverse_raw_iterator raw_rbegin() { return rawLog->rbegin(); }
   reverse_raw_iterator raw_rend()   { return rawLog->rend();   }
+  iterator begin()                  { return instLog.begin();  }
+  iterator end()                    { return instLog.end();    }
+  reverse_iterator rbegin()         { return instLog.rbegin(); }
+  reverse_iterator rend()           { return instLog.rend();   }
 
   void append(const RawLog::iterator& ri);
   void append(llvm::Instruction *I);
+  llvm::raw_ostream &printExecutedInst(llvm::raw_ostream &o,
+                            ExecutedInstID id, bool details=false);
 
-  InstLog(RawLog* log): rawLog(log) {
-    instLog.reserve(DefaultInstNum);
-  }
+  InstLog(RawLog* log): rawLog(log) { instLog.reserve(DefaultInstNum); }
+  ~InstLog() { delete rawLog; }
 
-//protected:
-
-  typedef std::vector<ExecutedInstID> InstVec;
+protected:
 
   RawLog       *rawLog;
   InstVec      instLog;
@@ -179,11 +182,8 @@ struct InstLog {
 public:
 
   // shared across all logs
-  static void setIDManager(llvm::IDManager *IDM);
   static bool funcCallLogged(llvm::Function *F);
-  static void readFuncMap(const char* file);
-
-  static llvm::IDManager *IDM;
+  static void readFuncMap(const char *file);
 
   typedef std::tr1::unordered_map<llvm::Function*, unsigned> func_map;
   func_map       funcsEscape;
@@ -193,27 +193,24 @@ public:
 
 struct InstLogBuilder {
 
-  InstLog *create(RawLog *log, IDManager *IDM);
+  InstLog *create(const char* logfile);
 
 protected:
+  InstLog *create(RawLog *log);
   void getInstBetween();
   void getInstPrefix();
   void getInstSuffix();
 
-  void incFromBr(llvm::BranchInst *I);
-  void incFromReturn(llvm::ReturnInst *I);
-  void incFromCall(const llvm::CallSite &cs);
+  void incFromJmp();
+  void incFromReturn();
+  void incFromCall();
 
+  InstLog                          *instLog;
   RawLog::iterator                  cur_ri, nxt_ri;
   llvm::BasicBlock::iterator        cur_ii, nxt_ii;
   std::stack<llvm::BasicBlock::iterator> callStack;
-
-  IDManager   *IDM;
-  InstLog     *instLog;
 };
 
-
-llvm::raw_ostream &PrintRecord(llvm::raw_ostream &o, const InsidRec &rec);
 llvm::raw_ostream &operator<< (llvm::raw_ostream &o, const InsidRec &rec);
 llvm::raw_ostream &operator<< (llvm::raw_ostream &o, const LoadRec &rec);
 llvm::raw_ostream &operator<< (llvm::raw_ostream &o, const StoreRec &rec);
