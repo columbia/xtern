@@ -29,11 +29,17 @@ InputFilename(cl::Positional, cl::desc("<input bitcode file>"),
     cl::init("-"), cl::value_desc("filename"));
 
 static cl::opt<std::string>
-OutputFilename("o", cl::desc("Override output filename"),
+OutputFilename("o", cl::desc("Output filename prefix (without .bc or .ll)"),
                cl::value_desc("filename"));
 
 static cl::opt<bool>
 OutputAssembly("S", cl::desc("Write output as LLVM assembly"));
+
+static bool endsWith(const string& str, const char* suffix) {
+  size_t len = str.length();
+  size_t suffix_len = strlen(suffix);
+  return str.compare(len-suffix_len, suffix_len, suffix) == 0;
+}
 
 int main(int argc, char **argv) {
   cl::ParseCommandLineOptions(argc, argv,
@@ -49,10 +55,17 @@ int main(int argc, char **argv) {
     return 1;
   }
 
+  if(endsWith(OutputFilename, ".ll") || endsWith(OutputFilename, ".bc")) {
+    errs() << "Option -o specifies output filename prefix "\
+      "without .bc or .ll extension ";
+    return 1;
+  }
+
+  string ext = (OutputAssembly? ".ll" : ".bc");
   string FuncMapFilename  = OutputFilename + ".funcs";
-  string AnalysisFilename = OutputFilename + "-analysis.bc";
-  string RecordFilename   = OutputFilename + "-record.bc";
-  string ReplayFilename   = OutputFilename + "-replay.bc";
+  string AnalysisFilename = OutputFilename + "-analysis" + ext;
+  string RecordFilename   = OutputFilename + "-record"   + ext;
+  string ReplayFilename   = OutputFilename + "-replay"   + ext;
 
   string ErrorInfo;
   raw_ostream *AnalysisOut = new raw_fd_ostream(AnalysisFilename.c_str(),

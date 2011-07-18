@@ -27,14 +27,14 @@ extern "C" {
   /// (2) address <-> integer ID, used at runtime for logging
   ///
   /// The instrumentor loginstr creates mapping (1) while instrumenting a
-  /// bc module.  It also writes a tern_all_loggable_callees() fucntion
-  /// that builds mapping (2) at runtime.
+  /// bc module.  It also writes a tern_funcs_call_logged() fucntion that
+  /// builds mapping (2) at runtime.
   ///
   /// This is a little bit gross ...
   ///
-  void tern_all_loggable_callees(void); ///will be replaced by loginstr
-  void tern_loggable_callee(void* func, unsigned funcid, const char* name);
-  void tern_escape_callee(void* func, unsigned funcid, const char* name);
+  void tern_funcs_call_logged(void); ///will be replaced by loginstr
+  void tern_func_call_logged(void* func, unsigned funcid, const char* name);
+  void tern_func_escape(void* func, unsigned funcid, const char* name);
 }
 
 #endif

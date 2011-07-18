@@ -10,40 +10,46 @@ using namespace std;
 
 namespace tern {
 
-Value* getLoggable(const Instruction *I) {
-  return getIntMetadata(I, "log");
+LogMDTag getInstLoggedMD(const Instruction *I) {
+  Value *MD = getIntMetadata(I, "log");
+  if(!MD)
+    return NotLogged;
+
+  ConstantInt *CI = dyn_cast<ConstantInt>(MD);
+  return (LogMDTag) CI->getZExtValue();
 }
 
-void setLoggable(LLVMContext &C, Instruction *I) {
-  Value *const data = ConstantInt::get(Type::getInt1Ty(C), 1);
-  I->setMetadata("log", MDNode::get(C, &data, 1));
+void setInstLoggedMD(LLVMContext &C, Instruction *I, LogMDTag tag) {
+  assert(tag == Logged || tag == LogBBMarker && "invalid Log MD Tag!");
+  Value *const data = ConstantInt::get(Type::getInt8Ty(C), tag);
+  I->setMetadata("log", MDNode::get(C, &data, /* number of values */ 1));
 }
 
-static bool loggableHelper(Instruction *ins) {
+static LogMDTag instLoggedHelper(Instruction *ins) {
   Value *insid = getInsID(ins);
-  if(!insid) return false;
+  if(!insid) return NotLogged;
 
   switch(ins->getOpcode()) {
   case Instruction::Load:
   case Instruction::Store:
-    return true;
+    return Logged;
   case Instruction::Call:
   case Instruction::Invoke:
-    return loggableCall(ins);
+    return callLogged(ins);
   }
-  return false;
+  return NotLogged;
 }
 
-bool loggableInstruction(Instruction *ins) {
+LogMDTag instLogged(Instruction *ins) {
   Value *insid = getInsID(ins);
-  if(!insid) return false;
+  if(!insid) return NotLogged;
 
-  if(loggableHelper(ins))
-    return true;
+  if(instLoggedHelper(ins))
+    return Logged;
 
   BasicBlock *BB = ins->getParent();
   if(ins != BB->getFirstNonPHI())
-    return false;
+    return NotLogged;
 
 #if 0
   // can probably use fancier algorithm (e.g., dominators or
@@ -65,7 +71,7 @@ bool loggableInstruction(Instruction *ins) {
     ++ nsucc;
   }
   if(npred == 1 && nsucc == 1)
-    return false;
+    return NotLogged;
 #endif
 
   // If no other instructions in this BB before the first non-logged call
@@ -89,13 +95,18 @@ bool loggableInstruction(Instruction *ins) {
   // To simplify this task, we log a marker before the call to foo in BB2.
   //
   for(BasicBlock::iterator ii=ins; ii!=BB->end(); ++ii) {
-    if(ii->getOpcode() == Instruction::Call) // first call instruction
-      return !loggableCall(ii); // if call not logged, log marker
-    if(loggableHelper(ii))
-      return false; // if any inst before first call is logged, no marker
-
+    if(ii->getOpcode() == Instruction::Call) { // first call instruction
+      LogMDTag tag = callLogged(ii);
+      if(tag == NotLogged)  // if call not logged, log marker
+        return LogBBMarker;
+      else
+        return NotLogged;
+    }
+    // if any inst before first call is logged, no marker
+    if(instLoggedHelper(ii))
+      return NotLogged;
   }
-  return true;
+  return LogBBMarker;
 }
 
 //
@@ -116,46 +127,47 @@ bool loggableInstruction(Instruction *ins) {
 //
 // TODO: necessary to log intrinsic calls?
 //
-bool loggableFunc(Function *func) {
+LogMDTag funcBodyLogged(Function *func) {
   if(func->getIntrinsicID() != Intrinsic::not_intrinsic)
-    return false;
+    return NotLogged;
 
   if(func->getName().startswith("tern"))
-    return false;
+    return NotLogged;
 
   if(func->isDeclaration())
-    return false;
+    return NotLogged;
 
-  return true;
+  return Logged;
 }
 
-bool loggableCallee(Function *func) {
+LogMDTag funcCallLogged(Function *func) {
   if(func->getIntrinsicID() != Intrinsic::not_intrinsic)
-    return false;
+    return NotLogged;
 
   if(func->getName().startswith("tern"))
-    return false;
+    return NotLogged;
 
   if(func->isDeclaration())
-    return true;
+    return Logged;
 
-  return false;
+  return NotLogged;
 }
 
-bool loggableCall(Instruction *call) {
+LogMDTag callLogged(Instruction *call) {
   Value *insid = getInsID(call);
   if(!insid)
-    return false;
+    return NotLogged;
 
   CallSite cs(call);
 
   Function *func = cs.getCalledFunction();
   if(func)
-    return loggableCallee(func);
+    return funcCallLogged(func);
 
-  // indirect call, must log
-  // TODO: query alias and log only if may point to a loggable func
-  return true;
+  // TODO: can query alias and log only if may point to one of the
+  // functions whose calls should be logged.  For now, instrument all
+  // indirect calls and check if we need to log them at runtime
+  return Logged;
 }
 
 } // namespace tern

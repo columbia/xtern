@@ -25,8 +25,8 @@ struct LogInstr: public llvm::ModulePass {
   llvm::Value       *logRet;
 
   typedef std::tr1::unordered_map<llvm::Function*, unsigned> func_map_t;
-  func_map_t       escapes;
-  func_map_t       loggables;
+  func_map_t       funcsEscape;
+  func_map_t       funcsCallLogged;
   std::string      func_map_file;
 
   LogInstr(): ModulePass(&ID) {}

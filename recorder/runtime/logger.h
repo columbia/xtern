@@ -45,22 +45,22 @@ protected:
 
   /// code and data shared by all loggers
 public:
-  static void markLoggableCallee(void *func, unsigned funcid, const char* name) {
-    loggableCallees[func] = funcid;
+  static void markFuncCallLogged(void *func, unsigned funcid, const char* name){
+    funcsCallLogged[func] = funcid;
   }
-  static void markEscapeCallee(void *func, unsigned funcid, const char* name) {
-    escapeCallees[func] = funcid;
+  static void markFuncEscape(void *func, unsigned funcid, const char* name) {
+    funcsEscape[func] = funcid;
   }
-  static bool isLoggableCallee(void *func) {
-    return loggableCallees.find(func) != loggableCallees.end();
+  static bool funcCallLogged(void *func) {
+    return funcsCallLogged.find(func) != funcsCallLogged.end();
   }
-  static bool isEscapeCallee(void *func) {
-    return escapeCallees.find(func) != escapeCallees.end();
+  static bool funcEscape(void *func) {
+    return funcsEscape.find(func) != funcsEscape.end();
   }
 
   typedef std::tr1::unordered_map<void*, unsigned> func_map;
-  static func_map loggableCallees;
-  static func_map escapeCallees;
+  static func_map funcsCallLogged;
+  static func_map funcsEscape;
 
   static void progBegin();
   static void progEnd();

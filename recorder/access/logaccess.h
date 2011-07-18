@@ -144,107 +144,39 @@ struct RawLog {
   char *_buf;
 };
 
-struct Log: public RawLog {
+
+struct InstLog {
 
   struct ExecutedInstID {
     unsigned inst      : 31;  // either inst ID or index into raw log
-    unsigned isLogged :  1;  // determines so
+    unsigned isLogged  :  1;  // this flag determines so
   };
+
+  typedef RawLog::iterator            raw_iterator;
+  typedef RawLog::reverse_iterator    reverse_raw_iterator;
 
   enum { DefaultInstNum = 1024*1024*1024 };
 
-  typedef RawLog                      Parent;
-  typedef Parent::iterator            raw_iterator;
-  typedef Parent::reverse_iterator    reverse_raw_iterator;
-  typedef std::vector<ExecutedInstID> InstTrace;
+  raw_iterator raw_begin() { return rawLog->begin(); }
+  raw_iterator raw_end()   { return rawLog->end();   }
+  reverse_raw_iterator raw_rbegin() { return rawLog->rbegin(); }
+  reverse_raw_iterator raw_rend()   { return rawLog->rend();   }
 
-  // instruction stream iterators
-  struct iterator
-    : public std::iterator<std::bidirectional_iterator_tag,
-                           llvm::Instruction,ptrdiff_t> {
-    typedef iterator self_type;
-    typedef std::iterator<std::bidirectional_iterator_tag,
-                          llvm::Instruction,ptrdiff_t> super;
-    typedef super::value_type value_type;
-    typedef super::difference_type difference_type;
-    typedef super::pointer pointer;
-    typedef super::reference reference;
-
-    Log                      *log;
-    raw_iterator               ri;
-    llvm::BasicBlock::iterator ii;
-    std::stack<llvm::BasicBlock::iterator> callStack;
-
-    iterator(): log(NULL) {}
-    iterator(Log *log, raw_iterator ritor, llvm::BasicBlock::iterator itor)
-      : ri(ritor), ii(itor) {}
-
-    operator pointer() const {
-      return (pointer) ii;
-    }
-    reference operator*() const {
-      return *(pointer)(ii);
-    }
-    pointer operator->() const {
-      return &operator*();
-    }
-    bool operator==(const Log::iterator &rhs) const {
-      return ri == rhs.ri && ii == rhs.ii;
-    }
-    bool operator!=(const Log::iterator &rhs) const {
-      return ri != rhs.ri || ii != rhs.ii;
-    }
-    self_type &operator--();
-    self_type &operator++();
-    self_type operator--(int) { // postdecrement
-      self_type tmp = *this;
-      -- *this;
-      return tmp;
-    }
-    self_type operator++(int) { // postincrement
-      self_type tmp = *this;
-      ++ *this;
-      return tmp;
-    }
-
-    void incFromCall(llvm::CallInst *I);
-    void incFromReturn(llvm::ReturnInst *I);
-    void incFromBr(llvm::BranchInst *I);
-  };
-  typedef std::reverse_iterator<iterator> reverse_iterator;
-
-  raw_iterator raw_begin() { return Parent::begin(); }
-  raw_iterator raw_end()   { return Parent::end();   }
-  reverse_raw_iterator raw_rbegin() { return Parent::rbegin(); }
-  reverse_raw_iterator raw_rend()   { return Parent::rend();   }
-
-  iterator begin();
-  iterator end();
-  reverse_iterator rbegin();
-  reverse_iterator rend();
-
-public:
-  void createInstTrace();
-
-protected:
-  void incFromCall(const llvm::CallSite &cs);
-  void incFromReturn(llvm::ReturnInst *I);
-  void incFromBr(llvm::BranchInst *I);
-  void append(const InsidRec *rec);
+  void append(const RawLog::iterator& ri);
   void append(llvm::Instruction *I);
-  void getInstBetween();
-  void getInstPrefix();
-  void getInstSuffix();
 
-  InstTrace instTrace;
-  raw_iterator cur_ri, nxt_ri;
-  llvm::BasicBlock::iterator cur_ii, nxt_ii;
-  std::stack<llvm::BasicBlock::iterator> callStack;
+  InstLog(RawLog* log): rawLog(log) {
+    instLog.reserve(DefaultInstNum);
+  }
+
+//protected:
+
+  typedef std::vector<ExecutedInstID> InstVec;
+
+  RawLog       *rawLog;
+  InstVec      instLog;
 
 public:
-
-  Log(const char* file): RawLog(file), instTrace(DefaultInstNum) {}
-  Log() {}
 
   // shared across all logs
   static void setIDManager(llvm::IDManager *IDM);
@@ -257,6 +189,29 @@ public:
   func_map       funcsEscape;
   func_map       funcsCallLogged;
 };
+
+
+struct InstLogBuilder {
+
+  InstLog *create(RawLog *log, IDManager *IDM);
+
+protected:
+  void getInstBetween();
+  void getInstPrefix();
+  void getInstSuffix();
+
+  void incFromBr(llvm::BranchInst *I);
+  void incFromReturn(llvm::ReturnInst *I);
+  void incFromCall(const llvm::CallSite &cs);
+
+  RawLog::iterator                  cur_ri, nxt_ri;
+  llvm::BasicBlock::iterator        cur_ii, nxt_ii;
+  std::stack<llvm::BasicBlock::iterator> callStack;
+
+  IDManager   *IDM;
+  InstLog     *instLog;
+};
+
 
 llvm::raw_ostream &PrintRecord(llvm::raw_ostream &o, const InsidRec &rec);
 llvm::raw_ostream &operator<< (llvm::raw_ostream &o, const InsidRec &rec);

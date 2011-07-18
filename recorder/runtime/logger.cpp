@@ -24,8 +24,8 @@ namespace tern {
 
 __thread Logger* Logger::the = NULL;
 
-Logger::func_map Logger::loggableCallees;
-Logger::func_map Logger::escapeCallees;
+Logger::func_map Logger::funcsCallLogged;
+Logger::func_map Logger::funcsEscape;
 
 void Logger::logInsid(unsigned insid) {
   checkAndGrowLogSize();
@@ -65,7 +65,7 @@ void Logger::logStore(unsigned insid, void* addr, uint64_t data) {
 }
 
 void Logger::logCall(int indir, unsigned insid, short narg, void* func, va_list vl) {
-  if(indir && !isEscapeCallee(func))
+  if(indir && !funcEscape(func))
     return;
 
   checkAndGrowLogSize();
@@ -79,8 +79,8 @@ void Logger::logCall(int indir, unsigned insid, short narg, void* func, va_list 
   call->type = CallRecTy;
   call->seq = seq;
   call->narg = narg;
-  assert(isLoggableCallee(func));
-  call->funcid = loggableCallees[func];
+  assert(funcCallLogged(func));
+  call->funcid = funcsCallLogged[func];
 
   short i, rec_narg;
 
@@ -113,7 +113,7 @@ void Logger::logCall(int indir, unsigned insid, short narg, void* func, va_list 
 }
 
 void Logger::logRet(int indir, unsigned insid, short narg, void* func, uint64_t data){
-  if(indir && !isEscapeCallee(func))
+  if(indir && !funcEscape(func))
     return;
 
   checkAndGrowLogSize();
@@ -126,8 +126,8 @@ void Logger::logRet(int indir, unsigned insid, short narg, void* func, uint64_t 
   ret->type = ReturnRecTy;
   ret->seq = seq;
   ret->narg = narg;
-  assert(isLoggableCallee(func));
-  ret->funcid = loggableCallees[func];
+  assert(funcCallLogged(func));
+  ret->funcid = funcsCallLogged[func];
   ret->data = data;
 
   off += RECORD_SIZE;
@@ -210,7 +210,7 @@ void Logger::threadEnd(void) {
 }
 
 void Logger::progBegin(void) {
-  tern_all_loggable_callees();
+  tern_funcs_call_logged();
 }
 
 void Logger::progEnd(void) {
@@ -220,16 +220,16 @@ void Logger::progEnd(void) {
 } // namespace tern
 
 
-void __attribute((weak)) tern_all_loggable_callees(void) {
+void __attribute((weak)) tern_funcs_call_logged(void) {
   // empty function; will be replaced by loginstr
 }
 
-void tern_loggable_callee(void* func, unsigned funcid, const char* name) {
-  tern::Logger::markLoggableCallee(func, funcid, name);
+void tern_func_call_logged(void* func, unsigned funcid, const char* name) {
+  tern::Logger::markFuncCallLogged(func, funcid, name);
 }
 
-void tern_escape_callee(void* func, unsigned funcid, const char* name) {
-  tern::Logger::markEscapeCallee(func, funcid, name);
+void tern_func_escape(void* func, unsigned funcid, const char* name) {
+  tern::Logger::markFuncEscape(func, funcid, name);
 }
 
 void tern_log_insid(unsigned insid) {

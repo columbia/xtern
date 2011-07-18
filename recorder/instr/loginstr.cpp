@@ -51,7 +51,7 @@ bool LogInstr::runOnModule(Module &M) {
 
   forallfunc(M, fi) {
     // instr function @fi if it is loggable
-    if(loggableFunc(fi))
+    if(funcBodyLogged(fi))
       instrFunc(*fi);
   }
 
@@ -62,8 +62,8 @@ void LogInstr::exportFuncs(void) {
   string ErrorInfo;
   raw_fd_ostream f(func_map_file.c_str(), ErrorInfo);
   assert(!f.has_error() && "can't open file for writing function name->id map!");
-  forall(func_map_t, fi, loggables) {
-    bool escape = (escapes.find(fi->first) != escapes.end());
+  forall(func_map_t, fi, funcsCallLogged) {
+    bool escape = (funcsEscape.find(fi->first) != funcsEscape.end());
     f << fi->second << " " << (escape? 1 : 0)
       << " " << fi->first->getName()<< "\n";
   }
@@ -72,13 +72,13 @@ void LogInstr::exportFuncs(void) {
 void LogInstr::getFuncs(Module &M) {
   unsigned funcid = Intrinsic::num_intrinsics;
   forallfunc(M, fi) {
-    if(loggableCallee(fi)) {
-      func_map_t::iterator i = loggables.find(fi);
-      if(i == loggables.end()) {
+    if(funcCallLogged(fi)) {
+      func_map_t::iterator i = funcsCallLogged.find(fi);
+      if(i == funcsCallLogged.end()) {
         ++ funcid;
-        loggables[fi] = funcid;
+        funcsCallLogged[fi] = funcid;
         if(funcEscapes(fi))
-          escapes[fi] = funcid;
+          funcsEscape[fi] = funcid;
       }
     }
   }
@@ -86,7 +86,7 @@ void LogInstr::getFuncs(Module &M) {
 
 /// create function tern_all_loggable_callees() and mark loggable callees
 void LogInstr::markFuncs(Module &M) {
-  const char *markall_name = "tern_all_loggable_callees";
+  const char *markall_name = "tern_funcs_call_logged";
   const FunctionType *functype = TypeBuilder<void (void), false>::get(*context);
 
   Function *markall = dyn_cast<Function>
@@ -97,24 +97,24 @@ void LogInstr::markFuncs(Module &M) {
   Function *markone;
   const char *markone_name;
 
-  markone_name = "tern_loggable_callee";
+  markone_name = "tern_func_call_logged";
   functype = TypeBuilder<void (types::i<8>*, types::i<32>),
     false>::get(*context);
   markone = dyn_cast<Function>
     (M.getOrInsertFunction(markone_name, functype));
-  forall(func_map_t, fi, loggables) {
+  forall(func_map_t, fi, funcsCallLogged) {
     Value *args[2];
     args[0] = builder.CreateBitCast(fi->first, addrType, "tern_funcast");
     args[1] = ConstantInt::get(Type::getInt32Ty(*context), fi->second);
     builder.CreateCall2(markone, args[0], args[1]);
   }
 
-  markone_name = "tern_escape_callee";
+  markone_name = "tern_func_escape";
   functype = TypeBuilder<void (types::i<8>*, types::i<32>),
     false>::get(*context);
   markone = dyn_cast<Function>
     (M.getOrInsertFunction(markone_name, functype));
-  forall(func_map_t, fi, escapes) {
+  forall(func_map_t, fi, funcsEscape) {
     Value *args[2];
     args[0] = builder.CreateBitCast(fi->first, addrType, "tern_funcast");
     args[1] = ConstantInt::get(Type::getInt32Ty(*context), fi->second);
@@ -133,10 +133,18 @@ void LogInstr::instrFunc(Function &F) {
     for(cur=BB->begin(); cur!=BB->end();) {
       prv = cur;
       cur ++;
-      if(!loggableInstruction(prv))
+
+      LogMDTag tag = instLogged(prv);
+      if(tag == NotLogged)
         continue;
-      // mark instruction loggable
-      setLoggable(*context, prv);
+
+      // set logged metadata
+      setInstLoggedMD(*context, prv, tag);
+      if(tag == LogBBMarker) {
+        instrFirstNonPHI(prv);
+        continue;
+      }
+      // must be a logged instruction
       switch(prv->getOpcode()) {
       case Instruction::Load:
         instrLoad(dyn_cast<LoadInst>(prv));
@@ -148,10 +156,9 @@ void LogInstr::instrFunc(Function &F) {
       case Instruction::Invoke:
         instrCall(prv);
         break;
-        /// FIXME: can be a call instruction that shouldn't be logged, but
-        /// a marker
-      default: // no other ins loggable, log FirstNonPHI
-        instrFirstNonPHI(prv);
+      default:
+        errs() << *prv << "\n";
+        assert(0 && "unknown instruction that must be logged!");
       }
     }
   }
@@ -163,6 +170,10 @@ Value *LogInstr::castIfNecessary(Value *srcval, const Type *dst,
   if(src == dst) return srcval;
   if(src->isPointerTy())
     return CastInst::CreatePointerCast(srcval, dst, "tern_ptrcast", insert);
+  if(!CastInst::castIsValid(Instruction::ZExt, srcval, dst)) {
+    errs() << *srcval << "\n";
+    errs() << *insert << "\n";
+  }
   return CastInst::CreateZExtOrBitCast(srcval, dst, "tern_valcast", insert);
 }
 
