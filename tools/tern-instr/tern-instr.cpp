@@ -3,6 +3,7 @@
 #include "llvm/Module.h"
 #include "llvm/PassManager.h"
 #include "llvm/Analysis/Verifier.h"
+#include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Assembly/PrintModulePass.h"
 #include "llvm/Bitcode/ReaderWriter.h"
 #include "llvm/Support/PassNameParser.h"
@@ -48,42 +49,75 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-  string FuncMap = OutputFilename + ".funcs";
+  string FuncMapFilename  = OutputFilename + ".funcs";
+  string AnalysisFilename = OutputFilename + "-analysis.bc";
+  string RecordFilename   = OutputFilename + "-record.bc";
+  string ReplayFilename   = OutputFilename + "-replay.bc";
 
   string ErrorInfo;
-  raw_ostream *Out = new raw_fd_ostream(OutputFilename.c_str(), ErrorInfo,
-                                        raw_fd_ostream::F_Binary);
-  assert(Out && "can't open output file!");
+  raw_ostream *AnalysisOut = new raw_fd_ostream(AnalysisFilename.c_str(),
+                                   ErrorInfo,  raw_fd_ostream::F_Binary);
+  raw_ostream *RecordOut   = new raw_fd_ostream(RecordFilename.c_str(),
+                                   ErrorInfo,  raw_fd_ostream::F_Binary);
+  raw_ostream *ReplayOut   = new raw_fd_ostream(ReplayFilename.c_str(),
+                                   ErrorInfo,  raw_fd_ostream::F_Binary);
+  assert(AnalysisOut && "can't open output file!");
+  assert(RecordOut   && "can't open output file!");
+  assert(ReplayOut   && "can't open output file!");
 
   LogInstr *pass;
-  PassManager Passes;
-  const std::string &ModuleDataLayout = M.get()->getDataLayout();
-  if (!ModuleDataLayout.empty())
-    Passes.add(new TargetData(ModuleDataLayout));
+  PassManager Passes1, Passes2, Passes3;
 
   // TODO: all optimization passes
-  Passes.add(new IDTagger);
-  Passes.add(new SyncInstr);
-  Passes.add(pass = new LogInstr); pass->setFuncsExportFile(FuncMap);
-  Passes.add(new InitInstr);
 
-  // output analysis.bc
+  const std::string &ModuleDataLayout = M.get()->getDataLayout();
 
-  // clone module
-
-  // replay.bc
-
-  // record.bc
-
+  // analysis instrumentation
+  if (!ModuleDataLayout.empty())
+    Passes1.add(new TargetData(ModuleDataLayout));
+  Passes1.add(new IDTagger);
   // Check that the module is well formed on completion of optimization
-  Passes.add(createVerifierPass());
-
+  Passes1.add(createVerifierPass());
   if (OutputAssembly)
-    Passes.add(createPrintModulePass(Out));
+    Passes1.add(createPrintModulePass(AnalysisOut));
   else
-    Passes.add(createBitcodeWriterPass(*Out));
-  Passes.run(*M.get());
+    Passes1.add(createBitcodeWriterPass(*AnalysisOut));
 
-  delete Out;
+  // record instrumentation
+  if (!ModuleDataLayout.empty())
+    Passes2.add(new TargetData(ModuleDataLayout));
+  Passes2.add(new SyncInstr);
+  Passes2.add(createVerifierPass());
+  Passes2.add(pass = new LogInstr); pass->setFuncsExportFile(FuncMapFilename);
+  Passes2.add(createVerifierPass());
+  Passes2.add(new InitInstr);
+  // Check that the module is well formed on completion of optimization
+  Passes2.add(createVerifierPass());
+  if (OutputAssembly)
+    Passes2.add(createPrintModulePass(RecordOut));
+  else
+    Passes2.add(createBitcodeWriterPass(*RecordOut));
+
+  // replay instrumentation
+  if (!ModuleDataLayout.empty())
+    Passes3.add(new TargetData(ModuleDataLayout));
+  // TODO add loom.bit
+  // Check that the module is well formed on completion of optimization
+  Passes3.add(createVerifierPass());
+  if (OutputAssembly)
+    Passes3.add(createPrintModulePass(ReplayOut));
+  else
+    Passes3.add(createBitcodeWriterPass(*ReplayOut));
+
+  Passes1.run(*M.get());
+  auto_ptr<Module> MC;
+  MC.reset(CloneModule(M.get()));
+  Passes2.run(*M.get());
+  Passes3.run(*MC.get());
+
+  delete AnalysisOut;
+  delete RecordOut;
+  delete ReplayOut;
+
   return 0;
 }
