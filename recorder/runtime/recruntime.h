@@ -57,7 +57,7 @@ struct RecorderRT: public Runtime, public _Scheduler {
   int semTimedWait(unsigned insid, sem_t *sem, const struct timespec *abstime);
   int semPost(unsigned insid, sem_t *sem);
 
-  void symbolic(void *addr, int nbytes, const char *name);
+  void symbolic(unsigned insid, void *addr, int nbytes, const char *name);
 
   RecorderRT(): _Scheduler(pthread_self()) {
     int ret = sem_init(&thread_create_sem, 0, 1); // main thread

@@ -24,8 +24,9 @@ void tern_prog_end() {
   tern::Runtime::the->progEnd();
 }
 
-void tern_symbolic(void *addr, int nbytes, const char *name) {
-  tern::Runtime::the->symbolic(addr, nbytes, name);
+void tern_symbolic_real(unsigned insid, void *addr,
+                        int nbytes, const char *name) {
+  tern::Runtime::the->symbolic(insid, addr, nbytes, name);
 }
 
 void tern_thread_begin(void) {

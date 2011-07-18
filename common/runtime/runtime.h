@@ -10,7 +10,8 @@ namespace tern {
 struct Runtime {
   virtual void progBegin() {}
   virtual void progEnd() {}
-  virtual void symbolic(void *addr, int nbytes, const char *name) {}
+  virtual void symbolic(unsigned insid, void *addr,
+                        int nbytes, const char *name) {}
   virtual void threadBegin() {}
   virtual void threadEnd() {}
 

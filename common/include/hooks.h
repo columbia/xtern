@@ -16,9 +16,12 @@
 extern "C" {
 #endif
 
-
-  /// hooks that users insert.
-# include "user.h"
+  /// hooks that users insert translate into these
+  void tern_symbolic_real(unsigned insid, void *addr,
+                          int nbytes, const char *symname);
+  void tern_task_begin_real(unsigned insid, void *addr,
+                            int nbytes, const char *name);
+  void tern_task_end_real(unsigned insid);
 
   /// hooks tern automatically inserts.  start with the ones tern provides
   void tern_prog_begin(void);    /// initializes tern internal data
@@ -35,13 +38,16 @@ extern "C" {
   /// calls. add one extra argument, @insid or instruction ID to each hook
   /// to ease debugging.
 # undef DEF
-# undef DEFTERN
+# undef DEFTERNAUTO
+# undef DEFTERNUSER
 # define DEF(func, kind, rettype, args...) \
     rettype tern_ ## func (unsigned insid, args);
-# define DEFTERN(func, kind)
+# define DEFTERNAUTO(func)
+# define DEFTERNUSER(func)
 # include "syncfuncs.def.h"
 # undef DEF
-# undef DEFTERN
+# undef DEFTERNAUTO
+# undef DEFTERNUSER
 
 
 #ifdef __cplusplus

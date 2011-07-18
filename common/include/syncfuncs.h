@@ -10,14 +10,17 @@ namespace tern {
 namespace syncfunc {
 
 #undef DEF
-#undef DEFTERN
+#undef DEFTERNAUTO
+#undef DEFTERNUSER
 
 enum {
 # define DEF(func,kind,...) func,
-# define DEFTERN(func,kind)     func,
+# define DEFTERNAUTO(func)      func,
+# define DEFTERNUSER(func)  func,
 # include "syncfuncs.def.h"
 # undef DEF
-# undef DEFTERN
+# undef DEFTERNAUTO
+# undef DEFTERNUSER
   num_syncs,
   not_sync = (unsigned)(-1)
 };
@@ -27,7 +30,7 @@ extern const int kind[];
 extern const char* name[];
 extern const char* nameInTern[];
 
-enum {Synchronization, BlockingSyscall, TernBuiltin};
+enum {Synchronization, BlockingSyscall, TernUser, TernAuto};
 
 static inline bool isSync(unsigned nr) {
   assert(nr < num_syncs);
@@ -41,7 +44,17 @@ static inline bool isBlockingSyscall(unsigned nr) {
 
 static inline bool isTern(unsigned nr) {
   assert(nr < num_syncs);
-  return kind[nr] == TernBuiltin;
+  return kind[nr] == TernUser || kind[nr] == TernAuto;
+}
+
+static inline bool isTernUser(unsigned nr) {
+  assert(nr < num_syncs);
+  return kind[nr] == TernUser;
+}
+
+static inline bool isTernAuto(unsigned nr) {
+  assert(nr < num_syncs);
+  return kind[nr] == TernAuto;
 }
 
 static inline const char* getName(unsigned nr) {

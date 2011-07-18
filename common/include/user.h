@@ -2,7 +2,7 @@
 #ifndef __TERN_COMMON_USER_H
 #define __TERN_COMMON_USER_H
 
-/* users can choose to manually insert these methods to their programs */
+/* users manually insert these macros to their programs */
 
 #ifdef __cplusplus
 extern "C" {

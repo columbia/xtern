@@ -51,11 +51,11 @@ DEF(sigwait,                BlockingSyscall, int, const sigset_t *set, int *sig)
 /* DEF(syscall,                BlockingSyscall, tern_, int, int) */ /* FIXME: why include generic syscall entry point? */
 /* DEF(ap_mpm_pod_check,       BlockingSyscall, tern_) */ /* FIXME: ap_mpm_pod_check is not a real lib call; needed for apache */
 
-DEFTERN(tern_symbolic,     TernBuiltin)
-DEFTERN(tern_thread_begin, TernBuiltin)
-DEFTERN(tern_thread_end,   TernBuiltin)
-DEFTERN(tern_task_begin,   TernBuiltin)
-DEFTERN(tern_task_end,     TernBuiltin)
-DEFTERN(tern_fix_up,       TernBuiltin)
-DEFTERN(tern_fix_down,     TernBuiltin)
+DEFTERNUSER(tern_symbolic)
+DEFTERNAUTO(tern_thread_begin)
+DEFTERNAUTO(tern_thread_end)
+DEFTERNUSER(tern_task_begin)
+DEFTERNUSER(tern_task_end)
+DEFTERNAUTO(tern_fix_up)
+DEFTERNAUTO(tern_fix_down)
 

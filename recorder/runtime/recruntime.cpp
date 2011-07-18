@@ -408,14 +408,15 @@ int RecorderRT<_S>::semPost(unsigned ins, sem_t *sem){
 
 
 template <typename _S>
-void RecorderRT<_S>::symbolic(void *addr, int nbyte, const char *name){
+void RecorderRT<_S>::symbolic(unsigned insid, void *addr,
+                              int nbyte, const char *name){
   unsigned nturn;
 
   _S::getTurn();
   nturn = _S::getTurnCount();
   _S::putTurn();
 
-  Logger::the->logSync(INVALID_INSID, syncfunc::tern_symbolic,
+  Logger::the->logSync(insid, syncfunc::tern_symbolic,
                        nturn, (uint64_t)addr, (uint64_t)nbyte);
 }
 

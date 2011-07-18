@@ -62,16 +62,17 @@ void __tern_prog_end (void) {
   tern_prog_end();
 }
 
-void __tern_symbolic(void *addr, int nbytes, const char *symname) {
+void __tern_symbolic(unsigned insid, void *addr,
+                     int nbytes, const char *symname) {
   if(nbytes <= 0 || !addr)
     return;
-  tern_symbolic(addr, nbytes, symname);
+  tern_symbolic_real(insid, addr, nbytes, symname);
 }
 
-void __tern_symbolic_argv(int argc, char **argv) {
+void __tern_symbolic_argv(unsigned insid, int argc, char **argv) {
   char arg[32];
   for(int i=0; i<argc; ++i) {
     sprintf(arg, "arg%d\n", i);
-    tern_symbolic(argv[i], strlen(argv[i])+1, arg);
+    tern_symbolic_real(insid, argv[i], strlen(argv[i])+1, arg);
   }
 }

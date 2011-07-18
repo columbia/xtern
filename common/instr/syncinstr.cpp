@@ -76,13 +76,13 @@ void SyncInstr::initFuncTypes(Module &M) {
   forallfunc(*tmp, fi) {
     if(fi->isDeclaration()) {
       unsigned syncid = syncfunc::getTernNameID(fi->getNameStr().c_str());
-      // only care about sync functions not provided by us
-      if(syncid != syncfunc::not_sync && !syncfunc::isTern(syncid))
+      // only care about sync functions not automatically inserted by tern
+      if(syncid != syncfunc::not_sync && !syncfunc::isTernAuto(syncid))
         functypes[syncid] = fi->getFunctionType();
     }
   }
   for(unsigned i=0; i<syncfunc::num_syncs; ++i) {
-    if(!syncfunc::isTern(i)) {
+    if(!syncfunc::isTernAuto(i)) {
       assert(functypes.find(i) != functypes.end()
              && "can't find type for sync function!");
     }
@@ -102,7 +102,8 @@ void SyncInstr::warnEscapeFuncs(Module &M) {
   }
 }
 
-void SyncInstr::replaceFunctionInCall(Module &M, Instruction *I, unsigned syncid) {
+void SyncInstr::replaceFunctionInCall(Module &M, Instruction *I,
+                                      unsigned syncid) {
 
   CallSite cs(I);
   InvokeInst *IV;
@@ -182,7 +183,7 @@ bool SyncInstr::runOnModule(Module &M) {
       unsigned syncid = syncfunc::getNameID(name);
       if(syncid == syncfunc::not_sync)
         continue;
-      if(syncfunc::isTern(syncid))
+      if(syncfunc::isTernAuto(syncid))
         continue;
       replaceFunctionInCall(M, prv, syncid);
     }

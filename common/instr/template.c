@@ -23,10 +23,13 @@ extern intptr_t unused;
 void template(void)
 {
 # undef DEF
-# undef DEFTERN
+# undef DEFTERNAUTO
+# undef DEFTERNUSER
 # define DEF(func, args...)  unused = (intptr_t) tern_ ## func;
-# define DEFTERN(func, kind)
+# define DEFTERNAUTO(func)
+# define DEFTERNUSER(func)   unused = (intptr_t) func ## _real;
 # include "syncfuncs.def.h"
 # undef DEF
-# undef DEFTERN
+# undef DEFTERNAUTO
+# undef DEFTERNUSER
 }

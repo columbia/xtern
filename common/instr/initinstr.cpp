@@ -2,6 +2,7 @@
 
 #include <vector>
 #include "initinstr.h"
+#include "instrutil.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/TypeBuilder.h"
 
@@ -27,13 +28,19 @@ void InitInstr::addInitInMain(llvm::Module &M, llvm::Function *mainfunc) {
 }
 
 void InitInstr::addSymbolicArgv(llvm::Module &M, llvm::Function *mainfunc) {
+
+  // TODO: need to assign the inserted __tern_symbolic_argv an instruction ID
+  return;
+
   Instruction *I = mainfunc->getEntryBlock().getFirstNonPHI();
-  const FunctionType *Ty = TypeBuilder<void (types::i<32>, types::i<8>**),
+  const FunctionType *Ty = TypeBuilder<void (types::i<32>, types::i<32>,
+                                             types::i<8>**),
     false>::get(getGlobalContext());
   Constant *C = M.getOrInsertFunction("__tern_symbolic_argv", Ty);
   Function *F = dyn_cast<Function>(C);
   assert(F && "can't insert function!");
   SmallVector<Value*, 8> args;
+  args.push_back(getInsID(I));
   for(Function::arg_iterator ai=mainfunc->arg_begin(), ae=mainfunc->arg_end();
       ai != ae; ++ai) {
     assert(ai);
