@@ -68,6 +68,8 @@ void Logger::logCall(int indir, unsigned insid, short narg, void* func, va_list 
   if(indir && !funcEscape(func))
     return;
 
+  assert(funcCallLogged(func));
+
   checkAndGrowLogSize();
   checkAndSetInsid(insid);
 
@@ -79,7 +81,6 @@ void Logger::logCall(int indir, unsigned insid, short narg, void* func, va_list 
   call->type = CallRecTy;
   call->seq = seq;
   call->narg = narg;
-  assert(funcCallLogged(func));
   call->funcid = funcsCallLogged[func];
 
   short i, rec_narg;
@@ -116,6 +117,8 @@ void Logger::logRet(int indir, unsigned insid, short narg, void* func, uint64_t 
   if(indir && !funcEscape(func))
     return;
 
+  assert(funcCallLogged(func));
+
   checkAndGrowLogSize();
   checkAndSetInsid(insid);
 
@@ -126,7 +129,6 @@ void Logger::logRet(int indir, unsigned insid, short narg, void* func, uint64_t 
   ret->type = ReturnRecTy;
   ret->seq = seq;
   ret->narg = narg;
-  assert(funcCallLogged(func));
   ret->funcid = funcsCallLogged[func];
   ret->data = data;
 

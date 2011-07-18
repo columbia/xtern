@@ -6,6 +6,7 @@
 #include <iterator>
 #include <tr1/unordered_map>
 #include <sys/types.h>
+#include "llvm/Module.h"
 #include "llvm/Instruction.h"
 #include "llvm/Instructions.h"
 #include "llvm/BasicBlock.h"
@@ -182,12 +183,16 @@ protected:
 public:
 
   // shared across all logs
-  static bool funcCallLogged(llvm::Function *F);
-  static void readFuncMap(const char *file);
+  static unsigned getFuncID(llvm::Function *F);
+  static llvm::Function *getFunc(unsigned id);
+  static void setFuncMap(const char *file, const llvm::Module& M);
 
   typedef std::tr1::unordered_map<llvm::Function*, unsigned> func_map;
-  func_map       funcsEscape;
-  func_map       funcsCallLogged;
+  typedef std::tr1::unordered_map<unsigned, llvm::Function*> reverse_func_map;
+
+  static func_map         funcsEscape;
+  static func_map         funcsCallLogged;
+  static reverse_func_map funcsIDMap;
 };
 
 
@@ -197,17 +202,20 @@ struct InstLogBuilder {
 
 protected:
   InstLog *create(RawLog *log);
-  void getInstBetween();
+  void getInbetweenInsts();
+  void getInst();
   void getInstPrefix();
   void getInstSuffix();
 
-  void incFromJmp();
-  void incFromReturn();
-  void incFromCall();
+  bool nextInstFromJmp();
+  bool nextInstFromReturn();
+  bool nextInstFromCall();
 
-  InstLog                          *instLog;
+  void dumpIterators();
+
+  InstLog                           *instLog;
   RawLog::iterator                  cur_ri, nxt_ri;
-  llvm::BasicBlock::iterator        cur_ii, nxt_ii;
+  BasicBlock::iterator              cur_ii, nxt_ii;
   std::stack<llvm::BasicBlock::iterator> callStack;
 };
 

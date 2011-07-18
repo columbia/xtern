@@ -38,6 +38,8 @@ OutputAssembly("S", cl::desc("Write output as LLVM assembly"));
 static bool endsWith(const string& str, const char* suffix) {
   size_t len = str.length();
   size_t suffix_len = strlen(suffix);
+  if(len < suffix_len)
+    return false;
   return str.compare(len-suffix_len, suffix_len, suffix) == 0;
 }
 
@@ -89,7 +91,7 @@ int main(int argc, char **argv) {
   if (!ModuleDataLayout.empty())
     Passes1.add(new TargetData(ModuleDataLayout));
   Passes1.add(new IDTagger);
-  // Check that the module is well formed on completion of optimization
+  Passes1.add(new SyncInstr);
   Passes1.add(createVerifierPass());
   if (OutputAssembly)
     Passes1.add(createPrintModulePass(AnalysisOut));
@@ -99,12 +101,10 @@ int main(int argc, char **argv) {
   // record instrumentation
   if (!ModuleDataLayout.empty())
     Passes2.add(new TargetData(ModuleDataLayout));
-  Passes2.add(new SyncInstr);
-  Passes2.add(createVerifierPass());
+Passes2.add(createVerifierPass());
   Passes2.add(pass = new LogInstr); pass->setFuncsExportFile(FuncMapFilename);
-  Passes2.add(createVerifierPass());
+Passes2.add(createVerifierPass());
   Passes2.add(new InitInstr);
-  // Check that the module is well formed on completion of optimization
   Passes2.add(createVerifierPass());
   if (OutputAssembly)
     Passes2.add(createPrintModulePass(RecordOut));
@@ -115,7 +115,6 @@ int main(int argc, char **argv) {
   if (!ModuleDataLayout.empty())
     Passes3.add(new TargetData(ModuleDataLayout));
   // TODO add loom.bit
-  // Check that the module is well formed on completion of optimization
   Passes3.add(createVerifierPass());
   if (OutputAssembly)
     Passes3.add(createPrintModulePass(ReplayOut));

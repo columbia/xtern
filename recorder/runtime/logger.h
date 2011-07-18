@@ -33,8 +33,9 @@ protected:
   }
   void checkAndSetInsid(unsigned &insid) {
     if(insid == INVALID_INSID)
-      insid &= (1<<REC_TYPE_BITS)-1;
-    assert(insid < MAX_INSID && "instruction id larger than (1U<<29)!");
+      insid = INVALID_INSID_IN_REC;
+    else
+      assert(insid < MAX_INSID && "instruction id larger than (1U<<29)!");
   }
 
   char*      buf;

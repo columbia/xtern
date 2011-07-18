@@ -36,13 +36,14 @@ struct LogInstr: public llvm::ModulePass {
   llvm::Value *castIfNecessary(llvm::Value *data, const llvm::Type *dst,
                                  llvm::Instruction *insert);
   void instrFunc(llvm::Function &F);
+  void instrInst(llvm::Instruction *I);
   void instrLoad(llvm::LoadInst *load);
   void instrStore(llvm::StoreInst *store);
   void instrLoadStore(llvm::Value *insid, llvm::Value *addr,
                       llvm::Value *data, llvm::Instruction *ins, bool isload);
   void instrCall(llvm::Instruction *call);
   void instrInvoke(llvm::InvokeInst *invoke);
-  void instrFirstNonPHI(llvm::Instruction *ins);
+  void instrBBMarker(llvm::Instruction *ins);
 
   /// get loggable callees (i.e., calls to them must be logged); within
   /// these functions, also computes escape functions (function address

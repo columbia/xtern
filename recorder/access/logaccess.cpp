@@ -7,6 +7,7 @@
 #include <sys/mman.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <fstream>
 
 #include "util.h"
 #include "common/instr/instrutil.h"
@@ -17,7 +18,9 @@
 #include "llvm/Support/CallSite.h"
 #include "logaccess.h"
 
-#ifdef _DEBUG //_RECORDER
+//#define _DEBUG_RECORDER
+
+#ifdef _DEBUG_RECORDER
 #  define dprintf(fmt...) fprintf(stderr, fmt)
 #else
 #  define dprintf(fmt...)
@@ -78,22 +81,105 @@ void InstLog::append(const RawLog::iterator &ri) {
   id.inst = ri.getIndex();
   id.isLogged = 1;
   instLog.push_back(id);
+
+#ifdef _DEBUG_RECORDER
+  printExecutedInst(errs(), id, true) << "\n";
+#endif
 }
 
 void InstLog::append(Instruction *I) {
   ExecutedInstID id;
   unsigned insid = getIDManager()->getInstructionID(I);
 
+if(insid == INVALID_INSID) {
+  errs() << *I << "\n";
+  insid = getIDManager()->getInstructionID(I);
+}
+
   assert(insid != INVALID_INSID && "instruction has no valid id!");
   // TODO assert IDM->size() not too large once and for all
   id.inst = insid;
   id.isLogged = 0;
   instLog.push_back(id);
+
+#ifdef _DEBUG_RECORDER
+  printExecutedInst(errs(), id, true) << "\n";
+#endif
+}
+
+raw_ostream &InstLog::printExecutedInst(raw_ostream &o,
+                       ExecutedInstID id, bool details) {
+  unsigned insid;
+  if(id.isLogged) {
+    o << "L idx=" << id.inst;
+    raw_iterator ri(rawLog, id.inst);
+    o << " " << *ri;
+    insid = ri->insid;
+  } else {
+    o << "P ins=" << id.inst;
+    insid = id.inst;
+  }
+
+  if(details) {
+    Instruction *I = getIDManager()->getInstruction(insid);
+    if(I)
+      o << *I;
+  }
+  return o;
+}
+
+InstLog::func_map         InstLog::funcsEscape;
+InstLog::func_map         InstLog::funcsCallLogged;
+InstLog::reverse_func_map InstLog::funcsIDMap;
+
+unsigned InstLog::getFuncID(Function *F) {
+  func_map::iterator fi = funcsCallLogged.find(F);
+  if(fi == funcsCallLogged.end())
+    return (unsigned)-1;
+  return fi->second;
+}
+
+Function *InstLog::getFunc(unsigned funcid) {
+  reverse_func_map::iterator fi = funcsIDMap.find(funcid);
+  if(fi == funcsIDMap.end())
+    return NULL;
+  return fi->second;
+}
+
+void InstLog::setFuncMap(const char *file, const Module& M) {
+  ifstream f(file);
+  assert(f && "can't open func map file for read!");
+
+  unsigned funcid;
+  unsigned escape;
+  string funcname;
+  for(;;) {
+    f >> funcid;   if(!f) break;
+    f >> escape;   if(!f) break;
+    f >> funcname; if(!f) break;
+
+    assert(funcid > Intrinsic::num_intrinsics
+           && "invalid func id in .funcs file");
+    assert((escape==0||escape==1)
+           && "invalid escape value id in .funcs file");
+    assert(!funcname.empty()
+           && "invalid func name in .funcs file");
+
+    Function *F = M.getFunction(funcname);
+    assert(F && "can't find a function logged in .funcs file in the module!");
+    assert(funcsCallLogged.find(F) == funcsCallLogged.end()
+           && "redundant function names in .funcs file!");
+
+    funcsCallLogged[F] = funcid;
+    funcsIDMap[funcid] = F;
+    if(escape)
+      funcsEscape[F] = escape;
+  }
 }
 
 /// this call should be the call that changed the execution from curBB to
 /// nxtBB
-void InstLogBuilder::incFromCall() {
+bool InstLogBuilder::nextInstFromCall() {
   Function *F;
   BasicBlock *nxtBB;
   const CallSite cs(cur_ii);
@@ -101,7 +187,7 @@ void InstLogBuilder::incFromCall() {
   F = cs.getCalledFunction();
   if(F && !funcBodyLogged(F)) {
     ++ cur_ii;
-    return;
+    return false;
   }
 
   // sanity: nxtBB is the entry of the called function
@@ -120,16 +206,20 @@ void InstLogBuilder::incFromCall() {
 
   // move cur_ii
   cur_ii = nxtBB->begin();
+
+  return true;
 }
 
-void InstLogBuilder::incFromReturn() {
+bool InstLogBuilder::nextInstFromReturn() {
   // TODO sanity: the previous instruction of ii is a call to this function
   assert(!callStack.empty() && "return and call mismatch!");
   cur_ii = callStack.top();
   callStack.pop();
+
+  return true;
 }
 
-void InstLogBuilder::incFromJmp() {
+bool InstLogBuilder::nextInstFromJmp() {
   BasicBlock *nxtBB = nxt_ii->getParent();
 
   // sanity: nxtBB is one of the successors of curBB
@@ -141,56 +231,87 @@ void InstLogBuilder::incFromJmp() {
       break;
     }
   }
-if(!is_succ) {
-  errs() << "distance between raw iterators = " << nxt_ri - cur_ri << "\n";
-  errs() << *cur_ri  << "\n";
-  errs() << *nxt_ri  << "\n";
-  errs() << "cur I"  << *cur_ii << "\n"
-         << "nxt I"  << *nxt_ii << "\n";
-  errs() << "cur BB" << *BB
-         << "nxt BB" << *nxtBB;
-}
+#ifdef _DEBUG_RECORDER
+  if(!is_succ)
+    dumpIterators();
+#endif
   assert(is_succ && "successor BB of a branch is not logged!");
   cur_ii = nxtBB->begin();
+
+  return true;
 }
 
-
-void InstLogBuilder::getInstBetween() {
+// can control-transfer more than once.  consider the example below:
+//
+// bb:
+//    %1 = call foo();
+//    br i1 %1, label %bb1, label bb2;
+//
+// suppose current instruction is the ret instruction from foo(), then
+// we'll have to process br as well since there's no instruction logged
+// between the two instructions shown above
+//
+void InstLogBuilder::getInbetweenInsts() {
   unsigned cur_insid = cur_ri->getInsid();
   cur_ii = getIDManager()->getInstruction(cur_insid);
   unsigned nxt_insid = nxt_ri->getInsid();
   nxt_ii = getIDManager()->getInstruction(nxt_insid);
 
-  if(getInstLoggedMD(cur_ii) != LogBBMarker) {
+  if(instLogged(cur_ii) != LogBBMarker) {
+    assert(cur_ri->numRecForInst() == 1
+           && "multiple records for one instruction must be specially handled!");
     instLog->append(cur_ri);
     ++ cur_ii;
   }
 
+  int transfers = 0;
   while(cur_ii != nxt_ii) {
     instLog->append(cur_ii);
 
-    // TODO: can only do one of these control transfer inst
+    // sanity: can only do one of these control transfer inst
     switch(cur_ii->getOpcode()) {
     case Instruction::Call:
     case Instruction::Invoke:
-      incFromCall();
+      transfers += nextInstFromCall();
       break;
     case Instruction::Ret:
-      incFromReturn();
+      transfers += nextInstFromReturn();
       break;
     case Instruction::Unwind:
     case Instruction::IndirectBr:
     case Instruction::Switch:
     case Instruction::Br:
-      incFromJmp();
+      transfers += nextInstFromJmp();
       break;
     case Instruction::Unreachable:
-      assert(0 && "InstLogBuilder should never reach "\
-             "an Unrechable instruction!");
+      assert(0 && "InstLogBuilder should never reach an UnrechableInst!");
     default:
       ++ cur_ii;
       break;
     }
+  }
+
+#if 0
+if(transfers > 1)
+  dumpIterators();
+#endif
+
+}
+
+void InstLogBuilder::getInst() {
+  // sanity
+  unsigned insid = cur_ri->getInsid();
+  BasicBlock::iterator ii = getIDManager()->getInstruction(insid);
+  for(RawLog::iterator ri=cur_ri; ri!=nxt_ri; ++ri)
+    assert(ri->insid == insid
+           && "records are supposedly for the same instruction, "\
+           "but have different instruction IDs!");
+
+  if(cur_ri->type == CallRecTy) { // just append one inst to inst log
+    instLog->append(cur_ri);
+  } else { // a sync op; append all records from this op
+    for(int i=0; i<cur_ri->numRecForInst(); ++i)
+      instLog->append(cur_ri);
   }
 }
 
@@ -213,7 +334,7 @@ InstLog *InstLogBuilder::create(RawLog *log) {
   instLog = new InstLog(log);
 
   cur_ri = log->begin(); // thread_begin();
-  nxt_ri =  cur_ri + NumRelatedRecords(*cur_ri); // first logged inst of the prog
+  nxt_ri =  cur_ri + 1; // first logged inst of the prog
 
   getInstPrefix(); // thread_begin() to first logged inst of the program
 
@@ -225,10 +346,16 @@ InstLog *InstLogBuilder::create(RawLog *log) {
     -- end_ri; // last logged inst before ret from thread func (or main())
   }
 
+  int nrec;
   while(nxt_ri != end_ri) {
     cur_ri = nxt_ri;
-    nxt_ri = cur_ri + NumRelatedRecords(*cur_ri);
-    getInstBetween();
+    nrec = cur_ri->numRecForInst();
+    nxt_ri = cur_ri + nrec;
+
+    if(nrec > 1)
+      ;
+    else
+      getInbetweenInsts();
   }
 
   if(calledPthreadExit)
@@ -239,29 +366,20 @@ InstLog *InstLogBuilder::create(RawLog *log) {
   return instLog;
 }
 
-raw_ostream &InstLog::printExecutedInst(raw_ostream &o,
-                       ExecutedInstID id, bool details) {
-  unsigned insid;
-  if(id.isLogged) {
-    o << "L idx=" << id.inst;
-    raw_iterator ri(rawLog, id.inst);
-    o << " " << *ri;
-    insid = ri->insid;
-  } else {
-    o << "U ins=" << id.inst;
-    insid = id.inst;
-  }
-
-  if(details) {
-    Instruction *I = getIDManager()->getInstruction(insid);
-    if(I)
-      o << *I;
-  }
-  return o;
+void InstLogBuilder::dumpIterators() {
+  BasicBlock *BB = cur_ii->getParent();
+  BasicBlock *nxtBB = nxt_ii->getParent();
+  errs() << "distance between raw iterators = " << nxt_ri - cur_ri << "\n";
+  errs() << *cur_ri  << "\n";
+  errs() << *nxt_ri  << "\n";
+  errs() << "cur I"  << *cur_ii << "\n"
+         << "nxt I"  << *nxt_ii << "\n";
+  errs() << "cur BB" << *BB
+         << "nxt BB" << *nxtBB;
 }
 
 static const char* recNames[] = {
-  "ins",
+  "marker",
   "load",
   "store",
   "call",
@@ -315,15 +433,25 @@ raw_ostream &operator<<(raw_ostream &o, const StoreRec &rec) {
     << " " << rec.addr << ", " << rec.data;
 }
 raw_ostream &operator<<(raw_ostream &o, const CallRec &rec) {
-  return printInsidRec(o, (const InsidRec&)rec)
-    << " func" << rec.funcid << "(" << rec.narg << " args)";
+  Function *F = InstLog::getFunc(rec.funcid);
+  printInsidRec(o, (const InsidRec&)rec);
+  if(F)
+    o << " " << F->getName();
+  else
+    o << " func" << rec.funcid;
+  return o << "(" << rec.narg << " args)";
 }
 raw_ostream &operator<<(raw_ostream &o, const ExtraArgsRec &rec) {
   return printInsidRec(o, (const InsidRec&)rec) << "(...)";
 }
 raw_ostream &operator<<(raw_ostream &o, const ReturnRec &rec) {
-  return printInsidRec(o, (const InsidRec&)rec)
-    << " func" << rec.funcid << "() = " << rec.data;
+  Function *F = InstLog::getFunc(rec.funcid);
+  printInsidRec(o, (const InsidRec&)rec);
+  if(F)
+    o << " " << F->getName();
+  else
+    o << " func" << rec.funcid;
+  return o << "() = " << rec.data;
 }
 raw_ostream &operator<<(raw_ostream &o, const SyncRec &rec) {
   printInsidRec(o, (const InsidRec&)rec)

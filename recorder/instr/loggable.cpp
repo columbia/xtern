@@ -10,22 +10,22 @@ using namespace std;
 
 namespace tern {
 
-LogMDTag getInstLoggedMD(const Instruction *I) {
-  Value *MD = getIntMetadata(I, "log");
-  if(!MD)
-    return NotLogged;
+// LogTag getInstLoggedMD(const Instruction *I) {
+//   Value *MD = getIntMetadata(I, "log");
+//   if(!MD)
+//     return NotLogged;
 
-  ConstantInt *CI = dyn_cast<ConstantInt>(MD);
-  return (LogMDTag) CI->getZExtValue();
-}
+//   ConstantInt *CI = dyn_cast<ConstantInt>(MD);
+//   return (LogTag) CI->getZExtValue();
+// }
 
-void setInstLoggedMD(LLVMContext &C, Instruction *I, LogMDTag tag) {
-  assert(tag == Logged || tag == LogBBMarker && "invalid Log MD Tag!");
-  Value *const data = ConstantInt::get(Type::getInt8Ty(C), tag);
-  I->setMetadata("log", MDNode::get(C, &data, /* number of values */ 1));
-}
+// void setInstLoggedMD(LLVMContext &C, Instruction *I, LogTag tag) {
+//   assert(tag == Logged || tag == LogBBMarker && "invalid Log MD Tag!");
+//   Value *const data = ConstantInt::get(Type::getInt8Ty(C), tag);
+//   I->setMetadata("log", MDNode::get(C, &data, /* number of values */ 1));
+// }
 
-static LogMDTag instLoggedHelper(Instruction *ins) {
+static LogTag instLoggedHelper(Instruction *ins) {
   Value *insid = getInsID(ins);
   if(!insid) return NotLogged;
 
@@ -40,12 +40,14 @@ static LogMDTag instLoggedHelper(Instruction *ins) {
   return NotLogged;
 }
 
-LogMDTag instLogged(Instruction *ins) {
+LogTag instLogged(Instruction *ins) {
   Value *insid = getInsID(ins);
   if(!insid) return NotLogged;
 
-  if(instLoggedHelper(ins))
-    return Logged;
+  LogTag tag = instLoggedHelper(ins);
+
+  if(tag != NotLogged)
+    return tag;
 
   BasicBlock *BB = ins->getParent();
   if(ins != BB->getFirstNonPHI())
@@ -96,7 +98,7 @@ LogMDTag instLogged(Instruction *ins) {
   //
   for(BasicBlock::iterator ii=ins; ii!=BB->end(); ++ii) {
     if(ii->getOpcode() == Instruction::Call) { // first call instruction
-      LogMDTag tag = callLogged(ii);
+      LogTag tag = callLogged(ii);
       if(tag == NotLogged)  // if call not logged, log marker
         return LogBBMarker;
       else
@@ -127,7 +129,7 @@ LogMDTag instLogged(Instruction *ins) {
 //
 // TODO: necessary to log intrinsic calls?
 //
-LogMDTag funcBodyLogged(Function *func) {
+LogTag funcBodyLogged(Function *func) {
   if(func->getIntrinsicID() != Intrinsic::not_intrinsic)
     return NotLogged;
 
@@ -140,12 +142,16 @@ LogMDTag funcBodyLogged(Function *func) {
   return Logged;
 }
 
-LogMDTag funcCallLogged(Function *func) {
+LogTag funcCallLogged(Function *func) {
   if(func->getIntrinsicID() != Intrinsic::not_intrinsic)
     return NotLogged;
 
-  if(func->getName().startswith("tern"))
-    return NotLogged;
+  if(func->getName().startswith("tern")) {
+    assert(!func->getName().startswith("tern_log")
+           && "Module already has recorder (LogInstr) instrumentation; "\
+           "can only use this function on a module instrumented by LogInstr");
+    return LogSync;
+  }
 
   if(func->isDeclaration())
     return Logged;
@@ -162,8 +168,7 @@ LogMDTag funcCallLogged(Function *func) {
 /// call, either the first BB of the call target is logged, or there is a
 /// call-extraargs-ret record for the call
 ///
-
-LogMDTag callLogged(Instruction *call) {
+LogTag callLogged(Instruction *call) {
   Value *insid = getInsID(call);
   if(!insid)
     return NotLogged;
@@ -174,6 +179,8 @@ LogMDTag callLogged(Instruction *call) {
   if(func)
     return funcCallLogged(func);
 
+  // indirect call
+  //
   // TODO: can query alias and log only if may point to one of the
   // functions whose calls should be logged.  For now, instrument all
   // indirect calls and check if we need to log them at runtime

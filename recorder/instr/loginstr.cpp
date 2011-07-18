@@ -24,6 +24,11 @@ bool LogInstr::runOnModule(Module &M) {
 
   const FunctionType *functype;
 
+  // avoid instrument an already instrumented module
+  assert(!M.getFunction("tern_log_load")
+         && !M.getFunction("tern_log_store")
+         && "LogInstr: instrument a already instrumented module!");
+
   targetData = getAnalysisIfAvailable<TargetData>();
   context = &getGlobalContext();
 
@@ -51,7 +56,7 @@ bool LogInstr::runOnModule(Module &M) {
 
   forallfunc(M, fi) {
     // instr function @fi if it is loggable
-    if(funcBodyLogged(fi))
+    if(funcBodyLogged(fi) == Logged)
       instrFunc(*fi);
   }
 
@@ -72,7 +77,7 @@ void LogInstr::exportFuncs(void) {
 void LogInstr::getFuncs(Module &M) {
   unsigned funcid = Intrinsic::num_intrinsics;
   forallfunc(M, fi) {
-    if(funcCallLogged(fi)) {
+    if(funcCallLogged(fi) == Logged) {
       func_map_t::iterator i = funcsCallLogged.find(fi);
       if(i == funcsCallLogged.end()) {
         ++ funcid;
@@ -127,40 +132,43 @@ void LogInstr::markFuncs(Module &M) {
   builder.CreateRetVoid();
 }
 
+void LogInstr::instrInst(Instruction* I) {
+  switch(I->getOpcode()) {
+  case Instruction::Load:
+    instrLoad(dyn_cast<LoadInst>(I));
+    break;
+  case Instruction::Store:
+    instrStore(dyn_cast<StoreInst>(I));
+    break;
+  case Instruction::Call:
+  case Instruction::Invoke:
+    instrCall(I);
+    break;
+  default:
+    assert(0 && "unknown instruction that must be logged!");
+  }
+}
+
 void LogInstr::instrFunc(Function &F) {
   forall(Function, BB, F) {
     BasicBlock::iterator cur, prv;
     for(cur=BB->begin(); cur!=BB->end();) {
       prv = cur;
       cur ++;
-
-      LogMDTag tag = instLogged(prv);
-      if(tag == NotLogged)
-        continue;
-
-      // set logged metadata
-      setInstLoggedMD(*context, prv, tag);
-      if(tag == LogBBMarker) {
-        instrFirstNonPHI(prv);
-        continue;
-      }
-      // must be a logged instruction
-      switch(prv->getOpcode()) {
-      case Instruction::Load:
-        instrLoad(dyn_cast<LoadInst>(prv));
+      LogTag tag = instLogged(prv);
+      switch(tag) {
+      case NotLogged:
+      case LogSync: // handled by SyncInstr
         break;
-      case Instruction::Store:
-        instrStore(dyn_cast<StoreInst>(prv));
+      case LogBBMarker: // just a marker
+        instrBBMarker(prv);
         break;
-      case Instruction::Call:
-      case Instruction::Invoke:
-        instrCall(prv);
+      default: // must log the details of the inst
+        instrInst(prv);
         break;
-      default:
-        assert(0 && "unknown instruction that must be logged!");
-      }
-    }
-  }
+      } //switch(tag)
+    } // for(cur...)
+  } // forall(...)
 }
 
 Value *LogInstr::castIfNecessary(Value *srcval, const Type *dst,
@@ -203,7 +211,7 @@ void LogInstr::instrStore(StoreInst *store) {
   instrLoadStore(insid, addr, data, store, false);
 }
 
-void LogInstr::instrFirstNonPHI(Instruction *ins) {
+void LogInstr::instrBBMarker(Instruction *ins) {
   assert(ins == ins->getParent()->getFirstNonPHI());
   Value *insid = getInsID(ins); assert(insid);
 
@@ -223,9 +231,12 @@ void LogInstr::instrCall(Instruction *call) {
   func = castIfNecessary(func, addrType, call);
 
   Value *indir;
-  indir = (cs.getCalledFunction() ?
-           ConstantInt::get(Type::getInt32Ty(*context), 0)
+  Function *callee = cs.getCalledFunction();
+  indir = (callee? ConstantInt::get(Type::getInt32Ty(*context), 0)
            : ConstantInt::get(Type::getInt32Ty(*context), 1));
+
+  assert((!callee || !callee->getName().startswith("tern"))
+         && "instrumenting call to a tern function!");
 
   // log call
   vector<Value*> args;
