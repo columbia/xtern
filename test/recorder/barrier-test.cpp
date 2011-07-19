@@ -6,6 +6,7 @@
 // RUN: g++ -g -o %t2 %t2.s -L %projlibdir -lcommonruntime -lrecruntime -lpthread
 // RUN: ./%t2 | sort > %t2.out
 // RUN: diff %t2.out %s.out > /dev/null
+// RUN: %projbindir/logprint -bc %t2-analysis.bc tern-log-tid-0 -r -v > /dev/null
 
 // stress
 // RUN: ./%t2 && ./%t2 && ./%t2  && ./%t2  && ./%t2  && ./%t2  && ./%t2
@@ -18,6 +19,7 @@
 // RUN: g++ -g -o %t3 %t3.s -lpthread
 // RUN: ./%t3 | sort > %t3.out
 // RUN: diff %t3.out %s.out > /dev/null
+// RUN: %projbindir/logprint -bc %t2-analysis.bc tern-log-tid-0 -r -v > /dev/null
 
 // stress
 // RUN: ./%t3 && ./%t3 && ./%t3  && ./%t3  && ./%t3  && ./%t3  && ./%t3
