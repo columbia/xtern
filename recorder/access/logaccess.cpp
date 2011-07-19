@@ -76,6 +76,7 @@ RawLog::reverse_iterator RawLog::rend() {
 }
 
 
+
 void InstLog::append(const RawLog::iterator &ri) {
   ExecutedInstID id;
   id.inst = ri.getIndex();
@@ -113,7 +114,8 @@ raw_ostream &InstLog::printExecutedInst(raw_ostream &o,
   if(id.isLogged) {
     o << "L idx=" << id.inst;
     raw_iterator ri(rawLog, id.inst);
-    o << " " << *ri;
+    o << " ";
+    printRawRec(o, ri);
     insid = ri->insid;
   } else {
     o << "P ins=" << id.inst;
@@ -244,7 +246,7 @@ int InstLogBuilder::nextInstFromJmp() {
   }
 #ifdef _DEBUG //_DEBUG_RECORDER
   if(!is_succ)
-    dumpIterators();
+    dump();
 #endif
   assert(is_succ && "successor BB of a branch is not logged!");
   cur_ii = nxtBB->begin();
@@ -404,7 +406,7 @@ InstLog *InstLogBuilder::create(RawLog *log) {
   return instLog;
 }
 
-void InstLogBuilder::dumpIterators() {
+void InstLogBuilder::dump() {
   BasicBlock *BB = cur_ii->getParent();
   BasicBlock *nxtBB = nxt_ii->getParent();
   errs() << "distance between raw iterators = " << nxt_ri - cur_ri << "\n";
@@ -415,6 +417,7 @@ void InstLogBuilder::dumpIterators() {
   errs() << "cur BB" << *BB
          << "nxt BB" << *nxtBB;
 }
+
 
 static const char* recNames[] = {
   "marker",
@@ -433,6 +436,17 @@ static raw_ostream& printInsidRec(raw_ostream& o, const InsidRec& rec) {
   else
     o << "ins=" << rec.insid;
   return o << " " << recNames[rec.type];
+}
+
+static raw_ostream &printExtraArgsRec(raw_ostream &o, const ExtraArgsRec &rec) {
+  for(short i=0; i<rec.numArgsInRec(); ++i) {
+    o << ", " << rec.args[i];
+  }
+  return o;
+}
+
+static raw_ostream &printReturnRec(raw_ostream &o, const ReturnRec &rec) {
+  return o << " = " << rec.data;
 }
 
 raw_ostream& operator<<(raw_ostream& o, const InsidRec& rec) {
@@ -466,18 +480,26 @@ raw_ostream &operator<<(raw_ostream &o, const LoadRec &rec) {
   return printInsidRec(o, (const InsidRec&)rec)
     << " " << rec.addr << " = " << rec.data;
 }
+
 raw_ostream &operator<<(raw_ostream &o, const StoreRec &rec) {
   return printInsidRec(o, (const InsidRec&)rec)
     << " " << rec.addr << ", " << rec.data;
 }
+
 raw_ostream &operator<<(raw_ostream &o, const CallRec &rec) {
   Function *F = InstLog::getFunc(rec.funcid);
   printInsidRec(o, (const InsidRec&)rec);
   if(F)
-    o << " " << F->getName();
+    o << " " << F->getName() << "(";
   else
-    o << " func" << rec.funcid;
-  o << "(" << rec.narg << " args)";
+    o << " func" << rec.funcid << "(";
+
+  short i, narg = rec.numArgsInRec();
+  for(i=0; i<narg; ++i) {
+    o << rec.args[i] << ", ";
+  }
+  o << (rec.narg-narg) << " more args)";
+
   if(rec.flags & CallIndirect)
     o << " indirect";
   if(rec.flags & CallNoReturn)
@@ -486,24 +508,76 @@ raw_ostream &operator<<(raw_ostream &o, const CallRec &rec) {
     o << " escape";
   return o;
 }
+
 raw_ostream &operator<<(raw_ostream &o, const ExtraArgsRec &rec) {
-  return printInsidRec(o, (const InsidRec&)rec) << "(...)";
+  printInsidRec(o, (const InsidRec&)rec);
+  printExtraArgsRec(o, (const ExtraArgsRec&)rec);
+  return o;
 }
+
 raw_ostream &operator<<(raw_ostream &o, const ReturnRec &rec) {
   Function *F = InstLog::getFunc(rec.funcid);
   printInsidRec(o, (const InsidRec&)rec);
   if(F)
-    o << " " << F->getName();
+    o << " " << F->getName() << "()";
   else
-    o << " func" << rec.funcid;
-  return o << "() = " << rec.data;
+    o << " func" << rec.funcid << "() ";
+  return printReturnRec(o, rec);
 }
+
 raw_ostream &operator<<(raw_ostream &o, const SyncRec &rec) {
   printInsidRec(o, (const InsidRec&)rec)
     << " " << syncfunc::getName(rec.sync) << "()";
   if(NumRecordsForSync(rec.sync) == 2)
      o << (rec.after?"after":"before");
   return o << " turn = " << rec.turn;
+}
+
+raw_ostream &InstLog::printRawRec(raw_ostream &o,
+                                  const InstLog::raw_iterator &ri) {
+  if(ri->type != CallRecTy)
+    return o << *ri;
+
+  // CallRec
+  const CallRec &rec = (const CallRec &)*ri;
+  Function *F = InstLog::getFunc(rec.funcid);
+  printInsidRec(o, (const InsidRec&)rec);
+  if(F)
+    o << " " << F->getName() << "(";
+  else
+    o << " func" << rec.funcid << "(";
+
+  // Inline args
+  short i, rec_narg = rec.numArgsInRec();
+  for(i=0; i<rec_narg; ++i) {
+    o << rec.args[i];
+    if(i < rec.narg-1)
+      o << ", ";
+  }
+
+  // ExtraArgsRec
+  RawLog::iterator nxt_ri = ri;
+  for(i=0; i<NumExtraArgsRecords(rec.narg); ++i) {
+    ++ nxt_ri;
+    printExtraArgsRec(o, (const ExtraArgsRec &)*nxt_ri);
+  }
+
+  o << ")";
+
+  // ReturnRec
+  if(!(rec.flags & CallNoReturn)) {
+    ++ nxt_ri;
+    printReturnRec(o, (const ReturnRec&)*nxt_ri);
+  }
+
+   // function attributes
+  if(rec.flags & CallIndirect)
+    o << " indirect";
+  if(rec.flags & CallNoReturn)
+    o << " noreturn";
+  if(rec.flags & CalleeEscape)
+    o << " escape";
+  return o;
 }
 
 } // namespace tern

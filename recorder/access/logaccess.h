@@ -171,6 +171,8 @@ struct InstLog {
   void append(llvm::Instruction *I);
   llvm::raw_ostream &printExecutedInst(llvm::raw_ostream &o,
                             ExecutedInstID id, bool details=false);
+  llvm::raw_ostream &printRawRec(llvm::raw_ostream &o,
+                            const InstLog::raw_iterator&);
 
   InstLog(RawLog* log): rawLog(log) { instLog.reserve(DefaultInstNum); }
   ~InstLog() { delete rawLog; }
@@ -211,11 +213,11 @@ protected:
   int nextInstFromReturn();
   int nextInstFromCall();
 
-  void dumpIterators();
+  void dump();
 
   InstLog                           *instLog;
   RawLog::iterator                  cur_ri, nxt_ri;
-  BasicBlock::iterator              cur_ii, nxt_ii;
+  llvm::BasicBlock::iterator        cur_ii, nxt_ii;
   std::stack<llvm::BasicBlock::iterator> callStack;
 };
 

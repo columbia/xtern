@@ -50,9 +50,9 @@ enum {
 struct InsidRec {
   unsigned insid  : INSID_BITS;
   unsigned type   : REC_TYPE_BITS;
-  bool validInsid()     { return insid != INVALID_INSID_IN_REC; }
-  unsigned getInsid() { return validInsid()? insid : INVALID_INSID; }
-  int numRecForInst();
+  bool validInsid() const { return insid != INVALID_INSID_IN_REC; }
+  unsigned getInsid() const { return validInsid()? insid : INVALID_INSID; }
+  int numRecForInst() const;
 };
 BOOST_STATIC_ASSERT(sizeof(InsidRec)<=RECORD_SIZE);
 
@@ -78,11 +78,13 @@ struct CallRecPrefix: public InsidRec{
 struct CallRec: public CallRecPrefix {
   int      funcid;
   uint64_t args[MAX_INLINE_ARGS];
+  short numArgsInRec(void) const;
 };
 BOOST_STATIC_ASSERT(sizeof(CallRec)<=RECORD_SIZE);
 
 struct ExtraArgsRec: public CallRecPrefix {
   uint64_t args[MAX_EXTRA_ARGS];
+  short numArgsInRec(void) const;
 };
 BOOST_STATIC_ASSERT(sizeof(ExtraArgsRec)<=RECORD_SIZE);
 
@@ -121,8 +123,8 @@ static inline int NumRecordsForSync(short sync) {
   return 1;
 }
 
-inline int InsidRec::numRecForInst() {
-  switch(type) { // XXX: must consider functions that don't return
+inline int InsidRec::numRecForInst() const {
+  switch(type) {
   case CallRecTy:
   case ExtraArgsRecTy:
   case ReturnRecTy:
@@ -134,6 +136,15 @@ inline int InsidRec::numRecForInst() {
   default:
     return 1;
   }
+}
+
+inline short CallRec::numArgsInRec() const {
+  return std::min(narg, (short)MAX_INLINE_ARGS);
+}
+
+inline short ExtraArgsRec::numArgsInRec() const {
+  short rec_narg = (short)(narg - MAX_INLINE_ARGS - (seq-1) * MAX_EXTRA_ARGS);
+  return std::min(rec_narg, (short)MAX_EXTRA_ARGS);
 }
 
 static inline int SetLogName(char *buf, size_t sz, int tid) {
