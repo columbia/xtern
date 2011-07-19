@@ -102,6 +102,10 @@ void SyncInstr::warnEscapeFuncs(Module &M) {
   }
 }
 
+
+// We can't just replace the name of the synchronization functions to
+// tern_<original_name> because we change function prototypes by adding
+// one extra insid argument.
 void SyncInstr::replaceFunctionInCall(Module &M, Instruction *I,
                                       unsigned syncid) {
 

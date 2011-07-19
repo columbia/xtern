@@ -23,8 +23,7 @@ enum {
 # undef DEFTERNAUTO
 # undef DEFTERNUSER
   num_syncs,
-  first_sync = 1,
-  last_sync = num_syncs -1
+  first_sync = 1
 };
 BOOST_STATIC_ASSERT(num_syncs<USHRT_MAX);
 
@@ -35,37 +34,37 @@ extern const char* nameInTern[];
 enum {Synchronization, BlockingSyscall, TernUser, TernAuto};
 
 static inline bool isSync(unsigned nr) {
-  assert(nr < num_syncs);
+  assert(first_sync <= nr < num_syncs);
   return kind[nr] == Synchronization;
 }
 
 static inline bool isBlockingSyscall(unsigned nr) {
-  assert(nr < num_syncs);
+  assert(first_sync <= nr < num_syncs);
   return kind[nr] == BlockingSyscall;
 }
 
 static inline bool isTern(unsigned nr) {
-  assert(nr < num_syncs);
+  assert(first_sync <= nr < num_syncs);
   return kind[nr] == TernUser || kind[nr] == TernAuto;
 }
 
 static inline bool isTernUser(unsigned nr) {
-  assert(nr < num_syncs);
+  assert(first_sync <= nr < num_syncs);
   return kind[nr] == TernUser;
 }
 
 static inline bool isTernAuto(unsigned nr) {
-  assert(nr < num_syncs);
+  assert(first_sync <= nr < num_syncs);
   return kind[nr] == TernAuto;
 }
 
 static inline const char* getName(unsigned nr) {
-  assert(nr < num_syncs);
+  assert(first_sync <= nr < num_syncs);
   return name[nr];
 }
 
 static inline const char* getTernName(unsigned nr) {
-  assert(nr < num_syncs);
+  assert(first_sync <= nr < num_syncs);
   return nameInTern[nr];
 }
 
