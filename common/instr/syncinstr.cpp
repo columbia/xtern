@@ -81,7 +81,7 @@ void SyncInstr::initFuncTypes(Module &M) {
         functypes[syncid] = fi->getFunctionType();
     }
   }
-  for(unsigned i=0; i<syncfunc::num_syncs; ++i) {
+  for(unsigned i=syncfunc::first_sync; i<syncfunc::num_syncs; ++i) {
     if(!syncfunc::isTernAuto(i)) {
       assert(functypes.find(i) != functypes.end()
              && "can't find type for sync function!");

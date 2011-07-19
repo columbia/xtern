@@ -10,6 +10,7 @@ namespace tern {
 namespace syncfunc {
 
 const int kind[] = {
+  -1, // not_sync
 # define DEF(func,kind,...) kind,
 # define DEFTERNAUTO(func)      TernAuto,
 # define DEFTERNUSER(func)  TernUser,
@@ -20,6 +21,7 @@ const int kind[] = {
 };
 
 const char* name[] = {
+  NULL, // not_sync
 # define DEF(func,kind,...) #func,
 # define DEFTERNAUTO(func)      #func,
 # define DEFTERNUSER(func)  #func,
@@ -30,6 +32,7 @@ const char* name[] = {
 };
 
 const char* nameInTern[] = {
+  NULL, // not_sync
 # define DEF(func,kind,...) "tern_"#func,
 # define DEFTERNAUTO(func)  #func,
 # define DEFTERNUSER(func)  #func"_real",
@@ -40,14 +43,14 @@ const char* nameInTern[] = {
 };
 
 unsigned getNameID(const char* name) {
-  for(unsigned i=0; i<num_syncs; ++i)
+  for(unsigned i=first_sync; i<num_syncs; ++i)
     if(strcmp(name, getName(i)) == 0)
       return i;
   return not_sync;
 }
 
 unsigned getTernNameID(const char* name) {
-  for(unsigned i=0; i<num_syncs; ++i)
+  for(unsigned i=first_sync; i<num_syncs; ++i)
     if(strcmp(name, getTernName(i)) == 0)
       return i;
   return not_sync;

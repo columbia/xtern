@@ -14,6 +14,7 @@ namespace syncfunc {
 #undef DEFTERNUSER
 
 enum {
+  not_sync = 0, // not a sync operation
 # define DEF(func,kind,...) func,
 # define DEFTERNAUTO(func)      func,
 # define DEFTERNUSER(func)  func,
@@ -22,7 +23,8 @@ enum {
 # undef DEFTERNAUTO
 # undef DEFTERNUSER
   num_syncs,
-  not_sync = (unsigned)(-1)
+  first_sync = 1,
+  last_sync = num_syncs -1
 };
 BOOST_STATIC_ASSERT(num_syncs<USHRT_MAX);
 
