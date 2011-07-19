@@ -24,10 +24,10 @@ extern "C" {
   void tern_task_end_real(unsigned insid);
 
   /// hooks tern automatically inserts.  start with the ones tern provides
-  void tern_prog_begin(void);    /// initializes tern internal data
-  void tern_prog_end(void);      /// cleans up tern internal data
-  void tern_thread_begin(void);  /// called at the beginning of a thread
-  void tern_thread_end(void);      /// called at the end of a thread
+  void tern_prog_begin(void);   /// initializes tern internal data
+  void tern_prog_end(void);     /// cleans up tern internal data
+  void tern_thread_begin(void); /// called at the beginning of a thread
+  void tern_thread_end(unsigned insid); /// called at the end of a thread
 
   /// tern inserts these methods to a target program to make races
   /// deterministic; these methods are implemented only by the replayer

@@ -179,7 +179,7 @@ void InstLog::setFuncMap(const char *file, const Module& M) {
 
 /// this call should be the call that changed the execution from curBB to
 /// nxtBB
-bool InstLogBuilder::nextInstFromCall() {
+int InstLogBuilder::nextInstFromCall() {
   Function *F;
   BasicBlock *nxtBB;
   const CallSite cs(cur_ii);
@@ -187,7 +187,7 @@ bool InstLogBuilder::nextInstFromCall() {
   F = cs.getCalledFunction();
   if(F && !funcBodyLogged(F)) {
     ++ cur_ii;
-    return false;
+    return 0;
   }
 
   // sanity: nxtBB is the entry of the called function
@@ -204,22 +204,33 @@ bool InstLogBuilder::nextInstFromCall() {
   ++ ret_ii;
   callStack.push(ret_ii);
 
+#ifdef _DEBUG_RECORDER
+  errs() << "calling " << F->getName() << " return address "
+         << getIDManager()->getInstructionID(ret_ii) << "\n";
+#endif
   // move cur_ii
   cur_ii = nxtBB->begin();
 
-  return true;
+  return 1;
 }
 
-bool InstLogBuilder::nextInstFromReturn() {
+int InstLogBuilder::nextInstFromReturn() {
   // TODO sanity: the previous instruction of ii is a call to this function
+#ifdef _DEBUG_RECORDER
+  errs() << "returning from " << cur_ii->getParent()->getParent()->getName()
+         << " to return address "
+         << getIDManager()->getInstructionID(callStack.top())
+         << "\n";
+#endif
+
   assert(!callStack.empty() && "return and call mismatch!");
   cur_ii = callStack.top();
   callStack.pop();
 
-  return true;
+  return 1;
 }
 
-bool InstLogBuilder::nextInstFromJmp() {
+int InstLogBuilder::nextInstFromJmp() {
   BasicBlock *nxtBB = nxt_ii->getParent();
 
   // sanity: nxtBB is one of the successors of curBB
@@ -231,39 +242,46 @@ bool InstLogBuilder::nextInstFromJmp() {
       break;
     }
   }
-#ifdef _DEBUG_RECORDER
+#ifdef _DEBUG //_DEBUG_RECORDER
   if(!is_succ)
     dumpIterators();
 #endif
   assert(is_succ && "successor BB of a branch is not logged!");
   cur_ii = nxtBB->begin();
 
-  return true;
+  return 1;
 }
 
-// can control-transfer more than once.  consider the example below:
-//
-// bb:
-//    %1 = call foo();
-//    br i1 %1, label %bb1, label bb2;
-//
-// suppose current instruction is the ret instruction from foo(), then
-// we'll have to process br as well since there's no instruction logged
-// between the two instructions shown above
-//
-void InstLogBuilder::getInbetweenInsts() {
+void InstLogBuilder::getInbetweenInsts(bool takeCurrent, bool setNxt) {
   unsigned cur_insid = cur_ri->getInsid();
   cur_ii = getIDManager()->getInstruction(cur_insid);
-  unsigned nxt_insid = nxt_ri->getInsid();
-  nxt_ii = getIDManager()->getInstruction(nxt_insid);
 
-  if(instLogged(cur_ii) != LogBBMarker) {
-    assert(cur_ri->numRecForInst() == 1
-           && "multiple records for one instruction must be specially handled!");
-    instLog->append(cur_ri);
-    ++ cur_ii;
+  if(setNxt) {
+    unsigned nxt_insid = nxt_ri->getInsid();
+    nxt_ii = getIDManager()->getInstruction(nxt_insid);
   }
 
+  if(takeCurrent) {
+    if(instLogged(cur_ii) != LogBBMarker) { // append current instruction
+      assert(cur_ri->numRecForInst() == 1
+             && "multiple records for one inst must be specially handled!");
+      instLog->append(cur_ri);
+      ++ cur_ii;
+    }
+  } else
+    ++ cur_ii;  // skip current instruction
+
+  //
+  // can control-transfer more than once.  consider the example below:
+  //
+  // bb:
+  //    %1 = call foo();
+  //    br i1 %1, label %bb1, label bb2;
+  //
+  // suppose current instruction is the ret instruction from foo(), then
+  // we'll have to process br as well since there's no instruction logged
+  // between the two instructions shown above
+  //
   int transfers = 0;
   while(cur_ii != nxt_ii) {
     instLog->append(cur_ii);
@@ -290,12 +308,6 @@ void InstLogBuilder::getInbetweenInsts() {
       break;
     }
   }
-
-#if 0
-if(transfers > 1)
-  dumpIterators();
-#endif
-
 }
 
 void InstLogBuilder::getInst() {
@@ -307,20 +319,42 @@ void InstLogBuilder::getInst() {
            && "records are supposedly for the same instruction, "\
            "but have different instruction IDs!");
 
-  if(cur_ri->type == CallRecTy) { // just append one inst to inst log
+  if(cur_ri->type == CallRecTy) { // just append one raw record to inst log
     instLog->append(cur_ri);
-  } else { // a sync op; append all records from this op
+  } else { // a sync op; append all raw records from this op
     for(int i=0; i<cur_ri->numRecForInst(); ++i)
       instLog->append(cur_ri);
   }
+
+  // get the instructions from the last raw record of the current
+  // instruction to the next raw record; need this to handle cases such as
+  //
+  //  call foo (...)   <=== two raw records
+  //  %2 = %1 * 2      <=== no raw records
+  //  store %2, ...    <=== one raw record
+  //
+  cur_ri += cur_ri->numRecForInst()-1;
+  getInbetweenInsts(false);
+
 }
 
 void InstLogBuilder::getInstPrefix() {
-  // TODO
+  unsigned nxt_insid = nxt_ri->getInsid();
+  nxt_ii = getIDManager()->getInstruction(nxt_insid);
+  BasicBlock *nxtBB = nxt_ii->getParent();
+  for(cur_ii=nxtBB->begin(); cur_ii!=nxt_ii; ++cur_ii)
+    instLog->append(cur_ii);
 }
 
 void InstLogBuilder::getInstSuffix() {
-  // TODO
+  unsigned nxt_insid = nxt_ri->getInsid();
+  nxt_ii = getIDManager()->getInstruction(nxt_insid);
+  BasicBlock *nxtBB = nxt_ii->getParent();
+  for(cur_ii=nxt_ii; cur_ii!=nxtBB->end(); ++cur_ii) {
+    if(cur_ii->getOpcode() == Instruction::Unreachable)
+      break;
+    instLog->append(cur_ii);
+  }
 }
 
 InstLog *InstLogBuilder::create(const char *file) {
@@ -343,7 +377,11 @@ InstLog *InstLogBuilder::create(RawLog *log) {
   -- end_ri;  // thread_end();
   if(!end_ri->validInsid()) {
     calledPthreadExit = false;
-    -- end_ri; // last logged inst before ret from thread func (or main())
+    // make end_ri the last logged inst before the return from from a
+    // thread function or main()
+    -- end_ri;
+    // adjust end_ri in case it is subrecord of a call
+    end_ri -= end_ri->numRecForInst() - 1;
   }
 
   int nrec;
@@ -352,8 +390,8 @@ InstLog *InstLogBuilder::create(RawLog *log) {
     nrec = cur_ri->numRecForInst();
     nxt_ri = cur_ri + nrec;
 
-    if(nrec > 1)
-      ;
+    if(nrec > 1) // one instruction but multiple log recorsd
+      getInst();
     else
       getInbetweenInsts();
   }
@@ -393,7 +431,7 @@ static raw_ostream& printInsidRec(raw_ostream& o, const InsidRec& rec) {
   if(rec.insid == tern::INVALID_INSID_IN_REC)
     o << "ins=n/a";
   else
-    o << "ins= " << rec.insid;
+    o << "ins=" << rec.insid;
   return o << " " << recNames[rec.type];
 }
 
@@ -439,7 +477,14 @@ raw_ostream &operator<<(raw_ostream &o, const CallRec &rec) {
     o << " " << F->getName();
   else
     o << " func" << rec.funcid;
-  return o << "(" << rec.narg << " args)";
+  o << "(" << rec.narg << " args)";
+  if(rec.flags & CallIndirect)
+    o << " indirect";
+  if(rec.flags & CallNoReturn)
+    o << " noreturn";
+  if(rec.flags & CalleeEscape)
+    o << " escape";
+  return o;
 }
 raw_ostream &operator<<(raw_ostream &o, const ExtraArgsRec &rec) {
   return printInsidRec(o, (const InsidRec&)rec) << "(...)";

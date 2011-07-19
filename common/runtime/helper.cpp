@@ -58,7 +58,7 @@ void __tern_prog_begin(void) {
 }
 
 void __tern_prog_end (void) {
-  tern_thread_end(); // main thread ends
+  tern_thread_end(-1); // main thread ends
   tern_prog_end();
 }
 

@@ -33,8 +33,8 @@ void tern_thread_begin(void) {
   tern::Runtime::the->threadBegin();
 }
 
-void tern_thread_end() {
-  tern::Runtime::the->threadEnd();
+void tern_thread_end(unsigned ins) {
+  tern::Runtime::the->threadEnd(ins);
 }
 
 int tern_pthread_create(unsigned ins, pthread_t *thread,  pthread_attr_t *attr,
@@ -112,8 +112,8 @@ int tern_sem_post(unsigned ins, sem_t *sem) {
 
 /// just a wrapper to tern_thread_end() and pthread_exit()
 void tern_pthread_exit(unsigned ins, void *retval) {
-  tern_thread_end();
+  assert(tern::Scheduler::self() != tern::Scheduler::MainThreadTid
+         && "calling pthread_exit() in main is currently not supported!");
+  tern_thread_end(ins);
   pthread_exit(retval);
 }
-
-

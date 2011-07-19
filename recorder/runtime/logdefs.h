@@ -36,6 +36,12 @@ enum {
 };
 BOOST_STATIC_ASSERT(LastRecTy<(1U<<REC_TYPE_BITS));
 
+enum {
+  CallIndirect    = 1U,
+  CallNoReturn    = 2U,
+  CalleeEscape    = 4U
+};
+
 #ifdef ENABLE_PACKED_RECORD
 #  pragma pack(push)  // push current alignment to stack
 #  pragma pack(1)     // set alignment to 1 byte boundary
@@ -64,8 +70,9 @@ BOOST_STATIC_ASSERT(sizeof(StoreRec)<=RECORD_SIZE);
 
 /// common prefix of call-related records---not a real record type
 struct CallRecPrefix: public InsidRec{
-  short    seq;
-  short    narg;
+  uint8_t    flags;
+  uint8_t    seq;
+  short      narg;
 };
 
 struct CallRec: public CallRecPrefix {
@@ -108,18 +115,20 @@ static inline int NumSyncArgs(short sync) {
 static inline int NumRecordsForSync(short sync) {
   switch(sync) {
   case syncfunc::pthread_cond_wait:
-  case syncfunc::pthread_barrier_wait:
+   case syncfunc::pthread_barrier_wait:
     return 2;
   }
   return 1;
 }
 
 inline int InsidRec::numRecForInst() {
-  switch(type) {
+  switch(type) { // XXX: must consider functions that don't return
   case CallRecTy:
   case ExtraArgsRecTy:
   case ReturnRecTy:
-    return 2 + NumExtraArgsRecords(((const CallRecPrefix&)*this).narg);
+    return /*CallRec*/ 1
+      + NumExtraArgsRecords(((const CallRecPrefix&)*this).narg)
+      + /*ReturnRec*/ ((((const CallRecPrefix&)*this).flags&CallNoReturn) == 0);
   case SyncRecTy:
     return NumRecordsForSync(((const SyncRec&)*this).sync);
   default:

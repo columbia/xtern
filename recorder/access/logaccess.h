@@ -202,14 +202,14 @@ struct InstLogBuilder {
 
 protected:
   InstLog *create(RawLog *log);
-  void getInbetweenInsts();
+  void getInbetweenInsts(bool takeCurrent=true, bool setNxt = true);
   void getInst();
   void getInstPrefix();
   void getInstSuffix();
 
-  bool nextInstFromJmp();
-  bool nextInstFromReturn();
-  bool nextInstFromCall();
+  int nextInstFromJmp();
+  int nextInstFromReturn();
+  int nextInstFromCall();
 
   void dumpIterators();
 

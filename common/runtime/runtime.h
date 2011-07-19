@@ -13,7 +13,7 @@ struct Runtime {
   virtual void symbolic(unsigned insid, void *addr,
                         int nbytes, const char *name) {}
   virtual void threadBegin() {}
-  virtual void threadEnd() {}
+  virtual void threadEnd(unsigned insid) {}
 
   // thread
   virtual int pthreadCreate(unsigned insid, pthread_t *th, pthread_attr_t *a,

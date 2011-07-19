@@ -2,7 +2,7 @@
 ; RUN: llc -o %t1.s %t1-record.ll
 ; RUN: g++ -o %t1 %t1.s -L %projlibdir -lcommonruntime -lrecruntime -lpthread
 ; RUN: ./%t1
-; RUN: %projbindir/logprint -bc %t1-analysis.ll tern-log-tid-0 -r > %t1.out
+; RUN: %projbindir/logprint -bc %t1-analysis.ll tern-log-tid-0 -r -v | FileCheck %s.out
 
 
 ; ModuleID = 'two-transfers-test.ll'

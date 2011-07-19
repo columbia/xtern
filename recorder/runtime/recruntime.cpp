@@ -54,7 +54,7 @@ void RecorderRT<_S>::threadBegin(void) {
 }
 
 template <typename _S>
-void RecorderRT<_S>::threadEnd() {
+void RecorderRT<_S>::threadEnd(unsigned insid) {
   unsigned nturn;
   pthread_t th = pthread_self();
 
@@ -62,7 +62,7 @@ void RecorderRT<_S>::threadEnd() {
   nturn = _S::getTurnCount();
   _S::threadEnd(pthread_self());
 
-  Logger::the->logSync(INVALID_INSID, syncfunc::tern_thread_end,
+  Logger::the->logSync(insid, syncfunc::tern_thread_end,
                        nturn, true, (uint64_t)th);
   Logger::threadEnd();
 }

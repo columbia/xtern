@@ -3,6 +3,7 @@
 #include "common/instr/instrutil.h"
 #include "loggable.h"
 #include "loginstr.h"
+#include "recorder/runtime/logdefs.h"
 #include "llvm/LLVMContext.h"
 #include "llvm/Support/TypeBuilder.h"
 #include "llvm/Support/IRBuilder.h"
@@ -47,11 +48,11 @@ bool LogInstr::runOnModule(Module &M) {
                              ("tern_log_load", functype));
   logStore = dyn_cast<Value>(M.getOrInsertFunction
                              ("tern_log_store", functype));
-  functype = TypeBuilder<void (types::i<32>, types::i<32>, types::i<32>,
+  functype = TypeBuilder<void (types::i<8>, types::i<32>, types::i<32>,
                                types::i<8>*, ...), false>::get(*context);
   logCall = dyn_cast<Value>(M.getOrInsertFunction("tern_log_call", functype));
-  functype = TypeBuilder<void (types::i<32>, types::i<32>, types::i<32>,
-                               types::i<8>*, types::i<64>), false>::get(*context);
+  functype = TypeBuilder<void (types::i<8>, types::i<32>, types::i<32>,
+                               types::i<8>*, types::i<64>),false>::get(*context);
   logRet = dyn_cast<Value>(M.getOrInsertFunction("tern_log_ret", functype));
 
   forallfunc(M, fi) {
@@ -230,17 +231,25 @@ void LogInstr::instrCall(Instruction *call) {
   Value *func = cs.getCalledValue();
   func = castIfNecessary(func, addrType, call);
 
-  Value *indir;
+  uint8_t flags = 0;
   Function *callee = cs.getCalledFunction();
-  indir = (callee? ConstantInt::get(Type::getInt32Ty(*context), 0)
-           : ConstantInt::get(Type::getInt32Ty(*context), 1));
+  if(!callee)
+    flags |=  CallIndirect;
+  if(callee) {
+    if(callee->doesNotReturn())
+      flags |= CallNoReturn;
+    if(funcsEscape.find(callee) != funcsEscape.end())
+      flags |= CalleeEscape;
+  }
+
+  Value *flagsVal = ConstantInt::get(Type::getInt8Ty(*context), flags);
 
   assert((!callee || !callee->getName().startswith("tern"))
          && "instrumenting call to a tern function!");
 
   // log call
   vector<Value*> args;
-  args.push_back(indir);
+  args.push_back(flagsVal);
   args.push_back(insid);
   args.push_back(nargval);
   args.push_back(func);
@@ -261,7 +270,7 @@ void LogInstr::instrCall(Instruction *call) {
   else
     data = Constant::getNullValue(dataType);
   args.clear();
-  args.push_back(indir);
+  args.push_back(flagsVal);
   args.push_back(insid);
   args.push_back(nargval);
   args.push_back(func);

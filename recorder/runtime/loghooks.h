@@ -9,8 +9,9 @@ extern "C" {
   void tern_log_insid(unsigned insid);
   void tern_log_load(unsigned insid, void* addr, uint64_t data);
   void tern_log_store(unsigned insid, void* addr, uint64_t data);
-  void tern_log_call(int indir, unsigned insid, short narg, void* func, ...);
-  void tern_log_ret(int indir, unsigned insid,
+  void tern_log_call(uint8_t flags, unsigned insid,
+                     short narg, void* func, ...);
+  void tern_log_ret(uint8_t flags, unsigned insid,
                     short narg, void* func, uint64_t ret);
 
   /// The following three functions are for connecting the llvm::Function

@@ -14,8 +14,10 @@ struct Logger {
   void logInsid(unsigned insid);
   void logLoad(unsigned insid, void* addr, uint64_t data);
   void logStore(unsigned insid, void* addr, uint64_t data);
-  void logCall(int indir, unsigned insid, short narg, void* func, va_list args);
-  void logRet(int indir, unsigned insid, short narg, void* func, uint64_t data);
+  void logCall(uint8_t flags, unsigned insid,
+               short narg, void* func, va_list args);
+  void logRet(uint8_t flags, unsigned insid,
+              short narg, void* func, uint64_t data);
   void logSync(unsigned insid, unsigned short sync,
                unsigned turn, bool after = true, ...);
 
