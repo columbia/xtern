@@ -29,10 +29,9 @@ Logger::func_map Logger::funcsEscape;
 
 void Logger::logInsid(unsigned insid) {
   checkAndGrowLogSize();
-  checkAndSetInsid(insid);
 
   InsidRec *rec = (InsidRec*)(buf+off);
-  rec->insid = insid;
+  rec->setInsid(insid);
   rec->type = InsidRecTy;
 
   off += RECORD_SIZE;
@@ -40,10 +39,9 @@ void Logger::logInsid(unsigned insid) {
 
 void Logger::logLoad(unsigned insid, void* addr, uint64_t data) {
   checkAndGrowLogSize();
-  checkAndSetInsid(insid);
 
   LoadRec *rec = (LoadRec*)(buf+off);
-  rec->insid = insid;
+  rec->setInsid(insid);
   rec->type = LoadRecTy;
   rec->addr = addr;
   rec->data = data;
@@ -53,10 +51,9 @@ void Logger::logLoad(unsigned insid, void* addr, uint64_t data) {
 
 void Logger::logStore(unsigned insid, void* addr, uint64_t data) {
   checkAndGrowLogSize();
-  checkAndSetInsid(insid);
 
   StoreRec *rec = (StoreRec*)(buf+off);
-  rec->insid = insid;
+  rec->setInsid(insid);
   rec->type = StoreRecTy;
   rec->addr = addr;
   rec->data = data;
@@ -80,13 +77,12 @@ void Logger::logCall(uint8_t flags, unsigned insid,
   assert(funcCallLogged(func));
 
   checkAndGrowLogSize();
-  checkAndSetInsid(insid);
 
   short nextra = NumExtraArgsRecords(narg);
   short seq = 0;
 
   CallRec *call = (CallRec*)(buf+off);
-  call->insid = insid;
+  call->setInsid(insid);
   call->type = CallRecTy;
   call->flags = flags;
   call->seq = seq;
@@ -107,7 +103,7 @@ void Logger::logCall(uint8_t flags, unsigned insid,
     checkAndGrowLogSize();
 
     ExtraArgsRec *extra = (ExtraArgsRec*)(buf+off);
-    extra->insid = insid;
+    extra->setInsid(insid);
     extra->type = ExtraArgsRecTy;
     extra->seq = seq;
     extra->narg = narg;
@@ -141,12 +137,11 @@ void Logger::logRet(uint8_t flags, unsigned insid,
          && "Logging return from a function that doesn't return!");
 
   checkAndGrowLogSize();
-  checkAndSetInsid(insid);
 
   short seq = NumExtraArgsRecords(narg) + 1;
 
   ReturnRec *ret = (ReturnRec*)(buf+off);
-  ret->insid = insid;
+  ret->setInsid(insid);
   ret->type = ReturnRecTy;
   ret->flags = flags;
   ret->seq = seq;
@@ -160,10 +155,9 @@ void Logger::logRet(uint8_t flags, unsigned insid,
 void Logger::logSync(unsigned insid, unsigned short sync,
                      unsigned turn, bool after, ...) {
   checkAndGrowLogSize();
-  checkAndSetInsid(insid);
 
   SyncRec *ret = (SyncRec*)(buf+off);
-  ret->insid = insid;
+  ret->setInsid(insid);
   ret->type = SyncRecTy;
   ret->sync = sync;
   ret->turn = turn;

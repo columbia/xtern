@@ -18,9 +18,7 @@ enum {
   LOG_SIZE        = 1*TRUNK_SIZE,
   MAX_INLINE_ARGS = 2U,
   MAX_EXTRA_ARGS  = 3U,
-  MAX_INSID       = (1<<INSID_BITS),
-  INVALID_INSID   = (unsigned)(-1),
-  INVALID_INSID_IN_REC = (INVALID_INSID & ((1<<INSID_BITS)-1))
+  INVALID_INSID   = (unsigned)(-1)
 };
 
 enum {
@@ -48,10 +46,24 @@ enum {
 #endif
 
 struct InsidRec {
+
+protected:
+  enum {
+    MAX_INSID       = (1<<INSID_BITS),
+    INVALID_INSID_IN_REC = (INVALID_INSID & ((1<<INSID_BITS)-1))
+  };
+
+public:
   unsigned insid  : INSID_BITS;
   unsigned type   : REC_TYPE_BITS;
   bool validInsid() const { return insid != INVALID_INSID_IN_REC; }
   unsigned getInsid() const { return validInsid()? insid : INVALID_INSID; }
+  void setInsid(unsigned id) {
+    if(id == INVALID_INSID)
+      id = INVALID_INSID_IN_REC;
+    assert(id < MAX_INSID && "instruction id larger than (1U<<29)!");
+    insid = id;
+  }
   int numRecForInst() const;
 };
 BOOST_STATIC_ASSERT(sizeof(InsidRec)<=RECORD_SIZE);

@@ -169,6 +169,8 @@ struct InstLog {
 
   void append(const RawLog::iterator& ri);
   void append(llvm::Instruction *I);
+
+  llvm::Instruction *getInst(ExecutedInstID id);
   llvm::raw_ostream &printExecutedInst(llvm::raw_ostream &o,
                             ExecutedInstID id, bool details=false);
   llvm::raw_ostream &printRawRec(llvm::raw_ostream &o,
@@ -204,16 +206,17 @@ struct InstLogBuilder {
 
 protected:
   InstLog *create(RawLog *log);
-  void getInbetweenInsts(bool takeCurrent=true, bool setNxt = true);
-  void getInst();
-  void getInstPrefix();
-  void getInstSuffix();
+  void appendInbetweenInsts(bool takeCurrent=true, bool setNxt = true);
+  void appendInst();
+  void appendInstPrefix();
+  void appendInstSuffix();
 
   int nextInstFromJmp();
   int nextInstFromReturn();
   int nextInstFromCall();
 
   void dump();
+  void verify();
 
   InstLog                           *instLog;
   RawLog::iterator                  cur_ri, nxt_ri;

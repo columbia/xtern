@@ -92,13 +92,8 @@ void InstLog::append(Instruction *I) {
   ExecutedInstID id;
   unsigned insid = getIDManager()->getInstructionID(I);
 
-if(insid == INVALID_INSID) {
-  errs() << *I << "\n";
-  insid = getIDManager()->getInstructionID(I);
-}
-
   assert(insid != INVALID_INSID && "instruction has no valid id!");
-  // TODO assert IDM->size() not too large once and for all
+  // TODO assert getIDManager()->size() not too large once and for all
   id.inst = insid;
   id.isLogged = 0;
   instLog.push_back(id);
@@ -128,6 +123,20 @@ raw_ostream &InstLog::printExecutedInst(raw_ostream &o,
       o << *I;
   }
   return o;
+}
+
+Instruction *InstLog::getInst(ExecutedInstID id) {
+  unsigned insid;
+  if(id.isLogged) {
+    raw_iterator ri(rawLog, id.inst);
+    insid = ri->getInsid();
+  } else {
+    insid = id.inst;
+  }
+  if(insid == INVALID_INSID)
+    return NULL;
+
+  return getIDManager()->getInstruction(insid);
 }
 
 InstLog::func_map         InstLog::funcsEscape;
@@ -178,6 +187,9 @@ void InstLog::setFuncMap(const char *file, const Module& M) {
       funcsEscape[F] = escape;
   }
 }
+
+
+
 
 /// this call should be the call that changed the execution from curBB to
 /// nxtBB
@@ -254,7 +266,7 @@ int InstLogBuilder::nextInstFromJmp() {
   return 1;
 }
 
-void InstLogBuilder::getInbetweenInsts(bool takeCurrent, bool setNxt) {
+void InstLogBuilder::appendInbetweenInsts(bool takeCurrent, bool setNxt) {
   unsigned cur_insid = cur_ri->getInsid();
   cur_ii = getIDManager()->getInstruction(cur_insid);
 
@@ -312,7 +324,7 @@ void InstLogBuilder::getInbetweenInsts(bool takeCurrent, bool setNxt) {
   }
 }
 
-void InstLogBuilder::getInst() {
+void InstLogBuilder::appendInst() {
   // sanity
   unsigned insid = cur_ri->getInsid();
   BasicBlock::iterator ii = getIDManager()->getInstruction(insid);
@@ -336,11 +348,11 @@ void InstLogBuilder::getInst() {
   //  store %2, ...    <=== one raw record
   //
   cur_ri += cur_ri->numRecForInst()-1;
-  getInbetweenInsts(false);
+  appendInbetweenInsts(false);
 
 }
 
-void InstLogBuilder::getInstPrefix() {
+void InstLogBuilder::appendInstPrefix() {
   unsigned nxt_insid = nxt_ri->getInsid();
   nxt_ii = getIDManager()->getInstruction(nxt_insid);
   BasicBlock *nxtBB = nxt_ii->getParent();
@@ -348,7 +360,7 @@ void InstLogBuilder::getInstPrefix() {
     instLog->append(cur_ii);
 }
 
-void InstLogBuilder::getInstSuffix() {
+void InstLogBuilder::appendInstSuffix() {
   unsigned nxt_insid = nxt_ri->getInsid();
   nxt_ii = getIDManager()->getInstruction(nxt_insid);
   BasicBlock *nxtBB = nxt_ii->getParent();
@@ -372,7 +384,7 @@ InstLog *InstLogBuilder::create(RawLog *log) {
   cur_ri = log->begin(); // thread_begin();
   nxt_ri =  cur_ri + 1; // first logged inst of the prog
 
-  getInstPrefix(); // thread_begin() to first logged inst of the program
+  appendInstPrefix(); // thread_begin() to first logged inst of the program
 
   bool calledPthreadExit = true;
   RawLog::iterator end_ri = log->end();
@@ -393,17 +405,22 @@ InstLog *InstLogBuilder::create(RawLog *log) {
     nxt_ri = cur_ri + nrec;
 
     if(nrec > 1) // one instruction but multiple log recorsd
-      getInst();
+      appendInst();
     else
-      getInbetweenInsts();
+      appendInbetweenInsts();
   }
 
   if(calledPthreadExit)
     instLog->append(end_ri); // append thread_end
   else
-    getInstSuffix(); // last logged inst to ret from thread func (or main())
+    appendInstSuffix(); // last logged inst to ret from thread func (or main())
 
   return instLog;
+}
+
+void InstLogBuilder::verify() {
+  for(InstLog::iterator i=instLog->begin(); i!=instLog->end(); ++i) {
+  }
 }
 
 void InstLogBuilder::dump() {
@@ -431,10 +448,10 @@ static const char* recNames[] = {
 
 static raw_ostream& printInsidRec(raw_ostream& o, const InsidRec& rec) {
   assert(rec.type <= LastRecTy && "invalid log record type!");
-  if(rec.insid == tern::INVALID_INSID_IN_REC)
-    o << "ins=n/a";
-  else
+  if(rec.validInsid())
     o << "ins=" << rec.insid;
+  else
+    o << "ins=n/a";
   return o << " " << recNames[rec.type];
 }
 

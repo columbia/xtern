@@ -33,12 +33,6 @@ protected:
     // TODO: check log buffer size and allocate new space if necessary
     assert(off + RECORD_SIZE <= TRUNK_SIZE);
   }
-  void checkAndSetInsid(unsigned &insid) {
-    if(insid == INVALID_INSID)
-      insid = INVALID_INSID_IN_REC;
-    else
-      assert(insid < MAX_INSID && "instruction id larger than (1U<<29)!");
-  }
 
   char*      buf;
   unsigned   off;
