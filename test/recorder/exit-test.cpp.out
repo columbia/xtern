@@ -1,0 +1,3 @@
+CHECK: P ins=48  %22 = icmp ule i32 %21, 1, !dbg !59, !ins_id !73 ; <i1> [#uses=1]
+CHECK: P ins=49  br i1 %22, label %bb6, label %bb8, !dbg !59, !ins_id !74
+CHECK: P ins=50  call void @exit(i32 0) noreturn nounwind, !dbg !75, !ins_id !76
