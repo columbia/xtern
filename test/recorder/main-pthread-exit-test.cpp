@@ -2,8 +2,8 @@
 // RUN: %projbindir/tern-instr < %t1.ll -o %t2
 // RUN: llc -o %t2.s %t2-record.bc
 // RUN: g++ -g -o %t2 %t2.s -L %projlibdir -lcommonruntime -lrecruntime -lpthread
-// XXX: ./%t2  deadlock if main calls pthread_exit
-// XFAIL
+// RUN: ./%t2
+// XFAIL: *
 
 #include <sys/time.h>
 #include <time.h>
@@ -37,6 +37,7 @@ int main() {
   for(unsigned i=0; i<N; ++i)
     pthread_join(th[i], NULL);
 
+  // this would deadlock
   pthread_exit(NULL);
   return 0;
 }
