@@ -48,6 +48,7 @@ proc execOneLine { test PRS outcome lineno line } {
 proc substitute { line test tmpFile } {
   global srcroot objroot srcdir objdir subdir target_triplet
   global llvmlibdir llvmgcc llvmgxx
+  global gcc gxx
   global projlibdir projbindir
   set path [file join $srcdir $subdir]
 
@@ -60,6 +61,10 @@ proc substitute { line test tmpFile } {
   regsub -all {%llvmgcc} $new_line "$llvmgcc -emit-llvm -w" new_line
   #replace %llvmgxx with actual path to llvmg++
   regsub -all {%llvmgxx} $new_line "$llvmgxx -emit-llvm -w" new_line
+  #replace %gcc with actual gcc
+  regsub -all {%gcc} $new_line "$gcc" new_line
+  #replace %gxx with actual gxx
+  regsub -all {%gxx} $new_line "$gxx" new_line
   #replace %llvmlibdir with LLVM library directory
   regsub -all {%llvmlibdir} $new_line "$llvmlibdir" new_line
   #replace %projlibdir with project library directory

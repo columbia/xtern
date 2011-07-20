@@ -31,7 +31,7 @@ struct S bar() {
   return s;
 }
 
-int main() {
+int main(int argc, char *argv[], char *env[]) {
   int i;
   for(i=0; i<100; ++i)
     foo(i);

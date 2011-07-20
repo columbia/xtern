@@ -160,9 +160,23 @@ bool InitInstr::runOnModule(Module &M) {
     addSymbolicArgv(M, mainfunc);
   addSymbolic(M);
 
+  if(uclibc)
+    addBeginEndInMain(M, mainfunc);
+  else
+    addBeginEndAsCtorDtor(M);
+
+  // GlobalVariable *GCL = M.getGlobalVariable("llvm.global_ctors");
+  // GlobalVariable *GDL = M.getGlobalVariable("llvm.global_dtors");
+  // if(GCL || GDL)
+  //   addBeginEndAsCtorDtor(M);
+  // else
+  //  addBeginEndInMain(M, mainfunc);
+
+  // unfortunately, static ctor-dtor approach doesn't work for uclibc.
+  //
   // actually, if ctor-dtor method is robust, let's just stick to it and
   // not wrap main
-  addBeginEndAsCtorDtor(M);
+  // addBeginEndAsCtorDtor(M);
 
   return true;
 }
@@ -171,7 +185,7 @@ bool InitInstr::runOnModule(Module &M) {
 
 namespace {
 
-static RegisterPass<tern::InitInstr>
-X("initinstr", "instrumentation of tern initialization", false, false);
+//static RegisterPass<tern::InitInstr>
+//X("initinstr", "instrumentation of tern initialization", false, false);
 
 }

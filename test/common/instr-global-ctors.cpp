@@ -1,4 +1,4 @@
-// RUN: %llvmgcc %s -g -O0 -c -o %t1.ll -S
+// RUN: %llvmgcc %s -c -o %t1.ll -S
 // need -dont-warn-escaped-functions to nuke stderr warning ...
 // RUN: %projbindir/tern-instr < %t1.ll -S -o %t2 -dont-warn-escaped-functions
 

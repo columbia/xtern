@@ -32,7 +32,7 @@ InputFilename(cl::Positional, cl::desc("<input bitcode file>"),
 
 static cl::opt<std::string>
 OutputFilename("o", cl::desc("Output filename prefix (without .bc or .ll)"),
-               cl::value_desc("filename"));
+               cl::Optional, cl::init("default"), cl::value_desc("filename"));
 
 static cl::opt<string>
 WithUclibc("with-uclibc", cl::desc("Link .bcs with KLEE's uclibc library)"),
@@ -203,10 +203,22 @@ int main(int argc, char **argv) {
     return 1;
   }
 
+  bool Uclibc = (WithUclibc.compare("no") != 0);
+  if(Uclibc) {
+    if(WithUclibc.empty())
+      getUclibcPath();
+  }
+
   if(endsWith(OutputFilename, ".ll") || endsWith(OutputFilename, ".bc")) {
     errs() << "Option -o specifies output filename prefix "\
       "without .bc or .ll extension ";
     return 1;
+  }
+
+  if(OutputFilename.compare("default") == 0) {
+    OutputFilename = InputFilename;
+    if(endsWith(OutputFilename, ".ll") || endsWith(OutputFilename, ".bc"))
+      OutputFilename = OutputFilename.substr(0, OutputFilename.length()-3);
   }
 
   string ext = (OutputAssembly? ".ll" : ".bc");
@@ -237,7 +249,7 @@ int main(int argc, char **argv) {
   if (!ModuleDataLayout.empty())
     Passes1.add(new TargetData(ModuleDataLayout));
   Passes1.add(new IDTagger);
-  Passes1.add(new SyncInstr);
+  Passes1.add(new SyncInstr(Uclibc));
   Passes1.add(createVerifierPass());
   if (OutputAssembly)
     Passes1.add(createPrintModulePass(AnalysisOut));
@@ -245,7 +257,7 @@ int main(int argc, char **argv) {
     Passes1.add(createBitcodeWriterPass(*AnalysisOut));
 
   // record instrumentation
-  Passes2init.add(new InitInstr);
+  Passes2init.add(new InitInstr(Uclibc));
   if (!ModuleDataLayout.empty())
     Passes2.add(new TargetData(ModuleDataLayout));
 Passes2.add(createVerifierPass());
@@ -276,11 +288,8 @@ Passes2.add(createVerifierPass());
 
   // record.bc
   Passes2init.run(*M.get());
-  if(WithUclibc.compare("no") != 0) {
-    if(WithUclibc.empty())
-      getUclibcPath();
+  if(Uclibc)
     M.reset(linkWithUclibc(M.get()));
-  }
   Passes2.run(*M.get());
 
   // replay.bc

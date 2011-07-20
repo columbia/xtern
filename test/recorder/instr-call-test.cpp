@@ -35,7 +35,7 @@ extern int manyargs(char *p0, int len0, char *p1, int len1,
 extern void voidret(char* p, int len);
 extern uint64_t int64ret(char* p, int len);
 
-int main() {
+int main(int argc, char *argv[], char *env[]) {
   char buf[4096];
   int (*fp0)(char *, int);
   ssize_t (*fp1)(int, void*, size_t);

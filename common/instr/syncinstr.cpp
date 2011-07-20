@@ -195,6 +195,8 @@ bool SyncInstr::runOnModule(Module &M) {
         continue;
       if(syncfunc::isTernAuto(syncid))
         continue;
+      if(!uclibc && syncid == syncfunc::exit)
+        continue;
       replaceFunctionInCall(M, prv, syncid);
     }
   }
@@ -206,7 +208,7 @@ bool SyncInstr::runOnModule(Module &M) {
 
 namespace {
 
-static RegisterPass<tern::SyncInstr>
-X("syncinstr", "instrumentation of synchronization methods", false, false);
+//static RegisterPass<tern::SyncInstr>
+//X("syncinstr", "instrumentation of synchronization methods", false, false);
 
 }

@@ -83,7 +83,7 @@ void InstLog::append(const RawLog::iterator &ri) {
   id.isLogged = 1;
   instLog.push_back(id);
 
-#ifdef _DEBUG_RECORDER
+#ifdef _DEBUG_LOGACCESS
   printExecutedInst(errs(), id, true) << "\n";
 #endif
 }
@@ -97,7 +97,7 @@ void InstLog::append(Instruction *I) {
   id.isLogged = 0;
   instLog.push_back(id);
 
-#ifdef _DEBUG_RECORDER
+#ifdef _DEBUG_LOGACCESS
   printExecutedInst(errs(), id, true) << "\n";
 #endif
 }
@@ -217,7 +217,7 @@ int InstLogBuilder::nextInstFromCall() {
   ++ ret_ii;
   callStack.push(ret_ii);
 
-#ifdef _DEBUG_RECORDER
+#ifdef _DEBUG_LOGACCESS
   errs() << "calling " << F->getName() << " return address "
          << getIDManager()->getInstructionID(ret_ii) << "\n";
 #endif
@@ -229,7 +229,7 @@ int InstLogBuilder::nextInstFromCall() {
 
 int InstLogBuilder::nextInstFromReturn() {
   // TODO sanity: the previous instruction of ii is a call to this function
-#ifdef _DEBUG_RECORDER
+#ifdef _DEBUG_LOGACCESS
   errs() << "returning from " << cur_ii->getParent()->getParent()->getName()
          << " to return address "
          << getIDManager()->getInstructionID(callStack.top())
@@ -255,7 +255,7 @@ int InstLogBuilder::nextInstFromJmp() {
       break;
     }
   }
-#ifdef _DEBUG_RECORDER
+#ifdef _DEBUG_LOGACCESS
   if(!is_succ)
     dump();
 #endif
@@ -315,7 +315,8 @@ void InstLogBuilder::appendInbetweenInsts(bool takeCurrent, bool setNxt) {
       transfers += nextInstFromJmp();
       break;
     case Instruction::Unreachable:
-      assert(0 && "InstLogBuilder should never reach an UnrechableInst!");
+      assert(0 && "InstLogBuilder::appendInbetweenInsts() "\
+             "should never reach an UnrechableInst!");
     default:
       ++ cur_ii;
       break;
@@ -387,6 +388,10 @@ InstLog *InstLogBuilder::create(RawLog *log) {
 
   appendInstPrefix(); // thread_begin() to first logged inst of the program
 
+  // FIXME: relying on correctly finding the end of a raw log may be
+  // problematic if the logged thread didn't exit properly (so that our
+  // tern_thread_end() did not get called.  A more robust approach is just
+  // to start from beginning and go forward only.
   bool calledPthreadExit = true;
   RawLog::iterator end_ri = log->end();
   -- end_ri;  // thread_end();
@@ -410,16 +415,21 @@ InstLog *InstLogBuilder::create(RawLog *log) {
     else
       appendInbetweenInsts();
   }
+
+  // suffix
   if(calledPthreadExit)
     instLog->append(end_ri); // append thread_end
-  else
+  else {
     appendInstSuffix(); // last logged inst to ret from thread func (or main())
+    instLog->append(log->end()-1); // append thread_end
+  }
 
   return instLog;
 }
 
 void InstLogBuilder::verify() {
   for(InstLog::iterator i=instLog->begin(); i!=instLog->end(); ++i) {
+    // TODO
   }
 }
 

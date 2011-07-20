@@ -1,10 +1,10 @@
-// RUN: %llvmgcc %s -g -O0 -c -o %t1.ll -S
+// RUN: %llvmgcc %s -c -o %t1.ll -S
 // RUN: %projbindir/tern-instr < %t1.ll -o %t2
 // RUN: llvm-dis -f %t2-record.bc
 
 // test the x86 .a libraries
 // RUN: llc -o %t2.s %t2-record.bc
-// RUN: g++ -g -o %t2 %t2.s -L %projlibdir -lcommonruntime -lrecruntime -lpthread
+// RUN: %gxx -o %t2 %t2.s -L %projlibdir -lcommonruntime -lrecruntime -lpthread
 // RUN: ./%t2 | sort > %t2.out
 // RUN: diff %t2.out %s.out > /dev/null
 // RUN: %projbindir/logprint -bc %t2-analysis.bc tern-log-tid-0 -r -v > /dev/null
@@ -18,7 +18,7 @@
 // RUN: llvm-ld -o %t3 %t2-record.bc %projlibdir/commonruntime.bc %projlibdir/recruntime.bc
 // RUN: llvm-dis -f %t3.bc
 // RUN: llc -o %t3.s %t3.bc
-// RUN: g++ -g -o %t3 %t3.s -lpthread
+// RUN: %gxx -o %t3 %t3.s -lpthread
 // RUN: ./%t3 | sort > %t3.out
 // RUN: diff %t3.out %s.out > /dev/null
 // RUN: %projbindir/logprint -bc %t2-analysis.bc tern-log-tid-0 -r -v > /dev/null
@@ -79,7 +79,7 @@ void* thread_func(void *arg) {
   pthread_mutex_unlock(&m);
 }
 
-int main() {
+int main(int argc, char *argv[], char *env[]) {
   int ret;
   pthread_t th[N];
 

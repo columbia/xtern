@@ -123,8 +123,14 @@ int tern_sem_post(unsigned ins, sem_t *sem) {
 /// just a wrapper to tern_thread_end() and pthread_exit()
 void tern_pthread_exit(unsigned ins, void *retval) {
   // don't call tern_thread_end() for the main thread, since we'll call
-  // tern_prog_end() later (which calls tern_thread_end()
+  // tern_prog_end() later (which calls tern_thread_end())
   if(Scheduler::self() != Scheduler::MainThreadTid)
     tern_thread_end(ins);
   pthread_exit(retval);
+}
+
+void tern_exit(unsigned ins, int status) {
+  tern_thread_end(ins); // main thread ends
+  tern_prog_end();
+  exit(status);
 }

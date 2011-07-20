@@ -1,7 +1,7 @@
-// RUN: %llvmgcc %s -g -O0 -c -o %t1.ll -S
+// RUN: %llvmgcc %s -c -o %t1.ll -S
 // RUN: %projbindir/tern-instr < %t1.ll -o %t2
 // RUN: llc -o %t2.s %t2-record.bc
-// RUN: g++ -g -o %t2 %t2.s -L %projlibdir -lcommonruntime -lrecruntime -lpthread
+// RUN: %gxx -o %t2 %t2.s -L %projlibdir -lcommonruntime -lrecruntime -lpthread
 // RUN: ./%t2
 // RUN: %projbindir/logprint -bc %t2-analysis.bc tern-log-tid-0 -r -v | tail -3 | FileCheck %s.out
 
@@ -25,7 +25,7 @@ void* thread_func(void *arg) {
   bar();
 }
 
-int main() {
+int main(int argc, char *argv[], char *env[]) {
   int ret;
   pthread_t th[N];
 
