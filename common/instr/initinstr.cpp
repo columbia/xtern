@@ -67,7 +67,7 @@ void InitInstr::addCtorOrDtor(Module *M, Function *F, bool isCtor) {
 
 /// add __tern_prog_begin() as the first static ctor, and __tern_prog_end
 /// as the first static dtor of @M
-void InitInstr::addBeginEndAsCtorDtor(Module &M, GlobalValue* GCL) {
+void InitInstr::addBeginEndAsCtorDtor(Module &M) {
 
   const FunctionType *Ty = TypeBuilder<void (void),
     false>::get(getGlobalContext());
@@ -160,12 +160,9 @@ bool InitInstr::runOnModule(Module &M) {
     addSymbolicArgv(M, mainfunc);
   addSymbolic(M);
 
-  GlobalVariable *GCL = M.getGlobalVariable("llvm.global_ctors");
-  GlobalVariable *GDL = M.getGlobalVariable("llvm.global_dtors");
-  if(GCL || GDL)
-    addBeginEndAsCtorDtor(M, GCL);
-  else
-    addBeginEndInMain(M, mainfunc);
+  // actually, if ctor-dtor method is robust, let's just stick to it and
+  // not wrap main
+  addBeginEndAsCtorDtor(M);
 
   return true;
 }

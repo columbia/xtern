@@ -47,7 +47,7 @@ DEF(epoll_wait,             BlockingSyscall, int, int epfd, struct epoll_event *
 DEF(sigwait,                BlockingSyscall, int, const sigset_t *set, int *sig)
 /* should include sched_yield */
 
-DEF(exit,                   BlockingSyscall, void, int status)
+/* DEF(exit,                   BlockingSyscall, void, int status) */
 /* DEF(syscall,                BlockingSyscall, tern_, int, int) */ /* FIXME: why include generic syscall entry point? */
 /* DEF(ap_mpm_pod_check,       BlockingSyscall, tern_) */ /* FIXME: ap_mpm_pod_check is not a real lib call; needed for apache */
 

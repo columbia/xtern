@@ -121,10 +121,3 @@ void tern_pthread_exit(unsigned ins, void *retval) {
   tern_thread_end(ins);
   pthread_exit(retval);
 }
-
-/// just a wrapper to __tern_prog_end and exit()
-void tern_exit(unsigned ins, int status) {
-  tern_thread_end(ins); // main thread ends
-  tern_prog_end();
-  exit(status);
-}

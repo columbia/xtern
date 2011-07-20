@@ -5,9 +5,10 @@
 #include "syncinstr.h"
 #include "llvm/LLVMContext.h"
 #include "llvm/System/Path.h"
-#include "llvm/Bitcode/ReaderWriter.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Bitcode/ReaderWriter.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "instrutil.h"
 
@@ -15,6 +16,10 @@ using namespace std;
 using namespace llvm;
 
 namespace tern {
+
+static cl::opt<bool>
+DontWarnEscapeFunc("dont-warn-escaped-functions",
+               cl::desc("Warn about synchronization functions that escape."));
 
 char SyncInstr::ID = 0;
 
@@ -163,7 +168,8 @@ bool SyncInstr::runOnModule(Module &M) {
 
   initFuncTypes(M);
 
-  warnEscapeFuncs(M);
+  if(!DontWarnEscapeFunc)
+    warnEscapeFuncs(M);
 
   // replace calls to sync functions with calls to tern hooks
   forallbb(M, BB) {
