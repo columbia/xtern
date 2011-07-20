@@ -634,7 +634,6 @@ LLVMGCC
 LLVMGXX
 LOPT
 LLVMLD
-ENABLE_ATEXIT
 LIBOBJS
 LTLIBOBJS'
 ac_subst_files=''
@@ -1216,11 +1215,6 @@ if test -n "$ac_init_help"; then
      short | recursive ) echo "Configuration of [TERN] [0.10]:";;
    esac
   cat <<\_ACEOF
-
-Optional Features:
-  --disable-FEATURE       do not include FEATURE (same as --enable-FEATURE=no)
-  --enable-FEATURE[=ARG]  include FEATURE [ARG=yes]
-  --enable-atexit         Schedule tern runtime shutdown code using atexit()
 
 Optional Packages:
   --with-PACKAGE[=ARG]    use PACKAGE [ARG=yes]
@@ -3870,28 +3864,6 @@ LOPT=$LOPT
 LLVMLD=$LLVMLD
 
 
-# Check whether --enable-atexit was given.
-if test "${enable_atexit+set}" = set; then
-  enableval=$enable_atexit;
-else
-  enableval="no"
-fi
-
-{ echo "$as_me:$LINENO: checking Enable atexit()" >&5
-echo $ECHO_N "checking Enable atexit()... $ECHO_C" >&6; }
-if test ${enableval} = "no" ; then
-  ENABLE_ATEXIT=
-
-else
-  ENABLE_ATEXIT=ENABLE_ATEXIT=1
-
-
-cat >>confdefs.h <<\_ACEOF
-#define ENABLE_ATEXIT 1
-_ACEOF
-
-fi
-
 
 
 
@@ -4597,12 +4569,11 @@ LLVMGCC!$LLVMGCC$ac_delim
 LLVMGXX!$LLVMGXX$ac_delim
 LOPT!$LOPT$ac_delim
 LLVMLD!$LLVMLD$ac_delim
-ENABLE_ATEXIT!$ENABLE_ATEXIT$ac_delim
 LIBOBJS!$LIBOBJS$ac_delim
 LTLIBOBJS!$LTLIBOBJS$ac_delim
 _ACEOF
 
-  if test `sed -n "s/.*$ac_delim\$/X/p" conf$$subs.sed | grep -c X` = 58; then
+  if test `sed -n "s/.*$ac_delim\$/X/p" conf$$subs.sed | grep -c X` = 57; then
     break
   elif $ac_last_try; then
     { { echo "$as_me:$LINENO: error: could not make $CONFIG_STATUS" >&5

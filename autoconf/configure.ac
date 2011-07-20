@@ -133,19 +133,18 @@ AC_SUBST(LLVMGXX,$LLVMGXX)
 AC_SUBST(LOPT,$LOPT)
 AC_SUBST(LLVMLD,$LLVMLD)
 
-AC_ARG_ENABLE(atexit, 
-             AS_HELP_STRING([--enable-atexit],
-             [Schedule tern runtime shutdown code using atexit()]),
-             ,enableval="no")
-AC_MSG_CHECKING([Enable atexit()])
-if test ${enableval} = "no" ; then
-  AC_SUBST(ENABLE_ATEXIT,[[]])
-else
-  AC_SUBST(ENABLE_ATEXIT,[[ENABLE_ATEXIT=1]])
-  AC_DEFINE(ENABLE_ATEXIT, [1], 
-  [Installing tern runtime teardown code using atexit() (default is no) ])
-fi
-
+dnl AC_ARG_ENABLE(atexit, 
+dnl              AS_HELP_STRING([--enable-atexit],
+dnl              [Schedule tern runtime shutdown code using atexit()]),
+dnl              ,enableval="no")
+dnl AC_MSG_CHECKING([Enable atexit()])
+dnl if test ${enableval} = "no" ; then
+dnl   AC_SUBST(ENABLE_ATEXIT,[[]])
+dnl else
+dnl   AC_SUBST(ENABLE_ATEXIT,[[ENABLE_ATEXIT=1]])
+dnl   AC_DEFINE(ENABLE_ATEXIT, [1], 
+dnl   [Installing tern runtime teardown code using atexit() (default is no) ])
+dnl fi
 
 
 dnl **************************************************************************

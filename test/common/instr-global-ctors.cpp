@@ -2,9 +2,17 @@
 // RUN: %projbindir/tern-instr < %t1.ll -S -o %t2
 // XFAIL: *
 
+#include <iostream>
+using namespace std;
+
 struct S {
   S() {
+    cerr << "S ctor\n";
     x = 10;
+  }
+  ~S() {
+    x = 0;
+    cerr << "S dtor\n";
   }
   int x;
 };

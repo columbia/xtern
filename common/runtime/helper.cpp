@@ -53,9 +53,7 @@ int __tern_pthread_create(pthread_t *thread,  pthread_attr_t *attr,
 
 void __tern_prog_begin(void) {
   tern::InstallRuntime();
-#ifdef ENABLE_ATEXIT
-  atexit(__tern_prog_end);
-#endif
+  // atexit(__tern_prog_end);
   tern_prog_begin();
   tern_thread_begin(); // main thread begins
 }

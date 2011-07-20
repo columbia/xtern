@@ -151,7 +151,8 @@ LogTag funcCallLogged(Function *func) {
   if(func->getIntrinsicID() != Intrinsic::not_intrinsic)
     return NotLogged;
 
-  if(func->getName().startswith("tern")) {
+  if(func->getName().startswith("tern")
+    || func->getName().startswith("__tern")) {
     assert(!func->getName().startswith("tern_log")
            && "Module already has recorder (LogInstr) instrumentation; "\
            "can only use this function on a module instrumented by LogInstr");
