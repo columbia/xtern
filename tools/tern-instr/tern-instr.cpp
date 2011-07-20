@@ -34,9 +34,10 @@ static cl::opt<std::string>
 OutputFilename("o", cl::desc("Output filename prefix (without .bc or .ll)"),
                cl::value_desc("filename"));
 
-static cl::opt<std::string>
-Uclibc("uclibc", cl::desc("path to klee uclibc library)"),
-       cl::value_desc("filename"));
+static cl::opt<string>
+WithUclibc("with-uclibc", cl::desc("Link .bcs with KLEE's uclibc library)"),
+           cl::ValueOptional, cl::init("no"),
+           cl::value_desc("empty or path-to-uclibc"));
 
 static cl::opt<bool>
 OutputAssembly("S", cl::desc("Write output as LLVM assembly"));
@@ -49,6 +50,15 @@ static bool endsWith(const string& str, const char* suffix) {
   return str.compare(len-suffix_len, suffix_len, suffix) == 0;
 }
 
+
+void getUclibcPath(void) {
+  // FIXME: use root of the old tern; should this a configuration option
+  const char* tern_root = getenv("TERN_ROOT");
+  assert(tern_root && "TERN_ROOT environment variable is not set;"\
+         " can't search for uclibc!");
+  WithUclibc = tern_root;
+  WithUclibc += "/klee/klee-uclibc/lib/libc.a";
+}
 
 // copied from klee
 Module *linkWithLibrary(Module *module,
@@ -102,7 +112,7 @@ static llvm::Module *linkWithUclibc(llvm::Module *mainModule) {
     }
   }
 
-  mainModule = linkWithLibrary(mainModule, Uclibc);
+  mainModule = linkWithLibrary(mainModule, WithUclibc);
   assert(mainModule && "unable to link with uclibc");
 
   // more sighs, this is horrible but just a temp hack
@@ -266,8 +276,11 @@ Passes2.add(createVerifierPass());
 
   // record.bc
   Passes2init.run(*M.get());
-  if(!Uclibc.empty())
+  if(WithUclibc.compare("no") != 0) {
+    if(WithUclibc.empty())
+      getUclibcPath();
     M.reset(linkWithUclibc(M.get()));
+  }
   Passes2.run(*M.get());
 
   // replay.bc
