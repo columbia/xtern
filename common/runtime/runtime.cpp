@@ -20,11 +20,17 @@ void __attribute((weak)) InstallRuntime() {
   assert(0&&"A Runtime must define its own InstallRuntime() to instal itself!");
 }
 
+static bool prog_began = false; // sanity
 void tern_prog_begin() {
+  assert(!prog_began && "tern_prog_begin() already called!");
+  prog_began = true;
   Runtime::the->progBegin();
 }
 
 void tern_prog_end() {
+  assert(prog_began && "tern_prog_begin() not called "  \
+         "or tern_prog_end() already called!");
+  prog_began = false;
   Runtime::the->progEnd();
 }
 
@@ -116,8 +122,9 @@ int tern_sem_post(unsigned ins, sem_t *sem) {
 
 /// just a wrapper to tern_thread_end() and pthread_exit()
 void tern_pthread_exit(unsigned ins, void *retval) {
-  assert(Scheduler::self() != Scheduler::MainThreadTid
-         && "calling pthread_exit() in main is currently not supported!");
-  tern_thread_end(ins);
+  // don't call tern_thread_end() for the main thread, since we'll call
+  // tern_prog_end() later (which calls tern_thread_end()
+  if(Scheduler::self() != Scheduler::MainThreadTid)
+    tern_thread_end(ins);
   pthread_exit(retval);
 }

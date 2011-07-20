@@ -3,7 +3,6 @@
 // RUN: llc -o %t2.s %t2-record.bc
 // RUN: g++ -g -o %t2 %t2.s -L %projlibdir -lcommonruntime -lrecruntime -lpthread
 // RUN: ./%t2
-// XFAIL: *
 
 #include <sys/time.h>
 #include <time.h>
