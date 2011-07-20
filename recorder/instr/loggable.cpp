@@ -98,6 +98,11 @@ LogTag instLogged(Instruction *ins) {
   //
   for(BasicBlock::iterator ii=ins; ii!=BB->end(); ++ii) {
     if(ii->getOpcode() == Instruction::Call) { // first call instruction
+      // FIXME: callLogged may return Logged but the call may be indirect
+      // and at runtime we decide not to log the call
+      //
+      // Also, if the call is to something whose body is not logged (e.g.,
+      // intrinsics), we can just keep going without return.
       LogTag tag = callLogged(ii);
       if(tag == NotLogged)  // if call not logged, log marker
         return LogBBMarker;

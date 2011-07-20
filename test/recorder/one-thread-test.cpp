@@ -32,4 +32,5 @@ int main() {
   strcpy(buf0, buf1);
   strcat(buf0, buf2);
   printf("%s\n", buf0);
+  return 0;
 }

@@ -18,9 +18,9 @@
 #include "llvm/Support/CallSite.h"
 #include "logaccess.h"
 
-//#define _DEBUG_RECORDER
+//#define _DEBUG_LOGACCESS
 
-#ifdef _DEBUG_RECORDER
+#ifdef _DEBUG_LOGACCESS
 #  define dprintf(fmt...) fprintf(stderr, fmt)
 #else
 #  define dprintf(fmt...)
@@ -91,7 +91,6 @@ void InstLog::append(const RawLog::iterator &ri) {
 void InstLog::append(Instruction *I) {
   ExecutedInstID id;
   unsigned insid = getIDManager()->getInstructionID(I);
-
   assert(insid != INVALID_INSID && "instruction has no valid id!");
   // TODO assert getIDManager()->size() not too large once and for all
   id.inst = insid;
@@ -177,10 +176,10 @@ void InstLog::setFuncMap(const char *file, const Module& M) {
            && "invalid func name in .funcs file");
 
     Function *F = M.getFunction(funcname);
-    assert(F && "can't find a function logged in .funcs file in the module!");
+    if(!F) // unused function
+      continue;
     assert(funcsCallLogged.find(F) == funcsCallLogged.end()
            && "redundant function names in .funcs file!");
-
     funcsCallLogged[F] = funcid;
     funcsIDMap[funcid] = F;
     if(escape)
@@ -256,7 +255,7 @@ int InstLogBuilder::nextInstFromJmp() {
       break;
     }
   }
-#ifdef _DEBUG //_DEBUG_RECORDER
+#ifdef _DEBUG_RECORDER
   if(!is_succ)
     dump();
 #endif
@@ -353,8 +352,10 @@ void InstLogBuilder::appendInst() {
 }
 
 void InstLogBuilder::appendInstPrefix() {
+
   unsigned nxt_insid = nxt_ri->getInsid();
   nxt_ii = getIDManager()->getInstruction(nxt_insid);
+
   BasicBlock *nxtBB = nxt_ii->getParent();
   for(cur_ii=nxtBB->begin(); cur_ii!=nxt_ii; ++cur_ii)
     instLog->append(cur_ii);
@@ -409,7 +410,6 @@ InstLog *InstLogBuilder::create(RawLog *log) {
     else
       appendInbetweenInsts();
   }
-
   if(calledPthreadExit)
     instLog->append(end_ri); // append thread_end
   else

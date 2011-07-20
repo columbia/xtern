@@ -1,5 +1,6 @@
 // RUN: %llvmgcc %s -g -O0 -c -o %t1.ll -S
 // RUN: %projbindir/tern-instr < %t1.ll -S -o %t2
+// XFAIL: *
 
 struct S {
   S() {

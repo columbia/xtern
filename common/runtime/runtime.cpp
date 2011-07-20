@@ -1,9 +1,11 @@
 /* Author: Junfeng Yang (junfeng@cs.columbia.edu) -*- Mode: C++ -*- */
 
 #include <assert.h>
+#include "config.h"
 #include "hooks.h"
 #include "runtime.h"
 #include "scheduler.h"
+#include "helper.h"
 
 using namespace tern;
 
@@ -116,4 +118,13 @@ void tern_pthread_exit(unsigned ins, void *retval) {
          && "calling pthread_exit() in main is currently not supported!");
   tern_thread_end(ins);
   pthread_exit(retval);
+}
+
+/// just a wrapper to __tern_prog_end and exit()
+void tern_exit(unsigned ins, int status) {
+#ifndef ENABLE_ATEXIT
+  tern_thread_end(ins); // main thread ends
+  tern_prog_end();
+#endif
+  exit(status);
 }

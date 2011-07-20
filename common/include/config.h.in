@@ -1,5 +1,8 @@
 /* common/include/config.h.in.  Generated from autoconf/configure.tmp.ac by autoheader.  */
 
+/* Installing tern runtime teardown code using atexit() (default is no) */
+#undef ENABLE_ATEXIT
+
 /* Define to the address where bug reports for this package should be sent. */
 #undef PACKAGE_BUGREPORT
 

@@ -1,6 +1,7 @@
 /* Author: Junfeng Yang (junfeng@cs.columbia.edu) -*- Mode: C++ -*- */
 
 #include <vector>
+#include "config.h"
 #include "initinstr.h"
 #include "instrutil.h"
 #include "llvm/Support/raw_ostream.h"
@@ -13,18 +14,45 @@ namespace tern {
 
 char InitInstr::ID = 0;
 
-void InitInstr::addInitAsCtor(llvm::Module &M, llvm::GlobalValue* GCL) {
+void InitInstr::addBeginEndAsCtor(llvm::Module &M, llvm::GlobalValue* GCL) {
   // TODO: add a call to __tern_prog_begin as the first static constructor
+  assert(0 && "static constructors are not currently supported!");
+
+// ./Transforms/IPO/GlobalOpt.cpp
+
+#ifndef ENABLE_ATEXIT
+  // refer to llvm::InsertProfilingShutdownCall
+#endif
 }
 
-void InitInstr::addInitInMain(llvm::Module &M, llvm::Function *mainfunc) {
-  Instruction *I = mainfunc->getEntryBlock().getFirstNonPHI();
+void InitInstr::addBeginEndInMain(llvm::Module &M, llvm::Function *mainfunc) {
   const FunctionType *Ty = TypeBuilder<void (void),
     false>::get(getGlobalContext());
   Constant *C = M.getOrInsertFunction("__tern_prog_begin", Ty);
   Function *F = dyn_cast<Function>(C);
   assert(F && "can't insert function!");
-  CallInst::Create(F, "", I);
+
+  Function *userMain = M.getFunction("main");
+  assert(userMain && "unable to get user main");
+  userMain->setName("__main_in_tern");
+  const FunctionType *mainTy = userMain->getFunctionType();
+  Function *stub = Function::Create(mainTy, GlobalVariable::ExternalLinkage,
+                                    "main", &M);
+  BasicBlock *BB = BasicBlock::Create(getGlobalContext(), "entry", stub);
+  CallInst::Create(F, "", BB);
+  vector<Value*> args;
+  for(Function::arg_iterator ai=stub->arg_begin(); ai!=stub->arg_end(); ++ai)
+    args.push_back(ai);
+  Value *ret = CallInst::Create(userMain, args.begin(), args.end(),
+                                "orig_main", BB);
+#ifndef ENABLE_ATEXIT
+  Constant *C2 = M.getOrInsertFunction("__tern_prog_end", Ty);
+  Function *F2 = dyn_cast<Function>(C2);
+  assert(F && "can't insert function!");
+  CallInst::Create(F2, "", BB);
+#endif
+
+  ReturnInst::Create(getGlobalContext(), ret, BB);
 }
 
 void InitInstr::addSymbolicArgv(llvm::Module &M, llvm::Function *mainfunc) {
@@ -69,9 +97,9 @@ bool InitInstr::runOnModule(Module &M) {
 
   GlobalVariable *GCL = M.getGlobalVariable("llvm.global_ctors");
   if(GCL)
-    addInitAsCtor(M, GCL);
+    addBeginEndAsCtor(M, GCL);
   else
-    addInitInMain(M, mainfunc);
+    addBeginEndInMain(M, mainfunc);
 
   return true;
 }

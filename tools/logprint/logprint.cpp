@@ -62,6 +62,10 @@ int main(int argc, char **argv) {
     return 1;
   }
 
+  if(BcFilename.find("-record.bc") != BcFilename.npos
+     || BcFilename.find("-record.bc") != BcFilename.npos)
+    errs() << "warning: record.bc specified; use analysis.bc instead!";
+
   PassManager Passes;
   IDManager   *IDM = new IDManager;
   Passes.add(IDM);

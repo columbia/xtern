@@ -31,4 +31,7 @@ LOPT        := @LOPT@
 LLVMLD      := @LLVMLD@
 LLVMCC_OPTION := @LLVMCC_OPTION@
 
-
+# When ENABLE_ATEXIT is enabled, tern runtime will use atexit() to install
+# its teardown code; otherwise, tern instrumentor will instrument exits of
+# main() or insert a static destructor to the program
+@ENABLE_ATEXIT@

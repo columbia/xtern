@@ -155,6 +155,8 @@ void Logger::logRet(uint8_t flags, unsigned insid,
 void Logger::logSync(unsigned insid, unsigned short sync,
                      unsigned turn, bool after, ...) {
   checkAndGrowLogSize();
+  assert(sync >= syncfunc::first_sync && sync < syncfunc::num_syncs
+    && "trying to log unknown synchronization operation!");
 
   SyncRec *ret = (SyncRec*)(buf+off);
   ret->setInsid(insid);

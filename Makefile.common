@@ -12,7 +12,8 @@ ifdef EXCLUDED_SOURCES
 include $(LLVM_SRC_ROOT)/Makefile.rules
 
 AdditionalIncludes = -I$(LLVM_ROOT) -I$(LLVM_ROOT)/common/include \
-	             -I$(PROJ_SRC_ROOT) -I$(PROJ_SRC_ROOT)/common/include
+	             -I$(PROJ_SRC_ROOT) -I$(PROJ_SRC_ROOT)/common/include \
+	             -I$(PROJ_OBJ_ROOT) -I$(PROJ_OBJ_ROOT)/common/include
 
 CFLAGS   += -Wno-variadic-macros $(AdditionalIncludes)
 CXXFLAGS += -Wno-variadic-macros $(AdditionalIncludes)
