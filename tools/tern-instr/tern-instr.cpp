@@ -76,6 +76,8 @@ Module *linkWithLibrary(Module *module,
 }
 
 
+// TODO: make uclibc_main call static constructor and destructors, so that
+// we use just one method to add turn init and shutdown code.
 static llvm::Module *linkWithUclibc(llvm::Module *mainModule) {
   Function *f;
   // force import of __uClibc_main

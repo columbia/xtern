@@ -456,14 +456,12 @@ void InstLogBuilder::appendInbetweenInsts(bool takeCurrent) {
   unsigned cur_insid = cur_ri->getInsid();
   cur_ii = getIDManager()->getInstruction(cur_insid);
 
+  bool hasNxt = false;
   unsigned nxt_insid = nxt_ri->getInsid();
-  nxt_ii = getIDManager()->getInstruction(nxt_insid);
-
-  unsigned nxt_insid_check = getIDManager()->getInstructionID(nxt_ii);
-
-  assert(nxt_insid == nxt_insid_check);
-
-//errs() << *nxt_ii << "\n";
+  if(nxt_insid != INVALID_INSID) {
+    hasNxt = true;
+    nxt_ii = getIDManager()->getInstruction(nxt_insid);
+  }
 
   if(takeCurrent) {
     if(instLogged(cur_ii) != LogBBMarker) { // append current instruction
@@ -487,15 +485,24 @@ void InstLogBuilder::appendInbetweenInsts(bool takeCurrent) {
   // between the two instructions shown above
   //
   int transfers = 0;
-  while(cur_ii != nxt_ii) {
+  for(;;) {
+    if(hasNxt &&  cur_ii == nxt_ii)
+        break;
 
-if(cur_ii->getOpcode() == Instruction::Store)
-  dump();
+    unsigned opcode = cur_ii->getOpcode();
+
+    // previous instruction is a call that does not return ... stop
+    if(opcode == Instruction::Unreachable)
+      break;
 
     instLog->append(cur_ii);
 
-    // sanity: can only do one of these control transfer inst
-    switch(cur_ii->getOpcode()) {
+    // return with empty call stack ==> must be return from main or thread
+    // func; stop
+    if(opcode == Instruction::Ret && callStack.empty())
+      break;
+
+    switch(opcode) {
     case Instruction::Call:
     case Instruction::Invoke:
       transfers += nextInstFromCall();
@@ -509,9 +516,6 @@ if(cur_ii->getOpcode() == Instruction::Store)
     case Instruction::Br:
       transfers += nextInstFromJmp();
       break;
-    case Instruction::Unreachable:
-      assert(0 && "InstLogBuilder::appendInbetweenInsts() "\
-             "should never reach an UnrechableInst!");
     default:
       ++ cur_ii;
       break;
@@ -559,27 +563,15 @@ void InstLogBuilder::appendInstsPrefix() {
     instLog->append(cur_ii);
 }
 
-void InstLogBuilder::appendInstsSuffix() {
-
-  if(instLogged(cur_ii) != LogBBMarker)
-    instLog->append(nxt_ri);
-
-  unsigned nxt_insid = nxt_ri->getInsid();
-  nxt_ii = getIDManager()->getInstruction(nxt_insid);
-  BasicBlock *nxtBB = nxt_ii->getParent();
-  for(cur_ii=++nxt_ii; cur_ii!=nxtBB->end(); ++cur_ii) {
-    if(cur_ii->getOpcode() == Instruction::Unreachable)
-      break;
-    instLog->append(cur_ii);
-  }
-}
-
 InstLog *InstLogBuilder::create(const char *file) {
   RawLog *rawLog = new RawLog(file);
   return create(rawLog);
 }
 
 
+// FIXME: relying on correctly finding the end of a raw log may be
+// problematic if the logged thread didn't exit properly (so that our
+// tern_thread_end() did not get called
 InstLog *InstLogBuilder::create(RawLog *log) {
 
   instLog = new InstLog(log);
@@ -587,27 +579,22 @@ InstLog *InstLogBuilder::create(RawLog *log) {
   cur_ri = log->begin(); // syncfunc::tern_thread_begin
   nxt_ri =  cur_ri + 1;  // first logged inst of the prog
 
-  appendInstsPrefix();    // syncfunc::tern_thread_begin to first logged
+  appendInstsPrefix();   // syncfunc::tern_thread_begin to first logged
                          // inst of the program
 
-  // FIXME: relying on correctly finding the end of a raw log may be
-  // problematic if the logged thread didn't exit properly (so that our
-  // tern_thread_end() did not get called.  A more robust approach is just
-  // to start from beginning and go forward only.
-  bool calledPthreadExit = true;
   RawLog::iterator end_ri = log->end();
   -- end_ri;  // syncfunc::tern_thread_end
-  if(!end_ri->validInsid()) {
-    calledPthreadExit = false;
-    // make end_ri the last logged inst before the return from a thread
-    // function or main()
-    -- end_ri;
-    // adjust end_ri in case it is subrecord of a call
-    end_ri -= end_ri->numRecForInst() - 1;
-  }
 
   int nrec;
   while(nxt_ri != end_ri) {
+
+    // also exit if nxt_ri points to syncfunc::tern_thread_end.
+    if(nxt_ri->type == SyncRecTy) {
+      const SyncRec& syncRec = (const SyncRec&)*nxt_ri;
+      if(syncRec.sync == syncfunc::tern_thread_end)
+        break;
+    }
+
     cur_ri = nxt_ri;
     nrec = cur_ri->numRecForInst();
     nxt_ri = cur_ri + nrec;
@@ -618,13 +605,7 @@ InstLog *InstLogBuilder::create(RawLog *log) {
       appendInbetweenInsts();
   }
 
-  // suffix
-  if(calledPthreadExit)
-    instLog->append(end_ri); // append syncfunc::tern_thread_end
-  else {
-    appendInstsSuffix(); // last logged inst to ret from thread func (or main())
-    instLog->append(log->end()-1); // append syncfunc::tern_thread_end
-  }
+  instLog->append(nxt_ri); // append syncfunc::tern_thread_end
 
 #ifdef _DEBUG
   instLog->verify();

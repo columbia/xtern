@@ -299,7 +299,6 @@ protected:
   void appendInbetweenInsts(bool takeCurrent=true);
   void appendInsts();
   void appendInstsPrefix();
-  void appendInstsSuffix();
 
   int nextInstFromJmp();
   int nextInstFromReturn();
