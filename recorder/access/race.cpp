@@ -9,12 +9,11 @@
 using namespace llvm;
 using namespace tern;
 
-Access::Access(bool isWr, const InstLog::Trunk *c,
-               const InstLog::DInst &ins, uint8_t d)
-  : isWrite(isWr), ts(c), inst(ins), data(d) { }
+Access::Access(bool isWr, const InstTrunk *c, unsigned index, uint8_t d)
+  : isWrite(isWr), ts(c), idx(index), data(d) { }
 
 Access::Access(const Access &a)
-  : isWrite(a.isWrite), ts(a.ts), inst(a.inst), data(a.data) { }
+  : isWrite(a.isWrite), ts(a.ts), idx(a.idx), data(a.data) { }
 
 /***/
 
@@ -156,21 +155,14 @@ bool AccessHistory::appendAccess(Access *access)
 
 /***/
 
-void RaceDetector::onMemoryAccess(InstLog::Trunk *tr,
-                                  const InstLog::DInst &di)
+void RaceDetector::onMemoryAccess(InstTrunk *tr, unsigned idx, const LInst& LI)
 {
-  AccessHistory *ah;
+  const LMemInst& MI = LInstCast<LMemInst>(LI);
+  unsigned size = MI.getDataSize();
+  char *addr = MI.getAddr();
 
-  InstLog *log = tr->instLog;
-  Instruction *I = log->getInst(di);
-
-  int size = log->getSize(di);
-  char *addr = (char*)log->getAddr(di);
-  uint64_t data = log->getData(di);
-  uint8_t *dataptr = (uint8_t*)&data;
-
-  // for each byte addr
-  for(int i=0; i<size; ++i, ++addr, ++dataptr) {
+  for(unsigned i=0; i<size; ++i, ++addr) {
+    AccessHistory *ah;
     AccessMap::iterator ai = accesses.find(addr);
     if(ai == accesses.end()) {
       ah = new AccessHistory(addr);
@@ -178,8 +170,8 @@ void RaceDetector::onMemoryAccess(InstLog::Trunk *tr,
     } else {
       ah = ai->second;
     }
-    Access *access = new Access(I->getOpcode()==Instruction::Store,
-                                tr, di, *dataptr);
+    Access *access = new Access(MI.getRecType() == StoreRecTy,
+                                tr, idx, MI.getDataByte(i));
     ah->appendAccess(access);
   }
 }

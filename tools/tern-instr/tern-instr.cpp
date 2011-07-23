@@ -60,7 +60,7 @@ void getUclibcPath(void) {
   WithUclibc += "/klee/klee-uclibc/lib/libc.a";
 }
 
-// copied from klee
+// adapted from KLEE
 Module *linkWithLibrary(Module *module,
                         const std::string &libraryName) {
   Linker linker("klee", module, false);
@@ -78,6 +78,8 @@ Module *linkWithLibrary(Module *module,
 
 // TODO: make uclibc_main call static constructor and destructors, so that
 // we use just one method to add turn init and shutdown code.
+//
+// replace app_init and app_fini with static ctor and dtor
 static llvm::Module *linkWithUclibc(llvm::Module *mainModule) {
   Function *f;
   // force import of __uClibc_main

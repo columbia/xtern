@@ -37,7 +37,7 @@ void Logger::logInsid(unsigned insid) {
   off += RECORD_SIZE;
 }
 
-void Logger::logLoad(unsigned insid, void* addr, uint64_t data) {
+void Logger::logLoad(unsigned insid, char* addr, uint64_t data) {
   checkAndGrowLogSize();
 
   LoadRec *rec = (LoadRec*)(buf+off);
@@ -49,7 +49,7 @@ void Logger::logLoad(unsigned insid, void* addr, uint64_t data) {
   off += RECORD_SIZE;
 }
 
-void Logger::logStore(unsigned insid, void* addr, uint64_t data) {
+void Logger::logStore(unsigned insid, char* addr, uint64_t data) {
   checkAndGrowLogSize();
 
   StoreRec *rec = (StoreRec*)(buf+off);
@@ -256,11 +256,11 @@ void tern_log_insid(unsigned insid) {
   tern::Logger::the->logInsid(insid);
 }
 
-void tern_log_load(unsigned insid, void* addr, uint64_t data) {
+void tern_log_load (unsigned insid, char* addr, uint64_t data) {
   tern::Logger::the->logLoad(insid, addr, data);
 }
 
-void tern_log_store(unsigned insid, void* addr, uint64_t data) {
+void tern_log_store(unsigned insid, char* addr, uint64_t data) {
   tern::Logger::the->logStore(insid, addr, data);
 }
 

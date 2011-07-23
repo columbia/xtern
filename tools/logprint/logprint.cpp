@@ -70,7 +70,7 @@ int main(int argc, char **argv) {
   assert(!ModuleDataLayout.empty());
 
   PassManager Passes;
-  TargetData  *TD = new TargetData(ModuleDataLayout);
+  TargetData  *TD  = new TargetData(ModuleDataLayout);
   IDManager   *IDM = new IDManager;
   Passes.add(TD);
   Passes.add(IDM);
@@ -102,8 +102,8 @@ int main(int argc, char **argv) {
   InstLogBuilder b;
   auto_ptr<InstLog> log(b.create(InputFilename.c_str()));
 
-  for(InstLog::iterator i = log->begin(); i != log->end(); ++i)
-    log->printExecutedInst(outs(), *i, Details) << "\n";
+  for(unsigned i=0; i<log->numDInsts(); ++i)
+    log->printDInst(outs(), i, Details) << "\n";
 
   ProgInstLog progLog;
   //progLog.create(2);

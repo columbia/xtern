@@ -11,14 +11,13 @@ namespace tern {
 /// granularity for simplicity.  The old tern implementation has a race
 /// detector that tracks accesses at object level.
 struct Access {
-  Access(bool isWr, const InstLog::Trunk *tr,
-         const InstLog::DInst& inst, uint8_t data);
+  Access(bool isWr, const InstTrunk *tr, unsigned idx, uint8_t data);
   Access(const Access& a);
 
-  bool           isWrite;
-  const InstLog::Trunk*   ts;        // timestamp of the access
-  InstLog::DInst inst;      // instruction that performed the access
-  uint8_t        data;      // value read or written
+  bool             isWrite;
+  const InstTrunk  *ts;  // timestamp of the access
+  unsigned         idx;  // index of the instruction that performed the access
+  uint8_t          data; // value read or written
 };
 
 /// History of memory accesses for happens-before based race detection.
@@ -59,7 +58,7 @@ public:
   RaceDetector();
   ~RaceDetector();
 
-  void onMemoryAccess(InstLog::Trunk *tr, const InstLog::DInst& inst);
+  void onMemoryAccess(InstTrunk *tr, unsigned idx, const LInst& LI);
 
   /// byte-granularity accesses to all memory
   AccessMap  accesses;

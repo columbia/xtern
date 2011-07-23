@@ -149,129 +149,207 @@ struct RawLog {
 // them into different files
 
 #if 0
-struct InstLog;
-struct DInstruction {
-  int turn;
-  InstLog *log;
-  InstClass *inst;
-  int getOpcode() { return inst->getOpcode(); }
-  Instruction *getInstruction() { return inst; }
+
+/// dynamic instruction instance
+struct DInst {
+  Instruction  *inst; /// if not null, static instruction
+  InsidRec      *rec; /// if not null, logged record of this instruction
+
+  llvm::Instruction *getInst() { return inst;  }
+  int getOpcode()  { return inst->getOpcode(); }
+  bool isLogged()  {    return rec != NULL;    }
 };
 
-struct RInstruction: public DInstruction {
-  InsidRec *rec;
+struct DCallInst {
+  CallInst     *inst;
+  DRetInst     *ret;
+
+  llvm::Function* getCallee();
 };
 
-struct RLoadInst: public RInstruction {
-  void*    getAddr();
-  int      getSize();
-  uint64_t getData();
+struct DReturnInst {
+  ReturnInst     *inst;
+  DCallInst      *call;
+
+  llvm::Function* getCaller();
 };
 
-struct RStoreInst: public RInstruction {
-  void*    getAddr();
-  int      getSize();
-  uint64_t getData();
+struct DBranchInst {
+  BranchInst     *inst;
+  BasicBlock     *target;
 };
 
-struct RCallInst: public RInstruction {
-  llvm::Function* getCalledFunction();
-  uint64_t getArg(unsigned i);
-  int getArgSize(unsigned i);
-  int numArgs(void);
-  uint64_t getReturn();
-  int getReturnSize();
+struct DUnwindInst {
+  UnwindInst     *inst;
+  BasicBlock     *target;
 };
+
+struct DIndirectBrInst {
+  IndirectBrInst *inst;
+  BasicBlock     *target;
+};
+
+struct DSwitchInst {
+  SwitchInst     *inst;
+  BasicBlock     *target;
+};
+
+// dyn_DInstCast
+// DInstCast
+
 #endif
+
+struct InstLog;
+struct InstTrunk {
+  InstLog *instLog;
+  unsigned beginTurn, endTurn;
+  unsigned beginIndex, endIndex; // indexes into InstLog
+
+  bool happensBefore(const InstTrunk &tr) const {
+    return endTurn <= tr.beginTurn;
+  }
+  bool concurrent(const InstTrunk &tr) const {
+    return !happensBefore(tr)
+      && !tr.happensBefore(*this);
+  }
+
+  InstTrunk(): instLog(NULL) {}
+  InstTrunk(InstLog *log, unsigned beginT, unsigned beginI)
+    : instLog(log), beginTurn(beginT), beginIndex(beginI) {}
+};
+
+// logged instructions
+struct LInst {
+  llvm::Instruction *inst;
+  InsidRec          *rec;
+
+  LInst(llvm::Instruction *I, InsidRec *r)
+    : inst(I), rec(r) {}
+
+  unsigned  getRecType() const { return rec->type; }
+};
+
+struct LMemInst: public LInst {
+  char*     getAddr() const;
+  unsigned  getDataSize() const;
+  uint64_t  getData() const;
+  uint8_t   getDataByte(unsigned bytenr) const;
+};
+
+struct LLoadInst : public LMemInst {};
+struct LStoreInst: public LMemInst {};
+
+struct LCallInst: public LInst {
+  llvm::Function* getCalledFunction();
+  unsigned numArgs(void) const;
+  unsigned getArgSize(unsigned argnr) const;
+  uint64_t getArgData(unsigned argnr) const;
+  uint8_t  getArgDataByte(unsigned argnr, unsigned bytenr) const;
+  unsigned getRetDataSize() const;
+  uint64_t getRetData() const;
+  uint8_t  getRetDataByte(unsigned bytenr) const;
+};
+
+template<typename To>
+To& LInstCast(LInst& LI) {
+  // TODO: assert rec->type match type To
+  return (To&)(LI);
+}
+template<typename To>
+const To& LInstCast(const LInst& LI) {
+  // TODO: assert rec->type match type To
+  return (To&)(LI);
+}
+template<typename To>
+To* LInstCast(LInst* LI) {
+  // TODO: assert rec->type match type To
+  return (To*)(LI);
+}
 
 struct InstLog {
 
-  // TODO: do we have enough memory to hold a bigger struct per executed
-  // instruction?  If so, we can have a whole suite of DynInst classes.
-  // or perhaps this should be two pointers, Instruction* and InsidRec*
-  //
-  struct DInst {
-    unsigned inst      : 31;  // either inst ID or index into raw log
-    unsigned isLogged  :  1;  // this flag determines so
-  };
-
-  struct Trunk {
-    InstLog *instLog;
-    unsigned beginTurn, endTurn;
-    unsigned beginIndex, endIndex; // indexes into InstLog
-
-    bool happensBefore(const Trunk &tr) const {
-      return endTurn <= tr.beginTurn;
-    }
-    bool concurrent(const Trunk &tr) const {
-      return !happensBefore(tr)
-        && !tr.happensBefore(*this);
-    }
-
-    Trunk(): instLog(NULL) {}
-    Trunk(InstLog *log, unsigned beginT, unsigned beginI)
-      : instLog(log), beginTurn(beginT), beginIndex(beginI) {}
-  };
+public:
 
   typedef RawLog::iterator            raw_iterator;
   typedef RawLog::reverse_iterator    reverse_raw_iterator;
-  typedef std::vector<DInst>          InstVec;
-  typedef InstVec::iterator           iterator;
-  typedef InstVec::reverse_iterator   reverse_iterator;
-  typedef std::vector<Trunk>          TrunkVec;
+  typedef std::vector<InstTrunk>      TrunkVec;
   typedef TrunkVec::iterator          trunk_iterator;
   typedef TrunkVec::reverse_iterator  reverse_trunk_iterator;
 
-  enum { DefaultInstNum = 1024*1024*1024 };
-
-  raw_iterator raw_begin()          { return rawLog->begin();  }
-  raw_iterator raw_end()            { return rawLog->end();    }
-  reverse_raw_iterator raw_rbegin() { return rawLog->rbegin(); }
-  reverse_raw_iterator raw_rend()   { return rawLog->rend();   }
-  iterator begin()                  { return instLog.begin();  }
-  iterator end()                    { return instLog.end();    }
-  reverse_iterator rbegin()         { return instLog.rbegin(); }
-  reverse_iterator rend()           { return instLog.rend();   }
   trunk_iterator trunk_begin()      { return trunks.begin();  }
   trunk_iterator trunk_end()        { return trunks.end();    }
   reverse_trunk_iterator trunk_rbegin() { return trunks.rbegin();  }
   reverse_trunk_iterator trunk_rend()   { return trunks.rend();    }
 
-  void append(const RawLog::iterator& ri);
-  void append(llvm::Instruction *I);
+  raw_iterator raw_begin()          { return rawLog->begin();  }
+  raw_iterator raw_end()            { return rawLog->end();    }
+  reverse_raw_iterator raw_rbegin() { return rawLog->rbegin(); }
+  reverse_raw_iterator raw_rend()   { return rawLog->rend();   }
 
-  llvm::raw_ostream &printExecutedInst(llvm::raw_ostream &o,
-                            DInst id, bool details=false);
+  llvm::raw_ostream &printDInst(llvm::raw_ostream &o,
+                                unsigned idx, bool details=false);
   llvm::raw_ostream &printRawRec(llvm::raw_ostream &o,
-                            const InstLog::raw_iterator&);
+                                 const InstLog::raw_iterator&);
 
   unsigned numTrunks() { return trunks.size(); }
   unsigned getThreadEndTurn() { return trunks.back().endTurn; }
   unsigned getThreadBeginTurn() { return trunks.front().beginTurn; }
 
-  DInst getDInst(int i) { return instLog[i]; }
-  InsidRec *getRawRec(DInst di);
-  llvm::Instruction *getInst(DInst di);
+  unsigned numDInsts() { return instLog.size(); }
+  bool isDInstLogged(unsigned idx);
+  /// only for not logged instructions
+  llvm::Instruction *getStaticInst(unsigned idx);
+  /// only for logged instructions or tern_thread_begin and
+  /// tern_thread_end records
+  LInst getLInst(unsigned idx);
 
-  // load/store instructions
-  void *getAddr(DInst di);
-  int getSize(DInst di); // in bytes
-  uint64_t getData(DInst di);
+  // not-logged call/invoke instructions
+  llvm::Function *getCalledFunction(unsigned callIdx);
+  unsigned getReturnFromCall (unsigned callIdx);
+  unsigned getCallFromReturn (unsigned retIdx);
 
-  // call instruction
-  llvm::Function *getCalledFunction(DInst di);
-  int getReturnSize(DInst di);
-  uint64_t getReturnData(DInst di);
-
-  void verify();
+  // branch, indirect branch, switch, or unwind instructions (not logged)
+  llvm::BasicBlock *getJumpTarget(unsigned idx);
+  llvm::BasicBlock *getJumpSource(unsigned idx);
 
   InstLog(RawLog* log): rawLog(log) { instLog.reserve(DefaultInstNum); }
   ~InstLog() { delete rawLog; }
 
 protected:
+  // TODO: do we have enough memory to hold a bigger struct per executed
+  // instruction?  If so, we can have a whole suite of DynInst classes.
+  // or perhaps this should be two pointers, Instruction* and InsidRec*
+  //
+  struct DInst {
+    unsigned inst     : 31;
+    unsigned isLogged : 1;
+  };
+
+  typedef std::vector<DInst>          InstVec;
+  typedef std::tr1::unordered_map<unsigned, unsigned> IndexMap;
+
+  enum { DefaultInstNum = 1024*1024*1024 };
+
+  /// returns index of appended instruction
+  unsigned append(const RawLog::iterator& ri);
+  unsigned append(llvm::Instruction *I);
+  void matchCallReturn(unsigned callIdx, unsigned retIdx);
+
+  void verify();
+
+  friend class InstLogBuilder;
+
+protected:
 
   RawLog*      rawLog;
   InstVec      instLog;
+  IndexMap     callRetMap;  /// call instruction idx -> return instruction idx
+  IndexMap     retCallMap;  /// return instruction idx -> call instruction idx
+
+  // CallFuncMap  callFuncMap; /// call instruction idx -> function called
+  // BranchMap    branchMap;   /// idx of branch instructin -> taken branch
+  // RawRecMap    rawRecMap;   /// idx into instLog -> raw log record
+
   TrunkVec     trunks;
 
 public:
@@ -307,18 +385,19 @@ protected:
   void dump();
 
   InstLog                          *instLog;
+  unsigned                          cur_idx, call_idx;
   RawLog::iterator                  cur_ri, nxt_ri;
   llvm::BasicBlock::iterator        cur_ii, nxt_ii;
-  std::stack<llvm::BasicBlock::iterator> callStack;
+  std::stack<std::pair<llvm::BasicBlock::iterator, unsigned> > callStack;
 };
 
 
 struct ProgInstLog {
 
-  typedef std::map<unsigned, InstLog::Trunk*> TrunkMap;
+  typedef std::map<unsigned, InstTrunk*> TrunkMap;
 
   struct RaceHalf {
-    InstLog::Trunk *trunk;
+    InstTrunk *trunk;
     int index; // index into InstLog
     RaceHalf  *otherHalf;
 
@@ -338,7 +417,7 @@ struct ProgInstLog {
 };
 
 
-llvm::raw_ostream &operator<< (llvm::raw_ostream &o, const InstLog::Trunk& tr);
+llvm::raw_ostream &operator<< (llvm::raw_ostream &o, const InstTrunk& tr);
 
 llvm::raw_ostream &operator<< (llvm::raw_ostream &o, const InsidRec &rec);
 llvm::raw_ostream &operator<< (llvm::raw_ostream &o, const LoadRec &rec);

@@ -78,33 +78,74 @@ RawLog::reverse_iterator RawLog::rend() {
 
 
 
-void InstLog::append(const RawLog::iterator &ri) {
+char *LMemInst::getAddr() const {
+  assert(rec->type == LoadRecTy || rec->type == StoreRecTy);
+  MemRec *rec = (MemRec*)this->rec;
+  return rec->getAddr();
+}
 
+unsigned LMemInst::getDataSize() const {
+  assert(rec->type == LoadRecTy || rec->type == StoreRecTy);
+  TargetData *TD = getTargetData();
+  switch(inst->getOpcode()) {
+  case Instruction::Load:
+    return TD->getTypeStoreSize(inst->getType());
+  case Instruction::Store:
+    return TD->getTypeStoreSize(dyn_cast<StoreInst>(inst)
+                                ->getOperand(0)->getType());
+  default:
+    assert(0);
+  }
+}
+
+uint64_t LMemInst::getData() const {
+  assert(rec->type == LoadRecTy || rec->type == StoreRecTy);
+  MemRec *rec = (MemRec*)this->rec;
+  return rec->getData();
+}
+
+uint8_t LMemInst::getDataByte(unsigned bytenr) const {
+  assert(rec->type == LoadRecTy || rec->type == StoreRecTy);
+  MemRec *rec = (MemRec*)this->rec;
+  int64_t data = rec->getData();
+  assert(bytenr < getDataSize());
+  return ((int8_t*)data)[bytenr];
+}
+
+
+
+unsigned InstLog::append(const RawLog::iterator &ri) {
   // append to trunks
   if(ri->type == SyncRecTy) {
     SyncRec *rec = (SyncRec*)&*ri;
     if(!trunks.empty()) {
-      Trunk &last = trunks.back();
+      InstTrunk &last = trunks.back();
       last.endTurn = rec->turn;
-      last.endIndex = instLog.size();
+      last.endIndex = numDInsts();
     }
     if(rec->sync != syncfunc::tern_thread_end)
-      trunks.push_back(Trunk(this, rec->turn, instLog.size()));
+      trunks.push_back(InstTrunk(this, rec->turn, numDInsts()));
   }
 
   // append to instLog
   DInst di;
+  unsigned idx;
+
   di.inst = ri.getIndex();
   di.isLogged = 1;
+  idx = instLog.size();
   instLog.push_back(di);
 
 #ifdef _DEBUG_LOGACCESS
-  printExecutedInst(errs(), di, true) << "\n";
+  printDInst(errs(), idx, true) << "\n";
 #endif
+
+  return idx;
 }
 
-void InstLog::append(Instruction *I) {
+unsigned InstLog::append(Instruction *I) {
   DInst di;
+  unsigned idx;
   unsigned insid = getIDManager()->getInstructionID(I);
   assert(insid != INVALID_INSID && "instruction has no valid id!");
   // TODO assert getIDManager()->size() not too large once and for all
@@ -116,16 +157,27 @@ errs() << *I << "\n";
          && I->getOpcode() != Instruction::Store);
   di.inst = insid;
   di.isLogged = 0;
+  idx = instLog.size();
   instLog.push_back(di);
 
 #ifdef _DEBUG_LOGACCESS
-  printExecutedInst(errs(), di, true) << "\n";
+  printDInst(errs(), idx, true) << "\n";
 #endif
+
+  return idx;
 }
 
-raw_ostream &InstLog::printExecutedInst(raw_ostream &o,
-                       DInst di, bool details) {
+void InstLog::matchCallReturn(unsigned callIdx, unsigned retIdx) {
+  assert(callRetMap.find(callIdx) == callRetMap.end());
+  assert(retCallMap.find(retIdx)  == retCallMap.end());
+  callRetMap[callIdx] = retIdx;
+  retCallMap[retIdx]  = callIdx;
+}
+
+raw_ostream &InstLog::printDInst(raw_ostream &o, unsigned idx, bool details) {
   unsigned insid;
+  DInst di = instLog[idx];
+
   if(di.isLogged) {
     o << "L idx=" << di.inst;
     raw_iterator ri(rawLog, di.inst);
@@ -145,50 +197,89 @@ raw_ostream &InstLog::printExecutedInst(raw_ostream &o,
   return o;
 }
 
-InsidRec *InstLog::getRawRec(DInst di) {
-  assert(di.isLogged && "getting raw record off a non-logged instruction!");
-  raw_iterator ri(rawLog, di.inst);
-  return ri;
+bool InstLog::isDInstLogged(unsigned idx) {
+  DInst di = instLog[idx];
+  return di.isLogged;
 }
 
-Instruction *InstLog::getInst(DInst di) {
-  unsigned insid;
-  if(di.isLogged) {
-    raw_iterator ri(rawLog, di.inst);
-    insid = ri->getInsid();
-  } else {
-    insid = di.inst;
-  }
-  if(insid == INVALID_INSID)
-    return NULL;
+LInst InstLog::getLInst(unsigned idx) {
+  DInst di = instLog[idx];
+  assert(di.isLogged);
+  raw_iterator ri(rawLog, di.inst);
+  unsigned insid = ri->getInsid();
 
+  if(insid == INVALID_INSID)
+    return LInst(NULL, ri);
+
+  Instruction *I = getIDManager()->getInstruction(insid);
+  return LInst(I, ri);
+}
+
+Instruction *InstLog::getStaticInst(unsigned idx) {
+  unsigned insid;
+  DInst di = instLog[idx];
+  assert(!di.isLogged);
+  insid = di.inst;
   return getIDManager()->getInstruction(insid);
 }
 
-void *InstLog::getAddr(DInst di) {
-  MemRec *rec = (MemRec*)getRawRec(di);
-  assert(rec->type == LoadRecTy || rec->type == StoreRecTy);
-  return rec->getAddr();
+llvm::Function *InstLog::getCalledFunction(unsigned callIdx) {
+  unsigned retIdx = getReturnFromCall(callIdx);
+  Instruction *ret = getStaticInst(retIdx);
+  return ret->getParent()->getParent();
 }
 
-int InstLog::getSize(DInst di) {
-  Instruction *I = getInst(di);
-  TargetData *TD = getTargetData();
+unsigned InstLog::getReturnFromCall (unsigned callIdx) {
+  IndexMap::iterator i = callRetMap.find(callIdx);
+  assert(i != callRetMap.end());
+  return i->second;
+}
+
+unsigned InstLog::getCallFromReturn (unsigned retIdx) {
+  IndexMap::iterator i = retCallMap.find(retIdx);
+  assert(i != retCallMap.end());
+  return i->second;
+}
+
+BasicBlock *InstLog::getJumpTarget(unsigned idx) {
+
+#ifdef _DEBUG
+  // sanity
+  Instruction  *I = getStaticInst(idx);
   switch(I->getOpcode()) {
-  case Instruction::Load:
-    return TD->getTypeStoreSize(I->getType());
-  case Instruction::Store:
-    return TD->getTypeStoreSize(dyn_cast<StoreInst>(I)
-                                ->getOperand(0)->getType());
+  case Instruction::Unwind:
+  case Instruction::IndirectBr:
+  case Instruction::Switch:
+  case Instruction::Br:
+    break;
   default:
     assert(0);
   }
+#endif
+
+  DInst di = instLog[idx + 1];
+  Instruction * nxtI;
+  if(!di.isLogged)
+    nxtI = getStaticInst(idx+1);
+  else
+    nxtI =getLInst(idx+1).inst;
+  return nxtI->getParent();
 }
 
-uint64_t InstLog::getData(DInst di) {
-  MemRec *rec = (MemRec*)getRawRec(di);
-  assert(rec->type == LoadRecTy || rec->type == StoreRecTy);
-  return rec->getData();
+BasicBlock *InstLog::getJumpSource(unsigned idx) {
+
+#ifdef _DEBUG
+  // sanity
+  Instruction  *I = getStaticInst(idx);
+  assert(I && I == I->getParent()->begin());
+#endif
+
+  DInst di = instLog[idx - 1];
+  Instruction * prvI;
+  // jump instructions are not logged
+  assert(!isDInstLogged(idx-1));
+  prvI = getStaticInst(idx-1);
+  return prvI->getParent();
 }
 
 static void assertEntryInst(Instruction *I) {
@@ -207,49 +298,59 @@ static void assertNextInst(Instruction *I, Instruction *nxtI) {
 
 void InstLog::verify() {
   BasicBlock::iterator i;
-  InstLog::iterator ei;
   InsidRec    *rec;
   SyncRec     *syncRec;
   Instruction *I, *nxtI;
   BasicBlock  *BB;
   Function    *F;
   bool        is_succ;
+  unsigned    last;
 
-  // first ExecutedInst is syncfunc::tern_thread_begin
-  ei = begin();
-  rec = getRawRec(*ei);
+  // first DInst is syncfunc::tern_thread_begin
+  assert(isDInstLogged(0));
+  rec = getLInst(0).rec;
   assert(rec->type == SyncRecTy);
   syncRec = (SyncRec*)rec;
   assert(syncRec->sync == syncfunc::tern_thread_begin);
 
-  // last ExecutedInst is syncfunc::tern_thread_end
-  ei = end() - 1;
-  rec = getRawRec(*ei);
+  // last DInst is syncfunc::tern_thread_end
+  last = numDInsts()-1;
+  assert(isDInstLogged(last));
+  rec = getLInst(last).rec;
   assert(rec->type == SyncRecTy);
   syncRec = (SyncRec*)rec;
   assert(syncRec->sync == syncfunc::tern_thread_end);
 
-  // second ExecutedInst is the entry to main
-  ei = begin() + 1;
-  assert(!ei->isLogged);
-  I = getInst(*ei);
+  // second DInst is the entry to main() or a thread function
+  if(isDInstLogged(1))
+    I = getLInst(1).inst;
+  else
+    I = getStaticInst(1);
   assertEntryInst(I);
 
-  // FIXME: this is ulgy ...
-  for(ei=begin()+1; ei!=end()-2; ++ei) {
-    I = getInst(*ei);
-    nxtI = getInst(*(ei+1));
+  // FIXME: this is bulgy ...
+  for(unsigned i=1; i<numDInsts()-2; ++i) {
+    if(isDInstLogged(i))
+      I = getLInst(i).inst;
+    else
+      I = getStaticInst(i);
+
+    if(isDInstLogged(i+1))
+      nxtI = getLInst(i+1).inst;
+    else
+      nxtI = getStaticInst(i+1);
+
     assert(I && nxtI);
 
     switch(I->getOpcode()) {
     case Instruction::Load:
-      assert(ei->isLogged);
-      rec = getRawRec(*ei);
+      assert(isDInstLogged(i));
+      rec = getLInst(i).rec;
       assert(rec->type == LoadRecTy);
       break;
     case Instruction::Store:
-      assert(ei->isLogged);
-      rec = getRawRec(*ei);
+      assert(isDInstLogged(i));
+      rec = getLInst(i).rec;
       assert(rec->type == StoreRecTy);
       break;
     case Instruction::Ret:
@@ -278,7 +379,7 @@ void InstLog::verify() {
       break;
     case Instruction::Call:
     case Instruction::Invoke:
-      if(!ei->isLogged) {
+      if(!isDInstLogged(i)) {
         CallSite cs(I);
         F = cs.getCalledFunction();
         if(F) {
@@ -295,11 +396,11 @@ void InstLog::verify() {
         }
       } // fall through
     default:
-      if(!ei->isLogged) {
+      if(!isDInstLogged(i)) {
         assertNextInst(I, nxtI);
         break;
       }
-      rec = getRawRec(*ei);
+      rec = getLInst(i).rec;
       if(rec->type != SyncRecTy) {
         assertNextInst(I, nxtI);
         break;
@@ -319,7 +420,7 @@ void InstLog::verify() {
   }
 }
 
-raw_ostream& operator<<(raw_ostream& o, const InstLog::Trunk& tr) {
+raw_ostream& operator<<(raw_ostream& o, const InstTrunk& tr) {
   return o << "[" << tr.beginTurn << "(" << tr.beginIndex << "), "
            << tr.endTurn << "(" << tr.endIndex << "))";
 }
@@ -402,7 +503,7 @@ int InstLogBuilder::nextInstFromCall() {
   // return address
   BasicBlock::iterator ret_ii = cur_ii;
   ++ ret_ii;
-  callStack.push(ret_ii);
+  callStack.push(pair<BasicBlock::iterator, unsigned>(ret_ii, cur_idx));
 
 #ifdef _DEBUG_LOGACCESS
   errs() << "calling " << F->getName() << " return address "
@@ -419,13 +520,17 @@ int InstLogBuilder::nextInstFromReturn() {
 #ifdef _DEBUG_LOGACCESS
   errs() << "returning from " << cur_ii->getParent()->getParent()->getName()
          << " to return address "
-         << getIDManager()->getInstructionID(callStack.top())
+         << getIDManager()->getInstructionID(callStack.top().first)
          << "\n";
 #endif
 
   assert(!callStack.empty() && "return and call mismatch!");
-  cur_ii = callStack.top();
+  cur_ii   = callStack.top().first;
+  call_idx = callStack.top().second;
   callStack.pop();
+
+  // match call_idx and cur_idx;
+  instLog->matchCallReturn(call_idx, cur_idx);
 
   return 1;
 }
@@ -495,10 +600,10 @@ void InstLogBuilder::appendInbetweenInsts(bool takeCurrent) {
     if(opcode == Instruction::Unreachable)
       break;
 
-    instLog->append(cur_ii);
+    cur_idx = instLog->append(cur_ii);
 
-    // return with empty call stack ==> must be return from main or thread
-    // func; stop
+    // return with empty call stack ==> must be a return from main or
+    // thread func; stop
     if(opcode == Instruction::Ret && callStack.empty())
       break;
 
@@ -653,15 +758,16 @@ void ProgInstLog::create(int nthread) {
   // race detection; clock is represented as just Trunk
   forall(TrunkMap, ti, trunks) {
     // errs() << *(ti->second) << "\n";
-    InstLog::Trunk *tr = ti->second;
+    InstTrunk *tr = ti->second;
     for(unsigned i=tr->beginIndex; i<tr->endIndex; ++i) {
       InstLog *log = tr->instLog;
-      Instruction *I = log->getInst(log->getDInst(i));
-      if(!I) continue;
-      switch(I->getOpcode()) {
-      case Instruction::Load:
-      case Instruction::Store:
-        RaceDetector::the->onMemoryAccess(tr, tr->instLog->getDInst(i));
+      if(!log->isDInstLogged(i))
+        continue;
+      LInst LI = log->getLInst(i);
+      switch(LI.getRecType()) {
+      case LoadRecTy:
+      case StoreRecTy:
+        RaceDetector::the->onMemoryAccess(tr, i, LI);
         break;
       default:
         break;
@@ -729,12 +835,12 @@ raw_ostream& operator<<(raw_ostream& o, const InsidRec& rec) {
 
 raw_ostream &operator<<(raw_ostream &o, const LoadRec &rec) {
   return printInsidRec(o, (const InsidRec&)rec)
-    << " " << rec.addr << " = " << rec.data;
+    << " " << (void*)rec.addr << " = " << rec.data;
 }
 
 raw_ostream &operator<<(raw_ostream &o, const StoreRec &rec) {
   return printInsidRec(o, (const InsidRec&)rec)
-    << " " << rec.addr << ", " << rec.data;
+    << " " << (void*)rec.addr << ", " << rec.data;
 }
 
 raw_ostream &operator<<(raw_ostream &o, const CallRec &rec) {

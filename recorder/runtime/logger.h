@@ -12,8 +12,8 @@ namespace tern {
 struct Logger {
   /// per-thread logging functions and data
   void logInsid(unsigned insid);
-  void logLoad(unsigned insid, void* addr, uint64_t data);
-  void logStore(unsigned insid, void* addr, uint64_t data);
+  void logLoad (unsigned insid, char* addr, uint64_t data);
+  void logStore(unsigned insid, char* addr, uint64_t data);
   void logCall(uint8_t flags, unsigned insid,
                short narg, void* func, va_list args);
   void logRet(uint8_t flags, unsigned insid,
