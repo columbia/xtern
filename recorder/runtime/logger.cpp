@@ -12,7 +12,7 @@
 #include "loghooks.h"
 #include "logger.h"
 
-#ifdef _DEBUG_RECORDER
+#ifdef _DEBUG_LOGGER
 #  define dprintf(fmt...) fprintf(stderr, fmt)
 #else
 #  define dprintf(fmt...)
@@ -176,11 +176,10 @@ void Logger::logSync(unsigned insid, unsigned short sync,
   off += RECORD_SIZE;
 }
 
-Logger::Logger(int tid) {
-  SetLogName(logFile, sizeof(logFile), tid);
-
+Logger::Logger(const char* logFile) {
   foff = 0;
   fd = open(logFile, O_RDWR|O_CREAT, 0600);
+  dprintf("logFile = %s\n", logFile);
   assert(fd >= 0 && "can't open log file!");
   ftruncate(fd, LOG_SIZE);
 
@@ -219,8 +218,9 @@ void Logger::mapLogTrunk(void) {
   foff += TRUNK_SIZE;
 }
 
-void Logger::threadBegin(int tid) {
-  the = new Logger(tid);
+void Logger::threadBegin(const char *filename) {
+  assert(filename);
+  the = new Logger(filename);
   assert(the && "can't allocate memory for logger!");
   dprintf("Logger: new logger = %p\n", (void*)the);
 }

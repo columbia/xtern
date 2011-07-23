@@ -10,7 +10,9 @@ using namespace llvm;
 
 namespace tern {
 
+// don't belong here
 static IDManager *IDM = NULL;
+static TargetData *TD = NULL;
 
 void setIDManager(IDManager *idm) {
   IDM = idm;
@@ -19,6 +21,15 @@ void setIDManager(IDManager *idm) {
 IDManager *getIDManager(void) {
   assert(IDM && "IDManager hasn't been set!");
   return IDM;
+}
+
+void setTargetData(TargetData *td) {
+  TD = td;
+}
+
+TargetData *getTargetData(void) {
+  assert(TD && "TargetData hasn't been set!");
+  return TD;
 }
 
 Value* getIntMetadata(const Instruction *I, const char* key) {

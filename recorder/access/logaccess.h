@@ -2,6 +2,7 @@
 #ifndef __TERN_RECORDER_LOGACCESS_H
 #define __TERN_RECORDER_LOGACCESS_H
 
+#include <map>
 #include <stack>
 #include <iterator>
 #include <tr1/unordered_map>
@@ -11,6 +12,7 @@
 #include "llvm/Instructions.h"
 #include "llvm/BasicBlock.h"
 #include "llvm/Support/CallSite.h"
+#include "llvm/Support/raw_ostream.h"
 #include "recorder/runtime/logdefs.h"
 
 namespace tern {
@@ -25,10 +27,10 @@ struct RawLog {
     typedef iterator self_type;
     typedef std::iterator<std::random_access_iterator_tag,
                           InsidRec, ptrdiff_t> super;
-    typedef super::value_type value_type;
+    typedef super::value_type      value_type;
     typedef super::difference_type difference_type;
-    typedef super::pointer pointer;
-    typedef super::reference reference;
+    typedef super::pointer         pointer;
+    typedef super::reference       reference;
 
     unsigned getIndex() const {
       return index;
@@ -137,24 +139,88 @@ struct RawLog {
   reverse_iterator rbegin();
   reverse_iterator rend();
 
-  int _fd;
+  int      _fd;
   unsigned _num;
-  long _mapsz;
-  char *_buf;
+  long     _mapsz;
+  char*    _buf;
 };
+
+// TODO: should move the code below to the analysis/ folder, and separate
+// them into different files
+
+#if 0
+struct InstLog;
+struct DInstruction {
+  int turn;
+  InstLog *log;
+  InstClass *inst;
+  int getOpcode() { return inst->getOpcode(); }
+  Instruction *getInstruction() { return inst; }
+};
+
+struct RInstruction: public DInstruction {
+  InsidRec *rec;
+};
+
+struct RLoadInst: public RInstruction {
+  void*    getAddr();
+  int      getSize();
+  uint64_t getData();
+};
+
+struct RStoreInst: public RInstruction {
+  void*    getAddr();
+  int      getSize();
+  uint64_t getData();
+};
+
+struct RCallInst: public RInstruction {
+  llvm::Function* getCalledFunction();
+  uint64_t getArg(unsigned i);
+  int getArgSize(unsigned i);
+  int numArgs(void);
+  uint64_t getReturn();
+  int getReturnSize();
+};
+#endif
 
 struct InstLog {
 
-  struct ExecutedInstID {
+  // TODO: do we have enough memory to hold a bigger struct per executed
+  // instruction?  If so, we can have a whole suite of DynInst classes.
+  // or perhaps this should be two pointers, Instruction* and InsidRec*
+  //
+  struct DInst {
     unsigned inst      : 31;  // either inst ID or index into raw log
     unsigned isLogged  :  1;  // this flag determines so
   };
 
+  struct Trunk {
+    InstLog *instLog;
+    unsigned beginTurn, endTurn;
+    unsigned beginIndex, endIndex; // indexes into InstLog
+
+    bool happensBefore(const Trunk &tr) const {
+      return endTurn <= tr.beginTurn;
+    }
+    bool concurrent(const Trunk &tr) const {
+      return !happensBefore(tr)
+        && !tr.happensBefore(*this);
+    }
+
+    Trunk(): instLog(NULL) {}
+    Trunk(InstLog *log, unsigned beginT, unsigned beginI)
+      : instLog(log), beginTurn(beginT), beginIndex(beginI) {}
+  };
+
   typedef RawLog::iterator            raw_iterator;
   typedef RawLog::reverse_iterator    reverse_raw_iterator;
-  typedef std::vector<ExecutedInstID> InstVec;
+  typedef std::vector<DInst>          InstVec;
   typedef InstVec::iterator           iterator;
   typedef InstVec::reverse_iterator   reverse_iterator;
+  typedef std::vector<Trunk>          TrunkVec;
+  typedef TrunkVec::iterator          trunk_iterator;
+  typedef TrunkVec::reverse_iterator  reverse_trunk_iterator;
 
   enum { DefaultInstNum = 1024*1024*1024 };
 
@@ -166,27 +232,51 @@ struct InstLog {
   iterator end()                    { return instLog.end();    }
   reverse_iterator rbegin()         { return instLog.rbegin(); }
   reverse_iterator rend()           { return instLog.rend();   }
+  trunk_iterator trunk_begin()      { return trunks.begin();  }
+  trunk_iterator trunk_end()        { return trunks.end();    }
+  reverse_trunk_iterator trunk_rbegin() { return trunks.rbegin();  }
+  reverse_trunk_iterator trunk_rend()   { return trunks.rend();    }
 
   void append(const RawLog::iterator& ri);
   void append(llvm::Instruction *I);
 
-  llvm::Instruction *getInst(ExecutedInstID id);
   llvm::raw_ostream &printExecutedInst(llvm::raw_ostream &o,
-                            ExecutedInstID id, bool details=false);
+                            DInst id, bool details=false);
   llvm::raw_ostream &printRawRec(llvm::raw_ostream &o,
                             const InstLog::raw_iterator&);
+
+  unsigned numTrunks() { return trunks.size(); }
+  unsigned getThreadEndTurn() { return trunks.back().endTurn; }
+  unsigned getThreadBeginTurn() { return trunks.front().beginTurn; }
+
+  DInst getDInst(int i) { return instLog[i]; }
+  InsidRec *getRawRec(DInst di);
+  llvm::Instruction *getInst(DInst di);
+
+  // load/store instructions
+  void *getAddr(DInst di);
+  int getSize(DInst di); // in bytes
+  uint64_t getData(DInst di);
+
+  // call instruction
+  llvm::Function *getCalledFunction(DInst di);
+  int getReturnSize(DInst di);
+  uint64_t getReturnData(DInst di);
+
+  void verify();
 
   InstLog(RawLog* log): rawLog(log) { instLog.reserve(DefaultInstNum); }
   ~InstLog() { delete rawLog; }
 
 protected:
 
-  RawLog       *rawLog;
+  RawLog*      rawLog;
   InstVec      instLog;
+  TrunkVec     trunks;
 
 public:
 
-  // shared across all logs
+  // shared across all logs.  TODO: make this a separate struct
   static unsigned getFuncID(llvm::Function *F);
   static llvm::Function *getFunc(unsigned id);
   static void setFuncMap(const char *file, const llvm::Module& M);
@@ -206,23 +296,50 @@ struct InstLogBuilder {
 
 protected:
   InstLog *create(RawLog *log);
-  void appendInbetweenInsts(bool takeCurrent=true, bool setNxt = true);
-  void appendInst();
-  void appendInstPrefix();
-  void appendInstSuffix();
+  void appendInbetweenInsts(bool takeCurrent=true);
+  void appendInsts();
+  void appendInstsPrefix();
+  void appendInstsSuffix();
 
   int nextInstFromJmp();
   int nextInstFromReturn();
   int nextInstFromCall();
 
   void dump();
-  void verify();
 
-  InstLog                           *instLog;
+  InstLog                          *instLog;
   RawLog::iterator                  cur_ri, nxt_ri;
   llvm::BasicBlock::iterator        cur_ii, nxt_ii;
   std::stack<llvm::BasicBlock::iterator> callStack;
 };
+
+
+struct ProgInstLog {
+
+  typedef std::map<unsigned, InstLog::Trunk*> TrunkMap;
+
+  struct RaceHalf {
+    InstLog::Trunk *trunk;
+    int index; // index into InstLog
+    RaceHalf  *otherHalf;
+
+    llvm::raw_ostream& operator<<(llvm::raw_ostream&) const;
+  };
+
+  struct Race {
+    RaceHalf first, second;
+    llvm::raw_ostream& operator<<(llvm::raw_ostream&) const;
+  };
+
+  void create(int nthread);
+
+  TrunkMap                trunks;  // indexed by beginTurn
+  std::vector<InstLog*>   threadLogs;
+  std::vector<Race>       races;
+};
+
+
+llvm::raw_ostream &operator<< (llvm::raw_ostream &o, const InstLog::Trunk& tr);
 
 llvm::raw_ostream &operator<< (llvm::raw_ostream &o, const InsidRec &rec);
 llvm::raw_ostream &operator<< (llvm::raw_ostream &o, const LoadRec &rec);

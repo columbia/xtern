@@ -21,7 +21,7 @@ struct Logger {
   void logSync(unsigned insid, unsigned short sync,
                unsigned turn, bool after = true, ...);
 
-  Logger(int tid);
+  Logger(const char* filename);
   ~Logger();
 
   static __thread Logger* the; /// pointer to per-thread logger
@@ -61,7 +61,7 @@ public:
 
   static void progBegin();
   static void progEnd();
-  static void threadBegin(int tid);
+  static void threadBegin(const char* filename);
   static void threadEnd(void);
 
 };

@@ -129,9 +129,12 @@ struct Scheduler: public TidMap {
   /// join thread @th; must call with turn held
   void threadJoin(pthread_t th) { TidMap:: threadJoin(th); }
 
-  unsigned getTurnCount(void) { return turnCount; }
-  /// must call within turn because turnCount is shared across all threads
-  void incTurnCount(void) { ++ turnCount; }
+  /// must call within turn because turnCount is shared across all
+  /// threads.  we provide this method instead of incrementing turn for
+  /// each successful getTurn() because a successful getTurn() may not
+  /// lead to a real success of a synchronization operation (e.g., see
+  /// pthread_mutex_lock() implementation)
+  unsigned incTurnCount(void) { return turnCount++; }
 
   Scheduler(pthread_t main_th): TidMap(main_th), turnCount(0) {}
 

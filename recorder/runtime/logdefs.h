@@ -49,7 +49,7 @@ struct InsidRec {
 
 protected:
   enum {
-    MAX_INSID       = (1<<INSID_BITS),
+    MAX_INSID = (1<<INSID_BITS),
     INVALID_INSID_IN_REC = (INVALID_INSID & ((1<<INSID_BITS)-1))
   };
 
@@ -68,16 +68,18 @@ public:
 };
 BOOST_STATIC_ASSERT(sizeof(InsidRec)<=RECORD_SIZE);
 
-struct LoadRec: public InsidRec {
+// shared by LoadRec and StoreRec
+struct MemRec: public InsidRec {
   void*    addr;
   uint64_t data;
+  void*    getAddr() { return addr; }
+  uint64_t getData() { return data; }
 };
+
+struct LoadRec: public MemRec {};
 BOOST_STATIC_ASSERT(sizeof(LoadRec)<=RECORD_SIZE);
 
-struct StoreRec: public InsidRec {
-  void*    addr;
-  uint64_t data;
-};
+struct StoreRec: public MemRec {};
 BOOST_STATIC_ASSERT(sizeof(StoreRec)<=RECORD_SIZE);
 
 /// common prefix of call-related records---not a real record type
@@ -159,7 +161,7 @@ inline short ExtraArgsRec::numArgsInRec() const {
   return std::min(rec_narg, (short)MAX_EXTRA_ARGS);
 }
 
-static inline int SetLogName(char *buf, size_t sz, int tid) {
+static inline int getLogFilename(char *buf, size_t sz, int tid) {
   return snprintf(buf, sz, "tern-log-tid-%d", tid);
 }
 

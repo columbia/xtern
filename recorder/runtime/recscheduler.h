@@ -18,7 +18,6 @@ struct FCFSScheduler: public Scheduler {
 
   void getTurn(void) {
     pthread_mutex_lock(&lock);
-    incTurnCount();
   }
   void putTurn(void) {
     pthread_mutex_unlock(&lock);

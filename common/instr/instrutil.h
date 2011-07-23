@@ -4,6 +4,7 @@
 #define __TERN_COMMON_INSTRUTIL_H
 
 #include "llvm/Instruction.h"
+#include "llvm/Target/TargetData.h"
 #include "common/id-manager/IDManager.h"
 
 namespace tern {
@@ -13,6 +14,9 @@ llvm::Value* getInsID(const llvm::Instruction *I);
 bool funcEscapes(llvm::Function* F);
 llvm::IDManager *getIDManager(void);
 void setIDManager(llvm::IDManager * IDM);
+llvm::TargetData *getTargetData(void);
+void setTargetData(llvm::TargetData *td);
+
 
 }
 

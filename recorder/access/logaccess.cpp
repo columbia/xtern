@@ -17,6 +17,7 @@
 #include "llvm/Support/CFG.h"
 #include "llvm/Support/CallSite.h"
 #include "logaccess.h"
+#include "race.h"
 
 //#define _DEBUG_LOGACCESS
 
@@ -78,42 +79,62 @@ RawLog::reverse_iterator RawLog::rend() {
 
 
 void InstLog::append(const RawLog::iterator &ri) {
-  ExecutedInstID id;
-  id.inst = ri.getIndex();
-  id.isLogged = 1;
-  instLog.push_back(id);
+
+  // append to trunks
+  if(ri->type == SyncRecTy) {
+    SyncRec *rec = (SyncRec*)&*ri;
+    if(!trunks.empty()) {
+      Trunk &last = trunks.back();
+      last.endTurn = rec->turn;
+      last.endIndex = instLog.size();
+    }
+    if(rec->sync != syncfunc::tern_thread_end)
+      trunks.push_back(Trunk(this, rec->turn, instLog.size()));
+  }
+
+  // append to instLog
+  DInst di;
+  di.inst = ri.getIndex();
+  di.isLogged = 1;
+  instLog.push_back(di);
 
 #ifdef _DEBUG_LOGACCESS
-  printExecutedInst(errs(), id, true) << "\n";
+  printExecutedInst(errs(), di, true) << "\n";
 #endif
 }
 
 void InstLog::append(Instruction *I) {
-  ExecutedInstID id;
+  DInst di;
   unsigned insid = getIDManager()->getInstructionID(I);
   assert(insid != INVALID_INSID && "instruction has no valid id!");
   // TODO assert getIDManager()->size() not too large once and for all
-  id.inst = insid;
-  id.isLogged = 0;
-  instLog.push_back(id);
+  if(I->getOpcode() == Instruction::Load
+     || I->getOpcode() == Instruction::Store) {
+errs() << *I << "\n";
+  }
+  assert(I->getOpcode() != Instruction::Load
+         && I->getOpcode() != Instruction::Store);
+  di.inst = insid;
+  di.isLogged = 0;
+  instLog.push_back(di);
 
 #ifdef _DEBUG_LOGACCESS
-  printExecutedInst(errs(), id, true) << "\n";
+  printExecutedInst(errs(), di, true) << "\n";
 #endif
 }
 
 raw_ostream &InstLog::printExecutedInst(raw_ostream &o,
-                       ExecutedInstID id, bool details) {
+                       DInst di, bool details) {
   unsigned insid;
-  if(id.isLogged) {
-    o << "L idx=" << id.inst;
-    raw_iterator ri(rawLog, id.inst);
+  if(di.isLogged) {
+    o << "L idx=" << di.inst;
+    raw_iterator ri(rawLog, di.inst);
     o << " ";
     printRawRec(o, ri);
     insid = ri->insid;
   } else {
-    o << "P ins=" << id.inst;
-    insid = id.inst;
+    o << "P ins=" << di.inst;
+    insid = di.inst;
   }
 
   if(details) {
@@ -124,19 +145,185 @@ raw_ostream &InstLog::printExecutedInst(raw_ostream &o,
   return o;
 }
 
-Instruction *InstLog::getInst(ExecutedInstID id) {
+InsidRec *InstLog::getRawRec(DInst di) {
+  assert(di.isLogged && "getting raw record off a non-logged instruction!");
+  raw_iterator ri(rawLog, di.inst);
+  return ri;
+}
+
+Instruction *InstLog::getInst(DInst di) {
   unsigned insid;
-  if(id.isLogged) {
-    raw_iterator ri(rawLog, id.inst);
+  if(di.isLogged) {
+    raw_iterator ri(rawLog, di.inst);
     insid = ri->getInsid();
   } else {
-    insid = id.inst;
+    insid = di.inst;
   }
   if(insid == INVALID_INSID)
     return NULL;
 
   return getIDManager()->getInstruction(insid);
 }
+
+void *InstLog::getAddr(DInst di) {
+  MemRec *rec = (MemRec*)getRawRec(di);
+  assert(rec->type == LoadRecTy || rec->type == StoreRecTy);
+  return rec->getAddr();
+}
+
+int InstLog::getSize(DInst di) {
+  Instruction *I = getInst(di);
+  TargetData *TD = getTargetData();
+  switch(I->getOpcode()) {
+  case Instruction::Load:
+    return TD->getTypeStoreSize(I->getType());
+  case Instruction::Store:
+    return TD->getTypeStoreSize(dyn_cast<StoreInst>(I)
+                                ->getOperand(0)->getType());
+  default:
+    assert(0);
+  }
+}
+
+uint64_t InstLog::getData(DInst di) {
+  MemRec *rec = (MemRec*)getRawRec(di);
+  assert(rec->type == LoadRecTy || rec->type == StoreRecTy);
+  return rec->getData();
+}
+
+static void assertEntryInst(Instruction *I) {
+  BasicBlock  *BB;
+  Function    *F;
+  BB = I->getParent();
+  assert(I == BB->begin());
+  F = BB->getParent();
+  assert(BB == &F->getEntryBlock());
+}
+
+static void assertNextInst(Instruction *I, Instruction *nxtI) {
+  BasicBlock::iterator i = I;
+  assert(nxtI == ++i);
+}
+
+void InstLog::verify() {
+  BasicBlock::iterator i;
+  InstLog::iterator ei;
+  InsidRec    *rec;
+  SyncRec     *syncRec;
+  Instruction *I, *nxtI;
+  BasicBlock  *BB;
+  Function    *F;
+  bool        is_succ;
+
+  // first ExecutedInst is syncfunc::tern_thread_begin
+  ei = begin();
+  rec = getRawRec(*ei);
+  assert(rec->type == SyncRecTy);
+  syncRec = (SyncRec*)rec;
+  assert(syncRec->sync == syncfunc::tern_thread_begin);
+
+  // last ExecutedInst is syncfunc::tern_thread_end
+  ei = end() - 1;
+  rec = getRawRec(*ei);
+  assert(rec->type == SyncRecTy);
+  syncRec = (SyncRec*)rec;
+  assert(syncRec->sync == syncfunc::tern_thread_end);
+
+  // second ExecutedInst is the entry to main
+  ei = begin() + 1;
+  assert(!ei->isLogged);
+  I = getInst(*ei);
+  assertEntryInst(I);
+
+  // FIXME: this is ulgy ...
+  for(ei=begin()+1; ei!=end()-2; ++ei) {
+    I = getInst(*ei);
+    nxtI = getInst(*(ei+1));
+    assert(I && nxtI);
+
+    switch(I->getOpcode()) {
+    case Instruction::Load:
+      assert(ei->isLogged);
+      rec = getRawRec(*ei);
+      assert(rec->type == LoadRecTy);
+      break;
+    case Instruction::Store:
+      assert(ei->isLogged);
+      rec = getRawRec(*ei);
+      assert(rec->type == StoreRecTy);
+      break;
+    case Instruction::Ret:
+      // TODO
+      break;
+    case Instruction::Unwind:
+    case Instruction::IndirectBr:
+    case Instruction::Switch:
+    case Instruction::Br:
+      is_succ = false;
+      BB = I->getParent();
+      for(succ_iterator si=succ_begin(BB); si!=succ_end(BB); ++si) {
+        if(*si == nxtI->getParent()) {
+          is_succ = true;
+          break;
+        }
+      }
+      if(!is_succ){
+        errs() << *I << "\n";
+        errs() << *nxtI << "\n";
+      }
+      assert(is_succ);
+      break;
+    case Instruction::Unreachable:
+      assert(0 && "should never see unreachable in executed instructions!");
+      break;
+    case Instruction::Call:
+    case Instruction::Invoke:
+      if(!ei->isLogged) {
+        CallSite cs(I);
+        F = cs.getCalledFunction();
+        if(F) {
+          if(funcBodyLogged(F)) {
+            assert(F == nxtI->getParent()->getParent());
+            assertEntryInst(nxtI);
+            break;
+          }
+        } else { // indirect call, not logged
+          if(I->getParent() != nxtI->getParent()) {
+            assertEntryInst(nxtI);
+            break;
+          }
+        }
+      } // fall through
+    default:
+      if(!ei->isLogged) {
+        assertNextInst(I, nxtI);
+        break;
+      }
+      rec = getRawRec(*ei);
+      if(rec->type != SyncRecTy) {
+        assertNextInst(I, nxtI);
+        break;
+      }
+      syncRec = (SyncRec*)rec;
+      if(syncRec->after) {
+        assertNextInst(I, nxtI);
+        break;
+      }
+      if((syncRec->sync != syncfunc::pthread_cond_wait
+          && syncRec->sync != syncfunc::pthread_barrier_wait)) {
+        assertNextInst(I, nxtI);
+        break;
+      }
+      assert(I == nxtI);
+    }
+  }
+}
+
+raw_ostream& operator<<(raw_ostream& o, const InstLog::Trunk& tr) {
+  return o << "[" << tr.beginTurn << "(" << tr.beginIndex << "), "
+           << tr.endTurn << "(" << tr.endIndex << "))";
+}
+
 
 InstLog::func_map         InstLog::funcsEscape;
 InstLog::func_map         InstLog::funcsCallLogged;
@@ -265,14 +452,18 @@ int InstLogBuilder::nextInstFromJmp() {
   return 1;
 }
 
-void InstLogBuilder::appendInbetweenInsts(bool takeCurrent, bool setNxt) {
+void InstLogBuilder::appendInbetweenInsts(bool takeCurrent) {
   unsigned cur_insid = cur_ri->getInsid();
   cur_ii = getIDManager()->getInstruction(cur_insid);
 
-  if(setNxt) {
-    unsigned nxt_insid = nxt_ri->getInsid();
-    nxt_ii = getIDManager()->getInstruction(nxt_insid);
-  }
+  unsigned nxt_insid = nxt_ri->getInsid();
+  nxt_ii = getIDManager()->getInstruction(nxt_insid);
+
+  unsigned nxt_insid_check = getIDManager()->getInstructionID(nxt_ii);
+
+  assert(nxt_insid == nxt_insid_check);
+
+//errs() << *nxt_ii << "\n";
 
   if(takeCurrent) {
     if(instLogged(cur_ii) != LogBBMarker) { // append current instruction
@@ -297,6 +488,10 @@ void InstLogBuilder::appendInbetweenInsts(bool takeCurrent, bool setNxt) {
   //
   int transfers = 0;
   while(cur_ii != nxt_ii) {
+
+if(cur_ii->getOpcode() == Instruction::Store)
+  dump();
+
     instLog->append(cur_ii);
 
     // sanity: can only do one of these control transfer inst
@@ -324,7 +519,7 @@ void InstLogBuilder::appendInbetweenInsts(bool takeCurrent, bool setNxt) {
   }
 }
 
-void InstLogBuilder::appendInst() {
+void InstLogBuilder::appendInsts() {
   // sanity
   unsigned insid = cur_ri->getInsid();
   BasicBlock::iterator ii = getIDManager()->getInstruction(insid);
@@ -337,7 +532,7 @@ void InstLogBuilder::appendInst() {
     instLog->append(cur_ri);
   } else { // a sync op; append all raw records from this op
     for(int i=0; i<cur_ri->numRecForInst(); ++i)
-      instLog->append(cur_ri);
+      instLog->append(cur_ri+i);
   }
 
   // get the instructions from the last raw record of the current
@@ -352,7 +547,9 @@ void InstLogBuilder::appendInst() {
 
 }
 
-void InstLogBuilder::appendInstPrefix() {
+void InstLogBuilder::appendInstsPrefix() {
+
+  instLog->append(cur_ri); // syncfunc::tern_thread_begin
 
   unsigned nxt_insid = nxt_ri->getInsid();
   nxt_ii = getIDManager()->getInstruction(nxt_insid);
@@ -362,11 +559,15 @@ void InstLogBuilder::appendInstPrefix() {
     instLog->append(cur_ii);
 }
 
-void InstLogBuilder::appendInstSuffix() {
+void InstLogBuilder::appendInstsSuffix() {
+
+  if(instLogged(cur_ii) != LogBBMarker)
+    instLog->append(nxt_ri);
+
   unsigned nxt_insid = nxt_ri->getInsid();
   nxt_ii = getIDManager()->getInstruction(nxt_insid);
   BasicBlock *nxtBB = nxt_ii->getParent();
-  for(cur_ii=nxt_ii; cur_ii!=nxtBB->end(); ++cur_ii) {
+  for(cur_ii=++nxt_ii; cur_ii!=nxtBB->end(); ++cur_ii) {
     if(cur_ii->getOpcode() == Instruction::Unreachable)
       break;
     instLog->append(cur_ii);
@@ -383,10 +584,11 @@ InstLog *InstLogBuilder::create(RawLog *log) {
 
   instLog = new InstLog(log);
 
-  cur_ri = log->begin(); // thread_begin();
-  nxt_ri =  cur_ri + 1; // first logged inst of the prog
+  cur_ri = log->begin(); // syncfunc::tern_thread_begin
+  nxt_ri =  cur_ri + 1;  // first logged inst of the prog
 
-  appendInstPrefix(); // thread_begin() to first logged inst of the program
+  appendInstsPrefix();    // syncfunc::tern_thread_begin to first logged
+                         // inst of the program
 
   // FIXME: relying on correctly finding the end of a raw log may be
   // problematic if the logged thread didn't exit properly (so that our
@@ -394,11 +596,11 @@ InstLog *InstLogBuilder::create(RawLog *log) {
   // to start from beginning and go forward only.
   bool calledPthreadExit = true;
   RawLog::iterator end_ri = log->end();
-  -- end_ri;  // thread_end();
+  -- end_ri;  // syncfunc::tern_thread_end
   if(!end_ri->validInsid()) {
     calledPthreadExit = false;
-    // make end_ri the last logged inst before the return from from a
-    // thread function or main()
+    // make end_ri the last logged inst before the return from a thread
+    // function or main()
     -- end_ri;
     // adjust end_ri in case it is subrecord of a call
     end_ri -= end_ri->numRecForInst() - 1;
@@ -411,26 +613,24 @@ InstLog *InstLogBuilder::create(RawLog *log) {
     nxt_ri = cur_ri + nrec;
 
     if(nrec > 1) // one instruction but multiple log recorsd
-      appendInst();
+      appendInsts();
     else
       appendInbetweenInsts();
   }
 
   // suffix
   if(calledPthreadExit)
-    instLog->append(end_ri); // append thread_end
+    instLog->append(end_ri); // append syncfunc::tern_thread_end
   else {
-    appendInstSuffix(); // last logged inst to ret from thread func (or main())
-    instLog->append(log->end()-1); // append thread_end
+    appendInstsSuffix(); // last logged inst to ret from thread func (or main())
+    instLog->append(log->end()-1); // append syncfunc::tern_thread_end
   }
+
+#ifdef _DEBUG
+  instLog->verify();
+#endif
 
   return instLog;
-}
-
-void InstLogBuilder::verify() {
-  for(InstLog::iterator i=instLog->begin(); i!=instLog->end(); ++i) {
-    // TODO
-  }
 }
 
 void InstLogBuilder::dump() {
@@ -445,6 +645,49 @@ void InstLogBuilder::dump() {
          << "nxt BB" << *nxtBB;
 }
 
+
+
+void ProgInstLog::create(int nthread) {
+  char logFile[64];
+  InstLogBuilder builder;
+  threadLogs.reserve(nthread);
+  for(int i=0; i<nthread; ++i) {
+    getLogFilename(logFile, sizeof(logFile), i);
+    threadLogs[i] = builder.create(logFile);
+  }
+
+  for(int i=0; i<nthread; ++i) {
+    for(InstLog::trunk_iterator ti=threadLogs[i]->trunk_begin();
+        ti != threadLogs[i]->trunk_end(); ++ti) {
+      unsigned turn = ti->beginTurn;
+      trunks[turn] = &*ti;
+    }
+  }
+
+  RaceDetector::install();
+
+  // TODO: sanity check.  e.g., turn numbers must be continuous; no
+  // redundant turns etc
+
+  // race detection; clock is represented as just Trunk
+  forall(TrunkMap, ti, trunks) {
+    // errs() << *(ti->second) << "\n";
+    InstLog::Trunk *tr = ti->second;
+    for(unsigned i=tr->beginIndex; i<tr->endIndex; ++i) {
+      InstLog *log = tr->instLog;
+      Instruction *I = log->getInst(log->getDInst(i));
+      if(!I) continue;
+      switch(I->getOpcode()) {
+      case Instruction::Load:
+      case Instruction::Store:
+        RaceDetector::the->onMemoryAccess(tr, tr->instLog->getDInst(i));
+        break;
+      default:
+        break;
+      }
+    }
+  }
+}
 
 static const char* recNames[] = {
   "marker",

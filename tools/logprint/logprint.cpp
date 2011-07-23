@@ -66,8 +66,13 @@ int main(int argc, char **argv) {
      || BcFilename.find("-record.ll") != BcFilename.npos)
     assert(0 && "record.bc specified; use analysis.bc instead!");
 
+  const std::string &ModuleDataLayout = M.get()->getDataLayout();
+  assert(!ModuleDataLayout.empty());
+
   PassManager Passes;
+  TargetData  *TD = new TargetData(ModuleDataLayout);
   IDManager   *IDM = new IDManager;
+  Passes.add(TD);
   Passes.add(IDM);
   Passes.run(*M.get());
 
@@ -84,6 +89,7 @@ int main(int argc, char **argv) {
     FuncsFilename += ".funcs";
   }
 
+  setTargetData(TD);
   setIDManager(IDM);
   InstLog::setFuncMap(FuncsFilename.c_str(), *M.get());
 
@@ -98,5 +104,7 @@ int main(int argc, char **argv) {
 
   for(InstLog::iterator i = log->begin(); i != log->end(); ++i)
     log->printExecutedInst(outs(), *i, Details) << "\n";
-}
 
+  ProgInstLog progLog;
+  //progLog.create(2);
+}

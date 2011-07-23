@@ -42,11 +42,14 @@ void RecorderRT<_S>::threadBegin(void) {
   unsigned nturn;
   pthread_t th = pthread_self();
 
+  char logFile[64];
+
   sem_wait(&thread_create_sem);
 
   _S::threadBegin(th);
-  Logger::threadBegin(_S::self());
-  nturn = _S::getTurnCount();
+  getLogFilename(logFile, sizeof(logFile), _S::self());
+  Logger::threadBegin(logFile);
+  nturn = _S::incTurnCount();
   _S::putTurn();
 
   Logger::the->logSync(INVALID_INSID, syncfunc::tern_thread_begin,
@@ -59,7 +62,7 @@ void RecorderRT<_S>::threadEnd(unsigned insid) {
   pthread_t th = pthread_self();
 
   _S::getTurn();
-  nturn = _S::getTurnCount();
+  nturn = _S::incTurnCount();
   _S::threadEnd(pthread_self());
 
   Logger::the->logSync(insid, syncfunc::tern_thread_end,
@@ -101,7 +104,7 @@ int RecorderRT<_S>::pthreadCreate(unsigned ins, pthread_t *thread,
   assert(!ret && "failed sync calls are not yet supported!");
   _S::threadCreate(*thread);
   sem_post(&thread_create_sem);
-  nturn = _S::getTurnCount();
+  nturn = _S::incTurnCount();
 
   _S::putTurn();
 
@@ -121,7 +124,7 @@ int RecorderRT<_S>::pthreadJoin(unsigned ins, pthread_t th, void **rv) {
     else
       break;
   }
-  nturn = _S::getTurnCount();
+  nturn = _S::incTurnCount();
   ret = pthread_join(th, rv);
   assert(!ret && "failed sync calls are not yet supported!");
 
@@ -154,7 +157,7 @@ int RecorderRT<_S>::pthreadMutexLock(unsigned ins, pthread_mutex_t *mu) {
 
   _S::getTurn();
   pthreadMutexLockHelper(mu);
-  nturn = _S::getTurnCount();
+  nturn = _S::incTurnCount();
   _S::putTurn();
 
   Logger::the->logSync(ins, syncfunc::pthread_mutex_lock,
@@ -170,7 +173,7 @@ int RecorderRT<_S>::pthreadMutexTryLock(unsigned ins, pthread_mutex_t *mu) {
   ret = pthread_mutex_trylock(mu);
   assert((!ret || ret==EBUSY)
          && "failed sync calls are not yet supported!");
-  nturn = _S::getTurnCount();
+  nturn = _S::incTurnCount();
   _S::putTurn();
 
   Logger::the->logSync(ins, syncfunc::pthread_mutex_lock,
@@ -195,7 +198,7 @@ int RecorderRT<_S>::pthreadMutexUnlock(unsigned ins, pthread_mutex_t *mu){
   assert(!ret && "failed sync calls are not yet supported!");
   _S::signal(mu);
 
-  nturn = _S::getTurnCount();
+  nturn = _S::incTurnCount();
 
   _S::putTurn();
 
@@ -225,7 +228,7 @@ int RecorderRT<_S>::pthreadBarrierWait(unsigned ins,
   int ret, nturn1, nturn2;
 
   _S::getTurn();
-  nturn1 = _S::getTurnCount();
+  nturn1 = _S::incTurnCount();
   barrier_map::iterator bi = barriers.find(barrier);
   assert(bi!=barriers.end() && "barrier is not initialized!");
   barrier_t &b = bi->second;
@@ -244,7 +247,7 @@ int RecorderRT<_S>::pthreadBarrierWait(unsigned ins,
 
   _S::getTurn();
   _S::signal(barrier);
-  nturn2 = _S::getTurnCount();
+  nturn2 = _S::incTurnCount();
   _S::putTurn();
 
   Logger::the->logSync(ins, syncfunc::pthread_barrier_wait,
@@ -275,7 +278,7 @@ int RecorderRT<_S>::pthreadCondWait(unsigned ins,
 
   _S::getTurn();
   pthread_mutex_unlock(mu);
-  nturn1 = _S::getTurnCount();
+  nturn1 = _S::incTurnCount();
   _S::signal(mu);
   _S::waitFirstHalf(cv);
 
@@ -283,7 +286,7 @@ int RecorderRT<_S>::pthreadCondWait(unsigned ins,
 
   _S::getTurnNU();
   pthreadMutexLockHelper(mu);
-  nturn2 = _S::getTurnCount();
+  nturn2 = _S::incTurnCount();
   _S::putTurn();
 
   Logger::the->logSync(ins, syncfunc::pthread_cond_wait,
@@ -315,7 +318,7 @@ int RecorderRT<_S>::pthreadCondSignal(unsigned ins, pthread_cond_t *cv){
   ret = pthread_cond_broadcast(cv);
   assert(!ret && "failed sync calls are not yet supported!");
   _S::signalNN(cv);
-  nturn = _S::getTurnCount();
+  nturn = _S::incTurnCount();
   _S::putTurnNU();
 
   Logger::the->logSync(ins, syncfunc::pthread_cond_signal,
@@ -332,7 +335,7 @@ int RecorderRT<_S>::pthreadCondBroadcast(unsigned ins, pthread_cond_t*cv){
   ret = pthread_cond_broadcast(cv);
   assert(!ret && "failed sync calls are not yet supported!");
   _S::broadcastNN(cv);
-  nturn = _S::getTurnCount();
+  nturn = _S::incTurnCount();
   _S::putTurnNU();
 
   Logger::the->logSync(ins, syncfunc::pthread_cond_broadcast,
@@ -353,7 +356,7 @@ int RecorderRT<_S>::semWait(unsigned ins, sem_t *sem) {
       break;
   }
 
-  nturn = _S::getTurnCount();
+  nturn = _S::incTurnCount();
   _S::putTurn();
 
   Logger::the->logSync(ins, syncfunc::sem_wait,
@@ -370,7 +373,7 @@ int RecorderRT<_S>::semTryWait(unsigned ins, sem_t *sem) {
   ret = sem_trywait(sem);
   if(ret < 0)
     assert(errno==EAGAIN && "failed sync calls are not yet supported!");
-  nturn = _S::getTurnCount();
+  nturn = _S::incTurnCount();
   _S::putTurn();
 
   Logger::the->logSync(ins, syncfunc::sem_trywait,
@@ -396,7 +399,7 @@ int RecorderRT<_S>::semPost(unsigned ins, sem_t *sem){
   assert(!ret && "failed sync calls are not yet supported!");
   _S::signal(sem);
 
-  nturn = _S::getTurnCount();
+  nturn = _S::incTurnCount();
 
   _S::putTurn();
 
@@ -413,7 +416,7 @@ void RecorderRT<_S>::symbolic(unsigned insid, void *addr,
   unsigned nturn;
 
   _S::getTurn();
-  nturn = _S::getTurnCount();
+  nturn = _S::incTurnCount();
   _S::putTurn();
 
   Logger::the->logSync(insid, syncfunc::tern_symbolic,
@@ -435,12 +438,12 @@ int RecorderRT<FCFSScheduler>::pthreadCondWait(unsigned ins,
 
   FCFSScheduler::getTurn();
   pthread_mutex_unlock(mu);
-  nturn1 = FCFSScheduler::getTurnCount();
+  nturn1 = FCFSScheduler::incTurnCount();
 
   pthread_cond_wait(cv, FCFSScheduler::getLock());
 
   pthreadMutexLockHelper(mu);
-  nturn2 = FCFSScheduler::getTurnCount();
+  nturn2 = FCFSScheduler::incTurnCount();
   FCFSScheduler::putTurn();
 
   Logger::the->logSync(ins, syncfunc::pthread_cond_wait,
@@ -457,7 +460,7 @@ int RecorderRT<FCFSScheduler>::pthreadCondSignal(unsigned ins,
 
   FCFSScheduler::getTurn();
   pthread_cond_signal(cv);
-  nturn = FCFSScheduler::getTurnCount();
+  nturn = FCFSScheduler::incTurnCount();
   FCFSScheduler::putTurn();
 
   Logger::the->logSync(ins, syncfunc::pthread_cond_signal,
@@ -472,7 +475,7 @@ int RecorderRT<FCFSScheduler>::pthreadCondBroadcast(unsigned ins,
 
   FCFSScheduler::getTurn();
   pthread_cond_broadcast(cv);
-  nturn = FCFSScheduler::getTurnCount();
+  nturn = FCFSScheduler::incTurnCount();
   FCFSScheduler::putTurn();
 
   Logger::the->logSync(ins, syncfunc::pthread_cond_broadcast,
