@@ -104,7 +104,4 @@ int main(int argc, char **argv) {
 
   for(unsigned i=0; i<log->numDInsts(); ++i)
     log->printDInst(outs(), i, Details) << "\n";
-
-  ProgInstLog progLog;
-  //progLog.create(2);
 }

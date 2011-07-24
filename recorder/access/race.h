@@ -2,6 +2,7 @@
 #ifndef __TERN_RACE_DETECTOR_H
 #define __TERN_RACE_DETECTOR_H
 
+#include <set>
 #include <list>
 #include "logaccess.h"
 
@@ -11,14 +12,17 @@ namespace tern {
 /// granularity for simplicity.  The old tern implementation has a race
 /// detector that tracks accesses at object level.
 struct Access {
-  Access(bool isWr, const InstTrunk *tr, unsigned idx, uint8_t data);
+  Access(bool isWr, uint8_t data, const InstTrunk *tr, unsigned idx);
   Access(const Access& a);
 
   bool             isWrite;
+  uint8_t          data; // value read or written
   const InstTrunk  *ts;  // timestamp of the access
   unsigned         idx;  // index of the instruction that performed the access
-  uint8_t          data; // value read or written
+  bool             racy; // involved in any race?
 };
+
+llvm::raw_ostream &operator<< (llvm::raw_ostream &o, const Access& a);
 
 /// History of memory accesses for happens-before based race detection.
 /// Based on Dinning and Schonberg's paper "An Empirical Comparison of
@@ -26,29 +30,42 @@ struct Access {
 /// to remember all accesses; instead we need to remember only
 /// concurrent reads and one writes to avoid missing races.
 ///
-/// A small tweak is that we want to detect all races, instead of just a
-/// race for a particular memory location
+/// A small tweak is that we want to detect all races for a particular
+/// memory location, instead of just any race.  We need all races so that
+/// we can totally order all conflicting memory accesses w.r.t the memory
+/// location.
 struct AccessHistory {
-  AccessHistory(void *addr);
-  AccessHistory(void *addr, Access *a);
-  ~AccessHistory();
 
-  static void removeAccesses(Access *a, std::list<Access*>& accesses);
+  typedef std::list<Access*>  AccessList;
+  typedef std::tr1::unordered_map<const InstTrunk*, AccessList*> AccessMap;
+  //typedef std::map<const InstTrunk*, AccessList*> AccessMap;
 
-  void printRace(Access *a1, Access *a2);
+  static void removeAccesses(Access *a, AccessMap &accesses);
+
   /// remove reads < access->ts
   void removeReads(Access *access);
   /// remove writes < access->ts; access must be a write
   void removeWrites(Access *access);
-  bool appendAccess(Access *access);
+  void appendAccess(Access *access);
+  void appendAccessHelper(Access *access);
+
+  unsigned numRacyAccesses() { return racyAccesses.size(); }
+
+  void dumpRace(const Access *a1, const Access *a2) const;
+
+  AccessHistory(void *addr);
+  AccessHistory(void *addr, Access *a);
+  ~AccessHistory();
 
   // memory address
   void *addr;
 
   /// concurrent reads to range [offset, offset+width)
-  std::list<Access*> reads;
+  AccessMap reads;
   /// existing writes to range
-  std::list<Access*> writes;
+  AccessMap writes;
+  /// accesses that involve in at least one race
+  std::set<Access*>   racyAccesses;
 };
 
 class RaceDetector {
@@ -58,9 +75,14 @@ public:
   RaceDetector();
   ~RaceDetector();
 
-  void onMemoryAccess(InstTrunk *tr, unsigned idx, const LInst& LI);
+  void onMemoryAccess(bool isWrite, char *addr, uint8_t data,
+                      const InstTrunk *tr, unsigned idx);
+  unsigned numRacyAccesses();
+  void sortRacyAccesses();
 
-  /// byte-granularity accesses to all memory
+  void dumpRacyAccesses();
+
+  /// accesses to all memory at byte granularity
   AccessMap  accesses;
 
   static void install();

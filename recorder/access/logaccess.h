@@ -148,74 +148,35 @@ struct RawLog {
 // TODO: should move the code below to the analysis/ folder, and separate
 // them into different files
 
-#if 0
-
-/// dynamic instruction instance
-struct DInst {
-  Instruction  *inst; /// if not null, static instruction
-  InsidRec      *rec; /// if not null, logged record of this instruction
-
-  llvm::Instruction *getInst() { return inst;  }
-  int getOpcode()  { return inst->getOpcode(); }
-  bool isLogged()  {    return rec != NULL;    }
-};
-
-struct DCallInst {
-  CallInst     *inst;
-  DRetInst     *ret;
-
-  llvm::Function* getCallee();
-};
-
-struct DReturnInst {
-  ReturnInst     *inst;
-  DCallInst      *call;
-
-  llvm::Function* getCaller();
-};
-
-struct DBranchInst {
-  BranchInst     *inst;
-  BasicBlock     *target;
-};
-
-struct DUnwindInst {
-  UnwindInst     *inst;
-  BasicBlock     *target;
-};
-
-struct DIndirectBrInst {
-  IndirectBrInst *inst;
-  BasicBlock     *target;
-};
-
-struct DSwitchInst {
-  SwitchInst     *inst;
-  BasicBlock     *target;
-};
-
-// dyn_DInstCast
-// DInstCast
-
-#endif
-
-struct InstLog;
-struct InstTrunk {
-  InstLog *instLog;
-  unsigned beginTurn, endTurn;
-  unsigned beginIndex, endIndex; // indexes into InstLog
-
-  bool happensBefore(const InstTrunk &tr) const {
+struct TurnRange {
+  bool happensBefore(const TurnRange &tr) const {
     return endTurn <= tr.beginTurn;
   }
-  bool concurrent(const InstTrunk &tr) const {
+  bool concurrent(const TurnRange &tr) const {
     return !happensBefore(tr)
       && !tr.happensBefore(*this);
   }
 
-  InstTrunk(): instLog(NULL) {}
-  InstTrunk(InstLog *log, unsigned beginT, unsigned beginI)
-    : instLog(log), beginTurn(beginT), beginIndex(beginI) {}
+  unsigned beginTurn, endTurn;
+};
+
+struct InstLog;
+struct InstTrunk: public TurnRange {
+  InstLog *instLog;
+  unsigned beginIndex, endIndex; // indexes into InstLog
+
+  InstTrunk() {
+    instLog = NULL;
+    beginTurn = endTurn = (unsigned)-1;
+    beginIndex = endIndex = (unsigned)-1;
+  }
+  InstTrunk(InstLog *log, unsigned turn, unsigned index) {
+    instLog = log;
+    beginTurn = turn;
+    beginIndex = index;
+    endTurn = (unsigned)-1;
+    endIndex = (unsigned)-1;
+  }
 };
 
 // logged instructions
@@ -345,10 +306,6 @@ protected:
   InstVec      instLog;
   IndexMap     callRetMap;  /// call instruction idx -> return instruction idx
   IndexMap     retCallMap;  /// return instruction idx -> call instruction idx
-
-  // CallFuncMap  callFuncMap; /// call instruction idx -> function called
-  // BranchMap    branchMap;   /// idx of branch instructin -> taken branch
-  // RawRecMap    rawRecMap;   /// idx into instLog -> raw log record
 
   TrunkVec     trunks;
 

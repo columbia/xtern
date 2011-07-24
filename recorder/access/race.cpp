@@ -3,17 +3,29 @@
 #include "race.h"
 #include "util.h"
 
-//#define dprintf(args...) fprintf(stderr, args)
-#define dprintf(args...)
+#define _DEBUG_RACEDETECTOR
+
+#ifdef _DEBUG_RACEDETECTOR
+#  define dprintf(fmt...) fprintf(stderr, fmt)
+#else
+#  define dprintf(fmt...)
+#endif
 
 using namespace llvm;
-using namespace tern;
 
-Access::Access(bool isWr, const InstTrunk *c, unsigned index, uint8_t d)
-  : isWrite(isWr), ts(c), idx(index), data(d) { }
+namespace tern {
+
+Access::Access(bool isWr, uint8_t d, const InstTrunk *c, unsigned index)
+  : isWrite(isWr), data(d), ts(c), idx(index) { }
 
 Access::Access(const Access &a)
-  : isWrite(a.isWrite), ts(a.ts), idx(a.idx), data(a.data) { }
+  : isWrite(a.isWrite), data(a.data), ts(a.ts), idx(a.idx) { }
+
+raw_ostream &operator<<(raw_ostream &o, const Access &a) {
+  return o << (a.isWrite?"write":"read") << " "
+           << "data=" << (int)a.data << " "
+           << "ts=[" << a.ts->beginTurn << "," << a.ts->endTurn << ")";
+}
 
 /***/
 
@@ -21,50 +33,95 @@ AccessHistory::AccessHistory(void *address): addr(address) {}
 
 AccessHistory::AccessHistory(void *address, Access *a) {
   addr = address;
-  if(a->isWrite)
-    writes.push_back(a);
-  else
-    reads.push_back(a);
+  appendAccessHelper(a);
 }
 
-AccessHistory::~AccessHistory()
-{
-  forall(std::list<Access*>, i, reads)
-    delete *i;
-  forall(std::list<Access*>, i, writes)
+AccessHistory::~AccessHistory() {
+  forall(AccessMap, i, reads) {
+    forall(AccessList, j, *(i->second)) {
+      if(!(*j)->racy)
+        delete *j;
+    }
+  }
+  forall(AccessMap, i, writes) {
+    forall(AccessList, j, *(i->second)) {
+      if(!(*j)->racy)
+        delete *j;
+    }
+  }
+  forall(set<Access*>,  i, racyAccesses)
     delete *i;
 }
 
-void AccessHistory::removeReads(Access *access)
-{
+void AccessHistory::removeReads(Access *access) {
   removeAccesses(access, reads);
 }
 
-void AccessHistory::removeWrites(Access *access)
-{
+void AccessHistory::removeWrites(Access *access) {
   removeAccesses(access, writes);
 }
 
-void AccessHistory::removeAccesses(Access *a, std::list<Access*>& accesses)
-{
-  std::list<Access*>::iterator cur, prv;
-  for(cur=accesses.begin(); cur!=accesses.end();) {
-    prv = cur++;
-    if((*prv)->ts->happensBefore(*a->ts)) {
-      Access *t = *prv;
-      delete t;
-      accesses.erase(prv);
+void AccessHistory::removeAccesses(Access *a, AccessMap &accesses) {
+
+  list<const InstTrunk*> toErase;
+
+  forall(AccessMap, i, accesses) {
+    if(i->first->happensBefore(*a->ts))
+      toErase.push_back(i->first);
+  }
+
+  forall(list<const InstTrunk*>, i, toErase) {
+    AccessMap::iterator ai = accesses.find(*i);
+    AccessList *al = ai->second;
+    accesses.erase(ai);
+
+#ifdef _DEBUG_RACEDETECTOR
+    //errs() << "removing accesses for " << **i << "\n";
+#endif
+
+    forall(AccessList, j, *al) {
+      if((*j)->racy) // otherwise, this access is owned by @racyAccesses
+        delete *j;
     }
+    delete al;
   }
 }
 
-void AccessHistory::printRace(Access *a1, Access *a2)
-{
+void AccessHistory::dumpRace(const Access *a1, const Access *a2) const {
+  errs() << "RACE on " << (void*) addr << ": "
+         << (a1->isWrite?"write":"read") << "-"
+         << (a2->isWrite?"write":"read") << " "
+         << *a1 << " " << *a2 << "\n";
 }
 
-bool AccessHistory::appendAccess(Access *access)
-{
-  std::list<Access*> racy_accesses;
+void AccessHistory::appendAccessHelper(Access *access) {
+
+  AccessMap *am;
+
+  if(access->isWrite)
+    am = &writes;
+  else
+    am = &reads;
+
+  AccessList *al;
+  AccessMap::iterator ai = am->find(access->ts);
+  if(ai != am->end())
+    al = ai->second;
+  else {
+    al = new AccessList;
+    (*am)[access->ts] = al;
+  }
+
+  al->push_back(access);
+
+#ifdef _DEBUG_RACEDETECTOR
+  // errs() << "RACEDETECTOR: appending " << (void*)addr << " "
+  // << *access << "\n";
+#endif
+}
+
+void AccessHistory::appendAccess(Access *access) {
+  AccessList racy_accesses;
 
   if(access->isWrite) {
     // remove reads < access->ts
@@ -73,113 +130,158 @@ bool AccessHistory::appendAccess(Access *access)
     removeWrites(access);
 
     // detect write-read races
-    if(!reads.empty())
-      racy_accesses.insert(racy_accesses.begin(),
-                           reads.begin(), reads.end());
+    if(!reads.empty()) {
+      forall(AccessMap, i, reads) {
+        // no race if accesses are within the same instruction trunk
+        if(i->first != access->ts) {
+          AccessList *al = i->second;
+          racy_accesses.insert(racy_accesses.end(), al->begin(), al->end());
+        }
+      }
+    }
     // detect write-write races
-    if(!writes.empty())
-      racy_accesses.insert(racy_accesses.begin(),
-                           writes.begin(), writes.end());
-
-    // add access to write list
-    writes.push_back(access);
-
+    if(!writes.empty()) {
+      forall(AccessMap, i, writes) {
+        // no race if accesses are within the same instruction trunk
+        if(i->first != access->ts) {
+          AccessList *al = i->second;
+          racy_accesses.insert(racy_accesses.end(), al->begin(), al->end());
+        }
+      }
+    }
   } else {// access->isWrite == false
     // remove reads < access->ts
     removeReads(access);
 
     // detect read-write race
-    std::list<Access*>::const_iterator i;
-    for(i=writes.begin(); i!=writes.end(); ++i)
-      if((*i)->ts->concurrent(*access->ts))
-        racy_accesses.push_back(*i);
-
-    // add access to read list
-    reads.push_back(access);
-  }
-
-  int nrace = 0;
-  forall(std::list<Access*>, i, racy_accesses) {
-    Access *racy = *i;
-    // assert(racy->tid != access->tid);
-
-    /// prune benign races.  note that our goal here is to decide if the
-    /// program may be nondeterministic when two instructions interleave
-    /// differently.  we can prune away useless writes: (1) a write-write
-    /// race where two writes are of the same value and (2) a read-write
-    /// race where the write is of the same value as the value already
-    /// read
-
-    // \todo: should consider symbolic values when pruning
-
-#if 0
-    if(get_option(tern, prune_useless_writes)) {
-      uint64_t v1, v2;
-      if(access->isWrite) { // write-write race or read-write race
-        v1 = cast<ConstantExpr>(racy->value)->getZExtValue(width*8);
-        v2 = cast<ConstantExpr>(access->value)->getZExtValue(width*8);
-      } else {  // write-read race
-        v1 = cast<ConstantExpr>(racy->old_value)->getZExtValue(width*8);
-        v2 = cast<ConstantExpr>(racy->value)->getZExtValue(width*8);
-      }
-
-      if(v1==v2) {
-        klee_warning("pruned %s-%s race with value %ld\n",
-                     racy->isWrite?"write":"read",
-                     access->isWrite?"write":"read",
-                     (long)v1);
-        continue;
+    list<Access*>::const_iterator i;
+    forall(AccessMap, i, writes) {
+      if(i->first != access->ts // check for same instruction trunk
+         && i->first->concurrent(*access->ts)) {
+        AccessList *al = i->second;
+        racy_accesses.insert(racy_accesses.end(), al->begin(), al->end());
       }
     }
-#endif
-
-    // real race
-    ++ nrace;
-    printRace(racy, access);
-
-#if 0
-    // prune redundant race reports if necessary
-    if(get_option(tern, suppress_redundant_races)) {
-      std::list<Access*> *al = (racy->isWrite? &writes : &reads);
-      std::list<Access*>::iterator j = find(al->begin(), al->end(), racy);
-      assert(j != al->end());
-      al->erase(j);
-      //delete racy;
-    }
-#endif
-
   }
 
-  return nrace > 0;
+  // add access for real
+  appendAccessHelper(access);
+
+  if(!racy_accesses.empty()) {
+    access->racy = true;
+    racyAccesses.insert(access);
+    forall(list<Access*>, i, racy_accesses) {
+      Access *racy = *i;
+      racy->racy = true;
+      racyAccesses.insert(racy);
+
+#ifdef _DEBUG_RACEDETECTOR
+      dumpRace(racy, access);
+#endif
+    }
+  }
 }
 
 /***/
 
-void RaceDetector::onMemoryAccess(InstTrunk *tr, unsigned idx, const LInst& LI)
-{
-  const LMemInst& MI = LInstCast<LMemInst>(LI);
-  unsigned size = MI.getDataSize();
-  char *addr = MI.getAddr();
+void RaceDetector::onMemoryAccess(bool isWrite, char *addr, uint8_t data,
+                                  const InstTrunk *tr, unsigned idx) {
+  AccessHistory *ah;
+  AccessMap::iterator ai = accesses.find(addr);
+  if(ai == accesses.end()) {
+    ah = new AccessHistory(addr);
+    accesses[addr] = ah;
+  } else {
+    ah = ai->second;
+  }
+  Access *access = new Access(isWrite, data, tr, idx);
+  ah->appendAccess(access);
+}
 
-  for(unsigned i=0; i<size; ++i, ++addr) {
-    AccessHistory *ah;
-    AccessMap::iterator ai = accesses.find(addr);
-    if(ai == accesses.end()) {
-      ah = new AccessHistory(addr);
-      accesses[addr] = ah;
-    } else {
-      ah = ai->second;
+unsigned RaceDetector::numRacyAccesses() {
+  unsigned n = 0;
+  forall(AccessMap, i, accesses) {
+    AccessHistory *ah = i->second;
+    n += ah->numRacyAccesses();
+  }
+  return n;
+}
+
+
+typedef pair<InstTrunk*, unsigned> DInstID;
+
+struct DInstEQ {
+  bool operator()(const DInstID &di1, const DInstID &di2) const {
+    return di1.first == di2.first && di1.second == di2.second;
+  }
+};
+
+struct DInstHash {
+  long operator()(const DInstID &di) const {
+    return tr1::hash<void*>()((void*)di.first)
+      ^ tr1::hash<unsigned>()(di.second);
+  }
+};
+
+void RaceDetector::sortRacyAccesses() {
+
+  typedef tr1::unordered_map<DInstID, int, DInstHash> RacyDInstMap;
+  typedef map<uint64_t, unsigned>  DataMap;
+
+  forall(AccessMap, i, accesses) {
+    AccessHistory *ah = i->second;
+    if(ah->racyAccesses.empty())
+      continue;
+
+    RacyDInstMap racyDInsts;
+    DataMap      dataMap;
+
+    forall(set<Access*>, j, ah->racyAccesses) {
+      DInstID di((InstTrunk*)(*j)->ts, (*j)->idx);
+      racyDInsts[di] = 1;
     }
-    Access *access = new Access(MI.getRecType() == StoreRecTy,
-                                tr, idx, MI.getDataByte(i));
-    ah->appendAccess(access);
+    forall(RacyDInstMap, di, racyDInsts) {
+      InstTrunk *tr = (*di).first.first;
+      unsigned idx = (*di).first.second;
+      LInst LI = tr->instLog->getLInst(idx);
+      if(LI.getRecType() == StoreRecTy) {
+        LStoreInst SI = LInstCast<LStoreInst>(LI);
+        DataMap::iterator k = dataMap.find(SI.getData());
+        if(k == dataMap.end())
+          dataMap[SI.getData()] = 1;
+        else
+          ++ dataMap[SI.getData()];
+      }
+    }
+    errs() << "writes to " << (void*)ah->addr << ":\n";
+    forall(DataMap, di, dataMap) {
+      if(di->second == 1) {
+        errs() << "unique: " << di->first << "\n";
+      } else {
+        errs() << "not unique: " << di->first << "\n";
+      }
+    }
+  }
+
+  // match reads with these writes
+}
+
+void RaceDetector::dumpRacyAccesses() {
+  forall(AccessMap, i, accesses) {
+    AccessHistory *ah = i->second;
+    if(ah->racyAccesses.empty())
+      continue;
+    errs() << "RACE on " << (void*)ah->addr << ": ";
+    forall(set<Access*>, j, ah->racyAccesses) {
+      errs() << **j << ", ";
+    }
+    errs() << "\n";
   }
 }
 
 RaceDetector::RaceDetector() {}
 
-RaceDetector::~RaceDetector()
-{
+RaceDetector::~RaceDetector() {
   forall(AccessMap, i, accesses) {
     delete i->second;
   }
@@ -190,3 +292,6 @@ void RaceDetector::install() {
 }
 
 RaceDetector *RaceDetector::the = NULL;
+
+
+}

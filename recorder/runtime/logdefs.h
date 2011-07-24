@@ -70,6 +70,7 @@ BOOST_STATIC_ASSERT(sizeof(InsidRec)<=RECORD_SIZE);
 
 // shared by LoadRec and StoreRec
 struct MemRec: public InsidRec {
+  long     seq;
   char*    addr;
   uint64_t data;
   char*    getAddr() { return addr; }

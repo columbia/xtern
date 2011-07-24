@@ -8,6 +8,7 @@
 #include <stdlib.h>
 #include <stdarg.h>
 #include <string.h>
+#include <pthread.h>
 #include "common/runtime/scheduler.h"
 #include "loghooks.h"
 #include "logger.h"
@@ -67,7 +68,7 @@ void Logger::logCall(uint8_t flags, unsigned insid,
     if(!funcEscape(func))
       return;
     flags |= CalleeEscape;
-    // FIXME
+    // FIXME: LogInstr should set  noreturn attribute for escape functions
     if(func == (void*)(intptr_t)exit
        || func == (void*)(intptr_t)pthread_exit) {
       flags |= CallNoReturn;

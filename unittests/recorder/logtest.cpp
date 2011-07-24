@@ -8,16 +8,16 @@ using namespace tern;
 struct loadstore {
   unsigned type;
   unsigned insid;
-  void *addr;
+  char     *addr;
   uint64_t data;
 };
 
 loadstore loadstores[5] = {
-  {tern::LoadRecTy,  1,    (void*)0xdeadbeef, 12345},
-  {tern::StoreRecTy, 3,    (void*)0xbeefdead, 67890},
-  {tern::LoadRecTy,  5,    (void*)0xadbdeeef, 34567},
-  {tern::StoreRecTy, 100,  (void*)0xdeafdbee, 1},
-  {tern::LoadRecTy,  10000,(void*)0xefdeadbe, 2557555555},
+  {tern::LoadRecTy,  1,    (char*)0xdeadbeef, 12345},
+  {tern::StoreRecTy, 3,    (char*)0xbeefdead, 67890},
+  {tern::LoadRecTy,  5,    (char*)0xadbdeeef, 34567},
+  {tern::StoreRecTy, 100,  (char*)0xdeafdbee, 1},
+  {tern::LoadRecTy,  10000,(char*)0xefdeadbe, 2557555555},
 };
 
 struct call {

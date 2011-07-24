@@ -109,10 +109,8 @@ uint8_t LMemInst::getDataByte(unsigned bytenr) const {
   MemRec *rec = (MemRec*)this->rec;
   int64_t data = rec->getData();
   assert(bytenr < getDataSize());
-  return ((int8_t*)data)[bytenr];
+  return ((int8_t*)&data)[bytenr];
 }
-
-
 
 unsigned InstLog::append(const RawLog::iterator &ri) {
   // append to trunks
@@ -757,23 +755,29 @@ void ProgInstLog::create(int nthread) {
 
   // race detection; clock is represented as just Trunk
   forall(TrunkMap, ti, trunks) {
-    // errs() << *(ti->second) << "\n";
     InstTrunk *tr = ti->second;
-    for(unsigned i=tr->beginIndex; i<tr->endIndex; ++i) {
+    for(unsigned idx=tr->beginIndex; idx<tr->endIndex; ++idx) {
       InstLog *log = tr->instLog;
-      if(!log->isDInstLogged(i))
+      if(!log->isDInstLogged(idx))
         continue;
-      LInst LI = log->getLInst(i);
-      switch(LI.getRecType()) {
-      case LoadRecTy:
-      case StoreRecTy:
-        RaceDetector::the->onMemoryAccess(tr, i, LI);
-        break;
-      default:
-        break;
+      LInst LI = log->getLInst(idx);
+      if(LI.getRecType() != LoadRecTy
+         && LI.getRecType() != StoreRecTy)
+        continue;
+
+      const LMemInst& MI = LInstCast<LMemInst>(LI);
+      unsigned size = MI.getDataSize();
+      char *addr = MI.getAddr();
+      bool isWrite = (LI.getRecType() == StoreRecTy);
+
+      for(unsigned i=0; i<size; ++i, ++addr) {
+        RaceDetector::the->onMemoryAccess(isWrite, addr,
+                                          MI.getDataByte(i), tr, idx);
       }
     }
   }
+
+  RaceDetector::the->sortRacyAccesses();
 }
 
 static const char* recNames[] = {
