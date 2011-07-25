@@ -53,12 +53,12 @@ struct AccessHistory {
 
   void dumpRace(const Access *a1, const Access *a2) const;
 
-  AccessHistory(void *addr);
-  AccessHistory(void *addr, Access *a);
+  AccessHistory(char *addr);
+  AccessHistory(char *addr, Access *a);
   ~AccessHistory();
 
   // memory address
-  void *addr;
+  char *addr;
 
   /// concurrent reads to range [offset, offset+width)
   AccessMap reads;
@@ -68,8 +68,7 @@ struct AccessHistory {
   std::set<Access*>   racyAccesses;
 };
 
-class RaceDetector {
-public:
+struct RaceDetector {
   typedef std::tr1::unordered_map<void*, AccessHistory*> AccessMap;
 
   RaceDetector();
@@ -87,6 +86,82 @@ public:
 
   static void install();
   static RaceDetector *the;
+};
+
+
+struct RaceSorter {
+  struct Edge;
+  struct Node;
+  struct HRange;
+  struct LTRange;
+  struct LTEdge;
+
+  typedef std::set<Node*>                                  NodeSet;
+  typedef std::pair<char*, unsigned>                         Range;
+  typedef std::map<Range, NodeSet*, LTRange>                 RNMap;
+  typedef std::map<unsigned, Node*>                          INMap;
+  typedef std::tr1::unordered_map<const InstTrunk*, INMap*> TINMap;
+
+  struct Node {
+    const InstTrunk  *ts;
+    unsigned         idx;
+    bool             isWrite;
+    char             *addr;
+    unsigned         size;
+    int64_t          data;
+    NodeSet          mergedReads; // only valid if this inst is a write
+    NodeSet          inEdges, outEdges;
+
+    void addInEdge(Node *from);
+    void addOutEdge(Node *to);
+    int64_t getDataInRange(const Range& range) const;
+
+    Node(const InstTrunk *ts, unsigned idx, bool isWrite,
+         char *addr, unsigned size, uint64_t data);
+    ~Node();
+  };
+
+  struct LTInstTrunk {
+    bool operator()(const InstTrunk *tr1, const InstTrunk *tr2) {
+      return tr1->beginTurn < tr2->beginTurn;
+    }
+  };
+
+  struct HRange{
+    size_t operator()(const Range& range) {
+      return std::tr1::hash<void*>()(range.first)
+        ^ std::tr1::hash<unsigned>()(range.second);
+    }
+  };
+
+  struct LTRange {
+    bool operator()(const Range &r1, const Range &r2) {
+      return r1.first < r2.first;
+    }
+  };
+
+  TINMap    tinMap; /// InstTrunk* -> index -> Node map
+  RNMap     rnMap;  /// Range -> NodeSet map; nodes with common access range
+
+  void addNode(const InstTrunk *ts, unsigned idx, bool isWrite,
+               char *addr, unsigned size, uint64_t data);
+  void addNodeFromAccess(Access *access);
+  void addEdgesForUniqueWrites(const Range &range, const NodeSet &NS);
+  bool topSort(std::list<Node*>& topOrder); /// @topOrder must be an empty list
+  bool topSortHelper(Node *node, std::list<Node*>& topOrder,
+                     std::tr1::unordered_map<Node*, bool>& visited,
+                     std::tr1::unordered_map<Node*, bool>& stack);
+  void longestPath(const NodeSet& NS, const std::list<Node*>& topOrder,
+                   std::list<Node*>& path);
+  void matchReads(Node *write, const NodeSet &reads, const NodeSet &writes);
+  bool reachable(Node *from, Node *to);
+
+  void sortNodes();
+
+  void dump();
+  void cycleCheck();
+
+  ~RaceSorter();
 };
 
 
