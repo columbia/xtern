@@ -3,6 +3,7 @@
 #define __TERN_RECORDER_LOGACCESS_H
 
 #include <map>
+#include <list>
 #include <stack>
 #include <iterator>
 #include <tr1/unordered_map>
@@ -138,6 +139,7 @@ struct RawLog {
   iterator end();
   reverse_iterator rbegin();
   reverse_iterator rend();
+  unsigned numRecords() { return _num; }
 
   int      _fd;
   unsigned _num;
@@ -273,7 +275,7 @@ public:
   llvm::BasicBlock *getJumpTarget(unsigned idx);
   llvm::BasicBlock *getJumpSource(unsigned idx);
 
-  InstLog(RawLog* log): rawLog(log) { instLog.reserve(DefaultInstNum); }
+  InstLog(RawLog* log);
   ~InstLog() { delete rawLog; }
 
 protected:
@@ -288,8 +290,6 @@ protected:
 
   typedef std::vector<DInst>          InstVec;
   typedef std::tr1::unordered_map<unsigned, unsigned> IndexMap;
-
-  enum { DefaultInstNum = 1024*1024*1024 };
 
   /// returns index of appended instruction
   unsigned append(const RawLog::iterator& ri);
@@ -349,28 +349,33 @@ protected:
 };
 
 
+struct RacyEdgeHalf {
+  const InstTrunk  *trunk;
+  unsigned         idx; // index into InstLog
+  RacyEdgeHalf     *otherHalf;
+
+  RacyEdgeHalf(): trunk(NULL), idx((unsigned)-1), otherHalf(NULL) {}
+  RacyEdgeHalf(const InstTrunk *tr, unsigned i, RacyEdgeHalf *other)
+    : trunk(tr), idx(i), otherHalf(other) { }
+};
+
+struct RacyEdge {
+  RacyEdgeHalf up, down;
+
+  RacyEdge() {}
+  RacyEdge(const InstTrunk *t1, unsigned i1, const InstTrunk *t2, unsigned i2)
+    : up(t1, i1, &down), down(t2, i2, &up) { }
+};
+
 struct ProgInstLog {
 
   typedef std::map<unsigned, InstTrunk*> TrunkMap;
-
-  struct RaceHalf {
-    InstTrunk *trunk;
-    int index; // index into InstLog
-    RaceHalf  *otherHalf;
-
-    llvm::raw_ostream& operator<<(llvm::raw_ostream&) const;
-  };
-
-  struct Race {
-    RaceHalf first, second;
-    llvm::raw_ostream& operator<<(llvm::raw_ostream&) const;
-  };
 
   void create(int nthread);
 
   TrunkMap                trunks;  // indexed by beginTurn
   std::vector<InstLog*>   threadLogs;
-  std::vector<Race>       races;
+  std::list<RacyEdge>     racyEdges;
 };
 
 
@@ -383,6 +388,9 @@ llvm::raw_ostream &operator<< (llvm::raw_ostream &o, const CallRec &rec);
 llvm::raw_ostream &operator<< (llvm::raw_ostream &o, const ExtraArgsRec &rec);
 llvm::raw_ostream &operator<< (llvm::raw_ostream &o, const ReturnRec &rec);
 llvm::raw_ostream &operator<< (llvm::raw_ostream &o, const SyncRec &rec);
+
+llvm::raw_ostream &operator<< (llvm::raw_ostream &o, const RacyEdgeHalf &reh);
+llvm::raw_ostream &operator<< (llvm::raw_ostream &o, const RacyEdge &re);
 
 } // namespace tern
 

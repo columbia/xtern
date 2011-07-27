@@ -77,7 +77,6 @@ RawLog::reverse_iterator RawLog::rend() {
 }
 
 
-
 char *LMemInst::getAddr() const {
   assert(rec->type == LoadRecTy || rec->type == StoreRecTy);
   MemRec *rec = (MemRec*)this->rec;
@@ -110,6 +109,12 @@ uint8_t LMemInst::getDataByte(unsigned bytenr) const {
   int64_t data = rec->getData();
   assert(bytenr < getDataSize());
   return ((int8_t*)&data)[bytenr];
+}
+
+InstLog::InstLog(RawLog *log) {
+  rawLog = log;
+  // rule of thumb: load/store are 1/5 of all instructions
+  instLog.reserve(rawLog->numRecords()*5);
 }
 
 unsigned InstLog::append(const RawLog::iterator &ri) {
@@ -777,7 +782,7 @@ void ProgInstLog::create(int nthread) {
     }
   }
 
-  RaceDetector::the->sortRacyAccesses();
+  RaceDetector::the->sortRacyAccesses(racyEdges);
 }
 
 static const char* recNames[] = {
@@ -940,5 +945,14 @@ raw_ostream &InstLog::printRawRec(raw_ostream &o,
     o << " escape";
   return o;
 }
+
+llvm::raw_ostream &operator<< (llvm::raw_ostream &o, const RacyEdgeHalf &reh) {
+  return o << *reh.trunk << " " << reh.idx;
+}
+
+llvm::raw_ostream &operator<< (llvm::raw_ostream &o, const RacyEdge &re) {
+  return o << re.up << ", " << re.down;
+}
+
 
 } // namespace tern

@@ -1,4 +1,5 @@
 /* Author: Junfeng Yang (junfeng@cs.columbia.edu) */
+#include <list>
 #include "llvm/Module.h"
 #include "llvm/LLVMContext.h"
 #include "llvm/PassManager.h"
@@ -8,6 +9,7 @@
 #include "llvm/Support/IRReader.h"
 #include "llvm/Support/CommandLine.h"
 
+#include "util.h"
 #include "common/id-manager/IDTagger.h"
 #include "common/id-manager/IDManager.h"
 #include "common/instr/instrutil.h"
@@ -87,4 +89,10 @@ int main(int argc, char **argv) {
 
   ProgInstLog progLog;
   progLog.create(NThreads);
+
+  if(!progLog.racyEdges.empty()) {
+    outs() << "racy edges are:\n";
+    forall(list<RacyEdge>, ri, progLog.racyEdges)
+      outs() << *ri << "\n";
+  }
 }

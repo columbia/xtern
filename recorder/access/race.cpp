@@ -4,7 +4,7 @@
 #include "race.h"
 #include "util.h"
 
-//#define _DEBUG_RACEDETECTOR
+#define _DEBUG_RACEDETECTOR
 
 #ifdef _DEBUG_RACEDETECTOR
 #  define dprintf(fmt...) fprintf(stderr, fmt)
@@ -17,10 +17,10 @@ using namespace llvm;
 namespace tern {
 
 Access::Access(bool isWr, uint8_t d, const InstTrunk *c, unsigned index)
-  : isWrite(isWr), data(d), ts(c), idx(index) { }
+  : isWrite(isWr), data(d), ts(c), idx(index), racy(false) { }
 
 Access::Access(const Access &a)
-  : isWrite(a.isWrite), data(a.data), ts(a.ts), idx(a.idx) { }
+  : isWrite(a.isWrite), data(a.data), ts(a.ts), idx(a.idx), racy(false) { }
 
 raw_ostream &operator<<(raw_ostream &o, const Access &a) {
   return o << (a.isWrite?"write":"read") << " "
@@ -43,12 +43,14 @@ AccessHistory::~AccessHistory() {
       if(!(*j)->racy)
         delete *j;
     }
+    delete i->second;
   }
   forall(AccessMap, i, writes) {
     forall(AccessList, j, *(i->second)) {
       if(!(*j)->racy)
         delete *j;
     }
+    delete i->second;
   }
   forall(set<Access*>,  i, racyAccesses)
     delete *i;
@@ -66,10 +68,9 @@ void AccessHistory::removeAccesses(Access *a, AccessMap &accesses) {
 
   list<const InstTrunk*> toErase;
 
-  forall(AccessMap, i, accesses) {
+  forall(AccessMap, i, accesses)
     if(i->first->happensBefore(*a->ts))
       toErase.push_back(i->first);
-  }
 
   forall(list<const InstTrunk*>, i, toErase) {
     AccessMap::iterator ai = accesses.find(*i);
@@ -80,10 +81,9 @@ void AccessHistory::removeAccesses(Access *a, AccessMap &accesses) {
     errs() << "RACEDETECTOR: removing accesses for " << **i << "\n";
 #endif
 
-    forall(AccessList, j, *al) {
-      if((*j)->racy) // otherwise, this access is owned by @racyAccesses
+    forall(AccessList, j, *al)
+      if(!(*j)->racy) // otherwise, this access is owned by @racyAccesses
         delete *j;
-    }
     delete al;
   }
 }
@@ -185,6 +185,7 @@ void AccessHistory::appendAccess(Access *access) {
 
 /***/
 
+// FIXME: can use a range-based race detector if it is faster
 void RaceDetector::onMemoryAccess(bool isWrite, char *addr, uint8_t data,
                                   const InstTrunk *tr, unsigned idx) {
   AccessHistory *ah;
@@ -224,7 +225,7 @@ struct DInstHash {
   }
 };
 
-void RaceDetector::sortRacyAccesses() {
+void RaceDetector::sortRacyAccesses(list<RacyEdge>& racyEdges) {
 
   RaceSorter raceSorter;
 
@@ -232,11 +233,21 @@ void RaceDetector::sortRacyAccesses() {
     AccessHistory *ah = i->second;
     if(ah->racyAccesses.empty())
       continue;
-    forall(set<Access*>, j, ah->racyAccesses) {
+    // FIXME 1: get boundary accesses (the read or write access that
+    // immediate-dominate all racy accesses, and read node that
+    // post-immediate-dominate all racy accesses if no write node
+    // post-immediate-dominate all racy accesses
+    //
+    // FIXME 2: should split racy accesses into groups, where accesses
+    // within one group are concurrent at least with one other access in
+    // the group, but all accesses in one group must happen-before (or
+    // after) another.
+    forall(set<Access*>, j, ah->racyAccesses)
       raceSorter.addNodeFromAccess(*j);
-    }
   }
+
   raceSorter.sortNodes();
+  raceSorter.getRacyEdges(racyEdges);
 }
 
 void RaceDetector::dumpRacyAccesses() {
@@ -291,7 +302,6 @@ void RaceSorter::addNode(const InstTrunk *ts, unsigned idx, bool isWrite,
   INMap::iterator ini = inMap->find(idx);
   if(ini != inMap->end())
     return;
-
   Node *node = new Node(ts, idx, isWrite, addr, size, data);
   (*inMap)[idx] = node;
 
@@ -314,27 +324,43 @@ void RaceSorter::addNode(const InstTrunk *ts, unsigned idx, bool isWrite,
   nodeSet->insert(node);
 }
 
+void RaceSorter::getRacyEdges(list<RacyEdge>& racyEdges) {
+  racyEdges.clear();
+
+  forall(TINMap, tini, tinMap) {
+    forall(INMap, ini, *tini->second) {
+      Node *from = ini->second;
+      forall(NodeSet, ni, from->outEdges) {
+        Node *to = *ni;
+        if(from->ts == to->ts || from->ts->happensBefore(*to->ts))
+          continue;
+        racyEdges.push_back(RacyEdge(from->ts, from->idx, to->ts, to->idx));
+      }
+    }
+  }
+}
+
 void RaceSorter::sortNodes() {
   // key observation: most racy writes are unique (reads may not be)
   //
   // data structure
   // ts -> ts, idx -> Node {ts, idx, isWrite, addr, size, data}
-
+  //
   // create edges based on turn
   //     ts1, idx1 -> ts2, idx2 if ts1 < ts2 or ts1 = ts2 && idx1 < idx2
-
+  //
   // merge nodes based on unique writes
   //     for each address range
   //        for each write touching this address range
   //           if no other write of same value
   //             merge read of addr of this unique value with write node
   //               [node has a list of merged reads]
-
+  //
   // Note: doing it at byte granularity may miss things.  think of
   // two-byte writes x1 x2; x1 x3; x4 x2; x4 x3.  each write is unique at
   // two-byte granularity, but not unique at byte granularity.  Thus, we
   // do it at instruction granularity
-
+  //
   // detect whether there are still concurrent writes
   //
   //   find path with maximum number of writes for a common byte range
@@ -348,14 +374,13 @@ void RaceSorter::sortNodes() {
   //   repeat with next write
   //   if can't find a position, backtrack
   //   if can't match reads to writes, backtrack
-
+  //
   //   Note: must also check boundary conditions (the value at addr before
   //   all these racy accesses, and value of addr after all racy accesses
   //   must match with the selected write order)
-
+  //
   // result: partial order of read/write instructions (total order for
   // instructions that access a common range of bytes)
-
 
   // add happens-before edges based on InstTrunk (TurnRange)
   forall(TINMap, tini1, tinMap) {
@@ -408,33 +433,57 @@ void RaceSorter::sortNodes() {
   errs() << "\n";
 #endif
 
+  map<Range, NodeSet, LTRange> crnMap; // range -> concurrent writes
   forall(RNMap, rni, rnMap) {
-    list<Node*> path;
-    longestPath(*rni->second, topOrder, path);
-
     NodeSet orderedWrites, allWrites, concurrentWrites;
-    forall(list<Node*>, ni, path) {
-      if((*ni)->isWrite)
-        orderedWrites.insert(*ni);
-    }
+
+    // find all writes from the set of accesses to the current range
     forall(NodeSet, ni, *rni->second) {
       if((*ni)->isWrite)
         allWrites.insert(*ni);
     }
+
+    // find writes that are ordered along the longest path
+    list<Node*> path;
+    longestPath(allWrites, topOrder, path);
+    forall(list<Node*>, ni, path) {
+      // need to check if the write is in @allWrites as well, since @path
+      // may have writes on other ranges
+      if((*ni)->isWrite && allWrites.find(*ni)!=allWrites.end())
+        orderedWrites.insert(*ni);
+    }
+
+    // find concurrent writes
     set_difference(allWrites.begin(), allWrites.end(),
                    orderedWrites.begin(), orderedWrites.end(),
                    insert_iterator<NodeSet>(concurrentWrites,
                                             concurrentWrites.begin()));
-    if(concurrentWrites.size() > 0) {
-      errs() << "concurrent writes for " << (void*) rni->first.first <<": ";
-      forall(NodeSet, ni, concurrentWrites) {
-        errs() << *ni << ", ";
-      }
-      assert(0 && "some writes are still concurrent; need slow search!");
-    }
+    if(concurrentWrites.size() > 0)
+      crnMap[rni->first] = concurrentWrites;
   }
+
+  // slow path: search where to put these concurrent writes
+  for(map<Range, NodeSet, LTRange>::iterator crni=crnMap.begin();
+      crni!=crnMap.end(); ++crni) {
+    errs() << "concurrent writes for " << (void*)crni->first.first << ": ";
+    forall(NodeSet, ni, crni->second)
+      errs() << **ni << ", ";
+    errs() << "\n";
+  }
+
+#if 0
+  errs() << "number all writes: " << allWrites.size() << ", "
+         << "concurrent writes for " << (void*) rni->first.first <<": ";
+  forall(NodeSet, ni, concurrentWrites)
+    errs() << *ni << ", ";
+  assert(0 && "some writes are still concurrent; need slow search!");
+#endif
+
+  // prune subsumed edges
+  pruneEdges();
 }
 
+/// longest path in an unweighted DAG
 void RaceSorter::longestPath(const NodeSet& NS, const list<Node*>& topOrder,
                              list<Node*>& path) {
   typedef tr1::unordered_map<Node*, pair<unsigned, Node*> > PathMap;
@@ -457,7 +506,7 @@ void RaceSorter::longestPath(const NodeSet& NS, const list<Node*>& topOrder,
         maxPrev = prev;
       }
     }
-    if(node->isWrite && NS.find(node) != NS.end())
+    if(NS.find(node) != NS.end())
       ++ max;
     pathTo[node].first  = max;
     pathTo[node].second = maxPrev;
@@ -478,13 +527,12 @@ void RaceSorter::longestPath(const NodeSet& NS, const list<Node*>& topOrder,
 
 void RaceSorter::addEdgesForUniqueWrites(const Range &range,
                                          const NodeSet &NS) {
-  typedef tr1::unordered_map<uint64_t, Node*>        DataMap;
-  typedef tr1::unordered_map<uint64_t, set<Node*> >  DataReadMap;
+  typedef tr1::unordered_map<uint64_t, Node*>    DataWriteMap;
+  typedef tr1::unordered_map<uint64_t, NodeSet>  DataReadMap;
 
   // discover writes with unique values
-  NodeSet     writes;
-  DataMap     dataMap;
-  DataReadMap dataReadMap;
+  DataWriteMap dataWriteMap;
+  DataReadMap  dataReadMap;
   forall(NodeSet, ni, NS) {
     Node *node = *ni;
     uint64_t data = node->getDataInRange(range);
@@ -493,20 +541,28 @@ void RaceSorter::addEdgesForUniqueWrites(const Range &range,
       continue;
     }
     // write
-    DataMap::iterator di = dataMap.find(data);
-    if(di == dataMap.end())
-      dataMap[data] = node;
+    DataWriteMap::iterator di = dataWriteMap.find(data);
+    if(di == dataWriteMap.end())
+      dataWriteMap[data] = node;
     else
       di->second = NULL; // not unique
-    writes.insert(node);
   }
 
+  // collect all writes, used in matchReads()
+  NodeSet writes;
+  forall(NodeSet, ni, NS)
+    if((*ni)->isWrite)
+      writes.insert(*ni);
+
   // match unique writes with corresponding reads
-  forall(DataMap, di, dataMap) {
+  forall(DataWriteMap, di, dataWriteMap) {
     if(!di->second)
       continue;
     // unique write
     Node *write = di->second;
+#ifdef _DEBUG_RACEDETECTOR
+    errs() << "unique write " << write->data << "\n";
+#endif
     DataReadMap::iterator dri = dataReadMap.find(di->first);
     if(dri == dataReadMap.end())
       continue;
@@ -518,6 +574,9 @@ void RaceSorter::addEdgesForUniqueWrites(const Range &range,
 }
 
 bool RaceSorter::topSort(list<Node*>& topOrder) {
+
+  topOrder.clear();
+
   std::list<Node*> roots;
   forall(TINMap, tini, tinMap) {
     forall(INMap, ini, *tini->second) {
@@ -567,37 +626,18 @@ bool RaceSorter::topSortHelper(Node *node, std::list<Node*>& topOrder,
 
 RaceSorter::~RaceSorter() {
   forall(TINMap, tini, tinMap) {
-    forall(INMap, ini, *tini->second) {
+    forall(INMap, ini, *tini->second)
       delete ini->second;
-    }
+    delete tini->second;
   }
-  forall(RNMap, rni, rnMap) {
+  forall(RNMap, rni, rnMap)
     delete rni->second;
-  }
 }
 
 void RaceSorter::dump() {
   forall(TINMap, tini, tinMap) {
-    forall(INMap, ini, *tini->second) {
-      Node *node = ini->second;
-      errs() << "Node " << node << ": " << *node->ts << ", "
-             << node->idx << ", " << (node->isWrite?"write":"read") << ", "
-             << (void*)node->addr << ", " << node->data << "\n";
-      if(!node->inEdges.empty()) {
-        errs() << "  in :";
-        forall(NodeSet, ni, node->inEdges) {
-          errs() << " " << *ni;
-        }
-        errs() << "\n";
-      }
-      if(!node->outEdges.empty()) {
-        errs() << "  out:";
-        forall(NodeSet, ni, node->outEdges) {
-          errs() << " " << *ni << " ";
-        }
-        errs() << "\n";
-      }
-    }
+    forall(INMap, ini, *tini->second)
+      errs() << *ini->second;
   }
 }
 
@@ -617,17 +657,26 @@ void RaceSorter::matchReads(Node *write, const NodeSet &reads,
            << " with read " << read << "\n";
 #endif
 
-    // add edge from this write to @read
+    // add @write -> @read
     write->addOutEdge(read);
     write->mergedReads.insert(read);
 
-    // add edges from writes that happen-before @read to this write
+    // if @awrite -> @read, add @awrite -> @write
     forall(NodeSet, ni, writes) {
       Node *awrite = *ni;
       if(write == awrite) // no self cycle
         continue;
-      if(reachable(awrite, read))
+      if(read->validInEdge(awrite))
         write->addInEdge(awrite);
+    }
+
+    // if @write -> @awrite, add @read -> @awrite
+    forall(NodeSet, ni, writes) {
+      Node *awrite = *ni;
+      if(write == awrite) // no self cycle
+        continue;
+      if(write->validOutEdge(awrite))
+        read->addOutEdge(awrite);
     }
   }
 }
@@ -653,6 +702,71 @@ bool RaceSorter::reachable(Node *from, Node *to) {
   return false;
 }
 
+// we only look at InstTrunk pairs, thus may still leave redundant edges
+// in the happens-before graph.  For instance, consider edges:
+//
+//   (ts1, 5) -> (ts2, 10), (ts2, 10) -> (ts3, 20), and (ts1, 4) -> (ts3, 21)
+//
+// the third edge is redundant, but our algorithm wouldn't prune it
+//
+// FIXME: use longestPath(), and prune edges not along the longest path
+void RaceSorter::pruneEdges() {
+  typedef pair<Node*, Node*> Edge;
+  typedef map<unsigned, Edge> INNMap;
+  typedef tr1::unordered_map<const InstTrunk*, INNMap> TINNMap;
+
+  forall(TINMap, tini, tinMap) {
+    // @earliest tracks the earliest indexes in other InstTrunks that
+    // happen-after nodes in current InstTrunk pointed to by @tini->second
+    TINNMap earliest;
+
+    forall(INMap, ini, *tini->second) {
+      Node *from = ini->second;
+
+      // self pruning of edges from the same node
+      tr1::unordered_map<const InstTrunk*, Node*> nodeEarliest;
+      list<Node*> toErase;
+      forall(NodeSet, ni, from->outEdges) {
+        Node *to = *ni;
+        tr1::unordered_map<const InstTrunk*, Node*>::iterator ei;
+        ei = nodeEarliest.find(to->ts);
+        if(ei == nodeEarliest.end())
+          nodeEarliest[to->ts] = to;
+        else {
+          Node *oldto = ei->second;
+          if(oldto->idx < to->idx)
+            toErase.push_back(to);
+          else
+            toErase.push_back(oldto);
+        }
+      }
+      forall(list<Node*>, ni, toErase)
+        from->removeOutEdge(*ni);
+
+      // pruning old edges from the same InstTrunk
+      forall(NodeSet, ni, from->outEdges) {
+        Node *to = *ni;
+        if(from->ts->happensBefore(*to->ts) || from->ts == to->ts)
+          continue;
+        // self pruning
+        TINNMap::iterator tinni = earliest.find(to->ts);
+        INNMap &innMap = earliest[to->ts];
+        INNMap::iterator inni = innMap.lower_bound(to->idx);
+        while(inni != innMap.end()) {
+          // remove edges that from-to subsumes
+          INNMap::iterator prv = inni ++;
+          Edge &edge = prv->second;
+          Node *oldfrom = edge.first;
+          Node *oldto   = edge.second;
+          oldfrom->removeOutEdge(oldto);
+          innMap.erase(prv);
+        }
+        innMap[to->idx] = Edge(from, to);
+      }
+    }
+  }
+}
+
 void RaceSorter::cycleCheck() {
   list<Node*> topOrder;
   if(topSort(topOrder)) {
@@ -666,8 +780,16 @@ void RaceSorter::cycleCheck() {
 int64_t RaceSorter::Node::getDataInRange(const Range& range) const{
   unsigned start = range.first - addr;
   unsigned end   = range.first + range.second - addr;
-  uint64_t data  = data & (1<<end - 1<<start);
-  return data;
+  return data & ((1ULL<<(end*8)) - (1ULL<<(start*8)));
+}
+
+bool RaceSorter::Node::validInEdge(Node *from) {
+  assert(this != from);
+  return inEdges.find(from) != inEdges.end();
+}
+
+bool RaceSorter::Node::validOutEdge(Node *to) {
+  return to->validInEdge(this);
 }
 
 void RaceSorter::Node::addInEdge(Node *from) {
@@ -683,6 +805,21 @@ void RaceSorter::Node::addOutEdge(Node *to) {
   to->addInEdge(this);
 }
 
+void RaceSorter::Node::removeInEdge(Node *from) {
+#ifdef _DEBUG_RACEDETECTOR
+  errs() << "RACESORTER: removing edge " << from << " to " << this << "\n";
+#endif
+  assert(this != from);
+  assert(this->inEdges.find(from)  != this->inEdges.end());
+  assert(from->outEdges.find(this) != from->outEdges.end());
+  this->inEdges.erase(from);
+  from->outEdges.erase(this);
+}
+
+void RaceSorter::Node::removeOutEdge(Node *to) {
+  to->removeInEdge(this);
+}
+
 RaceSorter::Node::Node(const InstTrunk *ts, unsigned idx, bool isWrite,
                        char *addr, unsigned size, uint64_t data) {
   this->ts      = ts;
@@ -694,5 +831,27 @@ RaceSorter::Node::Node(const InstTrunk *ts, unsigned idx, bool isWrite,
 }
 
 RaceSorter::Node::~Node() { }
+
+raw_ostream &operator<< (raw_ostream &o, const RaceSorter::Node &node) {
+  o << "Node " << &node << ": " << *node.ts << ", "
+    << node.idx << ", " << (node.isWrite?"write":"read") << ", "
+    << (void*)node.addr << ", " << node.data << ", "
+    << node.size << " bytes\n";
+  if(!node.inEdges.empty()) {
+    o << "  in :";
+    forall(RaceSorter::NodeSet, ni, node.inEdges) {
+      o << " " << *ni;
+    }
+    o << "\n";
+  }
+  if(!node.outEdges.empty()) {
+    o << "  out:";
+    forall(RaceSorter::NodeSet, ni, node.outEdges) {
+      o << " " << *ni << " ";
+    }
+    o << "\n";
+  }
+  return o;
+}
 
 }

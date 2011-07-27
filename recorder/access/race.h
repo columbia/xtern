@@ -77,9 +77,9 @@ struct RaceDetector {
   void onMemoryAccess(bool isWrite, char *addr, uint8_t data,
                       const InstTrunk *tr, unsigned idx);
   unsigned numRacyAccesses();
-  void sortRacyAccesses();
+  void sortRacyAccesses(std::list<RacyEdge>& racyEdges);
 
-  void dumpRacyAccesses();
+  void dumpRacyAccesses(); /// for debugging
 
   /// accesses to all memory at byte granularity
   AccessMap  accesses;
@@ -90,17 +90,44 @@ struct RaceDetector {
 
 
 struct RaceSorter {
-  struct Edge;
   struct Node;
+  struct LTNode;
   struct HRange;
   struct LTRange;
   struct LTEdge;
 
-  typedef std::set<Node*>                                  NodeSet;
+  typedef std::set<Node*, LTNode>                            NodeSet;
   typedef std::pair<char*, unsigned>                         Range;
   typedef std::map<Range, NodeSet*, LTRange>                 RNMap;
   typedef std::map<unsigned, Node*>                          INMap;
   typedef std::tr1::unordered_map<const InstTrunk*, INMap*> TINMap;
+
+  struct LTInstTrunk {
+    bool operator()(const InstTrunk *tr1, const InstTrunk *tr2) {
+      return tr1->beginTurn < tr2->beginTurn;
+    }
+  };
+
+  struct LTNode {
+    bool operator()(const Node *n1, const Node *n2) const {
+      return n1->ts->beginTurn < n2->ts->beginTurn
+        || (n1->ts->beginTurn == n2->ts->beginTurn
+            && n1->idx < n2->idx);
+    }
+  };
+
+  struct HRange{
+    size_t operator()(const Range& range) const {
+      return std::tr1::hash<void*>()(range.first)
+        ^ std::tr1::hash<unsigned>()(range.second);
+    }
+  };
+
+  struct LTRange {
+    bool operator()(const Range &r1, const Range &r2) const {
+      return r1.first < r2.first;
+    }
+  };
 
   struct Node {
     const InstTrunk  *ts;
@@ -112,32 +139,17 @@ struct RaceSorter {
     NodeSet          mergedReads; // only valid if this inst is a write
     NodeSet          inEdges, outEdges;
 
+    bool validInEdge(Node *from);
+    bool validOutEdge(Node *to);
     void addInEdge(Node *from);
     void addOutEdge(Node *to);
+    void removeInEdge(Node *from);
+    void removeOutEdge(Node *to);
     int64_t getDataInRange(const Range& range) const;
 
     Node(const InstTrunk *ts, unsigned idx, bool isWrite,
          char *addr, unsigned size, uint64_t data);
     ~Node();
-  };
-
-  struct LTInstTrunk {
-    bool operator()(const InstTrunk *tr1, const InstTrunk *tr2) {
-      return tr1->beginTurn < tr2->beginTurn;
-    }
-  };
-
-  struct HRange{
-    size_t operator()(const Range& range) {
-      return std::tr1::hash<void*>()(range.first)
-        ^ std::tr1::hash<unsigned>()(range.second);
-    }
-  };
-
-  struct LTRange {
-    bool operator()(const Range &r1, const Range &r2) {
-      return r1.first < r2.first;
-    }
   };
 
   TINMap    tinMap; /// InstTrunk* -> index -> Node map
@@ -155,8 +167,10 @@ struct RaceSorter {
                    std::list<Node*>& path);
   void matchReads(Node *write, const NodeSet &reads, const NodeSet &writes);
   bool reachable(Node *from, Node *to);
+  void pruneEdges();
 
   void sortNodes();
+  void getRacyEdges(std::list<RacyEdge>& racyEdges);
 
   void dump();
   void cycleCheck();
@@ -164,6 +178,7 @@ struct RaceSorter {
   ~RaceSorter();
 };
 
+llvm::raw_ostream &operator<< (llvm::raw_ostream &o, const RaceSorter::Node &n);
 
 }
 

@@ -1,6 +1,10 @@
+#include <set>
+#include <list>
+#include <algorithm>
 #include "gtest/gtest.h"
 #include "recorder/access/race.h"
 
+using namespace std;
 using namespace tern;
 
 TEST(racedetector, simple) {
@@ -100,4 +104,245 @@ TEST(racedetector, simple) {
   nracy = raceDetector->numRacyAccesses();
   EXPECT_EQ(3U, nracy);
   delete raceDetector;
+}
+
+struct LTHalf {
+  bool operator()(const RacyEdgeHalf &e1, const RacyEdgeHalf &e2) {
+    return e1.trunk->beginTurn < e2.trunk->beginTurn
+      || (e1.trunk->beginTurn == e2.trunk->beginTurn
+          && e1.idx < e2.idx);
+  }
+};
+struct LTEdge {
+  bool operator()(const RacyEdge &e1, const RacyEdge &e2) {
+    LTHalf lthalf;
+    return lthalf(e1.up, e2.up)
+      || (!lthalf(e2.up, e1.up) && lthalf(e1.down, e2.down));
+  }
+};
+
+void sortEdges(list<RacyEdge>& edges) {
+  set<RacyEdge, LTEdge> sorted;
+
+  for(list<RacyEdge>::iterator ri=edges.begin(); ri!=edges.end(); ++ri)
+    sorted.insert(*ri);
+
+  edges.clear();
+  for(set<RacyEdge, LTEdge>::iterator ri=sorted.begin();
+      ri!=sorted.end(); ++ri)
+    edges.push_back(*ri);
+}
+
+
+TEST(racesorter, simple) {
+  RacyEdge edge;
+  list<RacyEdge> racyEdges;
+  set<RacyEdge, LTEdge> sortedEdges;
+
+  RaceSorter *raceSorter;
+  InstTrunk tr1, tr2, tr3, tr4;
+  unsigned idx1 = 100, idx2 = 200, idx3 = 300;
+  char *addr1 = (char*)0xdeadbeef, *addr2 = (char*)0xbeefdead;
+  uint64_t data1 = 12345, data2 = 67890;
+  unsigned size1 = 4, size2 = 8;
+
+  //  tr1  || tr2
+  //  tr1  <  tr3
+  //  tr1  || tr4
+  //  tr2  <  tr3
+  //  tr2  || tr4
+  //  tr3  || tr4
+  tr1.beginTurn = 0;
+  tr1.endTurn   = 3;
+  tr2.beginTurn = 1;
+  tr2.endTurn   = 4;
+  tr3.beginTurn = 4;
+  tr3.endTurn   = 5;
+  tr4.beginTurn = 2;
+  tr4.endTurn   = 5;
+
+  // one edge
+  // store addr1 data1 \.
+  //                    \ load addr1 = data1
+  raceSorter = new RaceSorter;
+  raceSorter->addNode(&tr1, idx1,  true, addr1, size1, data1);
+  raceSorter->addNode(&tr2, idx2, false, addr1, size1, data1);
+  raceSorter->sortNodes();
+  raceSorter->getRacyEdges(racyEdges);
+  sortEdges(racyEdges);
+  EXPECT_EQ(1U, racyEdges.size());
+  edge = racyEdges.front();
+  EXPECT_EQ(&tr1, edge.up.trunk);
+  EXPECT_EQ(idx1, edge.up.idx);
+  EXPECT_EQ(&tr2, edge.down.trunk);
+  EXPECT_EQ(idx2, edge.down.idx);
+  delete raceSorter;
+
+  // one edge
+  // store addr1 data1 \.
+  //                    \ load addr1 = data1 \ (hb-edge from InstTrunk)
+  //                                          \ store addr1 data2
+  raceSorter = new RaceSorter;
+  raceSorter->addNode(&tr1, idx1,  true, addr1, size1, data1);
+  raceSorter->addNode(&tr2, idx2, false, addr1, size1, data1);
+  raceSorter->addNode(&tr3, idx3,  true, addr1, size1, data2);
+  raceSorter->sortNodes();
+  raceSorter->getRacyEdges(racyEdges);
+  sortEdges(racyEdges);
+  EXPECT_EQ(1U, racyEdges.size());
+  edge = racyEdges.front();
+  EXPECT_EQ(&tr1, edge.up.trunk);
+  EXPECT_EQ(idx1, edge.up.idx);
+  EXPECT_EQ(&tr2, edge.down.trunk);
+  EXPECT_EQ(idx2, edge.down.idx);
+  delete raceSorter;
+
+  // two edges, cross
+  // store addr1 data1   \/ store addr2 data2
+  // load  addr2 = data1 /\ load  addr1 data1
+  raceSorter = new RaceSorter;
+  raceSorter->addNode(&tr1, idx1, true, addr1, size1, data1);
+  raceSorter->addNode(&tr1, idx1+1, false, addr2, size2, data2);
+  raceSorter->addNode(&tr2, idx2-1, true, addr2, size2, data2);
+  raceSorter->addNode(&tr2, idx2, false, addr1, size1, data1);
+  raceSorter->sortNodes();
+  raceSorter->getRacyEdges(racyEdges);
+  sortEdges(racyEdges);
+  EXPECT_EQ(2U, racyEdges.size());
+  edge = racyEdges.front();
+  EXPECT_EQ(&tr1, edge.up.trunk);
+  EXPECT_EQ(idx1, edge.up.idx);
+  EXPECT_EQ(&tr2, edge.down.trunk);
+  EXPECT_EQ(idx2, edge.down.idx);
+  edge = racyEdges.back();
+  EXPECT_EQ(&tr2, edge.up.trunk);
+  EXPECT_EQ(idx2-1, edge.up.idx);
+  EXPECT_EQ(&tr1, edge.down.trunk);
+  EXPECT_EQ(idx1+1, edge.down.idx);
+  delete raceSorter;
+
+  // two edges
+  // store addr1 data1 \.
+  //                     load addr1 = data1
+  // store addr1 data2 /
+  raceSorter = new RaceSorter;
+  raceSorter->addNode(&tr1, idx1,  true, addr1, size1, data1);
+  raceSorter->addNode(&tr1, idx3,  true, addr1, size1, data2);
+  raceSorter->addNode(&tr2, idx2, false, addr1, size1, data1);
+  raceSorter->sortNodes();
+  raceSorter->getRacyEdges(racyEdges);
+  sortEdges(racyEdges);
+  EXPECT_EQ(2U, racyEdges.size());
+  edge = racyEdges.front();
+  EXPECT_EQ(&tr1, edge.up.trunk);
+  EXPECT_EQ(idx1, edge.up.idx);
+  EXPECT_EQ(&tr2, edge.down.trunk);
+  EXPECT_EQ(idx2, edge.down.idx);
+  edge = racyEdges.back();
+  EXPECT_EQ(&tr2, edge.up.trunk);
+  EXPECT_EQ(idx2, edge.up.idx);
+  EXPECT_EQ(&tr1, edge.down.trunk);
+  EXPECT_EQ(idx3, edge.down.idx);
+  delete raceSorter;
+
+  // three edges
+  // store addr1 data1 \.
+  //                   / load addr1 = data1
+  // store addr1 data2
+  //                   \load addr1 = data2
+  raceSorter = new RaceSorter;
+  raceSorter->addNode(&tr1, idx1-1, true, addr1, size1, data1);
+  raceSorter->addNode(&tr1, idx1,   true, addr1, size1, data2);
+  raceSorter->addNode(&tr2, idx2,   false, addr1, size1, data1);
+  raceSorter->addNode(&tr2, idx2+1, false, addr1, size1, data2);
+  raceSorter->sortNodes();
+  raceSorter->getRacyEdges(racyEdges);
+  sortEdges(racyEdges);
+  EXPECT_EQ(3U, racyEdges.size());
+  edge = racyEdges.front();
+  EXPECT_EQ(&tr1, edge.up.trunk);
+  EXPECT_EQ(idx1-1, edge.up.idx);
+  EXPECT_EQ(&tr2, edge.down.trunk);
+  EXPECT_EQ(idx2, edge.down.idx);
+  racyEdges.pop_front();
+  edge = racyEdges.front();
+  EXPECT_EQ(&tr1, edge.up.trunk);
+  EXPECT_EQ(idx1, edge.up.idx);
+  EXPECT_EQ(&tr2, edge.down.trunk);
+  EXPECT_EQ(idx2+1, edge.down.idx);
+  racyEdges.pop_front();
+  edge = racyEdges.front();
+  EXPECT_EQ(&tr2, edge.up.trunk);
+  EXPECT_EQ(idx2, edge.up.idx);
+  EXPECT_EQ(&tr1, edge.down.trunk);
+  EXPECT_EQ(idx1, edge.down.idx);
+  delete raceSorter;
+
+  // one edge, subsume
+  // store addr1 data2
+  // store addr1 data1 \.
+  //                    \ load addr1 = data1
+  //                      load addr1 = data1
+  raceSorter = new RaceSorter;
+  raceSorter->addNode(&tr1, idx1-1, true, addr1, size1, data2);
+  raceSorter->addNode(&tr1, idx1,   true, addr1, size1, data1);
+  raceSorter->addNode(&tr2, idx2,   false, addr1, size1, data1);
+  raceSorter->addNode(&tr2, idx2+1, false, addr1, size1, data1);
+  raceSorter->sortNodes();
+  raceSorter->getRacyEdges(racyEdges);
+  sortEdges(racyEdges);
+  EXPECT_EQ(1U, racyEdges.size());
+  edge = racyEdges.front();
+  EXPECT_EQ(&tr1, edge.up.trunk);
+  EXPECT_EQ(idx1, edge.up.idx);
+  EXPECT_EQ(&tr2, edge.down.trunk);
+  EXPECT_EQ(idx2, edge.down.idx);
+  delete raceSorter;
+
+  // one edge, subsume
+  // store addr1 data1
+  // store addr2 data2 \.
+  //                    \ load addr2 = data2
+  //                      load addr1 = data1
+  raceSorter = new RaceSorter;
+  raceSorter->addNode(&tr1, idx1-1, true, addr1, size1, data1);
+  raceSorter->addNode(&tr1, idx1,   true, addr2, size2, data2);
+  raceSorter->addNode(&tr2, idx2,   false, addr2, size2, data2);
+  raceSorter->addNode(&tr2, idx2+1, false, addr1, size1, data1);
+  raceSorter->sortNodes();
+  raceSorter->getRacyEdges(racyEdges);
+  sortEdges(racyEdges);
+  EXPECT_EQ(1U, racyEdges.size());
+  edge = racyEdges.front();
+  EXPECT_EQ(&tr1, edge.up.trunk);
+  EXPECT_EQ(idx1, edge.up.idx);
+  EXPECT_EQ(&tr2, edge.down.trunk);
+  EXPECT_EQ(idx2, edge.down.idx);
+  delete raceSorter;
+
+#if 0
+  // one edge, concurrent write
+  // store addr1 data1 \.
+  //                    \ load addr1 = data1 \.
+  //                                          \ store addr1 data2
+  raceSorter = new RaceSorter;
+  raceSorter->addNode(&tr1, idx1,  true, addr1, size1, data1);
+  raceSorter->addNode(&tr2, idx2, false, addr1, size1, data1);
+  raceSorter->addNode(&tr4, idx3,  true, addr1, size1, data2);
+  raceSorter->sortNodes();
+  raceSorter->getRacyEdges(racyEdges);
+  sortEdges(racyEdges);
+  EXPECT_EQ(2U, racyEdges.size());
+  edge = racyEdges.front();
+  EXPECT_EQ(&tr1, edge.up.trunk);
+  EXPECT_EQ(idx1, edge.up.idx);
+  EXPECT_EQ(&tr2, edge.down.trunk);
+  EXPECT_EQ(idx2, edge.down.idx);
+  edge = racyEdges.back();
+  EXPECT_EQ(&tr2, edge.up.trunk);
+  EXPECT_EQ(idx2, edge.up.idx);
+  EXPECT_EQ(&tr4, edge.down.trunk);
+  EXPECT_EQ(idx3, edge.down.idx);
+  delete raceSorter;
+#endif
 }
