@@ -434,6 +434,7 @@ void RaceSorter::sortNodes() {
 #endif
 
   map<Range, NodeSet, LTRange> crnMap; // range -> concurrent writes
+  map<Range, list<Node*>, LTRange> longestPaths; // range -> longest path
   forall(RNMap, rni, rnMap) {
     NodeSet orderedWrites, allWrites, concurrentWrites;
 
@@ -444,9 +445,8 @@ void RaceSorter::sortNodes() {
     }
 
     // find writes that are ordered along the longest path
-    list<Node*> path;
-    longestPath(allWrites, topOrder, path);
-    forall(list<Node*>, ni, path) {
+    longestPath(allWrites, topOrder, longestPaths[rni->first]);
+    forall(list<Node*>, ni, longestPaths[rni->first]) {
       // need to check if the write is in @allWrites as well, since @path
       // may have writes on other ranges
       if((*ni)->isWrite && allWrites.find(*ni)!=allWrites.end())
@@ -463,6 +463,10 @@ void RaceSorter::sortNodes() {
   }
 
   // slow path: search where to put these concurrent writes
+  if(!crnMap.empty())
+    search(crnMap, longestPaths);
+
+#if 0
   for(map<Range, NodeSet, LTRange>::iterator crni=crnMap.begin();
       crni!=crnMap.end(); ++crni) {
     errs() << "concurrent writes for " << (void*)crni->first.first << ": ";
@@ -471,7 +475,6 @@ void RaceSorter::sortNodes() {
     errs() << "\n";
   }
 
-#if 0
   errs() << "number all writes: " << allWrites.size() << ", "
          << "concurrent writes for " << (void*) rni->first.first <<": ";
   forall(NodeSet, ni, concurrentWrites)
@@ -479,8 +482,92 @@ void RaceSorter::sortNodes() {
   assert(0 && "some writes are still concurrent; need slow search!");
 #endif
 
+  // find positions for read
+
   // prune subsumed edges
   pruneEdges();
+}
+
+bool RaceSorter::search(map<Range, NodeSet, LTRange> &crnMap,
+                        map<Range, list<Node*>, LTRange> &longestPaths) {
+
+  if(!crnMap.empty() == 0) // all concurrent writes are resolved
+    return true;
+
+  map<Range, NodeSet, LTRange>::iterator crni=crnMap.begin();
+
+  const Range &range = crni->first;
+  list<Node*> &path = longestPaths[range];
+  NodeSet &concurrentWrites = crni->second;
+  Node *write = *concurrentWrites.begin();
+
+  // find a position for write in path
+  list<list<Node*>::iterator> concurrent;
+  forall(list<Node*>, ni, path)
+    if(!reachable(*ni, write)
+       && !reachable(write, *ni))
+      concurrent.push_back(ni);
+
+  for(list<list<Node*>::iterator>::iterator ni = concurrent.begin();
+      ni != concurrent.end(); ++ni) {
+    for(int i=0; i < 2; ++i) {
+
+      Node *cur_write, *prv_write;
+      list<Node*>::iterator prv, cur;
+      cur = *ni;;
+
+      if(i == 1)
+        ++ cur;
+
+      cur_write = *cur;
+
+      prv_write = NULL;
+      prv = cur;
+      if(prv != path.begin()) {
+        -- prv;
+        prv_write = *prv;
+      }
+
+      // find position to insert write to longest path. add edge, remove
+      // write from concurrentWrites
+      path.insert(*ni, write);
+      if(prv_write) {
+        prv_write->addOutEdge(write);
+        forall(NodeSet, ni, prv_write->matchingReads) {
+          // add outEdges for matching reads of prv_write
+          Node *read = *ni;
+          read->addOutEdge(write);
+        }
+      }
+      cur_write->addInEdge(write);
+
+      concurrentWrites.erase(concurrentWrites.begin());
+      // if range has no writes, remove range from crnMap
+      if(concurrentWrites.empty())
+        crnMap.erase(crni);
+
+      list<Node*> topOrder;
+      bool hasCycle = topSort(topOrder);
+      if(!hasCycle) {
+        // search position for next concurrent write
+        if(search(crnMap, longestPaths))
+          return true;
+      }
+
+      //  backtrack.  insert write back to concurrentWrites, remove edge,
+      //  remove write from path
+      crnMap[range].insert(write);
+      cur_write->removeInEdge(write);
+      if(prv_write) {
+        prv_write->removeOutEdge(write);
+        forall(NodeSet, ni, prv_write->matchingReads) {
+          Node *read = *ni;
+          read->removeOutEdge(write);
+        }
+      }
+    }
+  }
+  return false;
 }
 
 /// longest path in an unweighted DAG
@@ -659,7 +746,7 @@ void RaceSorter::matchReads(Node *write, const NodeSet &reads,
 
     // add @write -> @read
     write->addOutEdge(read);
-    write->mergedReads.insert(read);
+    write->addMatchingRead(read);
 
     // if @awrite -> @read, add @awrite -> @write
     forall(NodeSet, ni, writes) {
@@ -818,6 +905,15 @@ void RaceSorter::Node::removeInEdge(Node *from) {
 
 void RaceSorter::Node::removeOutEdge(Node *to) {
   to->removeInEdge(this);
+}
+
+void RaceSorter::Node::addMatchingWrite(Node *write) {
+  write->addMatchingRead(this);
+}
+
+void RaceSorter::Node::addMatchingRead(Node *read) {
+  this->matchingReads.insert(read);
+  read->matchingWrites.insert(this);
 }
 
 RaceSorter::Node::Node(const InstTrunk *ts, unsigned idx, bool isWrite,

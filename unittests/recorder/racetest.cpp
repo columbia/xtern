@@ -320,11 +320,10 @@ TEST(racesorter, simple) {
   EXPECT_EQ(idx2, edge.down.idx);
   delete raceSorter;
 
-#if 0
   // one edge, concurrent write
+  //                    /-------------------- store addr1 data2
   // store addr1 data1 \.
-  //                    \ load addr1 = data1 \.
-  //                                          \ store addr1 data2
+  //                    \ load addr1 = data1
   raceSorter = new RaceSorter;
   raceSorter->addNode(&tr1, idx1,  true, addr1, size1, data1);
   raceSorter->addNode(&tr2, idx2, false, addr1, size1, data1);
@@ -339,10 +338,9 @@ TEST(racesorter, simple) {
   EXPECT_EQ(&tr2, edge.down.trunk);
   EXPECT_EQ(idx2, edge.down.idx);
   edge = racyEdges.back();
-  EXPECT_EQ(&tr2, edge.up.trunk);
-  EXPECT_EQ(idx2, edge.up.idx);
-  EXPECT_EQ(&tr4, edge.down.trunk);
-  EXPECT_EQ(idx3, edge.down.idx);
+  EXPECT_EQ(&tr4, edge.up.trunk);
+  EXPECT_EQ(idx3, edge.up.idx);
+  EXPECT_EQ(&tr1, edge.down.trunk);
+  EXPECT_EQ(idx1, edge.down.idx);
   delete raceSorter;
-#endif
 }

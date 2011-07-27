@@ -136,7 +136,8 @@ struct RaceSorter {
     char             *addr;
     unsigned         size;
     int64_t          data;
-    NodeSet          mergedReads; // only valid if this inst is a write
+    NodeSet          matchingWrites; // only valid if this inst is a read
+    NodeSet          matchingReads;  // only valid if this inst is a write
     NodeSet          inEdges, outEdges;
 
     bool validInEdge(Node *from);
@@ -145,6 +146,8 @@ struct RaceSorter {
     void addOutEdge(Node *to);
     void removeInEdge(Node *from);
     void removeOutEdge(Node *to);
+    void addMatchingWrite(Node *write);
+    void addMatchingRead(Node *read);
     int64_t getDataInRange(const Range& range) const;
 
     Node(const InstTrunk *ts, unsigned idx, bool isWrite,
@@ -168,6 +171,8 @@ struct RaceSorter {
   void matchReads(Node *write, const NodeSet &reads, const NodeSet &writes);
   bool reachable(Node *from, Node *to);
   void pruneEdges();
+  bool search(std::map<Range, NodeSet, LTRange> &crnMap,
+              std::map<Range, std::list<Node*>, LTRange> &longestPaths);
 
   void sortNodes();
   void getRacyEdges(std::list<RacyEdge>& racyEdges);
