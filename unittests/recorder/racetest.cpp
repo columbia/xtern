@@ -104,6 +104,14 @@ TEST(racedetector, simple) {
   nracy = raceDetector->numRacyAccesses();
   EXPECT_EQ(3U, nracy);
   delete raceDetector;
+
+  // TODO: earlier write dominates a read and a write, which race
+
+  // TODO: earlier read dominates a read and a write, which race
+
+  // TOOD: later write post-dominate a read and a write, which race
+
+  // TODO: later read post-dominate a read and a write, which race
 }
 
 struct LTHalf {
@@ -227,6 +235,32 @@ TEST(racesorter, simple) {
   // store addr1 data2 /
   raceSorter = new RaceSorter;
   raceSorter->addNode(&tr1, idx1,  true, addr1, size1, data1);
+  raceSorter->addNode(&tr1, idx3,  true, addr1, size1, data2);
+  raceSorter->addNode(&tr2, idx2, false, addr1, size1, data1);
+  raceSorter->sortNodes();
+  raceSorter->getRacyEdges(racyEdges);
+  sortEdges(racyEdges);
+  EXPECT_EQ(2U, racyEdges.size());
+  edge = racyEdges.front();
+  EXPECT_EQ(&tr1, edge.up.trunk);
+  EXPECT_EQ(idx1, edge.up.idx);
+  EXPECT_EQ(&tr2, edge.down.trunk);
+  EXPECT_EQ(idx2, edge.down.idx);
+  edge = racyEdges.back();
+  EXPECT_EQ(&tr2, edge.up.trunk);
+  EXPECT_EQ(idx2, edge.up.idx);
+  EXPECT_EQ(&tr1, edge.down.trunk);
+  EXPECT_EQ(idx3, edge.down.idx);
+  delete raceSorter;
+
+  // two edges, one irrelevant write
+  // store addr1 data1 \.
+  // store addr2 data2
+  //                     load addr1 = data1
+  // store addr1 data2 /
+  raceSorter = new RaceSorter;
+  raceSorter->addNode(&tr1, idx1,  true, addr1, size1, data1);
+  raceSorter->addNode(&tr1, idx1+1,  true, addr2, size2, data2);
   raceSorter->addNode(&tr1, idx3,  true, addr1, size1, data2);
   raceSorter->addNode(&tr2, idx2, false, addr1, size1, data1);
   raceSorter->sortNodes();

@@ -95,12 +95,14 @@ struct RaceSorter {
   struct HRange;
   struct LTRange;
   struct LTEdge;
+  struct LTInstTrunk;
 
   typedef std::set<Node*, LTNode>                            NodeSet;
   typedef std::pair<char*, unsigned>                         Range;
   typedef std::map<Range, NodeSet*, LTRange>                 RNMap;
   typedef std::map<unsigned, Node*>                          INMap;
-  typedef std::tr1::unordered_map<const InstTrunk*, INMap*> TINMap;
+  typedef std::map<const InstTrunk*, INMap*, LTInstTrunk>    TINMap;
+  typedef  std::tr1::unordered_map<Node*, NodeSet>           NNSMap;
 
   struct LTInstTrunk {
     bool operator()(const InstTrunk *tr1, const InstTrunk *tr2) {
@@ -136,18 +138,22 @@ struct RaceSorter {
     char             *addr;
     unsigned         size;
     int64_t          data;
-    NodeSet          matchingWrites; // only valid if this inst is a read
-    NodeSet          matchingReads;  // only valid if this inst is a write
+
+    NodeSet          match; /// pair unique writes with corresponding reads
+    NodeSet          mayMatch; /// pair writes that are not unique with reads
+
     NodeSet          inEdges, outEdges;
 
-    bool validInEdge(Node *from);
-    bool validOutEdge(Node *to);
+    bool hasInEdge(Node *from);
+    bool hasOutEdge(Node *to);
     void addInEdge(Node *from);
     void addOutEdge(Node *to);
     void removeInEdge(Node *from);
     void removeOutEdge(Node *to);
-    void addMatchingWrite(Node *write);
-    void addMatchingRead(Node *read);
+    void addMatch(Node *read);
+    void addMayMatch(NodeSet &reads);
+
+    bool include(const Range& range) const;
     int64_t getDataInRange(const Range& range) const;
 
     Node(const InstTrunk *ts, unsigned idx, bool isWrite,
@@ -162,15 +168,40 @@ struct RaceSorter {
                char *addr, unsigned size, uint64_t data);
   void addNodeFromAccess(Access *access);
   void addEdgesForUniqueWrites(const Range &range, const NodeSet &NS);
+
   bool topSort(std::list<Node*>& topOrder); /// @topOrder must be an empty list
   bool topSortHelper(Node *node, std::list<Node*>& topOrder,
                      std::tr1::unordered_map<Node*, bool>& visited,
                      std::tr1::unordered_map<Node*, bool>& stack);
   void longestPath(const NodeSet& NS, const std::list<Node*>& topOrder,
                    std::list<Node*>& path);
-  void matchReads(Node *write, const NodeSet &reads, const NodeSet &writes);
-  bool reachable(Node *from, Node *to);
+  void longestWritePath(const Range &range, std::list<Node*>& path);
+  void reachable(std::tr1::unordered_map<Node*, NodeSet>& reachable,
+                 bool isForward);
+  void immediateWrites(const Range &range,
+                       std::tr1::unordered_map<Node*, NodeSet>& writes,
+                       bool isForward);
+  void matchUniqueWriteReads(Node *write, NodeSet &reads);
+  void matchWritesReads(NodeSet &writes, NodeSet &reads);
+  bool isReachable(Node *from, Node *to, const NNSMap& reachable);
   void pruneEdges();
+  bool search(std::list<std::pair<Range, Node*> > &pendingNodes);
+  bool searchForWrite(Node *write,
+                      const std::list<Node*> &writePath,
+                      const NNSMap &reach,
+                      std::list<std::pair<Range, Node*> > &pendingNodes);
+  bool searchForRead(Node *read,
+                     const std::list<Node*> &writePath,
+                     const NNSMap &reach,
+                     std::list<std::pair<Range, Node*> > &pendingNodes);
+  void addWriteWriteEdge(Node *w1, Node *w2,
+                         const NNSMap &reach,
+                         std::list<std::pair<Node*, Node*> > undos);
+  void addWriteReadEdge(Node *w, Node *r,
+                        const NNSMap &reach,
+                        std::list<std::pair<Node*, Node*> > undos);
+
+
   bool search(std::map<Range, NodeSet, LTRange> &crnMap,
               std::map<Range, std::list<Node*>, LTRange> &longestPaths);
 
@@ -178,7 +209,10 @@ struct RaceSorter {
   void getRacyEdges(std::list<RacyEdge>& racyEdges);
 
   void dump();
-  void cycleCheck();
+  void verify();
+
+  static void setUnion(NodeSet& NS1, const NodeSet &NS2);
+  static void setDiff(NodeSet& NS1, const NodeSet &NS2);
 
   ~RaceSorter();
 };
