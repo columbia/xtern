@@ -4,7 +4,7 @@
 #include "race.h"
 #include "util.h"
 
-#define _DEBUG_RACEDETECTOR
+//#define _DEBUG_RACEDETECTOR
 
 #ifdef _DEBUG_RACEDETECTOR
 #  define dprintf(fmt...) fprintf(stderr, fmt)
@@ -25,15 +25,20 @@ Access::Access(const Access &a)
 raw_ostream &operator<<(raw_ostream &o, const Access &a) {
   return o << (a.isWrite?"write":"read") << " "
            << "data=" << (int)a.data << " "
-           << "ts=[" << a.ts->beginTurn << "," << a.ts->endTurn << ")";
+           << "ts=[" << a.ts->beginTurn << "," << a.ts->endTurn << ") "
+           << "idx=" << a.idx;
 }
 
 /***/
 
-AccessHistory::AccessHistory(char *address): addr(address) {}
+AccessHistory::AccessHistory(char *address)
+  : addr(address), lastWrite(NULL), preDominator(NULL), postDominator(NULL) {}
 
 AccessHistory::AccessHistory(char *address, Access *a) {
   addr = address;
+  lastWrite = NULL;
+  preDominator = NULL;
+  postDominator = NULL;
   appendAccessHelper(a);
 }
 
@@ -47,13 +52,22 @@ AccessHistory::~AccessHistory() {
   }
   forall(AccessMap, i, writes) {
     forall(AccessList, j, *(i->second)) {
-      if(!(*j)->racy)
-        delete *j;
+      if((*j)->racy)
+        continue;
+      if(*j == lastWrite)
+        continue;
+      delete *j;
     }
     delete i->second;
   }
   forall(set<Access*>,  i, racyAccesses)
     delete *i;
+  if(lastWrite)
+    delete lastWrite;
+  if(preDominator)
+    delete preDominator;
+  if(postDominator)
+    delete postDominator;
 }
 
 void AccessHistory::removeReads(Access *access) {
@@ -64,6 +78,35 @@ void AccessHistory::removeWrites(Access *access) {
   removeAccesses(access, writes);
 }
 
+
+/// to sort races, we need to match reads with writes.  However, it is
+/// possible for a read to happen before a racing write, therefore reading
+/// the value last written by a previous, non-racing write.  This function
+/// tracks such writes so that RaceSorter can detect these reads
+void AccessHistory::updateLastWrite(const std::list<const InstTrunk*> &toErase){
+  Access *lastWriteCandidate = NULL;
+  forallconst(list<const InstTrunk*>, i, toErase) {
+    AccessMap::iterator ai = writes.find(*i);
+    AccessList *al = ai->second;
+    forall(AccessList, j, *al) {
+      Access *write = *j;
+      if(lastWriteCandidate == NULL)
+        lastWriteCandidate = write;
+      else {
+        if(lastWriteCandidate->ts->endTurn < write->ts->endTurn
+           || (lastWriteCandidate->ts->endTurn == write->ts->endTurn
+               && lastWriteCandidate->idx < write->idx))
+          lastWriteCandidate = write;
+      }
+    }
+  }
+  if(lastWriteCandidate) {
+    if(lastWrite)
+      delete lastWrite;
+    lastWrite = lastWriteCandidate;
+  }
+}
+
 void AccessHistory::removeAccesses(Access *a, AccessMap &accesses) {
 
   list<const InstTrunk*> toErase;
@@ -71,6 +114,10 @@ void AccessHistory::removeAccesses(Access *a, AccessMap &accesses) {
   forall(AccessMap, i, accesses)
     if(i->first->happensBefore(*a->ts))
       toErase.push_back(i->first);
+
+  // update lastWrite if necessary
+  if(&accesses == &writes && racyAccesses.empty())
+    updateLastWrite(toErase);
 
   forall(list<const InstTrunk*>, i, toErase) {
     AccessMap::iterator ai = accesses.find(*i);
@@ -81,9 +128,13 @@ void AccessHistory::removeAccesses(Access *a, AccessMap &accesses) {
     errs() << "RACEDETECTOR: removing accesses for " << **i << "\n";
 #endif
 
-    forall(AccessList, j, *al)
-      if(!(*j)->racy) // otherwise, this access is owned by @racyAccesses
-        delete *j;
+    forall(AccessList, j, *al) {
+      if((*j)->racy) //this access is owned by @racyAccesses
+        continue;
+      if(*j == lastWrite) // need lastWrite for a little while
+        continue;
+      delete *j;
+    }
     delete al;
   }
 }
@@ -93,6 +144,11 @@ void AccessHistory::dumpRace(const Access *a1, const Access *a2) const {
          << (a1->isWrite?"write":"read") << "-"
          << (a2->isWrite?"write":"read") << " "
          << *a1 << " " << *a2 << "\n";
+}
+
+void AccessHistory::markRacy(Access *access) {
+  access->racy = true;
+  racyAccesses.insert(access);
 }
 
 void AccessHistory::appendAccessHelper(Access *access) {
@@ -116,8 +172,8 @@ void AccessHistory::appendAccessHelper(Access *access) {
   al->push_back(access);
 
 #ifdef _DEBUG_RACEDETECTOR
-   errs() << "RACEDETECTOR: appending " << (void*)addr << " "
-          << *access << "\n";
+  errs() << "RACEDETECTOR: appending " << (void*)addr << " "
+         << *access << "\n";
 #endif
 }
 
@@ -169,17 +225,25 @@ void AccessHistory::appendAccess(Access *access) {
   appendAccessHelper(access);
 
   if(!racy_accesses.empty()) {
-    access->racy = true;
-    racyAccesses.insert(access);
+    markRacy(access);
     forall(list<Access*>, i, racy_accesses) {
       Access *racy = *i;
-      racy->racy = true;
-      racyAccesses.insert(racy);
+      markRacy(racy);
+
+      // add last write that dominates all future accesses, so that we can
+      // sort races
+      if(lastWrite) {
+        preDominator = lastWrite;
+        lastWrite = NULL;
+      }
 
 #ifdef _DEBUG_RACEDETECTOR
       dumpRace(racy, access);
 #endif
     }
+  } else {
+    // no race.
+    // TODO: first access that post-dominates all racy accesses
   }
 }
 
@@ -242,8 +306,13 @@ void RaceDetector::sortRacyAccesses(list<RacyEdge>& racyEdges) {
     // within one group are concurrent at least with one other access in
     // the group, but all accesses in one group must happen-before (or
     // after) another.
+
+    if(ah->preDominator)
+      raceSorter.addNodeFromAccess(ah->preDominator);
+
     forall(set<Access*>, j, ah->racyAccesses)
       raceSorter.addNodeFromAccess(*j);
+
   }
 
   raceSorter.sortNodes();
@@ -338,7 +407,21 @@ void RaceSorter::getRacyEdges(list<RacyEdge>& racyEdges) {
       }
     }
   }
+
+#ifdef _DEBUG_RACEDETECTOR
+  errs() << "all racy edges:\n";
+  for(list<RacyEdge>::iterator ei = racyEdges.begin();
+      ei != racyEdges.end(); ++ei)
+    errs() << *ei << "\n";
+#endif
 }
+
+struct LTPR {
+  bool operator()(const pair<RaceSorter::Range, RaceSorter::Node *>& p1,
+                  const pair<RaceSorter::Range, RaceSorter::Node *>& p2) const{
+    return p1.second->mayMatch.size() < p2.second->mayMatch.size();
+  }
+};
 
 void RaceSorter::sortNodes() {
   // key observation: most racy writes are unique (reads may not be)
@@ -422,83 +505,26 @@ void RaceSorter::sortNodes() {
   dump();
 #endif
 
-  // find pending writes and reads
-#if 0
-  list<Node*> topOrder;
-  bool hasCycle = topSort(topOrder);
-  assert(!hasCycle);
-
-  map<Range, NodeSet, LTRange> crnMap; // range -> concurrent writes
-  map<Range, list<Node*>, LTRange> longestPaths; // range -> longest path
-  forall(RNMap, rni, rnMap) {
-    NodeSet orderedWrites, allWrites, concurrentWrites;
-
-    // find all writes from the set of accesses to the current range
-    forall(NodeSet, ni, *rni->second) {
-      if((*ni)->isWrite)
-        allWrites.insert(*ni);
-    }
-
-    // find writes that are ordered along the longest path
-    longestPath(allWrites, topOrder, longestPaths[rni->first]);
-    forall(list<Node*>, ni, longestPaths[rni->first]) {
-      // need to check if the write is in @allWrites as well, since @path
-      // may have writes on other ranges
-      if((*ni)->isWrite && allWrites.find(*ni)!=allWrites.end())
-        orderedWrites.insert(*ni);
-    }
-
-    // find concurrent writes
-    set_difference(allWrites.begin(), allWrites.end(),
-                   orderedWrites.begin(), orderedWrites.end(),
-                   insert_iterator<NodeSet>(concurrentWrites,
-                                            concurrentWrites.begin()));
-    if(concurrentWrites.size() > 0)
-      crnMap[rni->first] = concurrentWrites;
-  }
-
-  // slow path: search where to put these concurrent writes
-  if(!crnMap.empty()) {
-    bool ordered = search(crnMap, longestPaths);
-    if(!ordered) {
-      for(map<Range, NodeSet, LTRange>::iterator crni=crnMap.begin();
-          crni!=crnMap.end(); ++crni) {
-        errs() << "concurrent writes for " << (void*)crni->first.first << ": ";
-        forall(NodeSet, ni, crni->second)
-          errs() << **ni << ", ";
-        errs() << "\n";
-      }
-    }
-  }
-#endif
-
   list<pair<Range, Node*> > pendingNodes;
 
   // find concurrent writes
   forall(RNMap, rni, rnMap) {
-    NodeSet orderedWrites, allWrites, concurrentWrites;
-
-    // find all writes from the set of accesses to the current range
-    forall(NodeSet, ni, *rni->second) {
-      if((*ni)->isWrite)
-        allWrites.insert(*ni);
-    }
+    NodeSet orderedWrites, concurrentWrites;
 
     // find writes that are ordered along the longest path
     list<Node *> path;
     longestWritePath(rni->first, path);
-    forall(list<Node*>, ni, path) {
-      // need to check if the write is in @allWrites as well, since @path
-      // may have writes on other ranges
-      if((*ni)->isWrite && allWrites.find(*ni)!=allWrites.end())
-        orderedWrites.insert(*ni);
+    copy(path.begin(), path.end(),
+         insert_iterator<NodeSet>(orderedWrites, orderedWrites.begin()));
+
+    // find all writes from the set of accesses to the current range
+    forall(NodeSet, ni, *rni->second) {
+      if((*ni)->isWrite)
+        concurrentWrites.insert(*ni);
     }
 
     // find concurrent writes
-    set_difference(allWrites.begin(), allWrites.end(),
-                   orderedWrites.begin(), orderedWrites.end(),
-                   insert_iterator<NodeSet>(concurrentWrites,
-                                            concurrentWrites.begin()));
+    setDiff(concurrentWrites, orderedWrites);
     if(concurrentWrites.size() > 0) {
       forall(NodeSet, cni, concurrentWrites)
         pendingNodes.push_back(pair<Range, Node*>(rni->first, *cni));
@@ -506,103 +532,131 @@ void RaceSorter::sortNodes() {
   }
 
   // find unresolved reads
+  list<pair<Range, Node *> > pendingReads;
   forall(RNMap, rni, rnMap) {
     forall(NodeSet, ni, *rni->second) {
       Node *read = *ni;
       if(!read->isWrite && read->match.empty())
-        pendingNodes.push_back(pair<Range, Node*>(rni->first, read));
+        pendingReads.push_back(pair<Range, Node*>(rni->first, read));
     }
   }
+
+  // pendingReads.sort(LTPR());
+  pendingNodes.insert(pendingNodes.end(),
+                      pendingReads.begin(), pendingReads.end());
+
+#ifdef _DEBUG_RACEDETECTOR
+  errs() << "start search for " << pendingNodes.size() << " nodes:\n";
+  for(list<pair<Range, Node*> >::iterator pi = pendingNodes.begin();
+      pi != pendingNodes.end(); ++pi) {
+    errs() << *pi->second << "\n";
+  }
+#endif
 
   bool found = search(pendingNodes);
 
   assert(found);
 
+#ifdef _DEBUG
+  verify();
+#endif
+
   // prune subsumed edges
   pruneEdges();
+
+#ifdef _DEBUG
+  verify();
+#endif
 }
 
 void RaceSorter::addWriteWriteEdge(Node *w1, Node *w2,
-                                   const NNSMap &reach,
-                                  list<pair<Node*, Node*> > undos) {
+                                   const NNSMap &R,
+                                   list<pair<Node*, Node*> > &undos) {
+#ifdef _DEBUG_RACEDETECTOR
+  errs() << "add write " << w1 << " before " << w2 << "\n";
+#endif
+
+  // @w1 -> @w2
+  if(!isReachable(w1, w2, R)) {
+    w2->addInEdge(w1);
+    undos.push_back(pair<Node*, Node*>(w1, w2));
+  }
+
+  // matching read of @w1 -> @w2
+  forall(NodeSet, ni, w1->match) {
+    Node *read = *ni;
+    if(!isReachable(read, w2, R)) {
+      read->addOutEdge(w2);
+      undos.push_back(pair<Node*, Node*>(read, w2));
+    }
+  }
 }
 
-void RaceSorter::addWriteReadEdge(Node *w, Node *r,
-                                  const NNSMap &reach,
-                                  list<pair<Node*, Node*> > undos) {
+bool RaceSorter::hasCycle() {
+  list<Node*> topOrder;
+  return topSort(topOrder);
 }
 
+void RaceSorter::undo(const list<std::pair<Node*, Node*> > &undos) {
+  for(list<pair<Node*, Node*> >::const_iterator ui = undos.begin();
+      ui != undos.end(); ++ ui) {
+    Node *from = ui->first;
+    Node *to = ui->second;
+    from->removeOutEdge(to);
+  }
+}
+
+/// find a position to put @write
 bool RaceSorter::searchForWrite(Node *write,
                                 const list<Node*> &path,
                                 const NNSMap &R,
                                 list<pair<Range, Node*> > &pendingNodes) {
-
   list<Node*>::const_iterator pi = path.begin();
 
   for(;;) {
-    if(isReachable(*pi, write, R)) {
+    if(pi != path.end() && isReachable(*pi, write, R)) {
       ++ pi;
       continue;
     }
 
+#ifdef _DEBUG_RACEDETECTOR
+    errs() << "trying to insert " << write << " before ";
+    if(pi != path.end())
+      errs() << *pi << " in ";
+    else
+      errs() << "end() in ";
+    forallconst(list<Node*>, i, path)
+      errs() << *i << ", ";
+    errs() << "\n";
+#endif
+
     list<pair<Node*, Node*> > undos;
 
-    // find a position to put @write
-    if(pi != path.end()) {
-      Node *curWrite = *pi;
-
-      // @write -> @curWrite
-      if(!isReachable(write, curWrite, R)) {
-        curWrite->addInEdge(write);
-        undos.push_back(pair<Node*, Node*>(write, curWrite));
-      }
-
-      // matching read of @write -> @curWrite
-      forall(NodeSet, ni, write->match) {
-        Node *read = *ni;
-        if(!isReachable(read, curWrite, R)) {
-          read->addOutEdge(curWrite);
-          undos.push_back(pair<Node*, Node*>(read, curWrite));
-        }
-      }
-    }
+    if(pi != path.end())
+      addWriteWriteEdge(write, *pi, R, undos);
 
     if(pi != path.begin()) {
-      Node *prvWrite;
       list<Node*>::const_iterator prv = pi;
       -- prv;
-      prvWrite = *prv;
 
-      // @prvWrite -> @write
-      if(!isReachable(prvWrite, write, R)) {
-        prvWrite->addOutEdge(write);
-        undos.push_back(pair<Node*, Node*>(prvWrite, write));
-      }
-
-      // matching read of @prvWrite -> @write
-      forall(NodeSet, ni, prvWrite->match) {
-        Node *read = *ni;
-        if(!isReachable(read, write, R)) {
-          read->addOutEdge(write);
-          undos.push_back(pair<Node*, Node*>(read, write));
-        }
-      }
+      addWriteWriteEdge(*prv, write, R, undos);
     }
 
-    list<Node*> topOrder;
-    bool hasCycle = topSort(topOrder);
-    if(!hasCycle) {
+    if(!hasCycle()) {
       if(search(pendingNodes))
         return true;
     }
 
+#ifdef _DEBUG_RACEDETECTOR
+    errs() << "can't insert " << write << " before ";
+    if(pi != path.end())
+      errs() << *pi << "\n";
+    else
+      errs() << "end()\n";
+#endif
+
     // undo edges
-    for(list<pair<Node*, Node*> >::iterator ui = undos.begin();
-        ui != undos.end(); ++ ui) {
-      Node *from = ui->first;
-      Node *to = ui->second;
-      from->removeOutEdge(to);
-    }
+    undo(undos);
 
     if(pi == path.end() || isReachable(write, *pi, R))
       break;
@@ -618,46 +672,80 @@ bool RaceSorter::searchForRead(Node *read,
                                const NNSMap &R,
                                list<pair<Range, Node*> > &pendingNodes) {
 
-  // XXX: what about read of initial values?
-  forall(NodeSet, ni, read->mayMatch) {
-    Node *write = *ni;
-    if(isReachable(read, write, R))
+  assert(!path.empty() && !read->mayMatch.empty()
+         && "read of initial values (i.e., w/o stores) is not handled!");
+
+  list<Node*>::const_iterator pi = path.begin();
+  ++ pi;
+
+  for(;;) {
+    if(pi != path.end() && isReachable(*pi, read, R)) {
+      ++ pi;
       continue;
+    }
+
+    // FIXME: either read data section from ELF, or use the values from
+    // earlier non-racing reads
+    // assert(pi != path.begin()
+    //       && "read of initial values (i.e., w/o stores) is not handled!");
+
+    list<Node*>::const_iterator prv = pi;
+    -- prv;
+    Node *write = *prv;
+    // check if previous write is a may-match
+    if(read->mayMatch.find(write) == read->mayMatch.end()) {
+      if(pi == path.end())
+        return false;
+      ++ pi;
+      continue;
+    }
+
+    // check if previous write already happens-after us
+    if(isReachable(read, write, R))
+      return false;
+
+#ifdef _DEBUG_RACEDETECTOR
+    errs() << "trying to insert " << read << " after " << write << " in ";
+    forallconst(list<Node*>, i, path)
+      errs() << *i << ", ";
+    errs() << "\n";
+#endif
 
     list<pair<Node*, Node*> > undos;
 
-    // add @write -> @read
+    // add write -> read edge
     if(!isReachable(write, read, R)) {
       write->addOutEdge(read);
       undos.push_back(pair<Node*, Node*>(write, read));
     }
 
-    // add @read -> next write of @write
-    list<Node*>::const_iterator pi = find(path.begin(), path.end(), write);
-    assert(pi != path.end());
-    ++ pi;
+    // add read -> next write edge
     if(pi != path.end()) {
-      if(!isReachable(read, *pi, R)) {
-        read->addOutEdge(*pi);
-        undos.push_back(pair<Node*, Node*>(read, *pi));
+      Node *nextWrite = *pi;
+      if(!isReachable(read, nextWrite, R)) {
+        read->addOutEdge(nextWrite);
+        undos.push_back(pair<Node*, Node*>(read, nextWrite));
       }
     }
 
-    list<Node*> topOrder;
-    bool hasCycle = topSort(topOrder);
-    if(!hasCycle) {
+    if(!hasCycle()) {
       if(search(pendingNodes))
         return true;
     }
 
+#ifdef _DEBUG_RACEDETECTOR
+    errs() << "can't insert " << read << " after " << write << "\n";
+#endif
+
     // undo edges
-    for(list<pair<Node*, Node*> >::iterator ui = undos.begin();
-        ui != undos.end(); ++ ui) {
-      Node *from = ui->first;
-      Node *to = ui->second;
-      from->removeOutEdge(to);
-    }
+    undo(undos);
+
+    if(pi == path.end())
+      break;
+
+    ++ pi;
   }
+
   return false;
 }
 
@@ -675,101 +763,25 @@ bool RaceSorter::search(list<pair<Range, Node*> > &pendingNodes) {
   NNSMap R;
   reachable(R, true);
 
+#ifdef _DEBUG_RACEDETECTOR
+  errs() << "search " << *RN.second << "; "
+         << pendingNodes.size() << "remain \n";
+#endif
+
   bool found;
   if(RN.second->isWrite)
     found = searchForWrite(RN.second, writePath, R, pendingNodes);
   else
     found = searchForRead(RN.second, writePath, R, pendingNodes);
 
+#ifdef _DEBUG_RACEDETECTOR
+  errs() << "backtrack " << *RN.second << "\n";
+#endif
+
   if(!found)
     pendingNodes.push_front(RN);
   return found;
 }
-
-
-#if 0
-bool RaceSorter::search(map<Range, NodeSet, LTRange> &crnMap,
-                        map<Range, list<Node*>, LTRange> &longestPaths) {
-
-  if(!crnMap.empty() == 0) // all concurrent writes are resolved
-    return true;
-
-  map<Range, NodeSet, LTRange>::iterator crni=crnMap.begin();
-
-  const Range &range = crni->first;
-  list<Node*> &path = longestPaths[range];
-  NodeSet &concurrentWrites = crni->second;
-  Node *write = *concurrentWrites.begin();
-
-  // find a position for write in path
-  list<list<Node*>::iterator> concurrent;
-  forall(list<Node*>, ni, path)
-    if(!reachable(*ni, write,)
-       && !reachable(write, *ni))
-      concurrent.push_back(ni);
-
-  for(list<list<Node*>::iterator>::iterator ni = concurrent.begin();
-      ni != concurrent.end(); ++ni) {
-    for(int i=0; i < 2; ++i) {
-
-      Node *cur_write, *prv_write;
-      list<Node*>::iterator prv, cur;
-      cur = *ni;;
-
-      if(i == 1)
-        ++ cur;
-
-      cur_write = *cur;
-
-      prv_write = NULL;
-      prv = cur;
-      if(prv != path.begin()) {
-        -- prv;
-        prv_write = *prv;
-      }
-
-      // find position to insert write to longest path. add edge, remove
-      // write from concurrentWrites
-      path.insert(*ni, write);
-      if(prv_write) {
-        prv_write->addOutEdge(write);
-        forall(NodeSet, ni, prv_write->match) {
-          // add outEdges for matching reads of prv_write
-          Node *read = *ni;
-          read->addOutEdge(write);
-        }
-      }
-      cur_write->addInEdge(write);
-
-      concurrentWrites.erase(concurrentWrites.begin());
-      // if range has no writes, remove range from crnMap
-      if(concurrentWrites.empty())
-        crnMap.erase(crni);
-
-      list<Node*> topOrder;
-      bool hasCycle = topSort(topOrder);
-      if(!hasCycle) {
-        // search position for next concurrent write
-        if(search(crnMap, longestPaths))
-          return true;
-      }
-
-      //  backtrack.  insert write back to concurrentWrites, remove edge,
-      //  remove write from path
-      crnMap[range].insert(write);
-      cur_write->removeInEdge(write);
-      if(prv_write) {
-        prv_write->removeOutEdge(write);
-        forall(NodeSet, ni, prv_write->match) {
-          Node *read = *ni;
-          read->removeOutEdge(write);
-        }
-      }
-    }
-  }
-  return false;
-}
-#endif
 
 /// find writes that are ordered along the longest path
 void RaceSorter::longestWritePath(const Range &range, list<Node*>& path) {
@@ -785,6 +797,13 @@ void RaceSorter::longestWritePath(const Range &range, list<Node*>& path) {
   topSort(topOrder);
 
   longestPath(allWrites, topOrder, path);
+
+  list<Node*>::iterator prv, cur;
+  for(cur=path.begin(); cur != path.end();) {
+    prv = cur ++;
+    if(!(*prv)->isWrite || !(*prv)->include(range))
+      path.erase(prv);
+  }
 }
 
 
@@ -828,6 +847,15 @@ void RaceSorter::longestPath(const NodeSet& NS, const list<Node*>& topOrder,
     path.push_front(node);
     node = pathTo[node].second;
   } while(node);
+
+#ifdef _DEBUG_RACESORTER
+  NodeSet visited;
+  forall(list<Node*>, pi, path) {
+    Node *node = *pi;
+    assert(visited.find(node) == visited.end());
+    visited.insert(node);
+  }
+#endif
 }
 
 void RaceSorter::addEdgesForUniqueWrites(const Range &range,
@@ -836,7 +864,7 @@ void RaceSorter::addEdgesForUniqueWrites(const Range &range,
 
   // discover writes with unique values
   DataMap dataWriteMap;
-  DataMap  dataReadMap;
+  DataMap dataReadMap;
   forall(NodeSet, ni, NS) {
     Node *node = *ni;
     uint64_t data = node->getDataInRange(range);
@@ -855,19 +883,22 @@ void RaceSorter::addEdgesForUniqueWrites(const Range &range,
       writes.insert(*ni);
 
   // match unique writes with corresponding reads
-  forall(DataMap, di, dataWriteMap) {
-    if(di->second.size() > 1) {
-      DataMap::iterator ri = dataReadMap.find(di->first);
-      if(ri != dataReadMap.end()) {
-      }
+  forall(DataMap, wi, dataWriteMap) {
+    if(wi->second.size() > 1) {
+      DataMap::iterator ri = dataReadMap.find(wi->first);
+      if(ri != dataReadMap.end())
+        matchWritesReads(wi->second, ri->second);
       continue;
     }
     // unique write
-    Node *write = *di->second.begin();
+    Node *write = *wi->second.begin();
 #ifdef _DEBUG_RACEDETECTOR
-    errs() << "unique write " << write->data << "\n";
+    errs() << "unique write " << write->data << ", "
+           << wi->first << "\n";
+    if(dataReadMap.find(wi->first) == dataReadMap.end())
+      errs() << "but value not observed\n";
 #endif
-    DataMap::iterator dri = dataReadMap.find(di->first);
+    DataMap::iterator dri = dataReadMap.find(wi->first);
     if(dri == dataReadMap.end())
       continue;
     matchUniqueWriteReads(write, dri->second);
@@ -915,19 +946,25 @@ void RaceSorter::addEdgesForUniqueWrites(const Range &range,
   }
 }
 
-// TODO: template
+// can be made pretty using templates (set_union or set_difference would
+// be a template argument)
 void RaceSorter::setUnion(NodeSet& NS1, const NodeSet &NS2) {
   NodeSet temp;
   temp.swap(NS1);
+  // NOTE: it's important to use the same comparison functor LTNode as how
+  // we defined NodeSet here.  If we don't do so, STL would use the
+  // set_union with "<" as the comparison operator, which lead to weird
+  // results.  Why is STL so stupid and not to generate a type error if
+  // these comparison operators don't match?
   set_union(temp.begin(), temp.end(), NS2.begin(), NS2.end(),
-            insert_iterator<NodeSet>(NS1, NS1.begin()));
+            insert_iterator<NodeSet>(NS1, NS1.begin()), LTNode());
 }
 
 void RaceSorter::setDiff(NodeSet& NS1, const NodeSet &NS2) {
   NodeSet temp;
   temp.swap(NS1);
   set_difference(temp.begin(), temp.end(), NS2.begin(), NS2.end(),
-                 insert_iterator<NodeSet>(NS1, NS1.begin()));
+                 insert_iterator<NodeSet>(NS1, NS1.begin()), LTNode());
 }
 
 void RaceSorter::immediateWrites(const Range &range,
@@ -1040,6 +1077,17 @@ void RaceSorter::dump() {
 }
 
 void RaceSorter::matchWritesReads(NodeSet &writes, NodeSet &reads) {
+
+#ifdef _DEBUG_RACEDETECTOR
+  errs() << "RACESORTER: match writes ";
+  forall(NodeSet, wi, writes)
+    errs() << *wi << ", ";
+  errs() << " with reads ";
+  forall(NodeSet, ri, writes)
+    errs() << *ri << ", ";
+  errs() << "\n";
+#endif
+
   forall(NodeSet, wi, writes)
     (*wi)->addMayMatch(reads);
 }
@@ -1051,14 +1099,15 @@ void RaceSorter::matchUniqueWriteReads(Node *write, NodeSet &reads) {
   forall(NodeSet, ni, reads) {
     Node *read = *ni;
     assert(!read->isWrite);
-    if(read->ts == write->ts) // already have happens-before edges
-      continue;
 
 #ifdef _DEBUG_RACEDETECTOR
     errs() << "RACESORTER: match write " << write
            << " with read " << read << "\n";
 #endif
 
+    // even though write and read may be in same trunk, we must still
+    // match them here.
+    //
     // add @write -> @read
     write->addOutEdge(read);
     write->addMatch(read);
@@ -1071,29 +1120,6 @@ bool RaceSorter::isReachable(Node *from, Node *to, const NNSMap& R) {
   const NodeSet &NS = nsi->second;
   return NS.find(from) != NS.end();
 }
-
-#if 0
-bool RaceSorter::reachable(Node *from, Node *to) {
-  // fast path: happens-before from TurnRange or log index
-  if(from->ts->happensBefore(*to->ts))
-    return true;
-  if(from->ts == to->ts)
-    return from->idx < to->idx;
-
-  // slow path: breadth-first search
-  std::queue<Node*> q;
-  q.push(from);
-  while(!q.empty()) {
-    Node *cur = q.front();
-    q.pop();
-    if(cur == to)
-      return true;
-    forall(NodeSet, ni, cur->outEdges)
-      q.push(*ni);
-  }
-  return false;
-}
-#endif
 
 void RaceSorter::reachable(NNSMap& reachable,
                            bool isForward) {
@@ -1180,25 +1206,56 @@ void RaceSorter::pruneEdges() {
 }
 
 void RaceSorter::verify() {
-  list<Node*> topOrder;
-  if(topSort(topOrder)) {
+  if(hasCycle()) {
     dump();
     assert(0 && "happens-before graph can't have a cycle!");
   }
 
-  // TODO
+  forall(RNMap, rni, rnMap) {
+    list<Node*> path;
+    NodeSet allW, orderedW;
+
+    longestWritePath(rni->first, path);
+    copy(path.begin(), path.end(),
+         insert_iterator<NodeSet>(orderedW, orderedW.begin()));
+    forall(NodeSet, ni, *rni->second)
+      if((*ni)->isWrite)
+        allW.insert(*ni);
+    if(allW.size() == orderedW.size()) {
+      // TODO: check that read/write data match
+    }
+  }
 }
 
 /***/
 
 int64_t RaceSorter::Node::getDataInRange(const Range& range) const{
-  unsigned start = range.first - addr;
-  unsigned end   = range.first + range.second - addr;
-  return data & ((1ULL<<(end*8)) - (1ULL<<(start*8)));
+  unsigned start = 8 * (range.first - addr);
+  unsigned end   = 8 * (range.first + range.second - addr);
+  uint64_t mask;
+
+  assert(end <= 8*sizeof(data));
+
+  // WTH?  1ULL << 64 = 1 ?
+  if(end == 8*sizeof(data))
+    mask = 0;
+  else
+    mask = (1ULL<<end);
+  mask -= 1ULL << start;
+
+  return data & mask;
 }
 
 bool RaceSorter::Node::include(const Range& range) const{
   return (addr <= range.first) && ((addr+size) >= (range.first+range.second));
+}
+
+bool RaceSorter::Node::overlap(const Node* other) const {
+  if(other->addr + other->size <= addr)
+    return false;
+  if(addr + size <= other->addr)
+    return false;
+  return true;
 }
 
 bool RaceSorter::Node::hasInEdge(Node *from) {
@@ -1276,6 +1333,20 @@ raw_ostream &operator<< (raw_ostream &o, const RaceSorter::Node &node) {
   if(!node.outEdges.empty()) {
     o << "  out:";
     forall(RaceSorter::NodeSet, ni, node.outEdges) {
+      o << " " << *ni << " ";
+    }
+    o << "\n";
+  }
+  if(!node.match.empty()) {
+    o << "  match:";
+    forall(RaceSorter::NodeSet, ni, node.match) {
+      o << " " << *ni << " ";
+    }
+    o << "\n";
+  }
+  if(!node.mayMatch.empty()) {
+    o << "  mayMatch:";
+    forall(RaceSorter::NodeSet, ni, node.mayMatch) {
       o << " " << *ni << " ";
     }
     o << "\n";

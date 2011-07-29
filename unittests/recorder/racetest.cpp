@@ -9,7 +9,7 @@ using namespace tern;
 
 TEST(racedetector, simple) {
   unsigned nracy;
-  InstTrunk tr1, tr2, tr3;
+  InstTrunk tr1, tr2, tr3, tr4;
   char *addr = (char*)0xdeadbeef;
 
   tr1.beginTurn = 0;
@@ -18,6 +18,8 @@ TEST(racedetector, simple) {
   tr2.endTurn   = 3;
   tr3.beginTurn = 3;
   tr3.endTurn   = 5;
+  tr4.beginTurn = 4;
+  tr4.endTurn   = 6;
 
   RaceDetector *raceDetector;
 
@@ -105,7 +107,15 @@ TEST(racedetector, simple) {
   EXPECT_EQ(3U, nracy);
   delete raceDetector;
 
-  // TODO: earlier write dominates a read and a write, which race
+  // earlier write dominates a read and a write, which race
+  raceDetector = new RaceDetector;
+  raceDetector->onMemoryAccess(true, addr, 0, &tr1, 0);
+  raceDetector->onMemoryAccess(false, addr, 0, &tr3, 0);
+  raceDetector->onMemoryAccess(true, addr, 0, &tr4, 5);
+  raceDetector->dumpRacyAccesses();
+  nracy = raceDetector->numRacyAccesses();
+  EXPECT_EQ(2U, nracy);
+  delete raceDetector;
 
   // TODO: earlier read dominates a read and a write, which race
 
@@ -148,7 +158,7 @@ TEST(racesorter, simple) {
   set<RacyEdge, LTEdge> sortedEdges;
 
   RaceSorter *raceSorter;
-  InstTrunk tr1, tr2, tr3, tr4;
+  InstTrunk tr1, tr2, tr3, tr4, tr5;
   unsigned idx1 = 100, idx2 = 200, idx3 = 300;
   char *addr1 = (char*)0xdeadbeef, *addr2 = (char*)0xbeefdead;
   uint64_t data1 = 12345, data2 = 67890;
@@ -157,9 +167,13 @@ TEST(racesorter, simple) {
   //  tr1  || tr2
   //  tr1  <  tr3
   //  tr1  || tr4
+  //  tr1  <  tr5
   //  tr2  <  tr3
   //  tr2  || tr4
+  //  tr2  || tr5
   //  tr3  || tr4
+  //  tr3  || tr5
+  //  tr4  || tr5
   tr1.beginTurn = 0;
   tr1.endTurn   = 3;
   tr2.beginTurn = 1;
@@ -168,6 +182,8 @@ TEST(racesorter, simple) {
   tr3.endTurn   = 5;
   tr4.beginTurn = 2;
   tr4.endTurn   = 5;
+  tr5.beginTurn = 3;
+  tr5.endTurn   = 5;
 
   // one edge
   // store addr1 data1 \.
@@ -376,5 +392,161 @@ TEST(racesorter, simple) {
   EXPECT_EQ(idx3, edge.up.idx);
   EXPECT_EQ(&tr1, edge.down.trunk);
   EXPECT_EQ(idx1, edge.down.idx);
+  delete raceSorter;
+
+  // three edges, concurrent write
+  //                   /-------------------- store addr1 data2
+  // store addr1 data1                      /
+  //                   \load addr1 = data1 /
+  //                    load addr1 = data2/
+  raceSorter = new RaceSorter;
+  raceSorter->addNode(&tr1, idx1,   true, addr1, size1, data1);
+  raceSorter->addNode(&tr2, idx2,   false, addr1, size1, data1);
+  raceSorter->addNode(&tr2, idx2+1, false, addr1, size1, data2);
+  raceSorter->addNode(&tr4, idx3,   true, addr1, size1, data2);
+  raceSorter->sortNodes();
+  raceSorter->getRacyEdges(racyEdges);
+  sortEdges(racyEdges);
+  EXPECT_EQ(3U, racyEdges.size());
+  edge = racyEdges.front();
+  EXPECT_EQ(&tr1, edge.up.trunk);
+  EXPECT_EQ(idx1, edge.up.idx);
+  EXPECT_EQ(&tr2, edge.down.trunk);
+  EXPECT_EQ(idx2, edge.down.idx);
+  racyEdges.pop_front();
+  edge = racyEdges.front();
+  EXPECT_EQ(&tr1, edge.up.trunk);
+  EXPECT_EQ(idx1, edge.up.idx);
+  EXPECT_EQ(&tr4, edge.down.trunk);
+  EXPECT_EQ(idx3, edge.down.idx);
+  racyEdges.pop_front();
+  edge = racyEdges.front();
+  EXPECT_EQ(&tr4, edge.up.trunk);
+  EXPECT_EQ(idx3, edge.up.idx);
+  EXPECT_EQ(&tr2, edge.down.trunk);
+  EXPECT_EQ(idx2+1, edge.down.idx);
+  delete raceSorter;
+
+  // three edges, non-unique writes
+  // store addr1 data1
+  // store addr2 data2---------------------\.
+  //                 \  store addr2, data1  \.
+  //                  \-load addr2 = data2   \.
+  //                    load addr1 = data1    \.
+  //                    store addr2, data1  ---\-store addr2 data2
+  //                    load addr2 = data2----/
+  raceSorter = new RaceSorter;
+  raceSorter->addNode(&tr1, idx1,   true, addr1, size1, data1);
+  raceSorter->addNode(&tr1, idx1+1, true, addr2, size2, data2);
+  raceSorter->addNode(&tr2, idx2-2, true, addr2, size2, data1);
+  raceSorter->addNode(&tr2, idx2-1, false, addr2, size2, data2);
+  raceSorter->addNode(&tr2, idx2,   false, addr1, size1, data1);
+  raceSorter->addNode(&tr2, idx2+1, true, addr2, size2, data1);
+  raceSorter->addNode(&tr2, idx2+2, false, addr2, size2, data2);
+  raceSorter->addNode(&tr5, idx3,   true, addr2, size2, data2);
+
+  raceSorter->sortNodes();
+  raceSorter->getRacyEdges(racyEdges);
+  sortEdges(racyEdges);
+
+  EXPECT_EQ(4U, racyEdges.size());
+  edge = racyEdges.front();
+  EXPECT_EQ(&tr1, edge.up.trunk);
+  EXPECT_EQ(idx1+1, edge.up.idx);
+  EXPECT_EQ(&tr2, edge.down.trunk);
+  EXPECT_EQ(idx2-1, edge.down.idx);
+  racyEdges.pop_front();
+  edge = racyEdges.front();
+  EXPECT_EQ(&tr2, edge.up.trunk);
+  EXPECT_EQ(idx2-2, edge.up.idx);
+  EXPECT_EQ(&tr1, edge.down.trunk);
+  EXPECT_EQ(idx1+1, edge.down.idx);
+  racyEdges.pop_front();
+  edge = racyEdges.front();
+  EXPECT_EQ(&tr2, edge.up.trunk);
+  EXPECT_EQ(idx2+1, edge.up.idx);
+  EXPECT_EQ(&tr5, edge.down.trunk);
+  EXPECT_EQ(idx3, edge.down.idx);
+  racyEdges.pop_front();
+  edge = racyEdges.front();
+  EXPECT_EQ(&tr5, edge.up.trunk);
+  EXPECT_EQ(idx3, edge.up.idx);
+  EXPECT_EQ(&tr2, edge.down.trunk);
+  EXPECT_EQ(idx2+2, edge.down.idx);
+  delete raceSorter;
+
+  // three edges, non-unique writes
+  //                     /----------------- store addr1 data1
+  // load addr1 = data1-/
+  // store addr2  data2-\.
+  //                     \-load addr2 data2
+  //                      -store addr1 data1
+  //                     /-store addr1 data2
+  // load addr1 = data2-/
+  raceSorter = new RaceSorter;
+  raceSorter->addNode(&tr1, idx1-1, false, addr1, size1, data1);
+  raceSorter->addNode(&tr1, idx1,   true, addr2, size2, data2);
+  raceSorter->addNode(&tr1, idx1+1, false, addr1, size1, data2);
+  raceSorter->addNode(&tr2, idx2,   false, addr2, size2, data2);
+  raceSorter->addNode(&tr2, idx2+1, true, addr1, size1, data1);
+  raceSorter->addNode(&tr2, idx2+2, true, addr1, size1, data2);
+  raceSorter->addNode(&tr4, idx3,   true, addr1, size1, data1);
+
+  raceSorter->sortNodes();
+  raceSorter->getRacyEdges(racyEdges);
+  sortEdges(racyEdges);
+
+  EXPECT_EQ(4U, racyEdges.size());
+  edge = racyEdges.front();
+  EXPECT_EQ(&tr1, edge.up.trunk);
+  EXPECT_EQ(idx1, edge.up.idx);
+  EXPECT_EQ(&tr2, edge.down.trunk);
+  EXPECT_EQ(idx2, edge.down.idx);
+  racyEdges.pop_front();
+  edge = racyEdges.front();
+  EXPECT_EQ(&tr2, edge.up.trunk);
+  EXPECT_EQ(idx2+2, edge.up.idx);
+  EXPECT_EQ(&tr1, edge.down.trunk);
+  EXPECT_EQ(idx1+1, edge.down.idx);
+  racyEdges.pop_front();
+  edge = racyEdges.front();
+  EXPECT_EQ(&tr4, edge.up.trunk);
+  EXPECT_EQ(idx3, edge.up.idx);
+  EXPECT_EQ(&tr1, edge.down.trunk);
+  EXPECT_EQ(idx1-1, edge.down.idx);
+  racyEdges.pop_front();
+  edge = racyEdges.front();
+  EXPECT_EQ(&tr4, edge.up.trunk);
+  EXPECT_EQ(idx3, edge.up.idx);
+  EXPECT_EQ(&tr2, edge.down.trunk);
+  EXPECT_EQ(idx2+1, edge.down.idx);
+  delete raceSorter;
+
+  // three edges, non-unique writes
+  // store addr1 data1 (happens-before other writes)
+  //                                  /store addr1 data2
+  //                store addr1 data1-
+  //                                  \load addr1 = data1
+  raceSorter = new RaceSorter;
+  raceSorter->addNode(&tr1, idx1, true, addr1, size1, data1);
+  raceSorter->addNode(&tr3, idx2, true, addr1, size1, data1);
+  raceSorter->addNode(&tr5, idx3, true, addr1, size1, data2);
+  raceSorter->addNode(&tr5, idx3+1, false, addr1, size1, data1);
+
+  raceSorter->sortNodes();
+  raceSorter->getRacyEdges(racyEdges);
+  sortEdges(racyEdges);
+
+  EXPECT_EQ(2U, racyEdges.size());
+  edge = racyEdges.front();
+  EXPECT_EQ(&tr5, edge.up.trunk);
+  EXPECT_EQ(idx3, edge.up.idx);
+  EXPECT_EQ(&tr3, edge.down.trunk);
+  EXPECT_EQ(idx2, edge.down.idx);
+  edge = racyEdges.back();
+  EXPECT_EQ(&tr3, edge.up.trunk);
+  EXPECT_EQ(idx2, edge.up.idx);
+  EXPECT_EQ(&tr5, edge.down.trunk);
+  EXPECT_EQ(idx3+1, edge.down.idx);
   delete raceSorter;
 }

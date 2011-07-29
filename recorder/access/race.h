@@ -40,7 +40,10 @@ struct AccessHistory {
   typedef std::tr1::unordered_map<const InstTrunk*, AccessList*> AccessMap;
   //typedef std::map<const InstTrunk*, AccessList*> AccessMap;
 
-  static void removeAccesses(Access *a, AccessMap &accesses);
+  void removeAccesses(Access *a, AccessMap &accesses);
+
+  /// update lastWriet
+  void updateLastWrite(const std::list<const InstTrunk*> &toErase);
 
   /// remove reads < access->ts
   void removeReads(Access *access);
@@ -48,6 +51,8 @@ struct AccessHistory {
   void removeWrites(Access *access);
   void appendAccess(Access *access);
   void appendAccessHelper(Access *access);
+
+  void markRacy(Access *access);
 
   unsigned numRacyAccesses() { return racyAccesses.size(); }
 
@@ -64,8 +69,12 @@ struct AccessHistory {
   AccessMap reads;
   /// existing writes to range
   AccessMap writes;
+  /// last write access that dominates all future accesses; used by
+  /// RaceSorter to determine when a read occurs
+  Access *lastWrite;
   /// accesses that involve in at least one race
-  std::set<Access*>   racyAccesses;
+  std::set<Access*> racyAccesses;
+  Access *preDominator, *postDominator;
 };
 
 struct RaceDetector {
@@ -112,7 +121,7 @@ struct RaceSorter {
 
   struct LTNode {
     bool operator()(const Node *n1, const Node *n2) const {
-      return n1->ts->beginTurn < n2->ts->beginTurn
+      return (n1->ts->beginTurn < n2->ts->beginTurn)
         || (n1->ts->beginTurn == n2->ts->beginTurn
             && n1->idx < n2->idx);
     }
@@ -154,6 +163,7 @@ struct RaceSorter {
     void addMayMatch(NodeSet &reads);
 
     bool include(const Range& range) const;
+    bool overlap(const Node* other) const;
     int64_t getDataInRange(const Range& range) const;
 
     Node(const InstTrunk *ts, unsigned idx, bool isWrite,
@@ -169,13 +179,17 @@ struct RaceSorter {
   void addNodeFromAccess(Access *access);
   void addEdgesForUniqueWrites(const Range &range, const NodeSet &NS);
 
+  bool hasCycle();
   bool topSort(std::list<Node*>& topOrder); /// @topOrder must be an empty list
   bool topSortHelper(Node *node, std::list<Node*>& topOrder,
                      std::tr1::unordered_map<Node*, bool>& visited,
                      std::tr1::unordered_map<Node*, bool>& stack);
+
   void longestPath(const NodeSet& NS, const std::list<Node*>& topOrder,
                    std::list<Node*>& path);
   void longestWritePath(const Range &range, std::list<Node*>& path);
+
+  bool isReachable(Node *from, Node *to, const NNSMap& reachable);
   void reachable(std::tr1::unordered_map<Node*, NodeSet>& reachable,
                  bool isForward);
   void immediateWrites(const Range &range,
@@ -183,8 +197,9 @@ struct RaceSorter {
                        bool isForward);
   void matchUniqueWriteReads(Node *write, NodeSet &reads);
   void matchWritesReads(NodeSet &writes, NodeSet &reads);
-  bool isReachable(Node *from, Node *to, const NNSMap& reachable);
+
   void pruneEdges();
+
   bool search(std::list<std::pair<Range, Node*> > &pendingNodes);
   bool searchForWrite(Node *write,
                       const std::list<Node*> &writePath,
@@ -196,14 +211,12 @@ struct RaceSorter {
                      std::list<std::pair<Range, Node*> > &pendingNodes);
   void addWriteWriteEdge(Node *w1, Node *w2,
                          const NNSMap &reach,
-                         std::list<std::pair<Node*, Node*> > undos);
+                         std::list<std::pair<Node*, Node*> > &undos);
   void addWriteReadEdge(Node *w, Node *r,
                         const NNSMap &reach,
-                        std::list<std::pair<Node*, Node*> > undos);
+                        std::list<std::pair<Node*, Node*> > &undos);
+  void undo(const std::list<std::pair<Node*, Node*> > &undos);
 
-
-  bool search(std::map<Range, NodeSet, LTRange> &crnMap,
-              std::map<Range, std::list<Node*>, LTRange> &longestPaths);
 
   void sortNodes();
   void getRacyEdges(std::list<RacyEdge>& racyEdges);
