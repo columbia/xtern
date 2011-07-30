@@ -4,7 +4,7 @@
 #include "race.h"
 #include "util.h"
 
-//#define _DEBUG_RACEDETECTOR
+// #define _DEBUG_RACEDETECTOR
 
 #ifdef _DEBUG_RACEDETECTOR
 #  define dprintf(fmt...) fprintf(stderr, fmt)
@@ -638,11 +638,16 @@ bool RaceSorter::searchForWrite(Node *write,
     if(pi != path.begin()) {
       list<Node*>::const_iterator prv = pi;
       -- prv;
-
       addWriteWriteEdge(*prv, write, R, undos);
     }
 
     if(!hasCycle()) {
+      // NOTE: we don't just insert @write to @path to get the new longest
+      // write path.  The reason is that once a write is added, we can
+      // grow the longest path by more than just the write added.  For
+      // instance, think of appending a write at the end of the current
+      // longest path.  If the write has a HB edge to another write, then
+      // we grow the longest write path by two.
       if(search(pendingNodes))
         return true;
     }
@@ -729,7 +734,9 @@ bool RaceSorter::searchForRead(Node *read,
     }
 
     if(!hasCycle()) {
-      if(search(pendingNodes))
+      // pass @path down instead of recomputing it in next search()
+      // because @path won't change (we've done ordering the writes).
+      if(search(pendingNodes, path))
         return true;
     }
 
@@ -754,11 +761,21 @@ bool RaceSorter::search(list<pair<Range, Node*> > &pendingNodes) {
   if(pendingNodes.empty())
     return true;
 
+  list<Node*> writePath;
+  pair<Range, Node*> RN = pendingNodes.front();
+  longestWritePath(RN.first, writePath);
+
+  return search(pendingNodes, writePath);
+}
+
+bool RaceSorter::search(list<pair<Range, Node*> > &pendingNodes,
+                        const list<Node*> &path) {
+
+  if(pendingNodes.empty())
+    return true;
+
   pair<Range, Node*> RN = pendingNodes.front();
   pendingNodes.pop_front();
-
-  list<Node*> writePath;
-  longestWritePath(RN.first, writePath);
 
   NNSMap R;
   reachable(R, true);
@@ -770,9 +787,9 @@ bool RaceSorter::search(list<pair<Range, Node*> > &pendingNodes) {
 
   bool found;
   if(RN.second->isWrite)
-    found = searchForWrite(RN.second, writePath, R, pendingNodes);
+    found = searchForWrite(RN.second, path, R, pendingNodes);
   else
-    found = searchForRead(RN.second, writePath, R, pendingNodes);
+    found = searchForRead(RN.second, path, R, pendingNodes);
 
 #ifdef _DEBUG_RACEDETECTOR
   errs() << "backtrack " << *RN.second << "\n";
@@ -903,7 +920,7 @@ void RaceSorter::addEdgesForUniqueWrites(const Range &range,
       continue;
     matchUniqueWriteReads(write, dri->second);
 
-#ifdef _DEBUG
+#ifdef _DEBUG_RACEDETECTOR
     verify();
 #endif
   }
@@ -1211,6 +1228,7 @@ void RaceSorter::verify() {
     assert(0 && "happens-before graph can't have a cycle!");
   }
 
+#if 0
   forall(RNMap, rni, rnMap) {
     list<Node*> path;
     NodeSet allW, orderedW;
@@ -1225,6 +1243,7 @@ void RaceSorter::verify() {
       // TODO: check that read/write data match
     }
   }
+#endif
 }
 
 /***/

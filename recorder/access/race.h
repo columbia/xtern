@@ -201,6 +201,9 @@ struct RaceSorter {
   void pruneEdges();
 
   bool search(std::list<std::pair<Range, Node*> > &pendingNodes);
+
+  bool search(std::list<std::pair<Range, Node*> > &pendingNodes,
+              const std::list<Node*> &writePath);
   bool searchForWrite(Node *write,
                       const std::list<Node*> &writePath,
                       const NNSMap &reach,
