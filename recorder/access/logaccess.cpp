@@ -150,6 +150,8 @@ unsigned InstLog::append(Instruction *I) {
   DInst di;
   unsigned idx;
   unsigned insid = getIDManager()->getInstructionID(I);
+if(insid == INVALID_INSID)
+errs() << *I << "\n";
   assert(insid != INVALID_INSID && "instruction has no valid id!");
   // TODO assert getIDManager()->size() not too large once and for all
   if(I->getOpcode() == Instruction::Load
@@ -299,6 +301,11 @@ static void assertNextInst(Instruction *I, Instruction *nxtI) {
   assert(nxtI == ++i);
 }
 
+static void assertInvokeNormalDest(Instruction *I, Instruction *nxtI) {
+  InvokeInst *invoke = dyn_cast<InvokeInst>(I);
+  assert(nxtI == invoke->getNormalDest()->begin());
+}
+
 void InstLog::verify() {
   BasicBlock::iterator i;
   InsidRec    *rec;
@@ -405,7 +412,10 @@ void InstLog::verify() {
       }
       rec = getLInst(i).rec;
       if(rec->type != SyncRecTy) {
-        assertNextInst(I, nxtI);
+        if(I->getOpcode() != Instruction::Invoke)
+          assertNextInst(I, nxtI);
+        else
+          assertInvokeNormalDest(I, nxtI);
         break;
       }
       syncRec = (SyncRec*)rec;
@@ -490,7 +500,7 @@ int InstLogBuilder::nextInstFromCall() {
 
   F = cs.getCalledFunction();
   if(F && !funcBodyLogged(F)) {
-    ++ cur_ii;
+    nextInstFromLoggedInst();
     return 0;
   }
 
@@ -504,8 +514,20 @@ int InstLogBuilder::nextInstFromCall() {
          && "call target is different than logged!");
 
   // return address
+  InvokeInst *invoke;
   BasicBlock::iterator ret_ii = cur_ii;
-  ++ ret_ii;
+  switch(cur_ii->getOpcode()) {
+  case Instruction::Call:
+    ++ ret_ii;
+    break;
+  case Instruction::Invoke:
+    invoke = dyn_cast<InvokeInst>(ret_ii);
+    ret_ii = invoke->getNormalDest()->begin();
+    break;
+  default:
+    assert(0 && "not a call or invoke!");
+  }
+
   callStack.push(pair<BasicBlock::iterator, unsigned>(ret_ii, cur_idx));
 
 #ifdef _DEBUG_LOGACCESS
@@ -560,6 +582,15 @@ int InstLogBuilder::nextInstFromJmp() {
   return 1;
 }
 
+void InstLogBuilder::nextInstFromLoggedInst() {
+  if(cur_ii->getOpcode() != Instruction::Invoke) {
+    ++ cur_ii;
+    return;
+  }
+  InvokeInst *invoke = dyn_cast<InvokeInst>(cur_ii);
+  cur_ii = invoke->getNormalDest()->begin();
+}
+
 void InstLogBuilder::appendInbetweenInsts(bool takeCurrent) {
   unsigned cur_insid = cur_ri->getInsid();
   cur_ii = getIDManager()->getInstruction(cur_insid);
@@ -576,10 +607,10 @@ void InstLogBuilder::appendInbetweenInsts(bool takeCurrent) {
       assert(cur_ri->numRecForInst() == 1
              && "multiple records for one inst must be specially handled!");
       instLog->append(cur_ri);
-      ++ cur_ii;
+      nextInstFromLoggedInst();
     }
   } else
-    ++ cur_ii;  // skip current instruction
+      nextInstFromLoggedInst(); // skip current instruction
 
   //
   // can control-transfer more than once.  consider the example below:

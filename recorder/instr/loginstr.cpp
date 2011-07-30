@@ -177,9 +177,12 @@ Value *LogInstr::castIfNecessary(Value *srcval, const Type *dst,
                                  Instruction *insert) {
   const Type *src = srcval->getType();
   if(src == dst) return srcval;
+
   if(src->isPointerTy())
-    return CastInst::CreatePointerCast(srcval, dst, "tern_ptrcast", insert);
-  return CastInst::CreateZExtOrBitCast(srcval, dst, "tern_valcast", insert);
+    //return CastInst::CreatePointerCast(srcval, dst, "tern_ptrcast", insert);
+    return CastInst::CreatePointerCast(srcval, dst, "", insert);
+  //return CastInst::CreateZExtOrBitCast(srcval, dst, "tern_valcast", insert);
+  return CastInst::CreateZExtOrBitCast(srcval, dst, "", insert);
 }
 
 void LogInstr::instrLoadStore(Value *insid, Value *addr,
@@ -222,7 +225,10 @@ void LogInstr::instrBBMarker(Instruction *ins) {
   CallInst::Create(logInsid, args.begin(), args.end(), "", ins);
 }
 
-// FIXME: InvokeInst may throw an exception, which we currently don't log
+// FIXME1: InvokeInst may throw an exception, which we currently don't log
+// FIXME2: InvokeInst target may have multiple precedessors; we handle
+// only the case with a single predecessor (i.e., the current BB which has
+// this InvokeInst)
 void LogInstr::instrCall(Instruction *call) {
   CallSite cs(call);
   Value *insid = getInsID(call); assert(insid);
@@ -263,7 +269,17 @@ void LogInstr::instrCall(Instruction *call) {
 
   // log return
   BasicBlock::iterator ii = call;
-  Instruction *next_ins = ++ii;  // can't be NULL; every BB has a terminator
+  Instruction *next_ins;
+  if(call->getOpcode() == Instruction::Call)
+    next_ins = ++ii;  // can't be NULL; every BB has a terminator
+  else {// invoke
+    InvokeInst *invoke = dyn_cast<InvokeInst>(call);
+    BasicBlock *normalDest = invoke->getNormalDest();
+    assert(normalDest->getSinglePredecessor() == invoke->getParent()
+           && "invoke normal desk has more than one predecessors"\
+           " --- unsupported!");
+    next_ins = normalDest->getFirstNonPHI();
+  }
   Value *data = call;
   const Type *voidType = Type::getVoidTy(*context);
   if(data->getType() != voidType)

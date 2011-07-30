@@ -338,6 +338,7 @@ protected:
   int nextInstFromJmp();
   int nextInstFromReturn();
   int nextInstFromCall();
+  void nextInstFromLoggedInst();
 
   void dump();
 

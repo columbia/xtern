@@ -101,7 +101,7 @@ void SyncInstr::warnEscapeFuncs(Module &M) {
       unsigned syncid = syncfunc::getNameID(fi->getNameStr().c_str());
       if(syncid != syncfunc::not_sync && !syncfunc::isTern(syncid)) {
         if(funcEscapes(fi))
-          errs()<< "Function " << fi->getName() << " escapes!";
+          errs()<< "Function " << fi->getName() << " escapes!\n";
       }
     }
   }
@@ -147,8 +147,9 @@ void SyncInstr::replaceFunctionInCall(Module &M, Instruction *I,
     IV = dyn_cast<InvokeInst>(I);
     NI = InvokeInst::Create(hook, IV->getNormalDest(), IV->getUnwindDest(),
                             args.begin(), args.end(), "");
+    break;
   default:
-    abort();
+    assert(0 && "not a call or invoke");
   }
 
   // copy metadata since ReplaceInstWithInsit doesn't copy for us
@@ -175,8 +176,7 @@ bool SyncInstr::runOnModule(Module &M) {
   forallbb(M, BB) {
     BasicBlock::iterator prv, cur;
     for(cur=BB->begin(); cur!=BB->end();) {
-      prv = cur;
-      cur ++;
+      prv = cur ++;
 
       Function *F = NULL;
       switch(prv->getOpcode()) {
@@ -193,7 +193,7 @@ bool SyncInstr::runOnModule(Module &M) {
       unsigned syncid = syncfunc::getNameID(name);
       if(syncid == syncfunc::not_sync)
         continue;
-      if(syncfunc::isTernAuto(syncid))
+      if(syncfunc::isTern(syncid))
         continue;
       if(!uclibc && syncid == syncfunc::exit)
         continue;
