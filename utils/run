@@ -1,0 +1,50 @@
+#!/usr/bin/python
+
+import os
+import sys
+import logging
+#import argparse
+
+#parser = argparse.ArgumentParser('prepare binaries for use with tern');
+#parser.add_argument('program', metavar='Program.bc', nargs=1,
+#                  help='.bc or .ll program to prepare')
+
+#args = parser.parse_args();
+#print args.program
+
+def usage():
+    print 'prepare <program.bc or program.ll>'
+    exit(0)
+
+if len(sys.argv) == 1:
+    usage()
+
+program = sys.argv[1]
+program_without_ext = ''
+tern_obj_path = '/home/junfeng/work/xtern/obj/Debug'
+if program.endswith('.ll') or program.endswith('.bc'):
+    program_without_ext = program.rstrip('lbc.')
+record   = '%s-record'   % program_without_ext
+analysis = '%s-analysis' % program_without_ext 
+replay   = '%s-replay'   % program_without_ext
+
+cmd1 = '%s/bin/tern-instr -S -with-uclibc %s -o %s' \
+    % (tern_obj_path, program, program_without_ext)
+cmd2 = 'llc -o %s.s %s.ll' % (record, record)
+cmd3 = 'g++ -o %s %s.s -L%s/lib -lcommonruntime -lrecruntime -lpthread' \
+    % (record, record, tern_obj_path)
+cmd4 = ('./%s ' % record) + ' '.join(sys.argv[2:])
+
+commands = [cmd1, cmd2, cmd3, cmd4]
+
+for th in [0, 1]:
+    cmd = '%s/bin/logprint -r -v -bc %s.ll tern-log-tid-%d > out%d.txt' \
+        % (tern_obj_path, analysis, th, th)
+    commands.append(cmd)
+
+for cmd in commands:
+    print 'running <%s>' % cmd
+    os.system(cmd);
+
+
+
