@@ -6,6 +6,8 @@
 using namespace std;
 using namespace tern;
 
+//#define _DEBUG_RECORDER
+
 #ifdef _DEBUG_RECORDER
 #  define SELFCHECK  dump(cerr); selfcheck()
 #  define dprintf(fmt...) fprintf(stderr, fmt)
@@ -104,6 +106,9 @@ void RRSchedulerCV::waitFirstHalf(void *chan, bool doLock) {
   SELFCHECK;
 }
 
+bool RRSchedulerCV::isWaiting() {
+  return waitvar[self()] != NULL;
+}
 
 /// pop current runq head, and signal new head.  must call after the
 /// current thread has finished moving threads to runq
@@ -123,15 +128,15 @@ void RRSchedulerCV::next(void) {
 /// same as signal() but does not acquire the scheduler lock; if @all is
 /// true, signal all threads waiting on @chan
 void RRSchedulerCV::signalHelper(void *chan, bool all,
-                                 bool doLock, bool doUnlock) {
+                                 bool doLock, bool doUnlock, bool wild) {
   list<int>::iterator prv, cur;
 
   if(doLock)
     pthread_mutex_lock(&lock);
 
   assert(chan && "can't signal/broadcast  NULL");
-  assert(self() == runq.front());
-  dprintf("RRSchedulerCV: %d: %s %p\n", 
+  assert(!wild || self() == runq.front());
+  dprintf("RRSchedulerCV: %d: %s %p\n",
           self(), (all?"broadcast":"signal"), chan);
 
   // use delete-safe way of iterating the list in case @all is true

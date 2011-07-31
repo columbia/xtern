@@ -1,9 +1,12 @@
 // Authors: Junfeng Yang (junfeng@cs.columbia.edu).  Refactored from
 // Heming's Memoizer code
 
+#include <errno.h>
 #include "logger.h"
 #include "recruntime.h"
 #include "recscheduler.h"
+
+//#define _DEBUG_RECORDER
 
 #ifdef _DEBUG_RECORDER
 #  define dprintf(fmt...) fprintf(stderr, fmt)
@@ -273,7 +276,7 @@ int RecorderRT<_S>::pthreadBarrierDestroy(unsigned ins,
 
 template <typename _S>
 int RecorderRT<_S>::pthreadCondWait(unsigned ins,
-                pthread_cond_t *cv, pthread_mutex_t *mu){
+                                    pthread_cond_t *cv, pthread_mutex_t *mu){
   unsigned nturn1, nturn2;
 
   _S::getTurn();
@@ -300,8 +303,40 @@ template <typename _S>
 int RecorderRT<_S>::pthreadCondTimedWait(unsigned ins,
     pthread_cond_t *cv, pthread_mutex_t *mu, const struct timespec *abstime){
 
-  // FIXME: treat timed-wait as just wait
-  return pthreadCondWait(ins, cv, mu);
+  unsigned nturn1, nturn2;
+
+  _S::getTurn();
+  pthread_mutex_unlock(mu);
+  nturn1 = _S::incTurnCount();
+  _S::signal(mu);
+  _S::waitFirstHalf(cv);
+
+  pthread_cond_timedwait(cv, _S::getLock(), abstime);
+  dprintf("abstime = %p\n", (void*)abstime);
+  int ret = 0;
+
+  // NOTE: we can't use the return value of pthread_cond_timedwait above
+  // to determine whether we woke up from a timeout, as we implement
+  // tern_pthread_cond_signal using pthread_cond_broadcast, which wake up
+  // all waiting threads
+  if(_S::isWaiting()) {
+    // timed out --- which is nondeterministic
+    ret = ETIMEDOUT;
+    _S::signalNN(cv);
+    dprintf("%d timed out from timedwait\n", _S::self());
+  }
+
+  _S::getTurnNU();
+  pthreadMutexLockHelper(mu);
+  nturn2 = _S::incTurnCount();
+  _S::putTurn();
+
+  Logger::the->logSync(ins, syncfunc::pthread_cond_timedwait,
+                       nturn1, /* before */ false, (uint64_t)cv, (uint64_t)mu);
+  Logger::the->logSync(ins, syncfunc::pthread_cond_timedwait,
+                       nturn2, /* after */ true, (uint64_t)cv, (uint64_t)mu,
+                       ret==ETIMEDOUT);
+  return ret;
 }
 
 template <typename _S>
@@ -452,6 +487,29 @@ int RecorderRT<FCFSScheduler>::pthreadCondWait(unsigned ins,
                        nturn2, true, (uint64_t)cv, (uint64_t)mu);
   return 0;
 }
+
+template <>
+int RecorderRT<FCFSScheduler>::pthreadCondTimedWait(unsigned ins,
+    pthread_cond_t *cv, pthread_mutex_t *mu, const struct timespec *abstime){
+  unsigned nturn1, nturn2;
+
+  FCFSScheduler::getTurn();
+  pthread_mutex_unlock(mu);
+  nturn1 = FCFSScheduler::incTurnCount();
+
+  int ret = pthread_cond_timedwait(cv, FCFSScheduler::getLock(), abstime);
+
+  pthreadMutexLockHelper(mu);
+  nturn2 = FCFSScheduler::incTurnCount();
+  FCFSScheduler::putTurn();
+
+  Logger::the->logSync(ins, syncfunc::pthread_cond_timedwait,
+                       nturn1, false, (uint64_t)cv, (uint64_t)mu);
+  Logger::the->logSync(ins, syncfunc::pthread_cond_timedwait,
+                       nturn2, true, (uint64_t)cv, (uint64_t)mu, ret==ETIMEDOUT);
+  return 0;
+}
+
 
 template <>
 int RecorderRT<FCFSScheduler>::pthreadCondSignal(unsigned ins,

@@ -112,6 +112,7 @@ struct RRSchedulerCV: public Scheduler {
   void broadcastNN(void *chan){ signalHelper(chan, AllThreads,
                                              NoLock, NoUnlock); }
   void waitFirstHalf(void *chan, bool doLock = Lock);
+  bool isWaiting();
 
   pthread_mutex_t *getLock() {
     return &lock;
@@ -129,7 +130,8 @@ protected:
   void putTurnHelper(bool doLock, bool doUnlock);
   /// same as signal() but acquires or releases the scheduler lock based
   /// on the flags @doLock and @doUnlock
-  void signalHelper(void *chan, bool all, bool doLock, bool doUnlock);
+  void signalHelper(void *chan, bool all, bool doLock,
+                    bool doUnlock, bool wild = false);
   /// same as wait but but acquires or releases the scheduler lock based
   /// on the flags @doLock and @doUnlock
   void waitHelper(void *chan, bool doLock, bool doUnlock);

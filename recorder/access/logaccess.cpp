@@ -423,8 +423,7 @@ void InstLog::verify() {
         assertNextInst(I, nxtI);
         break;
       }
-      if((syncRec->sync != syncfunc::pthread_cond_wait
-          && syncRec->sync != syncfunc::pthread_barrier_wait)) {
+      if(NumRecordsForSync(syncRec->sync) != 2) {
         assertNextInst(I, nxtI);
         break;
       }

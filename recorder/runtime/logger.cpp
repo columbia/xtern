@@ -153,25 +153,26 @@ void Logger::logRet(uint8_t flags, unsigned insid,
   off += RECORD_SIZE;
 }
 
+// TODO: record ret->timedout
 void Logger::logSync(unsigned insid, unsigned short sync,
                      unsigned turn, bool after, ...) {
   checkAndGrowLogSize();
   assert(sync >= syncfunc::first_sync && sync < syncfunc::num_syncs
     && "trying to log unknown synchronization operation!");
 
-  SyncRec *ret = (SyncRec*)(buf+off);
-  ret->setInsid(insid);
-  ret->type = SyncRecTy;
-  ret->sync = sync;
-  ret->turn = turn;
-  ret->after = after;
+  SyncRec *rec = (SyncRec*)(buf+off);
+  rec->setInsid(insid);
+  rec->type = SyncRecTy;
+  rec->sync = sync;
+  rec->turn = turn;
+  rec->after = after;
 
   assert(NumSyncArgs(sync) <= (int)MAX_INLINE_ARGS);
 
   va_list args;
   va_start(args, after);
   for(int i=0; i<NumSyncArgs(sync); ++i)
-    ret->args[i] = va_arg(args, uint64_t);
+    rec->args[i] = va_arg(args, uint64_t);
   va_end(args);
 
   off += RECORD_SIZE;

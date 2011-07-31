@@ -110,9 +110,10 @@ struct ReturnRec: public CallRecPrefix {
 BOOST_STATIC_ASSERT(sizeof(ReturnRec)<=RECORD_SIZE);
 
 struct SyncRec: public InsidRec {
-  short    sync;   // type of sync call
-  bool     after;  // before or after the sync call
-  int      turn;   // turn no. that this sync occurred
+  short    sync;     // type of sync call
+  bool     after;    // before or after the sync call
+  bool     timedout; // is the wait timed out?
+  int      turn;     // turn no. that this sync occurred
   uint64_t args[MAX_INLINE_ARGS];
 };
 BOOST_STATIC_ASSERT(sizeof(SyncRec)<=RECORD_SIZE);
@@ -132,7 +133,8 @@ static inline int NumSyncArgs(short sync) {
 static inline int NumRecordsForSync(short sync) {
   switch(sync) {
   case syncfunc::pthread_cond_wait:
-   case syncfunc::pthread_barrier_wait:
+  case syncfunc::pthread_barrier_wait:
+  case syncfunc::pthread_cond_timedwait:
     return 2;
   }
   return 1;
