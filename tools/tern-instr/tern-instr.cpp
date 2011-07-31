@@ -75,11 +75,46 @@ Module *linkWithLibrary(Module *module,
   return linker.releaseModule();
 }
 
+// create a function to call all static ctors/dtors.  we can then pass
+// this function as the 3rd/4th argument to _uClibc_main, which will call
+// these functions for us
+Constant *wrapCtorDtor(Module *M, bool isCtor) {
+  const char *GVName = (isCtor? "llvm.global_ctors" :  "llvm.global_dtors");
+  const char *FName  = (isCtor? "__app_init_in_tern": "__app_fini_in_tern");
 
-// TODO: make uclibc_main call static constructor and destructors, so that
-// we use just one method to add turn init and shutdown code.
-//
-// replace app_init and app_fini with static ctor and dtor
+  //vector<const Type*> argty(1, Type::getVoidTy(getGlobalContext()));
+  const FunctionType *fty =
+    FunctionType::get(Type::getVoidTy(getGlobalContext()), false);
+
+  Constant *appInitFini = Constant::getNullValue(PointerType::getUnqual(fty));
+  GlobalVariable *GV = M->getGlobalVariable(GVName);
+  if(GV) {
+    appInitFini = Function::Create(fty, GlobalVariable::InternalLinkage,
+                                   FName, M);
+    BasicBlock *bb = BasicBlock::Create(getGlobalContext(), "entry",
+                                        cast<Function>(appInitFini));
+    Instruction *I = ReturnInst::Create(getGlobalContext(), bb);
+    ConstantArray *CA = dyn_cast<ConstantArray>(GV->getInitializer());
+    if(CA) {
+      for (User::op_iterator i=CA->op_begin(); i!=CA->op_end(); ++i) {
+        ConstantStruct *CS = dyn_cast<ConstantStruct>(*i);
+        if(!CS)
+          continue;
+        if (isa<ConstantPointerNull>(CS->getOperand(1)))
+          continue;
+        if (!isa<Function>(CS->getOperand(1)))
+          continue;
+        Function *F = dyn_cast<Function>(CS->getOperand(1));
+        // NOTE: this will make the wrapper function we're creating call
+        // the ctors or dtors in reverse order
+        I = CallInst::Create(F, "", I);
+      }
+    }
+    GV->eraseFromParent();
+  }
+  return appInitFini;
+}
+
 static llvm::Module *linkWithUclibc(llvm::Module *mainModule) {
   Function *f;
   // force import of __uClibc_main
@@ -150,6 +185,11 @@ static llvm::Module *linkWithUclibc(llvm::Module *mainModule) {
     }
   }
 
+  // add global ctors into __app_init_in_tern and add global dtors into
+  // __app_fini_in_tern
+  Constant *appInit = wrapCtorDtor(mainModule, true);
+  Constant *appFini = wrapCtorDtor(mainModule, false);
+
   // XXX we need to rearchitect so this can also be used with
   // programs externally linked with uclibc.
 
@@ -182,8 +222,8 @@ static llvm::Module *linkWithUclibc(llvm::Module *mainModule) {
                                                 ft->getParamType(0)));
   args.push_back(stub->arg_begin()); // argc
   args.push_back(++stub->arg_begin()); // argv
-  args.push_back(Constant::getNullValue(ft->getParamType(3))); // app_init
-  args.push_back(Constant::getNullValue(ft->getParamType(4))); // app_fini
+  args.push_back(appInit); // app_init
+  args.push_back(appFini); // app_fini
   args.push_back(Constant::getNullValue(ft->getParamType(5))); // rtld_fini
   args.push_back(Constant::getNullValue(ft->getParamType(6))); // stack_end
   CallInst::Create(uclibcMainFn, args.begin(), args.end(), "", bb);
@@ -253,7 +293,7 @@ int main(int argc, char **argv) {
   if (!ModuleDataLayout.empty())
     Passes1.add(new TargetData(ModuleDataLayout));
   Passes1.add(new IDTagger);
-  Passes1.add(new SyncInstr(Uclibc));
+  Passes1.add(new SyncInstr);
   Passes1.add(createVerifierPass());
   if (OutputAssembly)
     Passes1.add(createPrintModulePass(AnalysisOut));
@@ -261,7 +301,7 @@ int main(int argc, char **argv) {
     Passes1.add(createBitcodeWriterPass(*AnalysisOut));
 
   // record instrumentation
-  Passes2init.add(new InitInstr(Uclibc));
+  Passes2init.add(new InitInstr);
   if (!ModuleDataLayout.empty())
     Passes2.add(new TargetData(ModuleDataLayout));
 Passes2.add(createVerifierPass());

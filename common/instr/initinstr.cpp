@@ -92,6 +92,7 @@ void InitInstr::addBeginEndAsCtorDtor(Module &M) {
 ///        __user_main_for_tern();
 ///        __tern_prog_end();
 ///
+/// NOTE that we must also instrument exit() to call __tern_prog_end()
 void InitInstr::addBeginEndInMain(llvm::Module &M, llvm::Function *mainfunc) {
   const FunctionType *Ty = TypeBuilder<void (void),
     false>::get(getGlobalContext());
@@ -158,25 +159,10 @@ bool InitInstr::runOnModule(Module &M) {
 
   if(mainfunc->arg_size())
     addSymbolicArgv(M, mainfunc);
+
   addSymbolic(M);
 
-  if(uclibc)
-    addBeginEndInMain(M, mainfunc);
-  else
-    addBeginEndAsCtorDtor(M);
-
-  // GlobalVariable *GCL = M.getGlobalVariable("llvm.global_ctors");
-  // GlobalVariable *GDL = M.getGlobalVariable("llvm.global_dtors");
-  // if(GCL || GDL)
-  //   addBeginEndAsCtorDtor(M);
-  // else
-  //  addBeginEndInMain(M, mainfunc);
-
-  // unfortunately, static ctor-dtor approach doesn't work for uclibc.
-  //
-  // actually, if ctor-dtor method is robust, let's just stick to it and
-  // not wrap main
-  // addBeginEndAsCtorDtor(M);
+  addBeginEndAsCtorDtor(M);
 
   return true;
 }

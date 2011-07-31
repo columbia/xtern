@@ -195,8 +195,6 @@ bool SyncInstr::runOnModule(Module &M) {
         continue;
       if(syncfunc::isTern(syncid))
         continue;
-      if(!uclibc && syncid == syncfunc::exit)
-        continue;
       replaceFunctionInCall(M, prv, syncid);
     }
   }
