@@ -144,6 +144,11 @@ LogTag funcBodyLogged(Function *func) {
   if(func->isDeclaration())
     return NotLogged;
 
+  // c++ new and new[]; don't instrument since our code uses them too
+  if(func->getName().startswith("_Zna")
+     || func->getName().startswith("_Znw"))
+    return NotLogged;
+
   return Logged;
 }
 
