@@ -1,5 +1,18 @@
 // Authors: Junfeng Yang (junfeng@cs.columbia.edu).  Refactored from
 // Heming's Memoizer code
+//
+// Some tricky issues addressed or discussed here are:
+//
+// 1. deterministic pthread_create
+// 2. deterministic and deadlock-free pthread_barrier_wait
+// 3. deterministic and deadlock-free pthread_cond_wait
+// 4. timed wait operations (e.g., pthread_cond_timewait)
+// 5. try-operations (e.g., pthread_mutex_trylock)
+//
+// TODO:
+// 1. implement the other proposed solutions to pthread_cond_wait
+// 2. design and implement a physical-to-logical mapping to address timeouts
+// 3. implement replay runtime
 
 #include <errno.h>
 #include "logger.h"
@@ -168,6 +181,11 @@ int RecorderRT<_S>::pthreadMutexLock(unsigned ins, pthread_mutex_t *mu) {
   return 0;
 }
 
+
+/// instead of looping to get lock as how we implement the regular lock(),
+/// here just trylock once and return.  this preserves the semantics of
+/// trylock().  Note that we only log a trylock() operation when the lock
+/// is actually acquired.
 template <typename _S>
 int RecorderRT<_S>::pthreadMutexTryLock(unsigned ins, pthread_mutex_t *mu) {
   unsigned nturn, ret;
@@ -225,11 +243,39 @@ int RecorderRT<_S>::pthreadBarrierInit(unsigned ins, pthread_barrier_t *barrier,
   return ret;
 }
 
+
+/// barrier_wait has a similar problem to pthread_cond_wait (see below).
+/// we want to avoid the head of queue block, so must call wait(ba) and
+/// give up turn before calling pthread_barrier_wait.  However, when the
+/// last thread arrives, we must wake up the waiting threads.
+///
+/// solution: we keep track of the barrier count by ourselves, so that the
+/// last thread arriving at the barrier can figure out that it is the last
+/// thread, and wakes up all other threads.
+///
 template <typename _S>
 int RecorderRT<_S>::pthreadBarrierWait(unsigned ins,
                                        pthread_barrier_t *barrier) {
   int ret, nturn1, nturn2;
 
+  /// Note: the signal() operation has to be done while the thread has the
+  /// turn; otherwise two independent signal() operations on two
+  /// independent barriers can be nondeterministic.  e.g., suppose two
+  /// barriers ba1 and ba2 each has count 1.
+  ///
+  ///       t0                        t1
+  ///
+  /// getTurn()
+  /// wait(ba1);
+  ///                         getTurn()
+  ///                         wait(ba1);
+  /// barrier_wait(ba1)
+  ///                         barrier_wait(ba2)
+  /// signal(ba1)             signal(ba2)
+  ///
+  /// these two signal() ops can be nondeterministic, causing threads to be
+  /// added to the activeq in different orders
+  ///
   _S::getTurn();
   nturn1 = _S::incTurnCount();
   barrier_map::iterator bi = barriers.find(barrier);
@@ -274,6 +320,228 @@ int RecorderRT<_S>::pthreadBarrierDestroy(unsigned ins,
   return ret;
 }
 
+/// The issues with pthread_cond_wait()
+///
+/// ------ First issue: deadlock. Normally, we'd want to do
+///
+///   getTurn();
+///   pthread_cond_wait(&cv, &mu);
+///   putTurn();
+///
+/// However, pthread_cond_wait blocks, so we won't call putTurn(), thus
+/// deadlocking the entire system.  And there is (should be) no
+/// cond_trywait, unlike in the case of pthread_mutex_t.
+///
+///
+/// ------ A naive solution is to putTurn before calling pthread_cond_wait
+///
+///   getTurn();
+///   putTurn();
+///   pthread_cond_wait(&cv, &mu);
+///
+/// However, this is nondeterministic.  Two nondeterminism scenarios:
+///
+/// 1: race with a pthread_mutex_lock() (or trylock()).  Depending on the
+/// timing, the lock() may or may not succeed.
+///
+///   getTurn();
+///   putTurn();
+///                                     getTurn();
+///   pthread_cond_wait(&cv, &mu);      pthread_mutex_lock(&mu) (or trylock())
+///                                     putTurn();
+///
+/// 2: race with pthread_cond_signal() (or broadcast()).  Depending on the
+/// timing, the signal may or may not be received.  Note the code below uses
+/// "naked signal" without holding the lock, which is wrong, but despite so,
+/// we still have to be deterministic.
+///
+///   getTurn();
+///   putTurn();
+///                                      getTurn();
+///   pthread_cond_wait(&cv, &mu);       pthread_cond_signal(&cv) (or broadcast())
+///                                      putTurn();
+///
+///
+/// ------ First solution: replace mu with the scheduler mutex
+///
+///   getTurn();
+///   pthread_mutex_unlock(&mu);
+///   signal(&mu);
+///   waitFirstHalf(&cv); // put self() to waitq for &cv, but don't wait on
+///                       // any internal sync obj or release scheduler lock
+///                       // because we'll wait on the cond var in user
+///                       // program
+///   pthread_cond_wait(&cv, &schedulerLock);
+///   getTurnNU(); // get turn without lock(&schedulerLock), but
+///                // unlock(&schedulerLock) when returns
+///
+///   pthreadMutexLockHelper(mu); // call lock wrapper
+///   putTurn();
+///
+/// This solution solves race 1 & 2 at the same time because getTurn has to
+/// wait until schedulerLock is released.
+///
+///
+/// ------ Issue with the first solution: deadlock.
+///
+/// The first solution may still deadlock because the thread we
+/// deterministically choose to wake up may be different from the one
+/// chosen nondeterministically by pthread.
+///
+/// consider:
+///
+///   pthread_cond_wait(&cv, &schedulerLock);      pthread_cond_wait(&cv, &schedulerLock);
+///   getTurnWithoutLock();                        getTurnWithoutLock()
+///   ret = pthread_mutex_trylock(&mu);            ret = pthread_mutex_trylock(&mu);
+///   ...                                          ...
+///   putTurn();                                   putTurn();
+///
+/// When a thread calls pthread_cond_signal, suppose pthread chooses to
+/// wake up the second thread.  However, the first thread may be the one
+/// that gets the turn first.  Therefore the system would deadlock.
+///
+///
+/// ------- Second solution: replace pthread_cond_signal with
+/// pthread_cond_broadcast, which wakes up all threads, and then the
+/// thread that gets the turn first would proceed first to get mu.
+///
+/// pthread_cond_signal(cv):
+///
+///   getTurnLN();  // lock(&schedulerLock) but does not unlock(&schedulerLock)
+///   pthread_cond_broadcast(cv);
+///   signalNN(cv); // wake up the first thread waiting on cv; need to hold
+///                 // schedulerLock because signalNN touches wait queue
+///   putTurnNU();  // no lock() but unlock(&schedulerLock)
+///
+/// This is the solution currently implement.
+///
+///
+/// ------- Issues with the second solution: changed pthread_cond_signal semantics
+///
+/// Once we change cond_signal to cond_broadcast, all woken up threads can
+/// proceed after the first thread releases mu.  This differs from the
+/// cond var semantics where one signal should only wake up one thread, as
+/// seen in the Linux man page:
+///
+///   !pthread_cond_signal! restarts one of the threads that are waiting
+///   on the condition variable |cond|. If no threads are waiting on
+///   |cond|, nothing happens. If several threads are waiting on |cond|,
+///   exactly one is restarted, but it is not specified which.
+///
+/// If the application program correctly uses mesa-style cond var, i.e.,
+/// the woken up thread re-checks the condition using while, waking up
+/// more than one thread would not be an issue.  In addition, according
+/// to the IEEE/The Open Group, 2003, PTHREAD_COND_BROADCAST(P):
+///
+///   In a multi-processor, it may be impossible for an implementation of
+///   pthread_cond_signal() to avoid the unblocking of more than one
+///   thread blocked on a condition variable."
+///
+/// However, we have to be deterministic despite program errors (again).
+///
+///
+/// ------- Third (proposed, not yet implemented) solution: replace cv
+///         with our own cv in the actual pthread_cond_wait
+///
+/// pthread_cond_wait(cv, mu):
+///
+///   getTurn();
+///   pthread_mutex_unlock(&mu);
+///   signal(&mu);
+///   waitFirstHalf(&cv);
+///   putTurnLN();
+///   pthread_cond_wait(&waitcv[self()], &schedulerLock);
+///   getTurnNU();
+///   pthreadMutexLockHelper(mu);
+///   putTurn();
+///
+/// pthread_cond_signal(&cv):
+///
+///   getTurnLN();
+///   signalNN(&cv) // wake up precisely the first thread with waitVar == chan
+///   pthread_cond_signal(&cv); // no op
+///   putTurnNU();
+///
+/// ----- Fourth (proposed, not yet implemented) solution: re-implement
+///       pthread cv all together
+///
+/// A closer look at the code shows that we're not really using the
+/// original conditional variable at all.  That is, no thread ever waits
+/// on the original cond_var (ever calls cond_wait() on the cond var).  We
+/// may as well skip cond_signal.  That is, we're reimplementing cond vars
+/// with our own queues, lock and cond vars.
+///
+/// This observation motives our next design: re-implementing cond var on
+/// top of semaphore, so that we can get rid of the schedulerLock.  We can
+/// implement the scheduler functions as follows:
+///
+/// getTurn():
+///   sem_wait(&semOfThread);
+///
+/// putTurn():
+///   move self to end of active q
+///   find sem of head of q
+///   sem_post(&semOfHead);
+///
+/// wait():
+///   move self to end of wait q
+///   find sem of head of q
+///   sem_post(&sem_of_head);
+///
+/// We can then implement pthread_cond_wait and pthread_cond_signal as follows:
+///
+/// pthread_cond_wait(&cv, &mu):
+///   getTurn();
+///   pthread_mutex_unlock(&mu);
+///   signal(&mu);
+///   wait(&cv);
+///   putTurn();
+///
+///   getTurn();
+///   pthreadMutexLockHelper(&mu);
+///   putTurn();
+///
+/// pthread_cond_signal(&cv):
+///   getTurn();
+///   signal(&cv);
+///   putTurn();
+///
+/// One additional optimization we can do for programs that do sync
+/// frequently (1000 ops > 1 second?): replace the semaphores with
+/// integer flags.
+///
+///   sem_wait(semOfThread) ==>  while(flagOfThread != 1);
+///   sem_post(semOfHead)   ==>  flagOfHead = 1;
+///
+///
+///  ----- Fifth (proposed, probably not worth implementing) solution: can
+///        be more aggressive and implement more stuff on our own (mutex,
+///        barrier, etc), but probably unnecessary.  skip sleep and
+///        barrier_wait help the most
+///
+///
+///  ---- Summary
+///
+///  solution 2: lock + cv + cond_broadcast.  deterministic if application
+///  code use while() with cond_wait, same sync var state except short
+///  periods of time within cond_wait.  the advantage is that it ensures
+///  that all sync vars have the same internal states, in case the
+///  application code breaks abstraction boundaries and reads the internal
+///  states of the sync vars.
+///
+///  solution 3: lock + cv + replace cv.  deterministic, but probably not
+///  as good as semaphore since the schedulerLock seems unnecessary.  the
+///  advantage is that it ensures that all sync vars except original cond
+///  vars have the same internal states
+///
+///  solution 4: lock + semaphore.  deterministic, good if sync frequency
+///  low.
+///
+///  solution 4 optimization: lock + flag.  deterministic, good if sync
+///  frequency high
+///
+///  solution 5: probably not worth it
+///
 template <typename _S>
 int RecorderRT<_S>::pthreadCondWait(unsigned ins,
                                     pthread_cond_t *cv, pthread_mutex_t *mu){
@@ -299,6 +567,25 @@ int RecorderRT<_S>::pthreadCondWait(unsigned ins,
   return 0;
 }
 
+/// timeout based on real time is inherently nondeterministic.  three ways
+/// to solve
+///
+/// - ignore.  drawback: changed semantics.  program may get stuck (e.g.,
+///   pbzip2) if they rely on timeout to move forward.
+///
+/// - record timeout, and try to replay (tern approach)
+///
+/// - replace physical time with logical number of sync operations.  can
+///   count how many times we get the turn or the turn changed hands, and
+///   timeout based on this turn count.  This approach should maintain
+///   original semantics if program doesn't rely on physical running time
+///   of code.
+///
+///   optimization, if there's a deadlock (activeq == empty), we just wake
+///   up timed waiters in order
+///
+///   any issue with this approach?
+///
 template <typename _S>
 int RecorderRT<_S>::pthreadCondTimedWait(unsigned ins,
     pthread_cond_t *cv, pthread_mutex_t *mu, const struct timespec *abstime){
@@ -466,6 +753,18 @@ void RecorderRT<_S>::symbolic(unsigned insid, void *addr,
 // occurs.  Thus, we can simplify the implementation of pthread cond var
 // methods for FCFSScheduler.
 
+
+/// FCFS version of pthread_cond_wait is a lot simpler than RR version.
+///
+/// can use lock + cv, and since we don't force threads to get turns in
+/// some order, getTurnWithoutLock() is just a noop, and we don't need to
+/// replace cond_signal with cond_broadcast.
+///
+/// semaphore and flag approaches wouldn't make much sense.
+///
+/// TODO: can we use spinlock instead of schedulerLock?  probably not due
+/// to cond_wait problem
+///
 template <>
 int RecorderRT<FCFSScheduler>::pthreadCondWait(unsigned ins,
                 pthread_cond_t *cv, pthread_mutex_t *mu){
@@ -542,6 +841,51 @@ int RecorderRT<FCFSScheduler>::pthreadCondBroadcast(unsigned ins,
 }
 
 
+//////////////////////////////////////////////////////////////////////////
+// Replay Runtime
+//
+// optimization: can skip synchronization operations.  three different
+// approaches
+//
+//  - skip no synchronization operations
+//
+//  - skip sleep or barrier wait operations
+//
+//  - skip all synchronization operations
+
+/// pthread_cond_wait(&cv, &mu)
+///   getTurn();
+///   advance iter
+///   putTurn()
+///   pthread_cond_wait(&cv, &mu); // okay to do it here, as we don't care
+///                                // when we'll be woken up, as long as
+///                                // we enforce the order later before
+///                                // exiting this hook
+///
+///   pthread_mutex_unlock(&mu);   // unlock in case we grabbed this mutex
+///                                // prematurely; see example below
+///
+///   getTurn();
+///   advance iter
+///   putTurn()
+///
+///   pthread_mutex_lock(&mu);  // safe to lock here since we have this
+///                             // mutex according to the schedule, so the
+///                             // log will not have another
+///                             // pthread_mutex_lock record before we call
+///                             // unlock.
+///
+/// Why need pthread_mutex_unlock(&mu) in above code?  consider the schedule
+///
+///    t1             t2          t3
+///  cond_wait
+///                 lock
+///                 signal
+///                 lock
+///                              lock
+///                              unlock
+///
+/// if in replay, t1 grabs lock first before t3, the replay will deadlock.
 
 } // namespace tern
 
@@ -549,335 +893,3 @@ int RecorderRT<FCFSScheduler>::pthreadCondBroadcast(unsigned ins,
 
 
 
-/*
-  Need to clean this up
-
-  The issues with pthread_cond_wait()
-
-  ** First issue: deadlock. Normally, we'd want to do
-
-  getTurn();
-  pthread_cond_wait(&cv, &mu);
-  putTurn();
-
-  However, pthread_cond_wait blocks, so we won't call putTurn(), thus
-  deadlocking the entire system.  And there is (should be) no
-  cond_trywait, unlike in the case of pthread_mutex_t.
-
-  A naive solution is to putTurn before calling pthread_cond_wait
-
-  getTurn();
-  putTurn();
-  pthread_cond_wait(&cv, &mu);
-
-  However, this is nondeterministic.  Two nondeterminism scenarios:
-
-  1: race with a pthread_mutex_lock() (or trylock()).  Depending on the
-  timing, the lock() may or may not succeed.
-
-  getTurn();
-  putTurn();
-  getTurn();
-  pthread_cond_wait(&cv, &mu);       pthread_mutex_lock(&mu) (or trylock())
-  putTurn();
-
-  2: race with pthread_cond_signal() (or broadcast()).  Depending on the
-  timing, the signal may or may not be received.  Note the application
-  code uses "naked signal" without holding the lock, which is wrong, but
-  despite so, we still have to be deterministic.
-
-  getTurn();
-  putTurn();
-  getTurn();
-  pthread_cond_wait(&cv, &mu);       pthread_cond_signal(&cv) (or broadcast())
-  putTurn();
-
-  our solution: replace mu with the scheduler mutex
-
-  getTurn();
-  pthread_mutex_unlock(&mu);
-  signal(&mu);
-
-  waitFirstHalf(&cv); // put self() to waitq for &cv, but don't wait on
-                      // any internal sync obj or release scheduler lock
-                      // because we'll wait on the cond var in user
-                      // program
-
-  pthread_cond_wait(&cv, &schedulerLock);
-  getTurnWithoutLock();
-
-  retry:
-  ret = pthread_mutex_trylock(&mu);
-  if(ret == EBUSY) {
-  wait(&mu);
-  getTurn();
-  goto retry;
-  putTurn();
-
-  solves race 1 & 2 at the same time because getTurn has to wait until
-  schedulerLock is released.
-
-  ** Second issue: still deadlock.
-
-  The above approach may still deadlock because the thread we
-  deterministically choose to wake up may be different from the one chosen
-  nondeterministically by pthread.
-
-  consider:
-  pthread_cond_wait(&cv, &schedulerLock);          pthread_cond_wait(&cv, &schedulerLock);
-  getTurnWithoutLock();                            getTurnWithoutLock()
-  ret = pthread_mutex_trylock(&mu);                ret = pthread_mutex_trylock(&mu);
-  ...                                              ...
-  putTurn();                                       putTurn();
-
-  When a thread calls pthread_cond_signal, suppose pthread chooses to wake
-  up the second thread.  However, the first thread may be the one that
-  gets the turn first.  Therefore the system would deadlock.
-
-  One fix is to replace pthread_cond_signal with pthread_cond_broadcast,
-  which wakes up all threads, and then the thread that gets the turn first
-  would proceed first to get mu.  However, this changes the semantics of
-  pthread_cond_signal because all woken up threads can proceed after the
-  first thread releases mu.  This differs from the cond var semantics
-  where one signal should only wake up one thread.
-
-  This may not be an issue for mesa-style cond var because the woken up
-  thread has to re-check its condition anyway.
-
-  also man page says:
-
-  "In a multi-processor, it may be impossible for an implementation of
-  pthread_cond_signal() to avoid the unblocking of more than one thread
-  blocked on a condition variable."
-
-  -- IEEE/The Open Group, 2003, PTHREAD_COND_BROADCAST(P)
-
-  But, again, we have to be deterministic despite program errors.  Also,
-  linux man page is different:
-
-  !pthread_cond_signal! restarts one of the threads that are waiting on
-  the condition variable |cond|. If no threads are waiting on |cond|,
-  nothing happens. If several threads are waiting on |cond|, exactly one
-  is restarted, but it is not specified which.
-
-  Thus, we propose a second fix: replace cv with our own cv.
-
-  tern_pthread_cond_wait(&cv, &mu)
-  getTurn();
-  pthread_mutex_unlock(&mu);
-  signal(&mu);
-  putTurnWithoutUnlock(); // does not release schedulerLock
-  pthread_cond_wait(&cvOfThread, &schedulerLock);
-  getTurnWithoutLock();
-
-  retry:
-  ret = pthread_mutex_trylock(&mu);
-  if(ret == EBUSY) {
-  wait(&mu);
-  getTurn();
-  goto retry;
-
-  putTurn();
-
-  tern_pthread_cond_signal(&cv)
-  getTurn();
-  signal(&cv) // wake up precisely the first thread with waitVar == chan
-  pthread_cond_signal(&cv);
-  putTurn();
-
-
-  A closer look at the code shows that we're not really using the original
-  conditional variable at all.  That is, no thread ever waits on the
-  original cond_var (ever calls cond_wait() on the cond var).  We may as
-  well skip cond_signal.  That is, we're reimplementing cond vars with our
-  own queues, lock and cond vars.
-
-  This observation motives our next design: re-implementing cond var on
-  top of semaphore, so that we can get rid of the schedulerLock
-
-  getTurn()
-  sem_wait(&semOfThread);
-
-  putTurn()
-  move self to end of active q
-  find sem of head of q
-  sem_post(&semOfHead);
-
-  wait()
-  move self to end of wait q
-  find sem of head of q
-  sem_post(&sem_of_head);
-
-
-  tern_pthread_cond_wait(&cv, &mu)
-  getTurn();
-  pthread_mutex_unlock(&mu);
-  signal(&mu);
-  wait(&cv);
-  putTurn();
-
-  getTurn();
-  retry:
-  ret = pthread_mutex_trylock(&mu);
-  if(ret == EBUSY) {
-  wait(&mu);
-  goto retry;
-  putTurn();
-
-  tern_pthread_cond_signal(&cv)
-  getTurn();
-  signal(&cv) // wake up precisely the first thread with waitVar == chan
-  putTurn();
-
-
-  One additional optimization we can do for programs that do sync
-  frequently (1000 ops > 1 second?): replace the semaphores with integer flags.
-
-  sem_wait(semOfThread) ==>  while(flagOfThread != 1);
-  sem_post(semOfHead)   ==>  flagOfHead = 1;
-
-
-  Another optimization: can change the single wait queue to be multiple
-  wait queues keyed by the address they wait on, therefore no need to scan
-  the mixed wait queue.
-
-  What about cond_timedwait()?
-
-  timeout based on real time is inherently nondeterministic.  three ways to solve
-
-  - ignore timeout.  drawback: program may get stuck if they rely on
-  timeout to move forward.  e.g., changes semantics
-
-  - replace physical time with logical number of sync operations.
-  drawback: may be off too much compared to physical time, and may get
-  stuck as well if total number of sync < than the sync timeout
-  number.  However, can count how many times we get the turn, and use
-  it to timeout, thus should maintain original semantics if program
-  doesn't rely on physical running time of code.
-
-  actually, if there's a deadlock (activeq == empty), we just wait up
-  timed waiters in order
-
-  - record timeout, and reuse schedule (tern approach)
-
-  What about trylock()?
-
-  instead of looping to get lock as in regular lock, just trylock once and
-  return.  we only log it when the lock is actually acquired.
-
-  Summary
-
-  lock + cv + cond_broadcast: deterministic if use while() with
-  cond_wait, same sync var state except short periods of time within
-  cond_wait
-
-  lock + cv + replace cv: deterministic, but probably not as good as
-  semaphore since redundant mutex lock.  same sync var state except
-  original cond vars
-
-  lock + semaphore: deterministic, good if sync frequency low.
-
-  lock + flag: deterministic, good if sync frequency high
-
-  can be more aggressive and implement more stuff on our own (mutex,
-  barrier, etc), but probably unnecessary.  skip sleep and barrier_wait
-  help the most
-
-  -------------------
-
-  barrier has a similar problem.  we want to avoid the head of queue
-  block, so must call wait(ba) and give up turn before calling
-  pthread_barrier_wait.  However, when the last thread arrives, we must
-  wake up these waiting threads.
-
-  the signal op has to be done within the turn; otherwise two signal ops
-  from two independent barriers can be nondeterministic and add threads to
-  the queues in nondeterministic order.  e..g, suppose two barriers with
-  count 1.
-
-        t0                        t1
-
-  getTurn()
-  wait(ba1);
-                          getTurn()
-                          wait(ba1);
-  barrier_wait(ba1)
-                          barrier_wait(ba1)
-  signal()                signal()
-
-  these two signal() ops can be nondeterministic
-
-  -------------------
-
-  Instead of round-robin, can easy use a deterministic but random sequence
-  using a deterministic pseodu random number generator.
-
-  at each decision point, toss a coin to decide which one to run.
-
-  -------------------
-  break out of turn for memoization or execution
-
-  can deadlock if program uses ad hoc sync.  while(flag);
-
-  currently don't handle the case ...
-
-  -------------------
-
-  FCFS scheduler (whoever comes first run, nondeterminisic)
-
-  semaphore and flag approaches wouldn't make much sense.
-
-  can use lock + cv, and since we don't force threads to get turns in some
-  order, getTurnWithoutLock() is just a noop, and we don't need to replace
-  cond_signal with cond_broadcast.
-
-
-  can we use spinlock?  probably not due to cond_wait problem
-
-  -------------------
-
-  Replay scheduler
-
-  tern_pthread_cond_wait(&cv, &mu)
-  getTurn();
-  move iter
-  putTurn()
-
-  // okay to do it here, as we don't care when we'll be woken up, as
-  // long as we enforce the order later before exiting this hook
-  pthread_cond_wait(&cv, &mu);
-
-  pthread_mutex_unlock(&mu); // unlock in case we grabbed this mutex
-  // prematurelly.  consider the schedule
-  me             t2          t3
-  cond_wait
-  lock
-  signal
-  lock
-  lock
-  unlock
-
-  // if in replay, we grab lock first before
-  // t3, we'll be in trouble
-
-  getTurn();
-  move iter
-  putTurn()
-  pthread_mutex_lock(&mu);  // safe to lock here since we have this
-  // mutex according to the schedule, so the
-  // log will not have another
-  // pthread_mutex_lock record before we call
-  // unlock.
-
-
-  -------------------
-
-  replay optimization: can skip synchronization operations
-
-  - skip no synchronization operations
-
-  - skip sleep or barrier wait operations
-
-  - skip all synchronization operations
-
-*/

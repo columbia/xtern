@@ -86,8 +86,7 @@ void RRSchedulerCV::waitHelper(void *chan, bool doLock, bool doUnlock) {
     pthread_mutex_unlock(&lock);
 }
 
-/// move current head of runq to tail of waitq, and block current thread
-/// on its dedicated cond var.
+/// move current head of runq to tail of waitq
 void RRSchedulerCV::waitFirstHalf(void *chan, bool doLock) {
   assert(chan && "can't wait on NULL");
   assert(self() == runq.front());

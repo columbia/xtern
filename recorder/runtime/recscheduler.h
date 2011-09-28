@@ -1,5 +1,13 @@
 /* Author: Junfeng Yang (junfeng@cs.columbia.edu) -*- Mode: C++ -*- */
 // Refactored from Heming's Memoizer code
+//
+// TODO:
+// 1. use multiple wait queues per waitvar, instead of one for all
+//    waitvars, for performance?
+// 2. implement random scheduler
+// 3. implement replay scheduler
+// 4. support break out of turn.  RR can deadlock if program uses ad hoc
+//    sync, such as "while(flag)"
 
 #ifndef __TERN_RECORDER_SCHEDULER_H
 #define __TERN_RECORDER_SCHEDULER_H
@@ -13,6 +21,7 @@
 
 namespace tern {
 
+/// whoever comes first run; nondeterministic
 struct FCFSScheduler: public Scheduler {
   typedef Scheduler Parent;
 
@@ -51,6 +60,10 @@ protected:
   pthread_mutex_t lock; // protects TidMap data
 };
 
+
+/// TODO: one optimization is to change the single wait queue to be
+/// multiple wait queues keyed by the address they wait on, therefore no
+/// need to scan the mixed wait queue.
 struct RRSchedulerCV: public Scheduler {
   typedef Scheduler Parent;
 
@@ -150,6 +163,24 @@ protected:
   // it improves performance
   pthread_cond_t  waitcv[MaxThreads];
   void*           waitvar[MaxThreads];
+};
+
+
+/// Instead of round-robin, can easy use a deterministic but random
+/// sequence using a deterministic pseodu random number generator.  at
+/// each decision point, toss a coin to decide which one to run.
+struct RandomScheduler: public Scheduler {
+  // TODO
+};
+
+/// replay scheduler using semaphores
+struct ReplaySchedulerSem: public Scheduler {
+  // TODO
+};
+
+/// replay scheduler using integer flags
+struct ReplaySchedulerFlag: public Scheduler {
+  // TODO
 };
 
 } // namespace tern
