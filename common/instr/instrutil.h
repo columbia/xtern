@@ -5,7 +5,7 @@
 
 #include "llvm/Instruction.h"
 #include "llvm/Target/TargetData.h"
-#include "common/id-manager/IDManager.h"
+#include "common/IDManager.h"
 
 namespace tern {
 

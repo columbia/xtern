@@ -6,6 +6,7 @@
 #include "runtime.h"
 #include "scheduler.h"
 #include "helper.h"
+#include "stdlib.h"
 
 #include <iostream>
 

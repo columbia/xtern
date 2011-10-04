@@ -1,6 +1,6 @@
 /* Author: Junfeng Yang (junfeng@cs.columbia.edu) */
 #include "config.h"
-#include "util.h"
+#include "common/util.h"
 #include "common/instr/instrutil.h"
 #include "loggable.h"
 #include "loginstr.h"

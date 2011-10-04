@@ -4,7 +4,7 @@
 #define __TERN_COMMON_SYNCINSTR_H
 
 #include <tr1/unordered_map>
-#include "util.h"
+#include "common/util.h"
 #include "llvm/Pass.h"
 #include "llvm/Module.h"
 #include "llvm/Target/TargetData.h"

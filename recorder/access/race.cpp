@@ -2,7 +2,7 @@
 
 #include <queue>
 #include "race.h"
-#include "util.h"
+#include "common/util.h"
 
 // #define _DEBUG_RACEDETECTOR
 

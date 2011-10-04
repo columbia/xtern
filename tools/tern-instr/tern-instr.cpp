@@ -13,7 +13,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/PassNameParser.h"
 
-#include "common/id-manager/IDTagger.h"
+#include "common/IDTagger.h"
 
 #include "common/instr/initinstr.h"
 #include "common/instr/syncinstr.h"

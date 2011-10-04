@@ -9,7 +9,7 @@
 #include <stdlib.h>
 #include <fstream>
 
-#include "util.h"
+#include "common/util.h"
 #include "common/instr/instrutil.h"
 #include "recorder/instr/loggable.h"
 #include "llvm/Function.h"

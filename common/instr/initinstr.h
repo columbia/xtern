@@ -3,7 +3,7 @@
 #ifndef __TERN_COMMON_INITINSTR_H
 #define __TERN_COMMON_INITINSTR_H
 
-#include "util.h"
+#include "common/util.h"
 #include "llvm/Pass.h"
 #include "llvm/Module.h"
 

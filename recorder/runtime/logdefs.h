@@ -4,6 +4,7 @@
 #define __TERN_RECORDER_LOGDEFS_H
 
 #include <stdint.h>
+#include "stdio.h"
 #include <boost/static_assert.hpp>
 #include "syncfuncs.h"
 

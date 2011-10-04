@@ -11,6 +11,7 @@
 #include "llvm/Bitcode/ReaderWriter.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "instrutil.h"
+#include "stdio.h"
 
 using namespace std;
 using namespace llvm;

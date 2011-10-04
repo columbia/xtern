@@ -5,7 +5,7 @@
 #define __TERN_RECORDER_RUNTIME_H
 
 #include <tr1/unordered_map>
-#include "log.h"
+#include "common/log.h"
 #include "recscheduler.h"
 #include "common/runtime/runtime.h"
 #include "common/runtime/helper.h"

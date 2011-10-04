@@ -2,6 +2,10 @@
 // Refactored from Heming's Memoizer code
 
 #include "recscheduler.h"
+#include <iostream>
+#include <iostream>
+#include <iterator>
+#include <vector>
 
 using namespace std;
 using namespace tern;
