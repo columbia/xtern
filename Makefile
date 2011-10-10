@@ -18,12 +18,13 @@ include $(LEVEL)/Makefile.common
 
 .PHONY: cscope.files
 cscope.files:
-	find \
-          common recorder analyzer replayer tests \
+	cd $(PROJ_SRC_ROOT) && find \
+          include lib tools unittests test \
           -name Makefile -or \
           -name \*.in -or \
           -name \*.c -or \
           -name \*.cpp -or \
           -name \*.exp -or \
           -name \*.inc -or \
-          -name \*.h | sort > cscope.files
+          -name \*.h | sort > cscope.files && \
+	cscope -b
