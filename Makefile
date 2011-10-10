@@ -3,7 +3,7 @@
 #
 LEVEL := .
 
-DIRS := common recorder analyzer replayer tools
+DIRS := lib tools
 EXTRA_DIST := 
 
 ifeq ($(MAKECMDGOALS),unittests)

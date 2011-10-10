@@ -15,9 +15,9 @@
 
 #include "common/IDTagger.h"
 
-#include "common/instr/initinstr.h"
-#include "common/instr/syncinstr.h"
-#include "recorder/instr/loginstr.h"
+#include "tern/instr/init.h"
+#include "tern/instr/sync.h"
+#include "tern/instr/log.h"
 
 using namespace std;
 using namespace llvm;

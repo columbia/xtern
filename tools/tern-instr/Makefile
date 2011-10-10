@@ -2,7 +2,7 @@ LEVEL := ../..
 TOOLNAME = tern-instr
 
 LINK_COMPONENTS := bitreader bitwriter asmparser linker scalaropts
-USEDLIBS := recinstr.a commoninstr.a common.a
+USEDLIBS := instr.a common.a
 
 include $(LEVEL)/Makefile.common
 

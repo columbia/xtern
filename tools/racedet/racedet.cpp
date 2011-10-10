@@ -12,8 +12,8 @@
 #include "common/util.h"
 #include "common/IDTagger.h"
 #include "common/IDManager.h"
-#include "common/instr/instrutil.h"
-#include "recorder/access/logaccess.h"
+#include "tern/util.h"
+#include "tern/analysis/build-log.h"
 
 using namespace std;
 using namespace llvm;

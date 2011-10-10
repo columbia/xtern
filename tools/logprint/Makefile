@@ -2,7 +2,7 @@ LEVEL := ../..
 TOOLNAME = logprint
 
 LINK_COMPONENTS := bitreader asmparser core scalaropts support
-USEDLIBS := recaccess.a recinstr.a commoninstr.a common.a
+USEDLIBS := analysis.a common.a
 
 include $(LEVEL)/Makefile.common
 

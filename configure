@@ -1732,7 +1732,7 @@ fi
 ac_config_files="$ac_config_files Makefile.config"
 
 
-ac_config_headers="$ac_config_headers common/include/config.h"
+ac_config_headers="$ac_config_headers include/tern/config.h"
 
 
 
@@ -4446,7 +4446,7 @@ do
   case $ac_config_target in
     "setup") CONFIG_COMMANDS="$CONFIG_COMMANDS setup" ;;
     "Makefile.config") CONFIG_FILES="$CONFIG_FILES Makefile.config" ;;
-    "common/include/config.h") CONFIG_HEADERS="$CONFIG_HEADERS common/include/config.h" ;;
+    "include/tern/config.h") CONFIG_HEADERS="$CONFIG_HEADERS include/tern/config.h" ;;
     "Makefile") CONFIG_COMMANDS="$CONFIG_COMMANDS Makefile" ;;
     "Makefile.common") CONFIG_COMMANDS="$CONFIG_COMMANDS Makefile.common" ;;
     "test/Makefile") CONFIG_COMMANDS="$CONFIG_COMMANDS test/Makefile" ;;

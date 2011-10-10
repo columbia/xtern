@@ -22,7 +22,7 @@ dnl Configure a common Makefile
 AC_CONFIG_FILES(Makefile.config)
 
 dnl Configure a header file
-AC_CONFIG_HEADERS([common/include/config.h])
+AC_CONFIG_HEADERS([include/tern/config.h])
 
 dnl FIXME: Make out of tree builds work.
 

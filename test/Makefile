@@ -72,6 +72,8 @@ site.exp: Makefile $(LEVEL)/Makefile.config
 	@echo 'set projbindir "$(PROJ_OBJ_ROOT)/$(BuildMode)/bin"' >>site.tmp
 	@echo 'set llvmgcc "$(LLVMGCC) -g -O0 -I$(PROJ_SRC_ROOT)/include"' >> site.tmp
 	@echo 'set llvmgxx "$(LLVMGXX) -g -O0 -I$(PROJ_SRC_ROOT)/include"' >> site.tmp
+	@echo 'set ternruntime "-L$(PROJ_OBJ_ROOT)/$(BuildMode)/lib -lruntime -lcommon"' >>site.tmp
+	@echo 'set ternbcruntime "$(PROJ_OBJ_ROOT)/$(BuildMode)/lib/runtime.bc"' >>site.tmp
 	@echo 'set gcc "gcc -g -w"' >> site.tmp
 	@echo 'set gxx "g++ -g -w"' >> site.tmp
 	@echo 'set timeout 1' >> site.tmp
