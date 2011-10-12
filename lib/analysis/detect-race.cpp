@@ -1204,7 +1204,6 @@ void RaceSorter::pruneEdges() {
         if(from->ts->happensBefore(*to->ts) || from->ts == to->ts)
           continue;
         // self pruning
-        TINNMap::iterator tinni = earliest.find(to->ts);
         INNMap &innMap = earliest[to->ts];
         INNMap::iterator inni = innMap.lower_bound(to->idx);
         while(inni != innMap.end()) {

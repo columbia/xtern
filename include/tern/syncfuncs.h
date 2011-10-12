@@ -64,7 +64,7 @@ static inline const char* getName(unsigned nr) {
 }
 
 static inline const char* getTernName(unsigned nr) {
-  assert(first_sync <= nr < num_syncs);
+  assert(first_sync <= nr && nr < num_syncs);
   return nameInTern[nr];
 }
 
