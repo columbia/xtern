@@ -34,32 +34,32 @@ extern const char* nameInTern[];
 enum {Synchronization, BlockingSyscall, TernUser, TernAuto};
 
 static inline bool isSync(unsigned nr) {
-  assert(first_sync <= nr < num_syncs);
+  assert(first_sync <= nr && nr < num_syncs);
   return kind[nr] == Synchronization;
 }
 
 static inline bool isBlockingSyscall(unsigned nr) {
-  assert(first_sync <= nr < num_syncs);
+  assert(first_sync <= nr && nr < num_syncs);
   return kind[nr] == BlockingSyscall;
 }
 
 static inline bool isTern(unsigned nr) {
-  assert(first_sync <= nr < num_syncs);
+  assert(first_sync <= nr && nr < num_syncs);
   return kind[nr] == TernUser || kind[nr] == TernAuto;
 }
 
 static inline bool isTernUser(unsigned nr) {
-  assert(first_sync <= nr < num_syncs);
+  assert(first_sync <= nr && nr < num_syncs);
   return kind[nr] == TernUser;
 }
 
 static inline bool isTernAuto(unsigned nr) {
-  assert(first_sync <= nr < num_syncs);
+  assert(first_sync <= nr && nr < num_syncs);
   return kind[nr] == TernAuto;
 }
 
 static inline const char* getName(unsigned nr) {
-  assert(first_sync <= nr < num_syncs);
+  assert(first_sync <= nr && nr < num_syncs);
   return name[nr];
 }
 
