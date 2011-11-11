@@ -21,7 +21,7 @@ if len(sys.argv) == 1:
 
 program = sys.argv[1]
 program_without_ext = ''
-tern_obj_path = '/home/junfeng/work/xtern/obj/Debug'
+tern_obj_path = '/home/huayang/research/xtern/obj/Release/'
 if program.endswith('.ll') or program.endswith('.bc'):
     program_without_ext = program.rstrip('lbc.')
 record   = '%s-record'   % program_without_ext
@@ -31,7 +31,7 @@ replay   = '%s-replay'   % program_without_ext
 cmd1 = '%s/bin/tern-instr -S -with-uclibc %s -o %s' \
     % (tern_obj_path, program, program_without_ext)
 cmd2 = 'llc -o %s.s %s.ll' % (record, record)
-cmd3 = 'g++ -o %s %s.s -L%s/lib -lcommonruntime -lrecruntime -lpthread' \
+cmd3 = 'g++ -o %s %s.s tern_sym.c -L%s/lib -lruntime -linstr -lcommon -lpthread' \
     % (record, record, tern_obj_path)
 cmd4 = ('./%s ' % record) + ' '.join(sys.argv[2:])
 
