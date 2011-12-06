@@ -11,6 +11,7 @@
 #include "tern/hooks.h"
 #include "tern/runtime/runtime.h"
 #include "helper.h"
+#include "tern/options.h"
 
 typedef void * (*thread_func_t)(void*);
 static void *__tern_thread_func(void *arg) {
@@ -52,6 +53,8 @@ int __tern_pthread_create(pthread_t *thread,  pthread_attr_t *attr,
 }
 
 void __tern_prog_begin(void) {
+  options::read_options("default.options");
+
   tern::InstallRuntime();
   // atexit(__tern_prog_end);
   tern_prog_begin();

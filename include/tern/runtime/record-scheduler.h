@@ -38,6 +38,14 @@ struct FCFSScheduler: public Scheduler {
 
   // no signal() or broadcast for FCFS
 
+  void block() {}	//	no block
+
+  void wakeup() { 
+    pthread_mutex_lock(&lock);
+    turnCount++; 
+    pthread_mutex_unlock(&lock);
+  } 
+  
   void threadBegin(pthread_t self_th) {
     getTurn();
     Parent::threadBegin(self_th);
@@ -77,6 +85,10 @@ struct RRSchedulerCV: public Scheduler {
   /// thread on @waitq
   void wait(void *chan) { waitHelper(chan, Lock, Unlock); }
 
+  void block();
+
+  void wakeup();
+  
   /// must call with turn held
   void threadCreate(pthread_t new_th) {
     assert(self() == runq.front());
@@ -126,12 +138,20 @@ struct RRSchedulerCV: public Scheduler {
                                              NoLock, NoUnlock); }
   void waitFirstHalf(void *chan, bool doLock = Lock);
   bool isWaiting();
+  
+  unsigned incTurnCount(void)
+  {
+    unsigned ret = turnCount++;
+    pthread_cond_broadcast(&tickcv);
+    return ret;
+  }
 
   pthread_mutex_t *getLock() {
     return &lock;
   }
 
   RRSchedulerCV(pthread_t main_th);
+  ~RRSchedulerCV();
 
 protected:
 
@@ -159,6 +179,16 @@ protected:
   std::list<int>  waitq;
   pthread_mutex_t lock;
 
+  struct net_item
+  {
+    int tid;
+    int turn;
+  };
+  std::list<net_item> net_events;
+  pthread_cond_t replaycv;
+  pthread_cond_t tickcv;
+  FILE *log;
+  
   // TODO: can potentially create a thread-local struct for each thread if
   // it improves performance
   pthread_cond_t  waitcv[MaxThreads];

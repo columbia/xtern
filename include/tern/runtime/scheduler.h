@@ -117,6 +117,13 @@ struct Scheduler: public TidMap {
   /// @chan has the same requirement as wait
   void broadcast (void *chan) { }
 
+  /// info the scheduler that a thread is calling an external blocking function
+  /// NOTICE: different delay before @block() should not lead to different schedule.
+  void block() {}
+
+  /// info the scheduler that a blocking thread has returned.
+  void wakeup() { incTurnCount(); } 
+
   /// begin a thread & get the turn; called right after the thread begins
   void threadBegin(pthread_t self_th)  { TidMap:: threadBegin(self_th); }
 
@@ -128,7 +135,7 @@ struct Scheduler: public TidMap {
 
   /// join thread @th; must call with turn held
   void threadJoin(pthread_t th) { TidMap:: threadJoin(th); }
-
+  
   /// must call within turn because turnCount is shared across all
   /// threads.  we provide this method instead of incrementing turn for
   /// each successful getTurn() because a successful getTurn() may not

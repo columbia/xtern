@@ -181,6 +181,8 @@ Value *LogInstr::castIfNecessary(Value *srcval, const Type *dst,
   if(src->isPointerTy())
     //return CastInst::CreatePointerCast(srcval, dst, "tern_ptrcast", insert);
     return CastInst::CreatePointerCast(srcval, dst, "", insert);
+  Instruction::CastOps ops = CastInst::getCastOpcode(srcval, true, dst, true);
+  return CastInst::Create(ops, srcval, dst, "", insert);
   //return CastInst::CreateZExtOrBitCast(srcval, dst, "tern_valcast", insert);
   return CastInst::CreateZExtOrBitCast(srcval, dst, "", insert);
 }

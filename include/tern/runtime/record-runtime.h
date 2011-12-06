@@ -57,6 +57,28 @@ struct RecorderRT: public Runtime, public _Scheduler {
 
   void symbolic(unsigned insid, void *addr, int nbytes, const char *name);
 
+  // socket & file
+  int __socket(unsigned ins, int domain, int type, int protocol);
+  int __listen(unsigned ins, int sockfd, int backlog);
+  int __accept(unsigned ins, int sockfd, struct sockaddr *cliaddr, socklen_t *addrlen);
+  int __connect(unsigned ins, int sockfd, const struct sockaddr *serv_addr, socklen_t addrlen);
+  //struct hostent *__gethostbyname(unsigned ins, const char *name);
+  //struct hostent *__gethostbyaddr(unsigned ins, const void *addr, int len, int type);
+  ssize_t __send(unsigned ins, int sockfd, const void *buf, size_t len, int flags);
+  ssize_t __sendto(unsigned ins, int sockfd, const void *buf, size_t len, int flags, const struct sockaddr *dest_addr, socklen_t addrlen);
+  ssize_t __sendmsg(unsigned ins, int sockfd, const struct msghdr *msg, int flags);
+  ssize_t __recv(unsigned ins, int sockfd, void *buf, size_t len, int flags);
+  ssize_t __recvfrom(unsigned ins, int sockfd, void *buf, size_t len, int flags, struct sockaddr *src_addr, socklen_t *addrlen);
+  ssize_t __recvmsg(unsigned ins, int sockfd, struct msghdr *msg, int flags);
+  int __shutdown(unsigned ins, int sockfd, int how);
+  int __getpeername(unsigned ins, int sockfd, struct sockaddr *addr, socklen_t *addrlen);  
+  int __getsockopt(unsigned ins, int sockfd, int level, int optname, void *optval, socklen_t *optlen);
+  int __setsockopt(unsigned ins, int sockfd, int level, int optname, const void *optval, socklen_t optlen);
+  int __close(unsigned ins, int fd);
+  ssize_t __read(unsigned ins, int fd, void *buf, size_t count);
+  ssize_t __write(unsigned ins, int fd, const void *buf, size_t count);
+  int __select(unsigned ins, int nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds, struct timeval *timeout);  
+  
   RecorderRT(): _Scheduler(pthread_self()) {
     int ret = sem_init(&thread_create_sem, 0, 1); // main thread
     assert(!ret && "can't initialize semaphore!");

@@ -21,7 +21,7 @@ if len(sys.argv) == 1:
 
 program = sys.argv[1]
 program_without_ext = ''
-tern_obj_path = '/home/huayang/research/xtern/obj/Release/'
+tern_obj_path = '/home/huayang/research/xtern/obj/Debug/'
 if program.endswith('.ll') or program.endswith('.bc'):
     program_without_ext = program.rstrip('lbc.')
 record   = '%s-record'   % program_without_ext
@@ -40,7 +40,7 @@ commands = [cmd1, cmd2, cmd3, cmd4]
 for th in [0, 1]:
     cmd = '%s/bin/logprint -r -v -bc %s.ll tern-log-tid-%d > out%d.txt' \
         % (tern_obj_path, analysis, th, th)
-    commands.append(cmd)
+#    commands.append(cmd)
 
 for cmd in commands:
     print 'running <%s>' % cmd

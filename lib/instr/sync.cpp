@@ -135,9 +135,17 @@ void SyncInstr::replaceFunctionInCall(Module &M, Instruction *I,
   Value *insid = getInsID(I);
   assert(insid && "must run IDTagger before SyncInstr!");
   args.push_back(insid);
+  const llvm::PointerType *addrType;
+  addrType = Type::getInt8PtrTy(getGlobalContext());
+  int i = 0;
   for(CallSite::arg_iterator ai=cs.arg_begin(),ae=cs.arg_end(); ai!=ae; ++ai) {
     assert(*ai);
-    args.push_back(*ai);
+    Value *v = *ai;
+    //  force casting parameter types, otherwise exception throwed sometimes. 
+    if(v->getType()->isPointerTy())
+      v = CastInst::CreatePointerCast(v, functype->getParamType(i + 1), "", I);
+    ++i;
+    args.push_back(v);
   }
 
   switch(I->getOpcode()) {
@@ -196,6 +204,8 @@ bool SyncInstr::runOnModule(Module &M) {
         continue;
       if(syncfunc::isTern(syncid))
         continue;
+      //fprintf(stderr, "function name %s, syncid = %d\n", name, (int) syncid);
+      //fflush(stderr);
       replaceFunctionInCall(M, prv, syncid);
     }
   }
