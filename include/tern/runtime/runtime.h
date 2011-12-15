@@ -5,6 +5,7 @@
 #include <pthread.h>
 #include <semaphore.h>
 #include <sys/socket.h>
+#include <sys/epoll.h>
 
 namespace tern {
 
@@ -20,9 +21,12 @@ struct Runtime {
   virtual int pthreadCreate(unsigned insid, pthread_t *th, pthread_attr_t *a,
                             void *(*func)(void*), void *arg) = 0;
   virtual int pthreadJoin(unsigned insid, pthread_t th, void **retval) = 0;
+  virtual int pthreadCancel(unsigned insid, pthread_t th);
   // no pthreadExit since it's handled via threadEnd()
 
   // mutex
+  virtual int pthreadMutexInit(unsigned insid, pthread_mutex_t *mutex, const  pthread_mutexattr_t *mutexattr);
+  virtual int pthreadMutexDestroy(unsigned insid, pthread_mutex_t *mutex);
   virtual int pthreadMutexLock(unsigned insid, pthread_mutex_t *mutex) = 0;
   virtual int pthreadMutexTryLock(unsigned insid, pthread_mutex_t *mutex) = 0;
   virtual int pthreadMutexTimedLock(unsigned insid, pthread_mutex_t *mu,
@@ -74,6 +78,8 @@ struct Runtime {
   virtual ssize_t __read(unsigned ins, int fd, void *buf, size_t count);
   virtual ssize_t __write(unsigned ins, int fd, const void *buf, size_t count);
   virtual int __select(unsigned ins, int nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds, struct timeval *timeout);  
+    
+  virtual int __epoll_wait(unsigned ins, int epfd, struct epoll_event *events, int maxevents, int timeout);
 
   virtual int __sigwait(unsigned ins, const sigset_t *set, int *sig); 
 

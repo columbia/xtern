@@ -99,6 +99,9 @@ struct TidMap {
 ///  when necessary.  A nice side effect is we get static polymorphism
 ///  within the Runtime subclasses
 struct Scheduler: public TidMap {
+
+  void set_op(const char *m_op) {}  //  TODO delete me
+
   /// get the turn so that other threads trying to get the turn must wait
   void getTurn(void) { }
 

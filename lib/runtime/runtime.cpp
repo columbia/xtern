@@ -50,6 +50,10 @@ void tern_thread_end(unsigned ins) {
   Runtime::the->threadEnd(ins);
 }
 
+int tern_pthread_cancel(unsigned ins, pthread_t thread) {
+  return Runtime::the->pthreadCancel(ins, thread);
+}
+
 int tern_pthread_create(unsigned ins, pthread_t *thread,  pthread_attr_t *attr,
                         void *(*thread_func)(void*), void *arg) {
   return Runtime::the->pthreadCreate(ins, thread, attr,
@@ -58,6 +62,14 @@ int tern_pthread_create(unsigned ins, pthread_t *thread,  pthread_attr_t *attr,
 
 int tern_pthread_join(unsigned ins, pthread_t th, void **retval) {
   return Runtime::the->pthreadJoin(ins, th, retval);
+}
+
+int tern_pthread_mutex_init(unsigned ins, pthread_mutex_t *mutex, const pthread_mutexattr_t *mutexattr) {
+  return Runtime::the->pthreadMutexInit(ins, mutex, mutexattr);
+}
+
+int tern_pthread_mutex_destroy(unsigned ins, pthread_mutex_t *mutex) {
+  return Runtime::the->pthreadMutexDestroy(ins, mutex);
 }
 
 int tern_pthread_mutex_lock(unsigned ins, pthread_mutex_t *mutex) {
@@ -239,6 +251,11 @@ ssize_t tern_write(unsigned ins, int fd, const void *buf, size_t count)
   return Runtime::the->__write(ins, fd, buf, count);
 }
 
+int tern_epoll_wait(unsigned ins, int epfd, struct epoll_event *events, int maxevents, int timeout)
+{
+  return Runtime::the->__epoll_wait(ins, epfd, events, maxevents, timeout);
+}
+
 int tern_select(unsigned ins, int nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds, struct timeval *timeout)
 {
   return Runtime::the->__select(ins, nfds, readfds, writefds, exceptfds, timeout);
@@ -306,6 +323,21 @@ int tern_isfdtype(unsigned ins, int fd, int fdtype)
 }
 
 */
+
+int Runtime::pthreadCancel(unsigned insid, pthread_t thread)
+{
+  return pthread_cancel(thread);
+}
+
+int Runtime::pthreadMutexInit(unsigned insid, pthread_mutex_t *mutex, const  pthread_mutexattr_t *mutexattr)
+{
+  return pthread_mutex_init(mutex, mutexattr);
+}
+
+int Runtime::pthreadMutexDestroy(unsigned insid, pthread_mutex_t *mutex)
+{
+  return pthread_mutex_destroy(mutex);
+}
 
 int Runtime::__socket(unsigned ins, int domain, int type, int protocol)
 {
@@ -414,4 +446,8 @@ int Runtime::__sigwait(unsigned ins, const sigset_t *set, int *sig)
   return sigwait(set, sig); 
 }
 
+int Runtime::__epoll_wait(unsigned ins, int epfd, struct epoll_event *events, int maxevents, int timeout)
+{
+  return epoll_wait(epfd, events, maxevents, timeout);
+}
 

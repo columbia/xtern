@@ -19,6 +19,7 @@
 #include "tern/runtime/record-runtime.h"
 #include "tern/runtime/record-scheduler.h"
 #include "tern/options.h"
+#include "signal.h"
 #include "helper.h"
 #include <fstream>
 
@@ -40,7 +41,9 @@ namespace {
 
 namespace tern {
 
-ostream &output()
+__thread const char *FCFSScheduler::next_op = 0;
+
+static ostream &output()
 {
   static ofstream ouf("instr.log");
   return ouf;
@@ -48,6 +51,8 @@ ostream &output()
 
 void InstallRuntime() { 
   std::string rt = options::get<std::string>("SCHEDULE_TYPE");
+  if (rt == "RRuntime")
+    Runtime::the = new RRuntime();
   if (rt == "RR")
     Runtime::the = new RecorderRT<RRSchedulerCV>;
   if (rt == "FCFS")
@@ -632,6 +637,7 @@ int RecorderRT<_S>::pthreadBarrierDestroy(unsigned ins,
 template <typename _S>
 int RecorderRT<_S>::pthreadCondWait(unsigned ins,
                                     pthread_cond_t *cv, pthread_mutex_t *mu){
+#if 1
   unsigned nturn1, nturn2;
 
   _S::getTurn();
@@ -668,6 +674,11 @@ int RecorderRT<_S>::pthreadCondWait(unsigned ins,
   Logger::the->logSync(ins, syncfunc::pthread_cond_wait,
                        nturn2, /* after */ true, (uint64_t)cv, (uint64_t)mu);
   return 0;
+#else
+  _S::getTurn();
+  
+  _S::putTurn();
+#endif
 }
 
 /// timeout based on real time is inherently nondeterministic.  three ways
@@ -929,10 +940,25 @@ int RecorderRT<FCFSScheduler>::pthreadCondWait(unsigned ins,
   pthread_mutex_unlock(mu);
   nturn1 = FCFSScheduler::incTurnCount();
 
+  output() << "pthread_cond_wait_first";
+  output() << ' ' << nturn1;
+  output() << ' ' << (int) FCFSScheduler::self();
+  output() << ' ' << cv;
+  output() << ' ' << mu;
+  output() << endl;
+
   pthread_cond_wait(cv, FCFSScheduler::getLock());
 
   pthreadMutexLockHelper(mu);
   nturn2 = FCFSScheduler::incTurnCount();
+
+  output() << "pthread_cond_wait_second";
+  output() << ' ' << nturn2;
+  output() << ' ' << (int) FCFSScheduler::self();
+  output() << ' ' << cv;
+  output() << ' ' << mu;
+  output() << endl;
+
   FCFSScheduler::putTurn();
 
   Logger::the->logSync(ins, syncfunc::pthread_cond_wait,
@@ -950,11 +976,23 @@ int RecorderRT<FCFSScheduler>::pthreadCondTimedWait(unsigned ins,
   FCFSScheduler::getTurn();
   pthread_mutex_unlock(mu);
   nturn1 = FCFSScheduler::incTurnCount();
+  output() << "pthread_cond_timedwait_first";
+  output() << ' ' << nturn1;
+  output() << ' ' << (int) FCFSScheduler::self();
+  output() << ' ' << cv;
+  output() << ' ' << mu;
+  output() << endl;
 
   int ret = pthread_cond_timedwait(cv, FCFSScheduler::getLock(), abstime);
 
   pthreadMutexLockHelper(mu);
   nturn2 = FCFSScheduler::incTurnCount();
+  output() << "pthread_cond_timedwait_second";
+  output() << ' ' << nturn2;
+  output() << ' ' << (int) FCFSScheduler::self();
+  output() << ' ' << cv;
+  output() << ' ' << mu;
+  output() << endl;
   FCFSScheduler::putTurn();
 
   Logger::the->logSync(ins, syncfunc::pthread_cond_timedwait,
@@ -973,6 +1011,11 @@ int RecorderRT<FCFSScheduler>::pthreadCondSignal(unsigned ins,
   FCFSScheduler::getTurn();
   pthread_cond_signal(cv);
   nturn = FCFSScheduler::incTurnCount();
+  output() << "pthread_cond_signal";
+  output() << ' ' << nturn;
+  output() << ' ' << (int) FCFSScheduler::self();
+  output() << ' ' << cv;
+  output() << endl;
   FCFSScheduler::putTurn();
 
   Logger::the->logSync(ins, syncfunc::pthread_cond_signal,
@@ -988,6 +1031,11 @@ int RecorderRT<FCFSScheduler>::pthreadCondBroadcast(unsigned ins,
   FCFSScheduler::getTurn();
   pthread_cond_broadcast(cv);
   nturn = FCFSScheduler::incTurnCount();
+  output() << "pthread_cond_broadcast";
+  output() << ' ' << nturn;
+  output() << ' ' << (int) FCFSScheduler::self();
+  output() << ' ' << cv;
+  output() << endl;
   FCFSScheduler::putTurn();
 
   Logger::the->logSync(ins, syncfunc::pthread_cond_broadcast,
@@ -1059,6 +1107,11 @@ int RecorderRT<_S>::__accept(unsigned ins, int sockfd, struct sockaddr *cliaddr,
 {
   _S::block();
   int ret = Runtime::__accept(ins, sockfd, cliaddr, addrlen);
+  //output() << "accept_wakeup";
+  //output() << ' ' << _S::turnCount;
+  //output() << ' ' << (int) _S::self();
+  //output() << endl;
+  _S::set_op("accept");
   _S::wakeup();
   return ret;
 }
@@ -1068,6 +1121,11 @@ int RecorderRT<_S>::__connect(unsigned ins, int sockfd, const struct sockaddr *s
 {
   _S::block();
   int ret = Runtime::__connect(ins, sockfd, serv_addr, addrlen);
+  _S::set_op("connect");
+  //output() << "connect_wakeup";
+  //output() << ' ' << _S::turnCount;
+  //output() << ' ' << (int) _S::self();
+  //output() << endl;
   _S::wakeup();
   return ret;
 }
@@ -1107,8 +1165,15 @@ ssize_t RecorderRT<_S>::__sendmsg(unsigned ins, int sockfd, const struct msghdr 
 template <typename _S>
 ssize_t RecorderRT<_S>::__recv(unsigned ins, int sockfd, void *buf, size_t len, int flags)
 {
-  _S::block();
+  _S::block();  
+
   ssize_t ret = Runtime::__recv(ins, sockfd, buf, len, flags);
+
+  //output() << "recv_wakeup";
+  //output() << ' ' << _S::turnCount;
+  //output() << ' ' << (int) _S::self();
+  //output() << endl;
+  _S::set_op("recv");
   _S::wakeup();
   return ret;
 }
@@ -1118,6 +1183,11 @@ ssize_t RecorderRT<_S>::__recvfrom(unsigned ins, int sockfd, void *buf, size_t l
 {
   _S::block();
   ssize_t ret = Runtime::__recvfrom(ins, sockfd, buf, len, flags, src_addr, addrlen);
+  //output() << "recvfrom_wakeup";
+  //output() << ' ' << _S::turnCount;
+  //output() << ' ' << (int) _S::self();
+  //output() << endl;
+  _S::set_op("recvfrom");
   _S::wakeup();
   return ret;
 }
@@ -1127,6 +1197,11 @@ ssize_t RecorderRT<_S>::__recvmsg(unsigned ins, int sockfd, struct msghdr *msg, 
 {
   _S::block();
   ssize_t ret = Runtime::__recvmsg(ins, sockfd, msg, flags);
+  //output() << "recvmsg_wakeup";
+  //output() << ' ' << _S::turnCount;
+  //output() << ' ' << (int) _S::self();
+  //output() << endl;
+  _S::set_op("recvmsg");
   _S::wakeup();
   return ret;
 }
@@ -1166,6 +1241,11 @@ ssize_t RecorderRT<_S>::__read(unsigned ins, int fd, void *buf, size_t count)
 {
   _S::block();
   ssize_t ret = Runtime::__read(ins, fd, buf, count);
+  //output() << "read_wakeup";
+  //output() << ' ' << _S::turnCount;
+  //output() << ' ' << (int) _S::self();
+  //output() << endl;
+  _S::set_op("read");
   _S::wakeup();
   return ret;
 }
@@ -1181,6 +1261,31 @@ int RecorderRT<_S>::__select(unsigned ins, int nfds, fd_set *readfds, fd_set *wr
 {
   _S::block();
   int ret = Runtime::__select(ins, nfds, readfds, writefds, exceptfds, timeout);
+  //output() << "select_wakeup";
+  //output() << ' ' << _S::turnCount;
+  //output() << ' ' << (int) _S::self();
+  //output() << endl;
+  _S::set_op("select");
+  _S::wakeup();
+  return ret;
+}
+
+template <typename _S>
+int RecorderRT<_S>::__epoll_wait(unsigned ins, int epfd, struct epoll_event *events, int maxevents, int timeout)
+{
+  _S::block();
+  int ret = epoll_wait(epfd, events, maxevents, timeout);
+  _S::set_op("epoll_wait");
+  _S::wakeup();
+  return ret;
+}
+
+template <typename _S>
+int RecorderRT<_S>::__sigwait(unsigned ins, const sigset_t *set, int *sig)
+{
+  _S::block();
+  int ret = sigwait(set, sig); 
+  _S::set_op("sigwait");
   _S::wakeup();
   return ret;
 }

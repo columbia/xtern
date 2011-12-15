@@ -23,7 +23,9 @@ enum {
 # undef DEFTERNAUTO
 # undef DEFTERNUSER
   num_syncs,
-  first_sync = 1
+  first_sync = 1,
+  pthread_cond_wait_1 = 0x1000,
+  pthread_cond_wait_2
 };
 BOOST_STATIC_ASSERT(num_syncs<USHRT_MAX);
 

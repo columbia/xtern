@@ -31,7 +31,7 @@ replay   = '%s-replay'   % program_without_ext
 cmd1 = '%s/bin/tern-instr -S -with-uclibc %s -o %s' \
     % (tern_obj_path, program, program_without_ext)
 cmd2 = 'llc -o %s.s %s.ll' % (record, record)
-cmd3 = 'g++ -o %s %s.s tern_sym.c -L%s/lib -lruntime -linstr -lcommon -lpthread' \
+cmd3 = 'g++ -o %s %s.s tern_sym.c -L%s/lib -lruntime -linstr -lcommon -lpthread -lcrypt' \
     % (record, record, tern_obj_path)
 cmd4 = ('./%s ' % record) + ' '.join(sys.argv[2:])
 
