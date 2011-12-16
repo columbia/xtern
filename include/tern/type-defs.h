@@ -1,5 +1,5 @@
-#ifndef __TERN_PATH_SLICER_ALIAS_CACHE_H
-#define __TERN_PATH_SLICER_ALIAS_CACHE_H
+#ifndef __TERN_PATH_SLICER_TYPE_DEFS_H
+#define __TERN_PATH_SLICER_TYPE_DEFS_H
 
 #include <vector>
 #include <list>

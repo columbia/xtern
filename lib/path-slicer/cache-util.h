@@ -1,5 +1,5 @@
-#ifndef __TERN_PATH_SLICER_ALIAS_CACHE_H
-#define __TERN_PATH_SLICER_ALIAS_CACHE_H
+#ifndef __TERN_PATH_SLICER_CACHE_UTIL_H
+#define __TERN_PATH_SLICER_CACHE_UTIL_H
 
 #include "tern/type-defs.h"
 
@@ -19,11 +19,11 @@ namespace tern {
     
     bool in(long high1, long low1, long high2, long low2, bool &cachedResult);
     void add(long high1, long low1, long high2, long low2, bool result);
-    void delete(long high1, long low1, long high2, long low2);
+    void del(long high1, long low1, long high2, long low2);
 
     bool in(long high, long low, bool &cachedResult);
     void add(long high, long low, bool result);
-    void delete(long high, long low);
+    void del(long high, long low);
 
   };
 }

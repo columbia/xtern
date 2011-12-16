@@ -1,6 +1,8 @@
 #ifndef __TERN_PATH_SLICER_INSTR_REGION_H
 #define __TERN_PATH_SLICER_INSTR_REGION_H
 
+#include <list>
+
 #include "dyn-instr.h"
 
 /*  A Instruction Region is a continuous stream of executed instructions within one thread.
@@ -14,7 +16,7 @@ namespace tern {
     long startSyncId;
     long endSyncId;
     int tid;
-    list<DynInstr *> instrs;
+    std::list<DynInstr *> instrs;
 
   protected:
 

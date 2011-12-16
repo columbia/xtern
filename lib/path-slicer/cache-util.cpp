@@ -19,7 +19,7 @@ void CacheUtil::add(long high1, long low1, long high2, long low2, bool result) {
 
 }
 
-void CacheUtil::delete(long high1, long low1, long high2, long low2) {
+void CacheUtil::del(long high1, long low1, long high2, long low2) {
 
 }
 
@@ -31,7 +31,7 @@ void CacheUtil::add(long high, long low, bool result) {
 
 }
 
-void CacheUtil::delete(long high, long low) {
+void CacheUtil::del(long high, long low) {
 
 }
 
