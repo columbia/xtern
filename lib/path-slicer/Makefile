@@ -6,3 +6,5 @@ LOADABLE_MODULE := 1
 
 EXCLUDED_SOURCES := template.c
 include $(LEVEL)/Makefile.common
+
+CXXFLAGS += -I$(XTERN_ROOT)/include/
