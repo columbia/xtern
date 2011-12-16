@@ -5,6 +5,7 @@
 #include <assert.h>
 #include <tr1/unordered_map>
 #include <tr1/unordered_set>
+#include <stdio.h>
 
 namespace tern {
 
@@ -29,6 +30,8 @@ struct TidMap {
   /// sets thread-local tern tid
   void threadBegin(pthread_t self_th) {
     pthread_to_tern_map::iterator it = p_t_map.find(self_th);
+    if (it==p_t_map.end())
+      fprintf(stderr, "pthread tid not in map!\n");
     assert(it!=p_t_map.end() && "pthread tid not in map!");
     self_tid = it->second;
   }

@@ -1,7 +1,7 @@
 #ifdef __SPEC_HOOK___libc_start_main
 
-extern void __tern_prog_begin(void);  //  lib/runtime/helper.cpp
-extern void __tern_prog_end(void); //  lib/runtime/helper.cpp
+extern "C" void __tern_prog_begin(void);  //  lib/runtime/helper.cpp
+extern "C" void __tern_prog_end(void); //  lib/runtime/helper.cpp
 
 extern "C" int __libc_start_main(
   void *func_ptr, 
@@ -34,9 +34,16 @@ extern "C" int __libc_start_main(
 
 #ifdef __USE_TERN_RUNTIME
   if (need_hook) {
+    need_hook = false;
+	  fprintf(stderr, "%04d: __tern_prog_begin() called.\n", (int) pthread_self());
     __tern_prog_begin();
+	  fprintf(stderr, "%04d: __libc_start_main() called.\n", (int) pthread_self());
+    need_hook = true;
   	ret = orig_func(func_ptr, argc, argv, init_func, fini_func, stack_end);
+    need_hook = false;
+	  fprintf(stderr, "%04d: __tern_prog_end() called.\n", (int) pthread_self());
     __tern_prog_end();
+    need_hook = true;
 
 #ifdef PRINT_DEBUG
 	fprintf(stderr, "%04d: __libc_start_main is hooked.\n", (int) pthread_self());
