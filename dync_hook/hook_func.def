@@ -17,6 +17,18 @@ SECTION
 ENDDEF
 
 STARTDEF
+int
+pthread_cancel
+/lib/x86_64-linux-gnu/libpthread.so.0
+pthread_t
+SECTION
+pthread_t thread
+SECTION
+thread
+SECTION
+ENDDEF
+
+STARTDEF
 int 
 pthread_mutex_lock
 /lib/x86_64-linux-gnu/libpthread.so.0
@@ -208,4 +220,17 @@ SECTION
 nfds, readfds, writefds, exceptfds, timeout
 SECTION
 ENDDEF
+
+STARTDEF
+int
+__libc_start_main
+/lib/x86_64-linux-gnu/libc.so.6
+void *, int, char *[], void*, void*, void*
+SECTION
+void *func_ptr, int argc, char* argv[], void *init_func, void *fini_func, void *stack_end
+SECTION
+func_ptr, argc, argv, init_func, fini_func, stack_end
+SECTION
+ENDDEF
+
 

@@ -12,7 +12,7 @@
  */
 
 /* pthread synchronization operations */
-DEF(pthread_create,         Synchronization, int, pthread_t *thread, pthread_attr_t *attr, void* (*start_routine)(void *), void *arg)
+DEF(pthread_create,         Synchronization, int, pthread_t *thread, const pthread_attr_t *attr, void* (*start_routine)(void *), void *arg)
 DEF(pthread_join,           Synchronization, int, pthread_t th, void **thread_return)
 DEF(pthread_cancel,         Synchronization, int, pthread_t thread)
 DEF(pthread_exit,           Synchronization, void, void *retval)

@@ -53,18 +53,21 @@ bool read_line(FILE *fin, string &ret)
 
 void convert(FILE *fin)
 {
-	printf("#include <pthread.h>\n");
-	printf("#include <stdio.h>\n");
-	printf("#include <dlfcn.h>\n");
-	printf("#include <stdlib.h>\n");
-	printf("#include <sys/types.h>\n");
-	printf("#include <sys/socket.h>\n");
-	printf("#include <sys/select.h>\n");
-	printf("#include <sys/time.h>\n");
-  printf("extern \"C\" void __gxx_personality_v0(void) {} \n\n");
+  FILE *hook_cpp = fopen("template.cpp", "w");
+  FILE *types = fopen("hook_type_def.h", "w");
+/*
+  fprintf(hook_cpp, "#include <pthread.h>\n");
+	fprintf(hook_cpp, "#include <stdio.h>\n");
+	fprintf(hook_cpp, "#include <dlfcn.h>\n");
+	fprintf(hook_cpp, "#include <stdlib.h>\n");
+	fprintf(hook_cpp, "#include <sys/types.h>\n");
+	fprintf(hook_cpp, "#include <sys/socket.h>\n");
+	fprintf(hook_cpp, "#include <sys/select.h>\n");
+	fprintf(hook_cpp, "#include <sys/time.h>\n");
+  fprintf(hook_cpp, "extern \"C\" void __gxx_personality_v0(void) {} \n\n");
   
-	printf("#define PRINT_DEBUG\n");
-
+	fprintf(hook_cpp, "#define PRINT_DEBUG\n");
+*/
 	while (true)
 	{
 		string flag = "";
@@ -88,7 +91,7 @@ void convert(FILE *fin)
 		while (read_line(fin, flag) && flag != "SECTION")
 			args_only_name += flag;
 		print_func(
-			stdout,
+			hook_cpp,
 			func_ret_type.c_str(), 
 			func_name.c_str(), 
 			args_with_name.c_str(), 
@@ -96,7 +99,14 @@ void convert(FILE *fin)
 			args_only_name.c_str(), 
 			lib_path.c_str()
 		);
+
+    fprintf(types, "typedef %s (*__%s_funcdef)(%s);\n", 
+      func_ret_type.c_str(), 
+      func_name.c_str(), 
+      args_with_name.c_str());
 	}
+  fclose(hook_cpp);
+  fclose(types);
 }
 
 string read_file(const char *name)
@@ -114,6 +124,7 @@ string read_file(const char *name)
 int main()
 {
 	func_pattern = read_file("func_template.cpp");
+	void_func_pattern = read_file("void_func_template.cpp");
 	convert(stdin);
 	return 0;
 }

@@ -56,7 +56,62 @@ struct Runtime {
   virtual int semTimedWait(unsigned insid, sem_t *sem,
                            const struct timespec *abstime) = 0;
   virtual int semPost(unsigned insid, sem_t *sem) = 0;
-  
+ 
+/*
+  virtual int __pthread_create(unsigned insid, pthread_t *th, const pthread_attr_t *a, void *(*func)(void*), void *arg)
+  	{ return pthreadCreate(insid, th, const_cast<pthread_attr_t *>(a), func, arg); }
+  virtual int __pthread_join(unsigned insid, pthread_t th, void **retval)
+  	{ return pthreadJoin(insid, th, retval); }
+  virtual int __pthread_cancel(unsigned insid, pthread_t th)
+  	{ return pthreadCancel(insid, th); }
+  virtual int __pthread_mutex_init(unsigned insid, pthread_mutex_t *mutex, const  pthread_mutexattr_t *mutexattr)
+  	{ return pthreadMutexInit(insid, mutex, mutexattr); }
+  virtual int __pthread_mutex_destroy(unsigned insid, pthread_mutex_t *mutex)
+  	{ return pthreadMutexDestroy(insid, mutex); }
+  virtual int __pthread_mutex_lock(unsigned insid, pthread_mutex_t *mutex)
+  	{ return pthreadMutexLock(insid, mutex); }
+  virtual int __pthread_mutex_trylock(unsigned insid, pthread_mutex_t *mutex) 
+  	{ return pthreadMutexTryLock(insid, mutex); }
+  virtual int __pthread_mutex_timed_lock(unsigned insid, pthread_mutex_t *mu,
+                                    const struct timespec *abstime) 
+  	{ return pthreadMutexTimedLock(insid, mu, abstime); }
+  virtual int __pthread_mutex_unlock(unsigned insid, pthread_mutex_t *mutex) 
+  	{ return pthreadMutexUnlock(insid, mutex); }
+  virtual int __pthread_cond_wait(unsigned insid, pthread_cond_t *cv,
+                              pthread_mutex_t *mu) 
+  	{ return pthreadCondWait(insid, cv, mu); }
+  virtual int __pthread_cond_timedwait(unsigned insid, pthread_cond_t *cv,
+                                   pthread_mutex_t *mu,
+                                   const struct timespec *abstime) 
+  	{ return pthreadCondTimedWait(insid, cv, mu, abstime); }
+  virtual int __pthread_condSignal(unsigned insid, pthread_cond_t *cv) 
+  	{ return pthreadCondSignal(insid, cv); }
+  virtual int __pthread_cond_broadcast(unsigned insid, pthread_cond_t *cv)
+  	{ return pthreadCondBroadcast(insid, cv); }
+
+  // barrier
+  virtual int __pthread_barrier_init(unsigned insid, pthread_barrier_t *barrier,
+                                 unsigned count) 
+  	{ return pthreadBarrierInit(insid, barrier, count); }
+  virtual int __pthread_barrier_wait(unsigned insid,
+                                 pthread_barrier_t *barrier) 
+  	{ return pthreadBarrierWait(insid, barrier); }
+  virtual int __pthread_barrier_destroy(unsigned insid,
+                                    pthread_barrier_t *barrier)
+  	{ return pthreadBarrierDestroy(insid, barrier); }
+
+  // semaphore
+  virtual int __sem_wait(unsigned insid, sem_t *sem) 
+  	{ return semWait(insid, sem); }
+  virtual int __sem_trywait(unsigned insid, sem_t *sem) 
+  	{ return semTryWait(insid, sem); }
+  virtual int __sem_timedwait(unsigned insid, sem_t *sem,
+                           const struct timespec *abstime) 
+  	{ return semTimedWait(insid, sem, abstime); }
+  virtual int __sem_post(unsigned insid, sem_t *sem)
+  	{ return semPost(insid, sem); }
+*/
+
   // socket and files
   virtual int __socket(unsigned ins, int domain, int type, int protocol);
   virtual int __listen(unsigned ins, int sockfd, int backlog);

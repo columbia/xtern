@@ -29,6 +29,9 @@ extern "C" {
   void tern_thread_begin(void); /// called at the beginning of a thread
   void tern_thread_end(unsigned insid); /// called at the end of a thread
 
+  void tern___libc_start_main(void *func_ptr, int argc, char* argv[], void *init_func,
+    void *fini_func, void *stack_end);   /// called in dynamic hook mode
+
   /// tern inserts these methods to a target program to make races
   /// deterministic; these methods are implemented only by the replayer
   void tern_fix_up();

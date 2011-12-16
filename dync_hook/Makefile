@@ -1,16 +1,26 @@
-all: interpose.so template.cpp
+all: interpose.so 
 
-interpose.so: hook.cpp
-	gcc -fPIC -rdynamic -g $^ -I/usr/include/ -shared -Wl,-soname,interpose.so -o interpose.so -ldl
+INC_DIRS=-I$(XTERN_ROOT)/include/
+STD_LIBS=-lsupc++ -lpthread -lstdc++
+#TERN_LIBS=-L$(XTERN_ROOT)/obj/Debug/lib/  -lanalysis -linstr -lruntime
+TERN_LIBS=-L$(XTERN_ROOT)/obj/Debug/lib/ -lruntime -lcommon $(STD_LIBS)
+#TERN_LIBS=
+#TERN_LIBS=$(XTERN_ROOT)/obj/Debug/lib/libruntime.a
+CFLAGS= -g $(INC_DIRS)
+CXXFLAGS= -g $(INC_DIRS)
+
+interpose.so: template.cpp spec_hooks.cpp hook.cpp
+	gcc -fPIC -rdynamic hook.cpp $(CFLAGS) -c -o interpose.o
+	gcc $(CFLAGS) -shared -Wl,-soname,interpose.so interpose.o -o interpose.so -ldl $(TERN_LIBS) 
 
 %.o: %.cpp
 	$(CXX) $(INCLUDES) $(CXXFLAGS) -c $
 
 code_gen: code_gen.cpp
-	g++ $^ -o code_gen
+	g++ $^ $(CXXFLAGS) -o code_gen
 
 template.cpp: code_gen func_template.cpp void_func_template.cpp hook_func.def
-	./code_gen < hook_func.def > template.cpp
+	./code_gen < hook_func.def
 
 tests: tests/server.cpp tests/client.cpp
 	g++ tests/server.cpp -o server

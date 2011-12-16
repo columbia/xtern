@@ -34,7 +34,7 @@ static void *__tern_thread_func(void *arg) {
   assert(0 && "unreachable!");
 }
 
-int __tern_pthread_create(pthread_t *thread,  pthread_attr_t *attr,
+int __tern_pthread_create(pthread_t *thread,  const pthread_attr_t *attr,
                           thread_func_t user_thread_func,
                           void *user_thread_arg) {
   void **args;
@@ -46,7 +46,7 @@ int __tern_pthread_create(pthread_t *thread,  pthread_attr_t *attr,
   args[1] = user_thread_arg;
 
   int ret;
-  ret = pthread_create(thread, attr, __tern_thread_func, (void*)args);
+  ret = pthread_create(thread, const_cast<pthread_attr_t*>(attr), __tern_thread_func, (void*)args);
   if(ret < 0)
     delete[] (void**)args; // clean up memory for @args
   return ret;

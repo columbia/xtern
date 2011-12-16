@@ -23,6 +23,21 @@ void __attribute((weak)) InstallRuntime() {
   assert(0&&"A Runtime must define its own InstallRuntime() to instal itself!");
 }
 
+/*
+extern void __tern_prog_begin(void);  //  lib/runtime/helper.cpp
+extern void __tern_prog_end(void); //  lib/runtime/helper.cpp
+
+void tern___libc_start_main(void *func_ptr, int argc, char* argv[], void *init_func,
+  void *fini_func, void *stack_end)
+{
+  __tern_prog_begin();
+  int (*real_main) (void *a, int argc, char* argv[], void *b, void *c, void *d);
+  real_main = dlsym(RTLD_NEXT, "__libc_start_main"); 
+
+  __libc_start_main(func_ptr, argc, argv, init_func, fini_func, stack_end);
+  __tern_prog_end();
+}
+*/
 static bool prog_began = false; // sanity
 void tern_prog_begin() {
   assert(!prog_began && "tern_prog_begin() already called!");
