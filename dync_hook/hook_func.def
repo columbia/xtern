@@ -233,4 +233,150 @@ func_ptr, argc, argv, init_func, fini_func, stack_end
 SECTION
 ENDDEF
 
+START_SHORT_DEFINE
+/lib/x86_64-linux-gnu/libpthread.so.0
+int
+sem_wait
+(sem_t *sem)
+END_SHORT_DEFINE
+
+START_SHORT_DEFINE
+/lib/x86_64-linux-gnu/libpthread.so.0
+int 
+pthread_mutex_init
+(pthread_mutex_t */*restrict*/ mutex, const pthread_mutexattr_t */*restrict*/ attr)
+END_SHORT_DEFINE
+
+START_SHORT_DEFINE
+/lib/x86_64-linux-gnu/libpthread.so.0
+int 
+pthread_mutex_timedlock
+(pthread_mutex_t */*restrict*/ mutex, const struct timespec */*restrict*/ abs_timeout)
+END_SHORT_DEFINE
+
+START_SHORT_DEFINE
+/lib/x86_64-linux-gnu/libpthread.so.0
+int 
+pthread_cond_broadcast
+(pthread_cond_t *cond)
+END_SHORT_DEFINE
+
+START_SHORT_DEFINE
+/lib/x86_64-linux-gnu/libpthread.so.0
+int 
+pthread_cond_signal
+(pthread_cond_t *cond)
+END_SHORT_DEFINE
+
+START_SHORT_DEFINE
+/lib/x86_64-linux-gnu/libpthread.so.0
+int 
+pthread_barrier_wait
+(pthread_barrier_t *barrier)
+END_SHORT_DEFINE
+
+START_SHORT_DEFINE
+/lib/x86_64-linux-gnu/libpthread.so.0
+int 
+pthread_barrier_init
+(pthread_barrier_t */*restrict*/ barrier, const pthread_barrierattr_t */*restrict*/ attr, unsigned count)
+END_SHORT_DEFINE
+
+START_SHORT_DEFINE
+/lib/x86_64-linux-gnu/libpthread.so.0
+int 
+pthread_barrier_destroy
+(pthread_barrier_t *barrier)
+END_SHORT_DEFINE
+
+START_SHORT_DEFINE
+/lib/x86_64-linux-gnu/libpthread.so.0
+int
+sem_post
+(sem_t *sem)
+END_SHORT_DEFINE
+
+START_SHORT_DEFINE
+/lib/x86_64-linux-gnu/libpthread.so.0
+int
+sem_trywait
+(sem_t *sem)
+END_SHORT_DEFINE
+
+START_SHORT_DEFINE
+/lib/x86_64-linux-gnu/libpthread.so.0
+int
+sem_timedwait
+(sem_t *sem, const struct timespec *abs_timeout)
+END_SHORT_DEFINE
+
+START_SHORT_DEFINE
+/lib/x86_64-linux-gnu/libc.so.6
+ssize_t
+sendto
+(int sockfd, const void *buf, size_t len, int flags, const struct sockaddr *dest_addr, socklen_t addrlen)
+END_SHORT_DEFINE
+
+START_SHORT_DEFINE
+/lib/x86_64-linux-gnu/libc.so.6
+ssize_t
+sendmsg
+(int sockfd, const struct msghdr *msg, int flags)
+END_SHORT_DEFINE
+
+START_SHORT_DEFINE
+/lib/x86_64-linux-gnu/libc.so.6
+ssize_t
+recvfrom
+(int sockfd, void *buf, size_t len, int flags, struct sockaddr *src_addr, socklen_t *addrlen)
+END_SHORT_DEFINE
+
+START_SHORT_DEFINE
+/lib/x86_64-linux-gnu/libc.so.6
+ssize_t 
+recvmsg
+(int sockfd, struct msghdr *msg, int flags)
+END_SHORT_DEFINE
+
+START_SHORT_DEFINE
+/lib/x86_64-linux-gnu/libc.so.6
+int
+shutdown
+(int sockfd, int how)
+END_SHORT_DEFINE
+
+START_SHORT_DEFINE
+/lib/x86_64-linux-gnu/libc.so.6
+int
+close
+(int fd)
+END_SHORT_DEFINE
+
+START_SHORT_DEFINE
+/lib/x86_64-linux-gnu/libc.so.6
+unsigned int 
+sleep
+(unsigned int seconds)
+END_SHORT_DEFINE
+
+START_SHORT_DEFINE
+/lib/x86_64-linux-gnu/libc.so.6
+int 
+usleep
+(__useconds_t usec)
+END_SHORT_DEFINE
+
+START_SHORT_DEFINE
+/lib/x86_64-linux-gnu/libc.so.6
+int
+nanosleep
+(const struct timespec *req, struct timespec *rem)
+END_SHORT_DEFINE
+
+START_SHORT_DEFINE
+/lib/x86_64-linux-gnu/libc.so.6
+int
+epoll_wait
+(int epfd, struct epoll_event *events, int maxevents, int timeout)
+END_SHORT_DEFINE
 
