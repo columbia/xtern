@@ -4,6 +4,7 @@
 #include "dyn-instr.h"
 
 namespace tern {
+  class DynInstr;
   /* We must include as few as fields in this class in order to save memory. */
   class DynOprd {
   private:

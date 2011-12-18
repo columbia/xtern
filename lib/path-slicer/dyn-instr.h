@@ -5,6 +5,7 @@
 #include "instr-region.h"
 
 namespace tern {
+  class InstrRegion;
   /* We must include as few as fields in this class in order to save memory. 
     The main idea to get memory efficiency is to keep as many as information in its region.
     Only keep fields that MUST belong to all dynamic instructions in this class. */

@@ -1,8 +1,13 @@
 #ifndef __TERN_PATH_SLICER_INSTR_REGION_H
 #define __TERN_PATH_SLICER_INSTR_REGION_H
 
+#include <set>
 #include <list>
 
+#include "llvm/Instruction.h"
+#include "llvm/ADT/DenseSet.h"
+
+#include "tern/type-defs.h"
 #include "dyn-instr.h"
 #include "instr-id-mgr.h"
 
@@ -36,7 +41,7 @@ namespace tern {
     /* If this is a thread creation call, return its child thread. */
     llvm::DenseMap<DynInstr *, int> childTid;
 
-    InstrIdMgr *idMgr;
+    //InstrIdMgr *idMgr;
 
   protected:
 
@@ -58,7 +63,7 @@ namespace tern {
     int getChildTid(DynInstr *dynInstr);
     int getOrigInstrId(DynInstr *dynInstr);
     int getMxInstrId(DynInstr *dynInstr);
-    set<int> *getSimInstrId(DynInstr *dynInstr);
+    std::set<int> *getSimInstrId(DynInstr *dynInstr);
     llvm::Instruction *getOrigInstr(DynInstr *dynInstr);
     llvm::Instruction *getMxInstr(DynInstr *dynInstr);
     std::set<llvm::Instruction * > *getSimInstr(DynInstr *dynInstr);

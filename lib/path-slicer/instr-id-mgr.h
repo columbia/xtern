@@ -13,9 +13,13 @@
 
 #include "llvm/Instruction.h"
 #include "llvm/Module.h"
-#include "llvm/DenseSet.h"
+#include "llvm/ADT/DenseSet.h"
+
+#include "tern/type-defs.h"
 
 namespace tern {
+  class DynOprd;
+  class DynInstr;
   class InstrIdMgr {
   private:
     /* Original LLVM Module. */
@@ -45,11 +49,11 @@ namespace tern {
     DenseMap<int, int> revSimMap;               
     
     /* Map from a dynamic simplified instr id to it original instr. */
-    DenseMap<LongLongPair, std::set<Instruction *> *>; 
+    DenseMap<LongLongPair, std::set<Instruction *> *> simInstrMap; 
 
   protected:
     /* Generate a long long pair key for a dynamic instr. */
-    LongLongPair genKey(const DynInst *dInst);
+    LongLongPair genKey(DynInstr *dynInstr);
 
     /* Internal debugging utilities. */
     bool isOrigBcInstr(const llvm::Instruction *instr);
@@ -67,7 +71,7 @@ namespace tern {
     int getMxInstrId(const DynInstr *dynInstr);
 
     /* Given a dynamic instr, return its instr in max sliced module. */
-    llvm::Instruction *getMxInstr(const DynOprd *dynInstr);
+    llvm::Instruction *getMxInstr(DynOprd *dynInstr);
 
     /* Given a dynamic instr, return its set of instr id in simplified module. */
     std::set<int *> *getSimInstrId(const DynInstr *dynInstr);
