@@ -11,4 +11,6 @@
 typedef std::pair<long, long> LongPair;
 typedef std::pair<long long, long long> LongLongPair;
 
+#define NOT_TAKEN_INSTR "NOT TAKEN"
+
 #endif

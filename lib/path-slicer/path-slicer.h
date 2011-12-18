@@ -1,6 +1,8 @@
 #ifndef __TERN_PATH_SLICER_H
 #define __TERN_PATH_SLICER_H
 
+#include <list>
+
 #include "llvm/Function.h"
 #include "llvm/Pass.h"
 #include "llvm/Module.h"
@@ -10,6 +12,7 @@
 #include "dyn-instr.h"
 #include "trace.h"
 #include "instr-region.h"
+#include "callstack-mgr.h"
 #include "inter-slicer.h"
 #include "intra-slicer.h"
 
@@ -18,7 +21,9 @@ namespace tern {
   private:
     Stat stat;
     Trace trace;
-    list<InstrRegion *> instrRegions;
+    std::list<InstrRegion *> instrRegions;
+    CallStackMgr *ctxMgr;
+    
     InterSlicer interSlicer;
     IntraSlicer intraSlicer;
     
