@@ -42,15 +42,18 @@ void PathSlicer::enforceRacyEdges() {
 void PathSlicer::runPathSlicer(Module &M) {
   // Load trace.
   loadTrace();
-
+  assert(trace.size() > 0);
+  
   // Enforce racy edges.
   enforceRacyEdges();
   
   // Run intra-slicer.
-  interSlicer.detectInputDepRaces(trace);
+  interSlicer.detectInputDepRaces(&instrRegions);
 
   // Run inter-slicer.
-  intraSlicer.detectInputDepRaces(trace);
+  DynInstrItr itr = trace.end();
+  itr--;
+  intraSlicer.detectInputDepRaces(itr);
 
   // Calculate stat results.
   calStat();

@@ -10,7 +10,7 @@
 
 #include "stat.h"
 #include "dyn-instr.h"
-#include "trace.h"
+#include "slice.h"
 #include "instr-region.h"
 #include "callstack-mgr.h"
 #include "inter-slicer.h"
@@ -20,8 +20,8 @@ namespace tern {
   struct PathSlicer: public llvm::ModulePass {
   private:
     Stat stat;
-    Trace trace;
-    std::list<InstrRegion *> instrRegions;
+    std::list<DynInstr *> trace;
+    InstrRegions instrRegions;
     CallStackMgr *ctxMgr;
     
     InterSlicer interSlicer;

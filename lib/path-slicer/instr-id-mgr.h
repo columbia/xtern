@@ -1,7 +1,6 @@
 #ifndef __TERN_PATH_SLICER_INSTR_ID_MGR_H
 #define __TERN_PATH_SLICER_INSTR_ID_MGR_H
 
-#include "dyn-instr.h"
 #include "slicer/clone-info-manager.h"
 #include "slicer/trace.h"
 
@@ -15,7 +14,8 @@
 #include "llvm/Module.h"
 #include "llvm/ADT/DenseSet.h"
 
-#include "tern/type-defs.h"
+#include "type-defs.h"
+#include "dyn-instr.h"
 
 namespace tern {
   class DynOprd;

@@ -1,7 +1,7 @@
 #ifndef __TERN_PATH_SLICER_CACHE_UTIL_H
 #define __TERN_PATH_SLICER_CACHE_UTIL_H
 
-#include "tern/type-defs.h"
+#include "type-defs.h"
 
 #include "llvm/ADT/DenseSet.h"
 

@@ -7,7 +7,7 @@
 #include "llvm/Instruction.h"
 #include "llvm/ADT/DenseSet.h"
 
-#include "tern/type-defs.h"
+#include "type-defs.h"
 #include "dyn-instr.h"
 #include "instr-id-mgr.h"
 
@@ -68,6 +68,9 @@ namespace tern {
     llvm::Instruction *getMxInstr(DynInstr *dynInstr);
     std::set<llvm::Instruction * > *getSimInstr(DynInstr *dynInstr);
   };
+
+  /* Regions. */
+  typedef std::list<InstrRegion *> InstrRegions;
 }
 
 #endif

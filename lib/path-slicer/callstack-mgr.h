@@ -25,15 +25,18 @@ namespace tern {
     void printCallStack(DynInstr *dynInstr);
     void printTidToCallStackMap();
 
+    /* For each loaded dynamic instruction, update the per-thread "current" call stack. */
+    void updateCallStack(DynInstr *dynInstr);
+
+    /*  */
+    void setSimCallStack(DynInstr *dynInstr);
+
   public:
     CallStackMgr();
     ~CallStackMgr();
 
     /* For normal slicing mode, this is the orig call stack; for mx slicing mode, this is the mx call stack. */
     void setCallStack(DynInstr *dynInstr);
-
-    /*  */
-    void setSimCallStack(DynInstr *dynInstr);
   };
 }
 

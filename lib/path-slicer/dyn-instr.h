@@ -49,6 +49,9 @@ namespace tern {
     int getPhiIncomeIdx();
     // TBD.
   };
+
+  /* Iterator of a dynamic instruction. */
+  typedef std::list<DynInstr *>::iterator DynInstrItr;
 }
 
 #endif
