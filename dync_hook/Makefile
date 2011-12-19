@@ -1,4 +1,4 @@
-all: interpose.so 
+all: xternruntime interpose.so 
 
 INC_DIRS=-I$(XTERN_ROOT)/include/
 STD_LIBS=-lsupc++ -lpthread -lstdc++
@@ -8,6 +8,9 @@ TERN_LIBS=-L$(XTERN_ROOT)/obj/Debug/lib/ -lruntime -lcommon
 #TERN_LIBS=$(XTERN_ROOT)/obj/Debug/lib/libruntime.a
 CFLAGS= -g $(INC_DIRS)
 CXXFLAGS= -g $(INC_DIRS)
+
+xternruntime: 
+	cd $(XTERN_ROOT)/obj && make ENABLE_OPTIMIZED=0
 
 interpose.so: template.cpp spec_hooks.cpp hook.cpp
 	gcc -fPIC -rdynamic hook.cpp $(CFLAGS) -c -o interpose.o
