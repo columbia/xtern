@@ -33,6 +33,8 @@
 
 using namespace std;
 
+extern __thread int need_hook;
+
 namespace {
 // make sure templates are instantiated
 //tern::RecorderRT<tern::FCFSScheduler> unused_fcfsRT;
@@ -86,6 +88,8 @@ void RecorderRT<_S>::threadBegin(void) {
 
   char logFile[64];
 
+  need_hook = 0;
+
   sem_wait(&thread_create_sem);
 
   _S::threadBegin(th);
@@ -93,6 +97,8 @@ void RecorderRT<_S>::threadBegin(void) {
   //Logger::threadBegin(logFile);
   nturn = _S::incTurnCount();
   _S::putTurn();
+
+  need_hook = 1;
 
   //Logger::the->logSync(INVALID_INSID, syncfunc::tern_thread_begin, nturn, true, (uint64_t)th);
 }
@@ -102,9 +108,11 @@ void RecorderRT<_S>::threadEnd(unsigned insid) {
   unsigned nturn;
   pthread_t th = pthread_self();
 
+  need_hook = 0;
   _S::getTurn();
   nturn = _S::incTurnCount();
   _S::threadEnd(pthread_self());
+  need_hook = 1;
 
   //Logger::the->logSync(insid, syncfunc::tern_thread_end, nturn, true, (uint64_t)th);
   //Logger::threadEnd();
@@ -191,13 +199,16 @@ template <typename _S>
 void RecorderRT<_S>::pthreadMutexLockHelper(pthread_mutex_t *mu) {
   int ret;
   for(;;) {
+//    printf("try locking\n");
     ret = pthread_mutex_trylock(mu);
     if(ret == EBUSY)
       _S::wait(mu);
     else
       break;
+//    printf("faled\n");
     _S::getTurn();
   }
+//  printf("succeed\n");
   assert(!ret && "failed sync calls are not yet supported!");
 }
 
@@ -274,7 +285,6 @@ int RecorderRT<_S>::pthreadMutexUnlock(unsigned ins, pthread_mutex_t *mu){
   output() << ' ' << (int) _S::self();
   output() << ' ' << mu;
   output() << endl;
-
 
   _S::putTurn();
 

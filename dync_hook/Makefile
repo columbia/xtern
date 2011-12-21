@@ -2,6 +2,7 @@ all: xternruntime interpose.so
 
 INC_DIRS=-I$(XTERN_ROOT)/include/
 STD_LIBS=-lsupc++ -lpthread -lstdc++
+FLAG=`date +%F\#%T`
 #TERN_LIBS=-L$(XTERN_ROOT)/obj/Debug/lib/  -lanalysis -linstr -lruntime
 TERN_LIBS=-L$(XTERN_ROOT)/obj/Debug/lib/ -lruntime -lcommon 
 #TERN_LIBS=
@@ -25,13 +26,18 @@ code_gen: code_gen.cpp
 template.cpp: code_gen func_template.cpp void_func_template.cpp hook_func.def
 	./code_gen < hook_func.def
 
-tests: tests/server.cpp tests/client.cpp
+test: tests/server.cpp tests/client.cpp tests/all.cpp
 	g++ tests/server.cpp -o server
 	g++ tests/client.cpp -o client
+	g++ tests/all.cpp -o all -pthread
 
-runtests: tests
-	LD_PRELOAD=$(XTERN_ROOT)/dync_hook/interpose.so ./server 10144 &
-	LD_PRELOAD=$(XTERN_ROOT)/dync_hook/interpose.so ./client 127.0.0.1 10144 &
+runtests: test
+#	LD_PRELOAD=$(XTERN_ROOT)/dync_hook/interpose.so ./server 10144 &
+#	LD_PRELOAD=$(XTERN_ROOT)/dync_hook/interpose.so ./client 127.0.0.1 10144 &
+	LD_PRELOAD=$(XTERN_ROOT)/dync_hook/interpose.so ./all 10554
+	
+eval:
+	cd $(XTERN_ROOT)/apps/ && make -B EXE_PREFIX="LD_PRELOAD=$(XTERN_ROOT)/dync_hook/interpose.so"
 
 clean: 
 	rm -rf *.o

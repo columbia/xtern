@@ -38,6 +38,11 @@ void tern___libc_start_main(void *func_ptr, int argc, char* argv[], void *init_f
   __tern_prog_end();
 }
 */
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 static bool prog_began = false; // sanity
 void tern_prog_begin() {
   assert(!prog_began && "tern_prog_begin() already called!");
@@ -69,9 +74,9 @@ int tern_pthread_cancel(unsigned ins, pthread_t thread) {
   return Runtime::the->pthreadCancel(ins, thread);
 }
 
-int tern_pthread_create(unsigned ins, pthread_t *thread,  pthread_attr_t *attr,
+int tern_pthread_create(unsigned ins, pthread_t *thread,  const pthread_attr_t *attr,
                         void *(*thread_func)(void*), void *arg) {
-  return Runtime::the->pthreadCreate(ins, thread, attr,
+  return Runtime::the->pthreadCreate(ins, thread, const_cast<pthread_attr_t*>(attr),
                                            thread_func, arg);
 }
 
@@ -150,12 +155,19 @@ int tern_sem_post(unsigned ins, sem_t *sem) {
   return Runtime::the->semPost(ins, sem);
 }
 
+extern __thread int need_hook;
+
 /// just a wrapper to tern_thread_end() and pthread_exit()
 void tern_pthread_exit(unsigned ins, void *retval) {
   // don't call tern_thread_end() for the main thread, since we'll call
   // tern_prog_end() later (which calls tern_thread_end())
   if(Scheduler::self() != Scheduler::MainThreadTid)
+  {
+    printf("calling tern_thread_end\n");
     tern_thread_end(ins);
+    printf("calling tern_thread_end, done\n");
+  }
+  need_hook = 0;
   pthread_exit(retval);
 }
 
@@ -338,6 +350,10 @@ int tern_isfdtype(unsigned ins, int fd, int fdtype)
 }
 
 */
+
+#ifdef __cplusplus
+}
+#endif
 
 int Runtime::pthreadCancel(unsigned insid, pthread_t thread)
 {

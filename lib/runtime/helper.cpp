@@ -13,6 +13,8 @@
 #include "helper.h"
 #include "tern/options.h"
 
+extern "C" {
+
 typedef void * (*thread_func_t)(void*);
 static void *__tern_thread_func(void *arg) {
 
@@ -79,4 +81,6 @@ void __tern_symbolic_argv(unsigned insid, int argc, char **argv) {
     sprintf(arg, "arg%d\n", i);
     tern_symbolic_real(insid, argv[i], strlen(argv[i])+1, arg);
   }
+}
+
 }

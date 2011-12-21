@@ -244,14 +244,14 @@ START_SHORT_DEFINE
 /lib/x86_64-linux-gnu/libpthread.so.0
 int 
 pthread_mutex_init
-(pthread_mutex_t */*restrict*/ mutex, const pthread_mutexattr_t */*restrict*/ attr)
+(pthread_mutex_t * /*restrict*/  mutex, const pthread_mutexattr_t * /*restrict*/  attr)
 END_SHORT_DEFINE
 
 START_SHORT_DEFINE
 /lib/x86_64-linux-gnu/libpthread.so.0
 int 
 pthread_mutex_timedlock
-(pthread_mutex_t */*restrict*/ mutex, const struct timespec */*restrict*/ abs_timeout)
+(pthread_mutex_t * /*restrict*/  mutex, const struct timespec * /*restrict*/  abs_timeout)
 END_SHORT_DEFINE
 
 START_SHORT_DEFINE
@@ -279,7 +279,7 @@ START_SHORT_DEFINE
 /lib/x86_64-linux-gnu/libpthread.so.0
 int 
 pthread_barrier_init
-(pthread_barrier_t */*restrict*/ barrier, const pthread_barrierattr_t */*restrict*/ attr, unsigned count)
+(pthread_barrier_t * /*restrict*/  barrier, const pthread_barrierattr_t * /*restrict*/  attr, unsigned count)
 END_SHORT_DEFINE
 
 START_SHORT_DEFINE

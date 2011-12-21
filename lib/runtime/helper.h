@@ -9,7 +9,7 @@ extern "C" {
 
   /* helper function used by tern runtimes.  It ensures a newly created
    * thread calls tern_task_begin() and tern_pthread_exit() */
-  int __tern_pthread_create(pthread_t *thread,  pthread_attr_t *attr,
+  int __tern_pthread_create(pthread_t *thread,  const pthread_attr_t *attr,
                             void* (*start_routine)(void*), void *arg);
 
   /* tern inserts this helper function to the beginning of a program
@@ -23,10 +23,10 @@ extern "C" {
 
   /* similar to tern_symbolic() except inserted by tern and checks for
    * valid arguments */
-  void __tern_symbolic(void *addr, int nbytes, const char *symname);
+  //void __tern_symbolic(void *addr, int nbytes, const char *symname);
 
   /* mainly for marking arguments of main as symbolic */
-  void __tern_symbolic_argv(int argc, char **argv);
+  //void __tern_symbolic_argv(int argc, char **argv);
 }
 
 #endif
