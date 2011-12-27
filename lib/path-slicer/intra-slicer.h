@@ -16,6 +16,10 @@
 #include "cfg-mgr.h"
 
 namespace tern {
+  /* Note:
+    Current slicing algorithm which suits for PEREGRINE ignores "values", which would be required by 
+    the directed symbolic execution project.
+  */
   struct IntraSlicer {
   private:
     Stat *stat;

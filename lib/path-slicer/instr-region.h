@@ -42,6 +42,9 @@ namespace tern {
     llvm::DenseMap<DynInstr *, int> childTid;
 
     //InstrIdMgr *idMgr;
+    
+    /* TBD: We need to have per instr region cache for read write set, this is because the read write
+    set of each instr region can be different. */
 
   protected:
 

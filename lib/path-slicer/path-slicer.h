@@ -26,6 +26,16 @@ namespace tern {
     
     InterSlicer interSlicer;
     IntraSlicer intraSlicer;
+
+  protected:
+    /* Must look at the xtern trace format before implementing this function. */
+    void loadTrace();
+
+    /* Enforce racy edge and split new instruction regions.
+    A challenge is if we enforce partial order of racy edge, how to adjust the logical clock 
+    for these regions, given the logical clocks are based on start/end totol order of synch op index. */
+    void enforceRacyEdges();
+    void calStat();
     
   public:
     static char ID;
@@ -33,10 +43,7 @@ namespace tern {
     virtual ~PathSlicer();
     virtual bool runOnModule(llvm::Module &M);
     virtual void getAnalysisUsage(llvm::AnalysisUsage &AU) const;
-    void loadTrace();
-    void enforceRacyEdges();
     void runPathSlicer(llvm::Module &M);
-    void calStat();
   };
 }
 

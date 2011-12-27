@@ -30,10 +30,8 @@ namespace tern {
     
 
   protected:
-    bool intersectionStatic(DynInstr *brDynInstr, llvm::BasicBlock *notTaken,
-      RWSet &staticSet);
-    bool intersectionDyn(DynInstr *dynInstr, std::set<const llvm::Value *> &result);
-    bdd getPointeeBDD();
+    void addStatic(const llvm::Value *, DynInstr *dynInstr);
+    void addDyn(DynOprd *dynOprd, const llvm::Value *maxSlicedV);
     void addBrToCache(DynInstr *dynInstr, llvm::BasicBlock *notTaken, bool result);
     void addToCache(std::vector<int> *ctx, llvm::Instruction *instr, bool result);
     bool inCache(std::vector<int> *ctx, llvm::Instruction *instr, bool &cachedResult);
@@ -46,8 +44,26 @@ namespace tern {
     void clear();
     void setProperty(bool rw, bool sd, const char *name);
     void printProperty();
-    void addStatic(const llvm::Value *, DynInstr *dynInstr);
-    void addDyn(DynOprd *dynOprd, const llvm::Value *maxSlicedV);
+
+    /* How to use (not implementation of this function):
+    Given a dynamic branch instruction, first construct its "not taken branch" write set, then see 
+    whether the write set intersects with current (read or write) set; then construct the 
+    "not taken branch" read set, then see whether it intersects with current (must be write) set.
+    The constructed write set uses the stored oprd + the callstack of current dynamic branch instr. */
+    bool intersectionStatic(DynInstr *brDynInstr, llvm::BasicBlock *notTaken,
+      RWSet &staticSet);
+
+    /* How to use (not implementation of this function):
+    Given a load instruction, see whether its loaded memory intersects with current (must be write)
+    set; given a store instruction, see whether its stored memory intersects with current 
+    (read or write) set. */
+    bool intersectionDyn(DynInstr *dynInstr, std::set<const llvm::Value *> &result);
+
+    /* This is the fast path of rwset. First we check the bdd and then the two intersection functions 
+    agove. */
+    bdd getPointeeBDD();
+
+    /* Each rwset has its own property. Below are functions accessing them. */
     bool isRead();
     bool isWrite();
     bool isStatic();
