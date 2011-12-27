@@ -56,7 +56,7 @@ RRSchedulerCV::RRSchedulerCV(pthread_t main_th): Parent(main_th) {
 
   assert(self() == MainThreadTid && "tid hasn't been initialized!");
   runq.push_back(self()); // main thread
-  
+
   log = fopen("message.log", "w");
   assert(log && "open message log file failed!");
 
@@ -285,11 +285,7 @@ ostream& RRSchedulerCV::dump(ostream& o) {
 
 void RRSchedulerCV::block()
 {
-  static int blockable = options::get<int>("SCHEDULE_NETWORK");
-  //fprintf(stderr, "blockable = %d\n", blockable);
-  //fflush(stderr);
-  if (!blockable) return;
-
+  if (!options::schedule_network) return;
 
 /*
   pthread_mutex_lock(&lock);
@@ -308,22 +304,21 @@ void RRSchedulerCV::block()
   //  like putTurn
   pthread_mutex_lock(&lock);
   // I'm blocked! Don't push me into the queue!
-  //runq.push_back(self());	
+  //runq.push_back(self());
   next();
   SELFCHECK;
-  
+
   pthread_mutex_unlock(&lock);
 }
 
 void RRSchedulerCV::wakeup()
 {
-  static int blockable = options::get<int>("SCHEDULE_NETWORK");
-  if (!blockable) return;
+  if (!options::schedule_network) return;
 
   int tid = self();
 
   pthread_mutex_lock(&lock);
-  
+
   for(;;) {
     if (net_events.empty())
     {
@@ -335,7 +330,7 @@ void RRSchedulerCV::wakeup()
       getTurn();  //  ensure atomicity
       break;
     }
-    
+
     //  the replay part
     if (net_events.begin()->tid != tid)
       pthread_cond_wait(&replaycv, &lock);
@@ -356,7 +351,7 @@ void RRSchedulerCV::wakeup()
       pthread_cond_wait(&tickcv, &lock);
     }
   }
-  
+
   assert(tid>=0 && tid<MaxThreads);
 
   assert(log && "open message log file failed!");

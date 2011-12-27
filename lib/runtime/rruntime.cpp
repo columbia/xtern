@@ -31,14 +31,16 @@ static ostream &output()
 
 void RRuntime::block()
 {
-  static int blocking = options::get<int>("SCHEDULE_NETWORK");
+  // YJF: doesn't this equivalent to assert(!options::schedule_network)?
+  static int blocking = options::schedule_network;
   if (blocking)
     assert(0);
 }
 
 void RRuntime::wakeup()
 {
-  static int blocking = options::get<int>("SCHEDULE_NETWORK");
+  // YJF: doesn't this equivalent to assert(!options::schedule_network)?
+  static int blocking = options::schedule_network;
   if (blocking)
     assert(0);
 }
@@ -135,8 +137,7 @@ int RRuntime::find_next_thread(void) {
 }
 
 void RRuntime::do_sched(void) {
-  static int dmt = options::get<int>("DMT");
-  if (!dmt)
+  if (!options::DMT)
     return;
 
   thread_status[tid] = SCHEDULING;
@@ -168,8 +169,7 @@ void RRuntime::do_sched(void) {
 
 void RRuntime::move_next()
 {
-  static int dmt = options::get<int>("DMT");
-  if (!dmt)
+  if (!options::DMT)
     return;
 
   incToken();

@@ -35,12 +35,6 @@ using namespace std;
 
 extern __thread int need_hook;
 
-namespace {
-// make sure templates are instantiated
-//tern::RecorderRT<tern::FCFSScheduler> unused_fcfsRT;
-//tern::RecorderRT<tern::RRSchedulerCV> unused_rrcvRT;
-}
-
 namespace tern {
 
 __thread const char *FCFSScheduler::next_op = 0;
@@ -51,24 +45,14 @@ static ostream &output()
   return ouf;
 }
 
-void InstallRuntime() { 
-  std::string rt = options::get<std::string>("SCHEDULE_TYPE");
-  if (rt == "RRuntime")
+void InstallRuntime() {
+  if (options::runtime_type == "RRuntime")
     Runtime::the = new RRuntime();
-  if (rt == "RR")
+  else if (options::runtime_type == "RR")
     Runtime::the = new RecorderRT<RRSchedulerCV>;
-  if (rt == "FCFS")
+  else if (options::runtime_type == "FCFS")
     Runtime::the = new RecorderRT<FCFSScheduler>;
-
-  if (Runtime::the == NULL)
-  {
-    fprintf(stderr, "warning: runtime scheduler is not specified (RR or FCfS)\n\n\
-      Set to RR by default.\n");
-    fflush(stderr);
-    Runtime::the = new RecorderRT<RRSchedulerCV>;
-  }
-  assert(Runtime::the && "can't create RecorderRT!");
-
+  assert(Runtime::the && "can't create runtime!");
 }
 
 template <typename _S>
