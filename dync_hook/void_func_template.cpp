@@ -1,7 +1,7 @@
 #ifndef __SPEC_HOOK_FUNC_NAME
 extern "C" void FUNC_NAME(ARGS_WITH_NAME){
 	typedef int (*orig_func_type)(ARGS_WITHOUT_NAME);
-  
+
 	orig_func_type orig_func;
 
 	void * handle;
@@ -23,14 +23,13 @@ extern "C" void FUNC_NAME(ARGS_WITH_NAME){
 	dlclose(handle);
 
 #ifdef __USE_TERN_RUNTIME
-	if (need_hook) {
-    need_hook = false;
+	if (Space::isApp()) {
+
 #ifdef __NEED_INPUT_INSID
-  	Runtime::the->__FUNC_NAME(0, ARGS_ONLY_NAME);
+  	tern_FUNC_NAME(0, ARGS_ONLY_NAME);
 #else
-  	Runtime::the->__FUNC_NAME(ARGS_ONLY_NAME);
+  	tern_FUNC_NAME(ARGS_ONLY_NAME);
 #endif
-    need_hook = true;
 
 #ifdef PRINT_DEBUG
 	fprintf(stderr, "%04d: FUNC_NAME is hooked.\n", (int) pthread_self());

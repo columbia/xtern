@@ -1,7 +1,7 @@
 #ifndef __SPEC_HOOK_FUNC_NAME
 extern "C" FUNC_RET_TYPE FUNC_NAME(ARGS_WITH_NAME){
 	typedef int (*orig_func_type)(ARGS_WITHOUT_NAME);
-  
+
 	orig_func_type orig_func;
 
 	void * handle;
@@ -24,8 +24,7 @@ extern "C" FUNC_RET_TYPE FUNC_NAME(ARGS_WITH_NAME){
 	dlclose(handle);
 
 #ifdef __USE_TERN_RUNTIME
-  if (need_hook) {
-    need_hook = false;
+  if (Space::isApp()) {
 
 #ifdef PRINT_DEBUG
 	fprintf(stdout, "%04d: FUNC_NAME is hooked.\n", (int) pthread_self());
@@ -43,7 +42,6 @@ extern "C" FUNC_RET_TYPE FUNC_NAME(ARGS_WITH_NAME){
 	fprintf(stdout, "%04d: FUNC_NAME returned.\n", (int) pthread_self());
   fflush(stdout);
 #endif
-    need_hook = true;
 
   } else
 #else

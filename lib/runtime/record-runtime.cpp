@@ -33,8 +33,6 @@
 
 using namespace std;
 
-extern __thread int need_hook;
-
 namespace tern {
 
 __thread const char *FCFSScheduler::next_op = 0;
@@ -72,8 +70,6 @@ void RecorderRT<_S>::threadBegin(void) {
 
   char logFile[64];
 
-  need_hook = 0;
-
   sem_wait(&thread_create_sem);
 
   _S::threadBegin(th);
@@ -81,8 +77,6 @@ void RecorderRT<_S>::threadBegin(void) {
   //Logger::threadBegin(logFile);
   nturn = _S::incTurnCount();
   _S::putTurn();
-
-  need_hook = 1;
 
   //Logger::the->logSync(INVALID_INSID, syncfunc::tern_thread_begin, nturn, true, (uint64_t)th);
 }
@@ -92,11 +86,9 @@ void RecorderRT<_S>::threadEnd(unsigned insid) {
   unsigned nturn;
   pthread_t th = pthread_self();
 
-  need_hook = 0;
   _S::getTurn();
   nturn = _S::incTurnCount();
   _S::threadEnd(pthread_self());
-  need_hook = 1;
 
   //Logger::the->logSync(insid, syncfunc::tern_thread_end, nturn, true, (uint64_t)th);
   //Logger::threadEnd();

@@ -6,6 +6,7 @@
 
 #include "tern/config.h"
 #include "tern/hooks.h"
+#include "tern/space.h"
 #include "tern/runtime/runtime.h"
 #include "tern/runtime/scheduler.h"
 #include "helper.h"
@@ -32,7 +33,7 @@ void tern___libc_start_main(void *func_ptr, int argc, char* argv[], void *init_f
 {
   __tern_prog_begin();
   int (*real_main) (void *a, int argc, char* argv[], void *b, void *c, void *d);
-  real_main = dlsym(RTLD_NEXT, "__libc_start_main"); 
+  real_main = dlsym(RTLD_NEXT, "__libc_start_main");
 
   __libc_start_main(func_ptr, argc, argv, init_func, fini_func, stack_end);
   __tern_prog_end();
@@ -63,99 +64,181 @@ void tern_symbolic_real(unsigned insid, void *addr,
 }
 
 void tern_thread_begin(void) {
+  // thread starts in Sys space
   Runtime::the->threadBegin();
+  Space::exitSys();
 }
 
 void tern_thread_end(unsigned ins) {
+  Space::enterSys();
   Runtime::the->threadEnd(ins);
+  // thread ends in Sys space
 }
 
 int tern_pthread_cancel(unsigned ins, pthread_t thread) {
-  return Runtime::the->pthreadCancel(ins, thread);
+  int ret;
+  Space::enterSys();
+  ret = Runtime::the->pthreadCancel(ins, thread);
+  Space::exitSys();
+  return ret;
 }
 
 int tern_pthread_create(unsigned ins, pthread_t *thread,  const pthread_attr_t *attr,
                         void *(*thread_func)(void*), void *arg) {
-  return Runtime::the->pthreadCreate(ins, thread, const_cast<pthread_attr_t*>(attr),
+  int ret;
+  Space::enterSys();
+  ret = Runtime::the->pthreadCreate(ins, thread, const_cast<pthread_attr_t*>(attr),
                                            thread_func, arg);
+  Space::exitSys();
+  return ret;
 }
 
 int tern_pthread_join(unsigned ins, pthread_t th, void **retval) {
-  return Runtime::the->pthreadJoin(ins, th, retval);
+  int ret;
+  Space::enterSys();
+  ret = Runtime::the->pthreadJoin(ins, th, retval);
+  Space::exitSys();
+  return ret;
 }
 
 int tern_pthread_mutex_init(unsigned ins, pthread_mutex_t *mutex, const pthread_mutexattr_t *mutexattr) {
-  return Runtime::the->pthreadMutexInit(ins, mutex, mutexattr);
+  int ret;
+  Space::enterSys();
+  ret = Runtime::the->pthreadMutexInit(ins, mutex, mutexattr);
+  Space::exitSys();
+  return ret;
 }
 
 int tern_pthread_mutex_destroy(unsigned ins, pthread_mutex_t *mutex) {
-  return Runtime::the->pthreadMutexDestroy(ins, mutex);
+  int ret;
+  Space::enterSys();
+  ret = Runtime::the->pthreadMutexDestroy(ins, mutex);
+  Space::exitSys();
+  return ret;
 }
 
 int tern_pthread_mutex_lock(unsigned ins, pthread_mutex_t *mutex) {
-  return Runtime::the->pthreadMutexLock(ins, mutex);
+  int ret;
+  Space::enterSys();
+  ret = Runtime::the->pthreadMutexLock(ins, mutex);
+  Space::exitSys();
+  return ret;
 }
 
 int tern_pthread_mutex_trylock(unsigned ins, pthread_mutex_t *mutex) {
-  return Runtime::the->pthreadMutexTryLock(ins, mutex);
+  int ret;
+  Space::enterSys();
+  ret = Runtime::the->pthreadMutexTryLock(ins, mutex);
+  Space::exitSys();
+  return ret;
 }
 
 int tern_pthread_mutex_timedlock(unsigned ins, pthread_mutex_t *mutex,
                                  const struct timespec *t) {
-  return Runtime::the->pthreadMutexTimedLock(ins, mutex, t);
+  int ret;
+  Space::enterSys();
+  ret = Runtime::the->pthreadMutexTimedLock(ins, mutex, t);
+  Space::exitSys();
+  return ret;
 }
 
 int tern_pthread_mutex_unlock(unsigned ins, pthread_mutex_t *mutex) {
-  return Runtime::the->pthreadMutexUnlock(ins, mutex);
+  int ret;
+  Space::enterSys();
+  ret = Runtime::the->pthreadMutexUnlock(ins, mutex);
+  Space::exitSys();
+  return ret;
 }
 
 int tern_pthread_cond_wait(unsigned ins, pthread_cond_t *cv,pthread_mutex_t *mu){
-  return Runtime::the->pthreadCondWait(ins, cv, mu);
+  int ret;
+  Space::enterSys();
+  ret = Runtime::the->pthreadCondWait(ins, cv, mu);
+  Space::exitSys();
+  return ret;
 }
 
 int tern_pthread_cond_timedwait(unsigned ins, pthread_cond_t *cv,
                                 pthread_mutex_t *mu, const struct timespec *t){
-  return Runtime::the->pthreadCondTimedWait(ins, cv, mu, t);
+  int ret;
+  Space::enterSys();
+  ret = Runtime::the->pthreadCondTimedWait(ins, cv, mu, t);
+  Space::exitSys();
+  return ret;
 }
 
 int tern_pthread_cond_signal(unsigned ins, pthread_cond_t *cv) {
-  return Runtime::the->pthreadCondSignal(ins, cv);
+  int ret;
+  Space::enterSys();
+  ret = Runtime::the->pthreadCondSignal(ins, cv);
+  Space::exitSys();
+  return ret;
 }
 
 int tern_pthread_cond_broadcast(unsigned ins, pthread_cond_t *cv) {
-  return Runtime::the->pthreadCondBroadcast(ins, cv);
+  int ret;
+  Space::enterSys();
+  ret = Runtime::the->pthreadCondBroadcast(ins, cv);
+  Space::exitSys();
+  return ret;
 }
 
 int tern_pthread_barrier_init(unsigned ins, pthread_barrier_t *barrier,
                         const pthread_barrierattr_t * attr, unsigned count) {
-  return Runtime::the->pthreadBarrierInit(ins, barrier, count);
+  int ret;
+  Space::enterSys();
+  ret = Runtime::the->pthreadBarrierInit(ins, barrier, count);
+  Space::exitSys();
+  return ret;
 }
 
 int tern_pthread_barrier_wait(unsigned ins, pthread_barrier_t *barrier) {
-  return Runtime::the->pthreadBarrierWait(ins, barrier);
+  int ret;
+  Space::enterSys();
+  ret = Runtime::the->pthreadBarrierWait(ins, barrier);
+  Space::exitSys();
+  return ret;
 }
 
 int tern_pthread_barrier_destroy(unsigned ins, pthread_barrier_t *barrier) {
-  return Runtime::the->pthreadBarrierDestroy(ins, barrier);
+  int ret;
+  Space::enterSys();
+  ret = Runtime::the->pthreadBarrierDestroy(ins, barrier);
+  Space::exitSys();
+  return ret;
 }
 
 int tern_sem_wait(unsigned ins, sem_t *sem) {
-  return Runtime::the->semWait(ins, sem);
+  int ret;
+  Space::enterSys();
+  ret = Runtime::the->semWait(ins, sem);
+  Space::exitSys();
+  return ret;
 }
 
 int tern_sem_trywait(unsigned ins, sem_t *sem) {
-  return Runtime::the->semTryWait(ins, sem);
+  int ret;
+  Space::enterSys();
+  ret = Runtime::the->semTryWait(ins, sem);
+  Space::exitSys();
+  return ret;
 }
 
 int tern_sem_timedwait(unsigned ins, sem_t *sem, const struct timespec *t) {
-  return Runtime::the->semTimedWait(ins, sem, t);
+  int ret;
+  Space::enterSys();
+  ret = Runtime::the->semTimedWait(ins, sem, t);
+  Space::exitSys();
+  return ret;
 }
 
 int tern_sem_post(unsigned ins, sem_t *sem) {
-  return Runtime::the->semPost(ins, sem);
+  int ret;
+  Space::enterSys();
+  ret = Runtime::the->semPost(ins, sem);
+  Space::exitSys();
+  return ret;
 }
-
-extern __thread int need_hook;
 
 /// just a wrapper to tern_thread_end() and pthread_exit()
 void tern_pthread_exit(unsigned ins, void *retval) {
@@ -167,7 +250,6 @@ void tern_pthread_exit(unsigned ins, void *retval) {
     tern_thread_end(ins);
     printf("calling tern_thread_end, done\n");
   }
-  need_hook = 0;
   pthread_exit(retval);
 }
 
@@ -179,113 +261,201 @@ void tern_exit(unsigned ins, int status) {
 
 int tern_sigwait(unsigned ins, const sigset_t *set, int *sig)
 {
-  return Runtime::the->__sigwait(ins, set, sig); 
+  int ret;
+  Space::enterSys();
+  ret = Runtime::the->__sigwait(ins, set, sig);
+  Space::exitSys();
+  return ret;
 }
 
 int tern_socket(unsigned ins, int domain, int type, int protocol)
 {
-  return Runtime::the->__socket(ins, domain, type, protocol);
+  int ret;
+  Space::enterSys();
+  ret = Runtime::the->__socket(ins, domain, type, protocol);
+  Space::exitSys();
+  return ret;
 }
 
 int tern_listen(unsigned ins, int sockfd, int backlog)
 {
-  return Runtime::the->__listen(ins, sockfd, backlog);
+  int ret;
+  Space::enterSys();
+  ret = Runtime::the->__listen(ins, sockfd, backlog);
+  Space::exitSys();
+  return ret;
 }
 
 int tern_accept(unsigned ins, int sockfd, struct sockaddr *cliaddr, socklen_t *addrlen)
 {
-  return Runtime::the->__accept(ins, sockfd, cliaddr, addrlen);
+  int ret;
+  Space::enterSys();
+  ret = Runtime::the->__accept(ins, sockfd, cliaddr, addrlen);
+  Space::exitSys();
+  return ret;
 }
 
 int tern_connect(unsigned ins, int sockfd, const struct sockaddr *serv_addr, socklen_t addrlen)
 {
-  return Runtime::the->__connect(ins, sockfd, serv_addr, addrlen);
+  int ret;
+  Space::enterSys();
+  ret = Runtime::the->__connect(ins, sockfd, serv_addr, addrlen);
+  Space::exitSys();
+  return ret;
 }
 
 /*
 struct hostent *tern_gethostbyname(unsigned ins, const char *name)
 {
-  return Runtime::the->__gethostbyname(ins, name);
+  int ret;
+  Space::enterSys();
+  ret = Runtime::the->__gethostbyname(ins, name);
+  Space::exitSys();
+  return ret;
 }
 
 struct hostent *tern_gethostbyaddr(unsigned ins, const void *addr, int len, int type)
 {
-  return Runtime::the->__gethostbyaddr(ins, addr, len, type);
+  int ret;
+  Space::enterSys();
+  ret = Runtime::the->__gethostbyaddr(ins, addr, len, type);
+  Space::exitSys();
+  return ret;
 }
 */
 ssize_t tern_send(unsigned ins, int sockfd, const void *buf, size_t len, int flags)
 {
-  return Runtime::the->__send(ins, sockfd, buf, len, flags);
+  int ret;
+  Space::enterSys();
+  ret = Runtime::the->__send(ins, sockfd, buf, len, flags);
+  Space::exitSys();
+  return ret;
 }
 
 ssize_t tern_sendto(unsigned ins, int sockfd, const void *buf, size_t len, int flags, const struct sockaddr *dest_addr, socklen_t addrlen)
 {
-  return Runtime::the->__sendto(ins, sockfd, buf, len, flags, dest_addr, addrlen);
+  int ret;
+  Space::enterSys();
+  ret = Runtime::the->__sendto(ins, sockfd, buf, len, flags, dest_addr, addrlen);
+  Space::exitSys();
+  return ret;
 }
 
 ssize_t tern_sendmsg(unsigned ins, int sockfd, const struct msghdr *msg, int flags)
 {
-  return Runtime::the->__sendmsg(ins, sockfd, msg, flags);
+  int ret;
+  Space::enterSys();
+  ret = Runtime::the->__sendmsg(ins, sockfd, msg, flags);
+  Space::exitSys();
+  return ret;
 }
 
 ssize_t tern_recv(unsigned ins, int sockfd, void *buf, size_t len, int flags)
 {
-  return Runtime::the->__recv(ins, sockfd, buf, len, flags);
+  int ret;
+  Space::enterSys();
+  ret = Runtime::the->__recv(ins, sockfd, buf, len, flags);
+  Space::exitSys();
+  return ret;
 }
 
 ssize_t tern_recvfrom(unsigned ins, int sockfd, void *buf, size_t len, int flags, struct sockaddr *src_addr, socklen_t *addrlen)
 {
-  return Runtime::the->__recvfrom(ins, sockfd, buf, len, flags, src_addr, addrlen);
+  int ret;
+  Space::enterSys();
+  ret = Runtime::the->__recvfrom(ins, sockfd, buf, len, flags, src_addr, addrlen);
+  Space::exitSys();
+  return ret;
 }
 
 ssize_t tern_recvmsg(unsigned ins, int sockfd, struct msghdr *msg, int flags)
 {
-  return Runtime::the->__recvmsg(ins, sockfd, msg, flags);
+  int ret;
+  Space::enterSys();
+  ret = Runtime::the->__recvmsg(ins, sockfd, msg, flags);
+  Space::exitSys();
+  return ret;
 }
 
 int tern_shutdown(unsigned ins, int sockfd, int how)
 {
-  return Runtime::the->__shutdown(ins, sockfd, how);
+  int ret;
+  Space::enterSys();
+  ret = Runtime::the->__shutdown(ins, sockfd, how);
+  Space::exitSys();
+  return ret;
 }
 
 int tern_getpeername(unsigned ins, int sockfd, struct sockaddr *addr, socklen_t *addrlen)
 {
-  return Runtime::the->__getpeername(ins, sockfd, addr, addrlen);
+  int ret;
+  Space::enterSys();
+  ret = Runtime::the->__getpeername(ins, sockfd, addr, addrlen);
+  Space::exitSys();
+  return ret;
 }
-  
+
 int tern_getsockopt(unsigned ins, int sockfd, int level, int optname, void *optval, socklen_t *optlen)
 {
-  return Runtime::the->__getsockopt(ins, sockfd, level, optname, optval, optlen);
+  int ret;
+  Space::enterSys();
+  ret = Runtime::the->__getsockopt(ins, sockfd, level, optname, optval, optlen);
+  Space::exitSys();
+  return ret;
 }
 
 int tern_setsockopt(unsigned ins, int sockfd, int level, int optname, const void *optval, socklen_t optlen)
 {
-  return Runtime::the->__setsockopt(ins, sockfd, level, optname, optval, optlen);
+  int ret;
+  Space::enterSys();
+  ret = Runtime::the->__setsockopt(ins, sockfd, level, optname, optval, optlen);
+  Space::exitSys();
+  return ret;
 }
 
 int tern_close(unsigned ins, int fd)
 {
-  return Runtime::the->__close(ins, fd);
+  int ret;
+  Space::enterSys();
+  ret = Runtime::the->__close(ins, fd);
+  Space::exitSys();
+  return ret;
 }
 
 ssize_t tern_read(unsigned ins, int fd, void *buf, size_t count)
 {
-  return Runtime::the->__read(ins, fd, buf, count);
+  int ret;
+  Space::enterSys();
+  ret = Runtime::the->__read(ins, fd, buf, count);
+  Space::exitSys();
+  return ret;
 }
 
 ssize_t tern_write(unsigned ins, int fd, const void *buf, size_t count)
 {
-  return Runtime::the->__write(ins, fd, buf, count);
+  int ret;
+  Space::enterSys();
+  ret = Runtime::the->__write(ins, fd, buf, count);
+  Space::exitSys();
+  return ret;
 }
 
 int tern_epoll_wait(unsigned ins, int epfd, struct epoll_event *events, int maxevents, int timeout)
 {
-  return Runtime::the->__epoll_wait(ins, epfd, events, maxevents, timeout);
+  int ret;
+  Space::enterSys();
+  ret = Runtime::the->__epoll_wait(ins, epfd, events, maxevents, timeout);
+  Space::exitSys();
+  return ret;
 }
 
 int tern_select(unsigned ins, int nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds, struct timeval *timeout)
 {
-  return Runtime::the->__select(ins, nfds, readfds, writefds, exceptfds, timeout);
+  int ret;
+  Space::enterSys();
+  ret = Runtime::the->__select(ins, nfds, readfds, writefds, exceptfds, timeout);
+  Space::exitSys();
+  return ret;
 }
 
 /*
@@ -441,7 +611,7 @@ int Runtime::__getpeername(unsigned ins, int sockfd, struct sockaddr *addr, sock
 {
   return getpeername(sockfd, addr, addrlen);
 }
-  
+
 int Runtime::__getsockopt(unsigned ins, int sockfd, int level, int optname, void *optval, socklen_t *optlen)
 {
   return getsockopt(sockfd, level, optname, optval, optlen);
@@ -474,7 +644,7 @@ int Runtime::__select(unsigned ins, int nfds, fd_set *readfds, fd_set *writefds,
 
 int Runtime::__sigwait(unsigned ins, const sigset_t *set, int *sig)
 {
-  return sigwait(set, sig); 
+  return sigwait(set, sig);
 }
 
 int Runtime::__epoll_wait(unsigned ins, int epfd, struct epoll_event *events, int maxevents, int timeout)

@@ -8,11 +8,10 @@
 #include <sys/time.h>
 #include <execinfo.h>
 #include <tern/hooks.h>
+#include <tern/space.h>
 #include <tern/runtime/runtime.h>
 
 using namespace tern;
-
-__thread int need_hook = 1;
 
 #define __NEED_INPUT_INSID
 #define __USE_TERN_RUNTIME
