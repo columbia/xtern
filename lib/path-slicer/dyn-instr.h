@@ -27,6 +27,7 @@ namespace tern {
     std::vector<int> *callingCtx;
 
     /* This is only valid in simplified slicing mode. 
+      For each dynamic instruction, there should be only one callstack in simplified bc, right?
       TODO: MUST THINK OF A NICE WAY TO ELIMINATE THIS MEMORY TOO. */
     std::vector<int> *simCallingCtx;
 

@@ -32,7 +32,9 @@ namespace tern {
       (if it is not thread/process exits). */
     std::list<DynInstr *> instrs;
 
-    /* All the taken dynamic instructions in slicing. */
+    /* All the taken dynamic instructions in slicing.
+        TODO: Probably we can make the string to be only a char pointer, which could save 
+        much memory. */
     llvm::DenseMap<DynInstr *, std::string> takenInstrs;
 
     /* If this is a branch instr, return its incoming index, which is used for phi instr in slicing. */
