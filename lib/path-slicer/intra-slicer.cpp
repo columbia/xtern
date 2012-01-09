@@ -11,3 +11,7 @@ IntraSlicer::IntraSlicer() {
 
 IntraSlicer::~IntraSlicer() {}
 
+void IntraSlicer::detectInputDepRaces(const DynInstrVector trace, size_t startIndex) {
+  
+}
+

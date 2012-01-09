@@ -51,8 +51,10 @@ namespace tern {
     // TBD.
   };
 
-  /* Iterator of a dynamic instruction. */
-  typedef std::list<DynInstr *>::iterator DynInstrItr;
+  /* Composed types of a dynamic instruction. */
+  typedef std::vector<DynInstr *> DynInstrVector;
+  typedef std::list<DynInstr *> DynInstrList;
+  typedef DynInstrList::iterator DynInstrItr;
 }
 
 #endif

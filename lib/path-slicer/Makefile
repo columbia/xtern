@@ -3,6 +3,7 @@ LEVEL := ../..
 LIBRARYNAME := path-slicer
 BUILD_ARCHIVE := 1
 LOADABLE_MODULE := 1
+PARALLEL_DIRS=Options
 
 EXCLUDED_SOURCES := template.c
 include $(LEVEL)/Makefile.common

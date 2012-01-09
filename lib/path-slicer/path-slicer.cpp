@@ -51,10 +51,10 @@ void PathSlicer::runPathSlicer(Module &M) {
   interSlicer.detectInputDepRaces(&instrRegions);
 
   // Run inter-slicer.
-  DynInstrItr itr = trace.end();
-  itr--;
-  intraSlicer.detectInputDepRaces(itr);
-
+  size_t startIndex = trace.size();
+  assert(startIndex > 0);
+  startIndex--;
+  intraSlicer.detectInputDepRaces(trace, startIndex);
   // Calculate stat results.
   calStat();
   

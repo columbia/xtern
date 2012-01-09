@@ -20,11 +20,24 @@ namespace tern {
   struct PathSlicer: public llvm::ModulePass {
   private:
     Stat stat;
-    std::list<DynInstr *> trace;
+
+    /* Use vector rather than list here becuase we usually needs to start slicing from some index
+    of the trace, and this vector is stable once trace is loaded. */
+    DynInstrVector trace;
+
+    /* Slicing targets, can come from inter-thread phase or specified by users manually. */
+    DynInstrList targets;
+
+    /* InstrRegion(s) is only for inter-thread phase. */
     InstrRegions instrRegions;
-    CallStackMgr *ctxMgr;
-    
+
+    /* The whole system only has this copy of calling context manager, all the others are pointers. */
+    CallStackMgr ctxMgr;
+
+    /* Inter-thread slicer. */
     InterSlicer interSlicer;
+
+    /* Intra-thread slicer. */
     IntraSlicer intraSlicer;
 
   protected:

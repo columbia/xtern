@@ -27,6 +27,7 @@ namespace tern {
     Slice *slice;
     AliasMgr *aliasMgr;
     CfgMgr *cfgMgr;
+    size_t curIndex;
     
 
   protected:
@@ -38,11 +39,12 @@ namespace tern {
     bool postDominate(DynInstr *dynPostInstr, DynInstr *dynPrevInstr);
     bool postDominate(int postIid, int curIid);
     DynInstrItr current();
+    DynInstr *delFromTrace();
 
   public:
     IntraSlicer();
     ~IntraSlicer();
-    void detectInputDepRaces(DynInstrItr startInstr);
+    void detectInputDepRaces(const DynInstrVector trace, size_t startIndex);
   };
 }
 
