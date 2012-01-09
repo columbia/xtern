@@ -1,0 +1,11 @@
+######################################
+#           tern path slicer options              #
+
+tern_path_slicer::do_inter_thread_slicing 1
+
+
+tern_path_slicer::do_intra_thread_slicing 1
+
+
+tern_path_slicer::intra_thread_slicing_start_index 0
+

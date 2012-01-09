@@ -22,7 +22,7 @@ my %options = ();
 
 sub main {
 
-    my $hfile = "Options/path-slicer-options.h";
+    my $hfile = "$prefix-options.h";
     my $cfile = "$prefix-options.cpp";
 
     read_optf($default_opt_file, \%options);
@@ -227,7 +227,7 @@ $note
 #include <cstring>
 #include <assert.h>
 
-#include "Options/options.h"
+#include "options.h"
 
 using namespace std;
 

@@ -28,7 +28,7 @@
 #include <cstdlib>
 #include <assert.h>
 
-#include "tern/options.h"
+#include "options.h"
 
 #    define xi_panic(fmt, arg...) \
             abort()
