@@ -1,3 +1,4 @@
+
 1 Checkout git repo.    
 	git clone git@repair.cs.columbia.edu:xtern
 	git clone git@repair.cs.columbia.edu:llvm
@@ -13,11 +14,10 @@
 	export LLVM_ROOT=/home/heming/rcs/llvm
 
 
-4 Installation.
-	cd $XTERN_ROOT
-	./configure --with-llvmsrc=$LLVM_ROOT/llvm-2.7 \
-		--with-llvmobj=$LLVM_ROOT/llvm-obj --prefix=$LLVM_ROOT/install
-	make ENABLE_OPTIMIZED=X (X is 0 or 1)
-	make ENABLE_OPTIMIZED=X install (X is 0 or 1)
-
-
+4 How to build xtern with dynamic hook module.
+1. create $XTERN_ROOT/obj, go to obj.
+2. do config as following. that's because xtern uses LLVM makefile.common
+> ./../configure --with-llvmsrc=$LLVM_ROOT/llvm-2.7/ --with-llvmobj=$LLVM_ROOT/llvm-obj/ --with-llvmgccdir=$LLVM_ROOT/install/bin/
+3. edit obj/lib/Makefile, and remove "instr" and "analysis"
+4. edit obj/lib/runtime/Makefile, and remove the line of MODULE_NAME
+5. do "make" in obj. sometimes "make ENABLE_OPTIMIZED=0/1"

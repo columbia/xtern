@@ -1,0 +1,9 @@
+OPTION_FILE="default.options"
+EXE_PREFIX=
+
+prepare:
+ifneq ($(OPTION_FILE), "default.options")
+	cp $(OPTION_FILE) default.options
+endif
+
+

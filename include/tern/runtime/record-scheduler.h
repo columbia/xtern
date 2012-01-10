@@ -16,6 +16,7 @@
 #include <errno.h>
 #include <pthread.h>
 #include <iostream>
+#include <fstream>
 #include <semaphore.h>
 #include "tern/runtime/scheduler.h"
 
@@ -38,6 +39,31 @@ struct FCFSScheduler: public Scheduler {
 
   // no signal() or broadcast for FCFS
 
+  void block() {
+    next_op = 0;
+  }	//	no block
+
+  void set_op(const char *m_op)
+  {
+    next_op = m_op;
+  }
+
+  static __thread const char *next_op;
+
+  void wakeup() { 
+    pthread_mutex_lock(&lock);
+    if (next_op)
+      ouf << next_op << "_block";
+    else
+      ouf << "blockingreturn";
+    ouf << ' ' << turnCount;
+    ouf << ' ' << self();
+    ouf << std::endl;
+
+    turnCount++;
+    pthread_mutex_unlock(&lock);
+  } 
+  
   void threadBegin(pthread_t self_th) {
     getTurn();
     Parent::threadBegin(self_th);
@@ -52,15 +78,98 @@ struct FCFSScheduler: public Scheduler {
     return &lock;
   }
 
-  FCFSScheduler(pthread_t main_th): Parent(main_th) {
+  ~FCFSScheduler() {
+    ouf.close();
+  }
+
+  std::ofstream ouf;
+
+  FCFSScheduler(pthread_t main_th): Parent(main_th), ouf("fsfs_message.log") {
     pthread_mutex_init(&lock, NULL);
   }
 
 protected:
   pthread_mutex_t lock; // protects TidMap data
 };
+#if 0
+struct OptScheduler: public Scheduler {
+  typedef Scheduler Parent;
 
+  void getTurn(void);
+  void putTurn(void);
+  void wait(void *chan);
+  void block();
+  void wakeup();
+  void threadCreate(pthread_t new_th);
+  void threadBegin(pthread_t self_th);
+  void threadEnd(pthread_t self_th);
+  void signal(void *chan);
+  void broadcast(void *chan);
+  void getTurnNU(void);
+  void getTurnLN(void);
+  void putTurnNU(void);
+  void signalNN(void *chan);
+  void broadcastNN(void *chan);
+  void waitFirstHalf(void *chan, bool doLock = Lock);
+  bool isWaiting();
+  
+  unsigned incTurnCount(void)
+  {
+    unsigned ret = turnCount++;
+    pthread_cond_broadcast(&tickcv);
+    return ret;
+  }
 
+  pthread_mutex_t *getLock() {
+    return &lock;
+  }
+
+  RRSchedulerCV(pthread_t main_th);
+  ~RRSchedulerCV();
+
+protected:
+
+  /// same as getTurn but acquires or releases the scheduler lock based on
+  /// the flags @doLock and @doUnlock
+  void getTurnHelper(bool doLock, bool doUnlock);
+  /// same as putTurn but acquires or releases the scheduler lock based on
+  /// the flags @doLock and @doUnlock
+  void putTurnHelper(bool doLock, bool doUnlock);
+  /// same as signal() but acquires or releases the scheduler lock based
+  /// on the flags @doLock and @doUnlock
+  void signalHelper(void *chan, bool all, bool doLock,
+                    bool doUnlock, bool wild = false);
+  /// same as wait but but acquires or releases the scheduler lock based
+  /// on the flags @doLock and @doUnlock
+  void waitHelper(void *chan, bool doLock, bool doUnlock);
+  /// common operations done by both wait() and putTurnHelper()
+  void next(void);
+
+  /// for debugging
+  void selfcheck(void);
+  std::ostream& dump(std::ostream& o);
+
+  std::list<int>  runq;
+  std::list<int>  waitq;
+  pthread_mutex_t lock;
+
+  struct net_item
+  {
+    int tid;
+    int turn;
+  };
+  std::list<net_item> net_events;
+  pthread_cond_t replaycv;
+  pthread_cond_t tickcv;
+  FILE *log;
+  
+  // TODO: can potentially create a thread-local struct for each thread if
+  // it improves performance
+  pthread_cond_t  waitcv[MaxThreads];
+  void*           waitvar[MaxThreads];
+
+};
+#endif
 /// TODO: one optimization is to change the single wait queue to be
 /// multiple wait queues keyed by the address they wait on, therefore no
 /// need to scan the mixed wait queue.
@@ -77,6 +186,10 @@ struct RRSchedulerCV: public Scheduler {
   /// thread on @waitq
   void wait(void *chan) { waitHelper(chan, Lock, Unlock); }
 
+  void block();
+
+  void wakeup();
+  
   /// must call with turn held
   void threadCreate(pthread_t new_th) {
     assert(self() == runq.front());
@@ -126,12 +239,20 @@ struct RRSchedulerCV: public Scheduler {
                                              NoLock, NoUnlock); }
   void waitFirstHalf(void *chan, bool doLock = Lock);
   bool isWaiting();
+  
+  unsigned incTurnCount(void)
+  {
+    unsigned ret = turnCount++;
+    pthread_cond_broadcast(&tickcv);
+    return ret;
+  }
 
   pthread_mutex_t *getLock() {
     return &lock;
   }
 
   RRSchedulerCV(pthread_t main_th);
+  ~RRSchedulerCV();
 
 protected:
 
@@ -159,6 +280,16 @@ protected:
   std::list<int>  waitq;
   pthread_mutex_t lock;
 
+  struct net_item
+  {
+    int tid;
+    int turn;
+  };
+  std::list<net_item> net_events;
+  pthread_cond_t replaycv;
+  pthread_cond_t tickcv;
+  FILE *log;
+  
   // TODO: can potentially create a thread-local struct for each thread if
   // it improves performance
   pthread_cond_t  waitcv[MaxThreads];

@@ -33,7 +33,7 @@ struct LogInstr: public llvm::ModulePass {
   virtual bool runOnModule(llvm::Module &M);
   virtual void getAnalysisUsage(llvm::AnalysisUsage &AU) const;
 
-  llvm::Value *castIfNecessary(llvm::Value *data, const llvm::Type *dst,
+  static llvm::Value *castIfNecessary(llvm::Value *data, const llvm::Type *dst,
                                  llvm::Instruction *insert);
   void instrFunc(llvm::Function &F);
   void instrInst(llvm::Instruction *I);

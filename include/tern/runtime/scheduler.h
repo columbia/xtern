@@ -5,6 +5,7 @@
 #include <assert.h>
 #include <tr1/unordered_map>
 #include <tr1/unordered_set>
+#include <stdio.h>
 
 namespace tern {
 
@@ -29,6 +30,8 @@ struct TidMap {
   /// sets thread-local tern tid
   void threadBegin(pthread_t self_th) {
     pthread_to_tern_map::iterator it = p_t_map.find(self_th);
+    if (it==p_t_map.end())
+      fprintf(stderr, "pthread tid not in map!\n");
     assert(it!=p_t_map.end() && "pthread tid not in map!");
     self_tid = it->second;
   }
@@ -99,6 +102,9 @@ struct TidMap {
 ///  when necessary.  A nice side effect is we get static polymorphism
 ///  within the Runtime subclasses
 struct Scheduler: public TidMap {
+
+  void set_op(const char *m_op) {}  //  TODO delete me
+
   /// get the turn so that other threads trying to get the turn must wait
   void getTurn(void) { }
 
@@ -117,6 +123,13 @@ struct Scheduler: public TidMap {
   /// @chan has the same requirement as wait
   void broadcast (void *chan) { }
 
+  /// info the scheduler that a thread is calling an external blocking function
+  /// NOTICE: different delay before @block() should not lead to different schedule.
+  void block() {}
+
+  /// info the scheduler that a blocking thread has returned.
+  void wakeup() { incTurnCount(); } 
+
   /// begin a thread & get the turn; called right after the thread begins
   void threadBegin(pthread_t self_th)  { TidMap:: threadBegin(self_th); }
 
@@ -128,7 +141,7 @@ struct Scheduler: public TidMap {
 
   /// join thread @th; must call with turn held
   void threadJoin(pthread_t th) { TidMap:: threadJoin(th); }
-
+  
   /// must call within turn because turnCount is shared across all
   /// threads.  we provide this method instead of incrementing turn for
   /// each successful getTurn() because a successful getTurn() may not

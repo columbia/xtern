@@ -43,6 +43,7 @@ const char* nameInTern[] = {
 };
 
 unsigned getNameID(const char* name) {
+  assert(name && "got a null parameter.");
   for(unsigned i=first_sync; i<num_syncs; ++i)
     if(strcmp(name, getName(i)) == 0)
       return i;

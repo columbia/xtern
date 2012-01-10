@@ -52,7 +52,7 @@ static bool endsWith(const string& str, const char* suffix) {
 
 
 void getUclibcPath(void) {
-  // FIXME: use root of the old tern; should this a configuration option
+  // FIXME: use root of the old tern; should make this a configuration option
   const char* tern_root = getenv("TERN_ROOT");
   assert(tern_root && "TERN_ROOT environment variable is not set;"\
          " can't search for uclibc!");

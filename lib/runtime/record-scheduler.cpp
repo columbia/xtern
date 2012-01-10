@@ -3,9 +3,12 @@
 
 #include "tern/runtime/record-scheduler.h"
 #include <iostream>
-#include <iostream>
+#include <fstream>
 #include <iterator>
 #include <vector>
+#include <cstdio>
+#include <stdlib.h>
+#include "tern/options.h"
 
 using namespace std;
 using namespace tern;
@@ -14,7 +17,7 @@ using namespace tern;
 
 #ifdef _DEBUG_RECORDER
 #  define SELFCHECK  dump(cerr); selfcheck()
-#  define dprintf(fmt...) fprintf(stderr, fmt)
+#  define dprintf(fmt...) fprintf(stderr, fmt); fflush(stderr);
 #else
 #  define SELFCHECK
 #  define dprintf(fmt...)
@@ -30,14 +33,64 @@ void RRSchedulerCV::threadEnd(pthread_t self_th) {
   pthread_mutex_unlock(&lock);
 }
 
+RRSchedulerCV::~RRSchedulerCV()
+{
+  pthread_cond_destroy(&replaycv);
+  pthread_cond_destroy(&tickcv);
+  if (log)
+  {
+    fflush(log);
+    fclose(log);
+    log = NULL;
+  }
+}
+
 RRSchedulerCV::RRSchedulerCV(pthread_t main_th): Parent(main_th) {
   pthread_mutex_init(&lock, NULL);
   for(unsigned i=0; i<MaxThreads; ++i) {
     pthread_cond_init(&waitcv[i], NULL);
     waitvar[i] = NULL;
   }
+  pthread_cond_init(&replaycv, NULL);
+  pthread_cond_init(&tickcv, NULL);
+
   assert(self() == MainThreadTid && "tid hasn't been initialized!");
   runq.push_back(self()); // main thread
+
+  log = fopen("message.log", "w");
+  assert(log && "open message log file failed!");
+
+#if 1
+  ifstream inf("replay.log");
+  if (inf.good())
+  {
+    int tid, turn;
+    while (inf >> tid >> turn)
+    {
+      if (turn < 0) continue;
+      net_item item;
+      item.tid = tid;
+      item.turn = turn;
+      net_events.push_back(item);
+    }
+    inf.close();
+  }
+#else
+  FILE *fin = fopen("replay.log", "r");
+  if (fin)
+  {
+    int tid, turn;
+    //while (fscanf("%d %d", &tid, &turn) == 2)
+    while (fscanf(fin, "%d %d", &tid, &turn) == 2)
+    {
+      net_item item;
+      item.tid = tid;
+      item.turn = turn;
+      net_events.push_back(item);
+    }
+    fclose(fin);
+  }
+#endif
 }
 
 /// check if current thread is head of runq; otherwise, wait on the cond
@@ -50,10 +103,20 @@ void RRSchedulerCV::getTurnHelper(bool doLock, bool doUnlock) {
     pthread_mutex_lock(&lock);
 
   assert(tid>=0 && tid<MaxThreads);
-  while(tid != runq.front())
-    pthread_cond_wait(&waitcv[tid], &lock);
+  for(;;) {
+    if (!net_events.empty() && (int) net_events.begin()->turn == (int) turnCount)
+    {
+      pthread_cond_wait(&replaycv, &lock);
+      continue;
+    }
+    if (tid != runq.front())
+      pthread_cond_wait(&waitcv[tid], &lock);
+    else 
+      break;
+  }
 
   SELFCHECK;
+  //cerr << "RRScheduler: " << tid << " get turn." << endl;
   dprintf("RRSchedulerCV: %d: got turn\n", self());
 
   if(doUnlock)
@@ -209,7 +272,7 @@ void RRSchedulerCV::selfcheck(void) {
 }
 
 ostream& RRSchedulerCV::dump(ostream& o) {
-  o << "nthread " << Scheduler::nthread;
+  o << "nthread " << Scheduler::nthread << ": " << turnCount;
   o << " [runq ";
   copy(runq.begin(), runq.end(), ostream_iterator<int>(o, " "));
   o << "]";
@@ -220,5 +283,96 @@ ostream& RRSchedulerCV::dump(ostream& o) {
   return o;
 }
 
+void RRSchedulerCV::block()
+{
+  if (!options::schedule_network) return;
 
+/*
+  pthread_mutex_lock(&lock);
+
+  assert(tid>=0 && tid<MaxThreads);
+  while(tid != runq.front())
+    pthread_cond_wait(&waitcv[tid], &lock);
+*/
+  getTurn();
+  unsigned ret = incTurnCount();
+
+  assert(log && "open message log file failed!");
+  fprintf(log, "%d %d\n", (int)self(), - ret - 1);
+  fflush(log);
+
+  //  like putTurn
+  pthread_mutex_lock(&lock);
+  // I'm blocked! Don't push me into the queue!
+  //runq.push_back(self());
+  next();
+  SELFCHECK;
+
+  pthread_mutex_unlock(&lock);
+}
+
+void RRSchedulerCV::wakeup()
+{
+  if (!options::schedule_network) return;
+
+  int tid = self();
+
+  pthread_mutex_lock(&lock);
+
+  for(;;) {
+    if (net_events.empty())
+    {
+      //  the recording part
+      runq.push_back(tid);
+      SELFCHECK;
+      pthread_mutex_unlock(&lock);
+
+      getTurn();  //  ensure atomicity
+      break;
+    }
+
+    //  the replay part
+    if (net_events.begin()->tid != tid)
+      pthread_cond_wait(&replaycv, &lock);
+    else {
+      if (net_events.begin()->turn < turnCount)
+      {
+        int t = net_events.front().turn;
+        int id = net_events.front().tid;
+        exit(-1);
+      }
+
+      if (net_events.begin()->turn == (int) turnCount)
+      {
+        net_events.pop_front();
+        pthread_cond_broadcast(&replaycv);
+        break;
+      }
+      pthread_cond_wait(&tickcv, &lock);
+    }
+  }
+
+  assert(tid>=0 && tid<MaxThreads);
+
+  assert(log && "open message log file failed!");
+  unsigned ret = incTurnCount();
+  fprintf(log, "%d %d\n", tid, ret);
+  fflush(log);
+  //cerr << tid << ' ' << ret << endl;
+
+  if (runq.size() && tid == runq.front()) // the record part or some replay part
+    putTurn();
+  else  
+  {
+    runq.push_back(self());
+    SELFCHECK;
+    if(!runq.empty()) {
+      int tid = runq.front();
+      assert(tid>=0 && tid < Scheduler::nthread);
+      pthread_cond_signal(&waitcv[tid]);
+      dprintf("RRSchedulerCV: %d gives turn to %d\n", self(), tid);
+    }
+    pthread_mutex_unlock(&lock);
+  }
+}
 
