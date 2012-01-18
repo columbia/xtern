@@ -1,20 +1,21 @@
 #ifndef __TERN_PATH_SLICER_CACHE_UTIL_H
 #define __TERN_PATH_SLICER_CACHE_UTIL_H
 
-#include "type-defs.h"
-
 #include "llvm/ADT/DenseSet.h"
+
+#include "macros.h"
+#include "type-defs.h"
 
 namespace tern {
   class CacheUtil {
   private:
     /* Whether two dynamic instr may alias.
       Each dynamic instruction is <context pointer, instr pointer>, long long type, two of them form a pair. */
-    llvm::DenseMap<LongLongPair, bool> mutualCache;
+    HMAP<LongLongPair, bool> mutualCache;
 
     /* Whether one dynamic instr has a property (true or false).
       Each dynamic instruction is <context pointer, instr pointer>, long long type. */
-    llvm::DenseMap<long long, bool> singleCache;
+    HMAP<LongPair, bool> singleCache;
 
   protected:
 

@@ -2,17 +2,11 @@
 #define __TERN_PATH_SLICER_TYPE_DEFS_H
 
 #include <vector>
-#include <list>
-#include <string>
-#include <map>
-#include <set>
-#include <fstream>
+#include "llvm/Value.h"
 
 typedef std::pair<long, long> LongPair;
-typedef std::pair<long long, long long> LongLongPair;
-
-#define HM_IN(ELEM, SET) (SET.find(ELEM) != SET.end())
-#define DM_IN(ELEM, SET) (SET.count(ELEM) > 0)
-#define NOT_TAKEN_INSTR "NOT TAKEN"
+typedef std::pair<LongPair, LongPair> LongLongPair;
+typedef std::pair< std::vector<int> *, llvm::Value * > CtxVPair;
+typedef llvm::DenseSet< CtxVPair > CtxVDenseSet;
 
 #endif

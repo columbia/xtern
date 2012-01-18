@@ -1,7 +1,7 @@
 #ifndef __TERN_PATH_SLICER_RACY_EDGE_H
 #define __TERN_PATH_SLICER_RACY_EDGE_H
 
-#include "dyn-instr.h"
+#include "dyn-instrs.h"
 
 namespace tern {
   /* 

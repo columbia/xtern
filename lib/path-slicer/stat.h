@@ -8,13 +8,13 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/Support/raw_ostream.h"
 
-#include "type-defs.h"
+#include "macros.h"
 #include "stat.h"
 
 namespace tern {
   class Stat {
   private:
-    __gnu_cxx::hash_map<long, llvm::raw_string_ostream * > buf;
+    HMAP<long, llvm::raw_string_ostream * > buf;
 
   protected:
 

@@ -9,7 +9,7 @@
 #include "llvm/ADT/DenseSet.h"
 
 #include "stat.h"
-#include "dyn-instr.h"
+#include "dyn-instrs.h"
 #include "slice.h"
 #include "live-set.h"
 #include "alias-mgr.h"
@@ -27,8 +27,8 @@ namespace tern {
     Slice *slice;
     AliasMgr *aliasMgr;
     CfgMgr *cfgMgr;
+    const DynInstrVector *trace;
     size_t curIndex;
-    
 
   protected:
     void take(LiveSet &live, Slice &slice, DynInstr *dynInstr, const char *reason);
@@ -37,14 +37,34 @@ namespace tern {
     bool writtenBetween(DynInstr *dynInstr, DynInstr *dynHeadInstr, LiveSet &live);
     llvm::Instruction *getStaticPostDominator(DynInstr *dynInstr);
     bool postDominate(DynInstr *dynPostInstr, DynInstr *dynPrevInstr);
-    bool postDominate(int postIid, int curIid);
     DynInstrItr current();
     DynInstr *delFromTrace();
+    void handlePHI(DynInstr *dynInstr);
+    void handleBranch(DynInstr *dynInstr);
+    void handleRet(DynInstr *dynInstr);
+    void handleCall(DynInstr *dynInstr);
+    void handleNonMem(DynInstr *dynInstr);
+    void handleMem(DynInstr *dynInstr);
+    bool empty();
+    DynInstr *delTraceTail();
+    void takeNonMem(DynInstr *dynInstr);
+    void delRegOverWritten(DynInstr *dynInstr);
+    bool regOverWritten(DynInstr *dynInstr);
+    bool retRegOverWritten(DynInstr *dynInstr);
+    bool eventBetween(DynInstr *dynInstr);
+    bool writtenBetween(DynInstr *dynInstr);
+    bool mayWriteFunc(DynInstr *dynInstr, llvm::Function *func);
+    bool mayCallEvent(DynInstr *dynInstr, llvm::Function *func);
+    DynInstr *getCallInstrWithRet(DynInstr *retDynInstr);
+    DynInstr *prevDynInstr(DynInstr *dynInstr);
+    void removeRange(DynInstr *dynInstr);
+    void addMemAddrEqConstr(DynMemInstr *loadInstr, DynMemInstr *storeInstr);
 
   public:
     IntraSlicer();
     ~IntraSlicer();
-    void detectInputDepRaces(const DynInstrVector trace, size_t startIndex);
+    void init(const DynInstrVector *trace, size_t startIndex);
+    void detectInputDepRaces();
   };
 }
 

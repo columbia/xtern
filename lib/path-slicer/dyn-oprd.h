@@ -1,7 +1,7 @@
 #ifndef __TERN_PATH_SLICER_DYN_OPRD_H
 #define __TERN_PATH_SLICER_DYN_OPRD_H
 
-#include "dyn-instr.h"
+#include "dyn-instrs.h"
 
 #include "llvm/Instruction.h"
 
@@ -12,22 +12,19 @@ namespace tern {
   private:
     /* Points back to the dynamic instruction that owns this dynamic operand. */
     DynInstr *dynInstr;
-    int oprdIndex; /* Start from -1, which is the dest oprd. */
 
-    bool isAddrSymbolic;
-    bool isConstant;
-    uint64_t memAddr;
+    /* Start from 0. */
+    int oprdIndex; 
 
   protected:
 
   public:
     DynOprd();
     ~DynOprd();
-    bool isVariable();
     int getIndex();
-    bool isDestOprd();
+    DynInstr *getDynInstr();
     llvm::Value *getStaticValue();
-    
+    bool isConstant();    
   };
 }
 

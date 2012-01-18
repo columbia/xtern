@@ -6,11 +6,12 @@
 #include "llvm/ADT/DenseSet.h"
 
 #include "stat.h"
-#include "dyn-instr.h"
+#include "dyn-instrs.h"
 #include "alias-mgr.h"
 #include "cache-util.h"
 
 namespace tern {
+  class AliasMgr;
   class RWSet {
   private:
     Stat *stat;

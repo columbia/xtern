@@ -7,7 +7,7 @@
 #include "llvm/ADT/DenseSet.h"
 
 #include "stat.h"
-#include "dyn-instr.h"
+#include "dyn-instrs.h"
 #include "rw-set.h"
 #include "instr-region.h"
 #include "slice.h"

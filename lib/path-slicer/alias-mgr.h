@@ -11,12 +11,13 @@
 #include "slicer/adv-alias.h"
 #include "slicer/solve.h"
 
-#include "dyn-instr.h"
+#include "dyn-instrs.h"
 #include "cache-util.h"
 #include "instr-id-mgr.h"
 #include "stat.h"
 
 namespace tern {
+  class InstrIdMgr;
   struct AliasMgr {
   private:
     AAOLClient *origAaol;
@@ -45,8 +46,8 @@ namespace tern {
     ~AliasMgr();
 
     /* This is the universal interface to query alias in all other modules. */
-    void mayAlias(DynInstr *dynInstr1, int opIdx1, DynInstr *dynInstr2, int opIdx2);
-    void mayAlias(DynOprd *dynInstr1, DynInstr *dynInstr2);
+    //bool mayAlias(DynInstr *dynInstr1, int opIdx1, DynInstr *dynInstr2, int opIdx2);
+    bool mayAlias(DynOprd *dynOprd1, DynOprd *dynOprd2);
 
     /* Get pointee bdd. In max slicing or range analysis mode, it should return the pointee of 
         the max sliced module. */

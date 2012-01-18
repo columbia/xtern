@@ -3,7 +3,7 @@
 
 #include <vector>
 
-#include "dyn-instr.h"
+#include "dyn-instrs.h"
 #include "instr-id-mgr.h"
 
 namespace tern {

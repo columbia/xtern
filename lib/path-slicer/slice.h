@@ -3,7 +3,7 @@
 
 #include <list>
 
-#include "dyn-instr.h"
+#include "dyn-instrs.h"
 
 namespace tern {
   class Slice {
@@ -23,6 +23,7 @@ namespace tern {
     bool in(DynInstr *dynInstr);
     DynInstrItr begin();
     DynInstrItr end();
+    DynInstr *getHead();
   };
 }
 

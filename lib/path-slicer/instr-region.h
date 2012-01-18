@@ -8,8 +8,10 @@
 #include "llvm/ADT/DenseSet.h"
 
 #include "type-defs.h"
-#include "dyn-instr.h"
+#include "macros.h"
+#include "dyn-instrs.h"
 #include "instr-id-mgr.h"
+#include "rw-set.h"
 
 /*  A Instruction Region is a continuous stream of executed instructions within one thread.
   It starts from one synch operation and ends with another one (not including the this one).
@@ -19,34 +21,34 @@
 namespace tern {
   class InstrRegion {
   private:
+    /* A complete trace. */
+    DynInstrVector *trace;
+
+    /* The starting point of instruction index in the trace (inclusive). */
+    size_t startIndex;
+
+    /* The end point of instruction index in the trace (exclusive). */
+    size_t endIndex;
+
+    /* Thread id. When going over from the start to end of the trace, only pick the dynamic
+    instructions generated from current thread id. */
+    int tid;
+    
     /* Inclusive total order of the starting sync event. */
     int startSyncId;
 
     /* Exclusive (if it is not thread/process exits) total order of the starting sync event. */    
     int endSyncId;
 
-    /* Thread id. */
-    int tid;
-
-    /* All the executed dynamic instructions within this region, excludes the ending sync event 
-      (if it is not thread/process exits). */
-    std::list<DynInstr *> instrs;
-
     /* All the taken dynamic instructions in slicing.
         TODO: Probably we can make the string to be only a char pointer, which could save 
         much memory. */
-    llvm::DenseMap<DynInstr *, std::string> takenInstrs;
-
-    /* If this is a branch instr, return its incoming index, which is used for phi instr in slicing. */
-    llvm::DenseMap<DynInstr *, int> brIncomeIdx;
-
-    /* If this is a thread creation call, return its child thread. */
-    llvm::DenseMap<DynInstr *, int> childTid;
-
-    //InstrIdMgr *idMgr;
+    llvm::DenseMap<DynInstr *, const char *> takenInstrs;
     
-    /* TBD: We need to have per instr region cache for read write set, this is because the read write
+    /* We need to have per instr region cache for read write set, this is because the read write
     set of each instr region can be different. */
+    RWSet readSet;
+    RWSet writeSet;
 
   protected:
 

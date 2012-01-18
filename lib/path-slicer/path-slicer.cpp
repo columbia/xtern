@@ -54,7 +54,9 @@ void PathSlicer::runPathSlicer(Module &M) {
   size_t startIndex = trace.size();
   assert(startIndex > 0);
   startIndex--;
-  intraSlicer.detectInputDepRaces(trace, startIndex);
+  intraSlicer.init(&trace, startIndex); // Init intra threas slicer.
+  // TBD. Take initial instruction and add init oprds.
+  intraSlicer.detectInputDepRaces(); // Detect input dependent races.
   // Calculate stat results.
   calStat();
   
