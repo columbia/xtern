@@ -7,24 +7,26 @@
 
 namespace tern {
   class DynInstr;
-  /* We must include as few as fields in this class in order to save memory. */
+  /* This class is no longer involved in heap, it is only performed in function local computation,
+  so memory usage is no longer a problem. */
   class DynOprd {
   private:
     /* Points back to the dynamic instruction that owns this dynamic operand. */
     DynInstr *dynInstr;
 
-    /* Start from 0. */
+    /* Start from -1. */
     int oprdIndex; 
 
   protected:
 
   public:
     DynOprd();
+    DynOprd(DynInstr *dynInstr, int oprdIndex);
     ~DynOprd();
     int getIndex();
     DynInstr *getDynInstr();
     llvm::Value *getStaticValue();
-    bool isConstant();    
+    bool isConstant();
   };
 }
 

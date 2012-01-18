@@ -5,6 +5,11 @@ DynOprd::DynOprd() {
 
 }
 
+DynOprd::DynOprd(DynInstr *dynInstr, int oprdIndex) {
+  this->dynInstr = dynInstr;
+  this->oprdIndex = oprdIndex;
+}
+
 DynOprd::~DynOprd() {
 
 }
@@ -22,3 +27,4 @@ bool DynOprd::isConstant() {
   Value *v = getStaticValue();
   return isa<Constant>(v);
 }
+

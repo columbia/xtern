@@ -8,11 +8,15 @@
 
 #include "type-defs.h"
 #include "cache-util.h"
+#include "stat.h"
 
 namespace tern {
   class CfgMgr: public llvm::ModulePass {
   private:
     static char ID;
+
+    Stat *stat;
+    
     /* Cache the nearest postdominators of a given instruction. */
     llvm::DenseMap<const llvm::Instruction *, llvm::Instruction *> neareastPostDomInstr;
 
@@ -24,7 +28,7 @@ namespace tern {
   public:
     CfgMgr();
     ~CfgMgr();
-
+    void initStat(Stat *stat);
     virtual void getAnalysisUsage(llvm::AnalysisUsage &AU) const;
     virtual bool runOnModule(llvm::Module &M);    
     bool postDominate(llvm::Instruction *prevInstr, llvm::Instruction *postInstr);    

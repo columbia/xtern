@@ -13,6 +13,8 @@
 
 using namespace std;
 
+int __tern_path_slicer__aaol_dbg_level = 0;
+
 int __tern_path_slicer__do_inter_thread_slicing = 1;
 
 int __tern_path_slicer__do_intra_thread_slicing = 1;
@@ -37,9 +39,11 @@ struct _options: public options {
 
 
 
+
     }
 
     virtual void init() {
+
 
 
 
@@ -49,6 +53,8 @@ struct _options: public options {
 
     virtual int load(const char *dom, const char *opt, const char *val) {
     if (!strcmp (dom, "tern_path_slicer")) {
+        if (!strcmp (opt, "aaol_dbg_level"))
+            { __tern_path_slicer__aaol_dbg_level = (int)strtoul(val, 0, 0); return 1; }
         if (!strcmp (opt, "do_inter_thread_slicing"))
             { __tern_path_slicer__do_inter_thread_slicing = (int)strtoul(val, 0, 0); return 1; }
         if (!strcmp (opt, "do_intra_thread_slicing"))
@@ -66,6 +72,7 @@ struct _options: public options {
     }
     
     virtual void print(std::ostream &o) {
+    o << "tern_path_slicer::aaol_dbg_level    " << __tern_path_slicer__aaol_dbg_level << endl;
     o << "tern_path_slicer::do_inter_thread_slicing    " << __tern_path_slicer__do_inter_thread_slicing << endl;
     o << "tern_path_slicer::do_intra_thread_slicing    " << __tern_path_slicer__do_intra_thread_slicing << endl;
     o << "tern_path_slicer::intra_thread_slicing_start_index    " << __tern_path_slicer__intra_thread_slicing_start_index << endl;

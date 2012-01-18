@@ -10,6 +10,10 @@ CfgMgr::CfgMgr(): ModulePass(&ID) {
   postDomCache.clear();
 }
 
+void CfgMgr::initStat(Stat *stat) {
+  this->stat = stat;
+}
+
 void CfgMgr::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();
   AU.addRequired<PostDominatorTree>();

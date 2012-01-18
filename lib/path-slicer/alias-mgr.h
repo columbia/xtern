@@ -32,6 +32,9 @@ namespace tern {
     
 
   protected:
+    void genInstrMap(llvm::Module &module,
+      std::map<llvm::Instruction *, int> &insMap);
+    void initAAOL(AAOLClient **aaol, llvm::Module *module);
     void appendCtxAliasCache(const std::vector<int> *ctx1, const llvm::Value *v1,
       const std::vector<int> *ctx2, const llvm::Value *v2, bool result);    
     void appendCtxAliasCache(const std::vector<int> *ctx1, long iid1, int opIdx1,
@@ -44,6 +47,10 @@ namespace tern {
   public:
     AliasMgr();
     ~AliasMgr();
+    void initStat(Stat *stat);
+    void initInstrIdMgr(InstrIdMgr *idMgr);
+    void initModules(llvm::Module *origModule, llvm::Module *mxModule,
+      llvm::Module *simModule);
 
     /* This is the universal interface to query alias in all other modules. */
     //bool mayAlias(DynInstr *dynInstr1, int opIdx1, DynInstr *dynInstr2, int opIdx2);

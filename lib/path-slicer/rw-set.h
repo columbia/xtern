@@ -15,7 +15,6 @@ namespace tern {
   class RWSet {
   private:
     Stat *stat;
-    AliasMgr *aliasMgr;
     std::set<const llvm::Value *> staticSet;
     llvm::DenseMap<const llvm::Value *, std::set<DynOprd *> *> valueMap;
     CacheUtil dynInstrAliasCache;

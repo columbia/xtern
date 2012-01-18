@@ -14,15 +14,6 @@ Instruction *DynInstr::getOrigInstr() {
   return region->getOrigInstr(this);
 }
 
-DynOprd *DynInstr::getUsedOprd(unsigned index) {
-  ASSERT(index < usedOprds.size());
-  return usedOprds[index];
-}
-
-DynOprd *DynInstr::getDestOprd() {
-  return destOprd;
-}
-
 bool DynInstr::isTarget() {
   return isTaken();
 }
@@ -81,6 +72,10 @@ void DynCallInstr::setCalledFunc(llvm::Function *f) {
 
 llvm::Function *DynCallInstr::getCalledFunc() {
   return calledFunc;
+}
+
+bool DynCallInstr::isInternalCall() {
+  return (!calledFunc->isDeclaration());
 }
 
 DynSpawnThreadInstr::DynSpawnThreadInstr() {

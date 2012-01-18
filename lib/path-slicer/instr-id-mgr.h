@@ -17,12 +17,15 @@
 #include "type-defs.h"
 #include "dyn-instrs.h"
 #include "macros.h"
+#include "stat.h"
 
 namespace tern {
   class DynOprd;
   class DynInstr;
   class InstrIdMgr {
   private:
+    Stat *stat;
+    
     /* Original LLVM Module. */
     llvm::Module *origModule;    
 
@@ -62,9 +65,11 @@ namespace tern {
     bool isSimBcInstr(const llvm::Instruction *instr);
 
   public:
-    InstrIdMgr(llvm::Module *origModule, llvm::Module *mxModule, llvm::Module *simModule);
+    InstrIdMgr();
     ~InstrIdMgr();
-
+    void initStat(Stat *stat);
+    void initModules(llvm::Module *origModule, llvm::Module *mxModule, llvm::Module *simModule,
+      const char *lmTracePath);
     /* Load the landmark trace (not full trace) from disk, this is important to setup the instr id mapping. */
     void loadBinLandmarkTrace(const char *fullPath);
 
@@ -72,13 +77,13 @@ namespace tern {
     int getMxInstrId(const DynInstr *dynInstr);
 
     /* Given a dynamic instr, return its instr in max sliced module. */
-    llvm::Instruction *getMxInstr(DynOprd *dynInstr);
+    llvm::Instruction *getMxInstr(const DynInstr *dynInstr);
 
     /* Given a dynamic instr, return its set of instr id in simplified module. */
     std::set<int *> *getSimInstrId(const DynInstr *dynInstr);
 
     /* Given a dynamic instr, return its set of instr in simplified module. */
-    set<llvm::Instruction *> *getSimInstr(const DynOprd *dynInstr);
+    set<llvm::Instruction *> *getSimInstr(const DynInstr *dynInstr);
   };
 }
 

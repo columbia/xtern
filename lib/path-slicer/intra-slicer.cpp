@@ -59,11 +59,13 @@ void IntraSlicer::takeNonMem(DynInstr *dynInstr) {
 }
 
 void IntraSlicer::delRegOverWritten(DynInstr *dynInstr) {
-  live.delReg(dynInstr->getDestOprd());
+  DynOprd destOprd(dynInstr, -1);
+  live.delReg(&destOprd);
 }
 
 bool IntraSlicer::regOverWritten(DynInstr *dynInstr) {
-  return live.regIn(dynInstr->getDestOprd());
+  DynOprd destOprd(dynInstr, -1);
+  return live.regIn(&destOprd);
 }
 
 DynInstr *IntraSlicer::getCallInstrWithRet(DynInstr *retDynInstr) {
@@ -96,9 +98,9 @@ void IntraSlicer::handlePHI(DynInstr *dynInstr) {
   if (regOverWritten(phiInstr)) {
     delRegOverWritten(phiInstr);
     unsigned index = phiInstr->getIncomingIndex();
-    DynOprd *oprd = phiInstr->getUsedOprd(index);
-    if (!oprd->isConstant()) {
-      live.addReg(oprd);
+    DynOprd oprd(phiInstr, index);
+    if (oprd.isConstant()) {
+      live.addReg(&oprd);
     } else {
       DynInstr *prevInstr = prevDynInstr(phiInstr);
       prevInstr->setTaken(true, __func__);
@@ -137,7 +139,12 @@ void IntraSlicer::handleRet(DynInstr *dynInstr) {
 }
 
 void IntraSlicer::handleCall(DynInstr *dynInstr) {
-  // TBD.
+  DynCallInstr *callInstr = (DynCallInstr*)dynInstr;
+  if (callInstr->isInternalCall()) {
+    takeNonMem(callInstr);
+  } else {
+    // TBD: QUERY FUNCTION SUMMARY.
+  }
 }
 
 void IntraSlicer::handleNonMem(DynInstr *dynInstr) {
@@ -150,37 +157,38 @@ void IntraSlicer::handleMem(DynInstr *dynInstr) {
     DynMemInstr *loadInstr = (DynMemInstr*)dynInstr;
     if (loadInstr->isTarget() || regOverWritten(loadInstr)) {
       delRegOverWritten(loadInstr);
-      live.addReg(loadInstr->getUsedOprd(0));
+      DynOprd loadPtrOprd(loadInstr, 0);
+      live.addReg(&loadPtrOprd);
       live.addLoadMem(loadInstr);
       slice->add(loadInstr, __func__);
     }
   } else {
     DynMemInstr *storeInstr = (DynMemInstr*)dynInstr;
-    DynOprd *storeValue = storeInstr->getUsedOprd(0);
-    DynOprd *storePtrOprd = storeInstr->getUsedOprd(1);
+    DynOprd storeValue(storeInstr, 0);
+    DynOprd storePtrOprd(storeInstr, 1);
     if (storeInstr->isTarget()) {
-      live.addReg(storePtrOprd);
+      live.addReg(&storePtrOprd);
       slice->add(storeInstr, __func__);
     }
     DenseSet<DynInstr *> loadInstrs = live.getAllLoadInstrs();
     DenseSet<DynInstr *>::iterator itr(loadInstrs.begin());
     for (; itr != loadInstrs.end(); ++itr) {
       DynMemInstr *loadInstr = (DynMemInstr*)(*itr);
-      DynOprd *loadPtrOprd = loadInstr->getUsedOprd(0);
+      DynOprd loadPtrOprd(loadInstr, 0);
       if (loadInstr->getMemAddr() == storeInstr->getMemAddr()) {
         if (loadInstr->isMemAddrSymbolic() || storeInstr->isMemAddrSymbolic()) {
           addMemAddrEqConstr(loadInstr, storeInstr);
         }
         live.delLoadMem(loadInstr);
-        live.addReg(storeValue);
+        live.addReg(&storeValue);
         if (!storeInstr->isTaken()) {
-          live.addReg(storePtrOprd);
+          live.addReg(&storePtrOprd);
           slice->add(storeInstr, __func__);
         }
-      } else if (aliasMgr->mayAlias(loadPtrOprd, storePtrOprd)) {
-        live.addReg(storeValue);
+      } else if (aliasMgr->mayAlias(&loadPtrOprd, &storePtrOprd)) {
+        live.addReg(&storeValue);
         if (!storeInstr->isTaken()) {
-          live.addReg(storePtrOprd);
+          live.addReg(&storePtrOprd);
           slice->add(storeInstr, __func__);
         }
       }

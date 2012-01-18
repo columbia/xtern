@@ -19,3 +19,6 @@ tern_path_slicer::print_debug_info 0
 # Slicing mode. Normal: 0; Max: 1; Range: 2.
 tern_path_slicer::slicing_mode 0
 
+# AAOL debug level.
+tern_path_slicer::aaol_dbg_level 0
+

@@ -5,6 +5,7 @@
 
 #include "dyn-instrs.h"
 #include "instr-id-mgr.h"
+#include "stat.h"
 
 namespace tern {
   struct CallSitePnt {
@@ -13,6 +14,7 @@ namespace tern {
   };
   class CallStackMgr {
   private:
+    Stat *stat;
     InstrIdMgr *idMgr;
     llvm::DenseMap<int, vector<CallSitePnt *> *> tidToCallStackMap;
     std::set<vector<int> *> ctxPool;
@@ -34,7 +36,8 @@ namespace tern {
   public:
     CallStackMgr();
     ~CallStackMgr();
-
+    void initStat(Stat *stat);
+    void initInstrIdMgr(InstrIdMgr *idMgr);
     /* For normal slicing mode, this is the orig call stack; for mx slicing mode, this is the mx call stack. */
     void setCallStack(DynInstr *dynInstr);
   };

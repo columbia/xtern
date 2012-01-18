@@ -27,13 +27,6 @@ namespace tern {
       of instructions within this region, such as thread id and vector clock. */
     InstrRegion *region;
 
-    /* Use a separate pointer to store destination operand. This would not cost more memory
-    since most LLVM instructions have destination operand. */
-    DynOprd *destOprd;
-
-    /* All used operands of this instruction, including function call arguments. */
-    std::vector<DynOprd * > usedOprds;
-
     /* The total order of execution index of this dynamic instr.
         Question: does xtern still have this feature? */
     size_t index;
@@ -88,12 +81,6 @@ namespace tern {
 
     /* TBD */
     llvm::Instruction *getOrigInstr();
-
-    /* TBD */
-    DynOprd *getUsedOprd(unsigned index);
-
-    /* TBD */
-    DynOprd *getDestOprd();
   };
 
   class DynPHIInstr: public DynInstr {
@@ -140,6 +127,8 @@ namespace tern {
   private:
 
   protected:
+    /* This called function is the recorded one during execution, so it can solve the inambiguity
+    in function pointers. Need to add constraint assertion to fix this called one. */
     llvm::Function *calledFunc;
 
   public:
@@ -147,6 +136,7 @@ namespace tern {
     ~DynCallInstr();
     void setCalledFunc(llvm::Function *f);
     llvm::Function *getCalledFunc();
+    bool isInternalCall();
     
   };
 
