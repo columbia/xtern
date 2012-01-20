@@ -115,7 +115,7 @@ namespace options {
 
 $opt_decl
 
-void read_options(const char *f);
+bool read_options(const char *f);
 void print_options(void);
 void print_options(const char *f);
 
@@ -191,17 +191,16 @@ static int read_option_inter (string &key, string &val);
 static void print_options_to_stream (ostream &o);
 static int parse_next_option(ifstream& f, string& key, string& val);
 
-void read_options(const char *f)
+bool read_options(const char *f)
 {
   ifstream fs(f);
-  if (!fs) {
-    cerr << "Unable to open " << f << endl;
-    return;
-  }
+  if (!fs)
+    return false;
 
   string key, val;
   while (parse_next_option (fs, key, val))
     read_option_inter(key, val);
+  return true;
 }
 
 void print_options (void)
