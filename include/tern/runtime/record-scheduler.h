@@ -144,6 +144,8 @@ protected:
   void waitHelper(void *chan, bool doLock, bool doUnlock);
   /// common operations done by both wait() and putTurnHelper()
   void next(void);
+  /// select what thread to schedule next, and move it to front of @runq
+  virtual void choose(void) {}
 
   /// for debugging
   void selfcheck(void);
@@ -297,11 +299,33 @@ protected:
 };
 
 
-/// Instead of round-robin, can easy use a deterministic but random
-/// sequence using a deterministic pseodu random number generator.  at
-/// each decision point, toss a coin to decide which one to run.
-struct RandomScheduler: public Scheduler {
-  // TODO
+/// adapted from an example in POSIX.1-2001
+struct Random {
+  Random(): next(1) {}
+  int rand(int randmax=32767)
+  {
+    next = next * 1103515245 + 12345;
+    return (int)((unsigned)(next/65536) % (randmax + 1));
+  }
+  void srand(unsigned seed)
+  {
+    next = seed;
+  }
+  unsigned long next;
+};
+
+/// Instead of round-robin, can schedule threads based on a deterministic
+/// (pseudo) random number generator.  That is, at each scheduling
+/// decision point, we query the deterministic random number generator for
+/// the next thread to run.  Such a scheduler is deterministic, yet it can
+/// generate different deterministic sequences based on the seed.
+struct SeededRRSchedulerCV: public RRSchedulerCV {
+  virtual void choose(void);
+  void setSeed(unsigned seed);
+
+  SeededRRSchedulerCV(pthread_t main_th): RRSchedulerCV(main_th) {}
+
+  Random rand;
 };
 
 /// replay scheduler using semaphores

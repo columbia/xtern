@@ -1,3 +1,4 @@
 DMT = 1
 runtime_type = RR
+scheduler_seed = 0x12345
 schedule_network  = 1

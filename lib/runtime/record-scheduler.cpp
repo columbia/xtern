@@ -376,3 +376,19 @@ void RRSchedulerCV::wakeup()
   }
 }
 
+void SeededRRSchedulerCV::setSeed(unsigned seed)
+{
+  rand.srand(seed);
+}
+
+void SeededRRSchedulerCV::choose(void)
+{
+  // find next thread using @rand.  complexity is O(runq.size()), but
+  // shouldn't matter much anyway as the number of threads is small
+  int i = rand.rand(runq.size());
+  list<int>::iterator it = runq.begin();
+  while(i--) ++it;
+  assert(it != runq.end());
+  runq.erase(it);
+  runq.push_front(*it);
+}

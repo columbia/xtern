@@ -48,6 +48,11 @@ void InstallRuntime() {
     Runtime::the = new RRuntime();
   else if (options::runtime_type == "RR")
     Runtime::the = new RecorderRT<RRSchedulerCV>;
+  else if (options::runtime_type == "SeededRR") {
+    RecorderRT<SeededRRSchedulerCV> *rt = new RecorderRT<SeededRRSchedulerCV>;
+    static_cast<SeededRRSchedulerCV*>(rt)->setSeed(options::scheduler_seed);
+    Runtime::the = rt;
+  }
   else if (options::runtime_type == "FCFS")
     Runtime::the = new RecorderRT<FCFSScheduler>;
   assert(Runtime::the && "can't create runtime!");
