@@ -885,7 +885,7 @@ void RecorderRT<_S>::symbolic(unsigned insid, void *addr,
 
 //////////////////////////////////////////////////////////////////////////
 // Partially specialize RecorderRT for scheduler FCFSScheduler.  The
-// FCFSScheduler does really care about the order of synchronization
+// FCFSScheduler doesn't really care about the order of synchronization
 // operations, as long as the log faithfully records the actual order that
 // occurs.  Thus, we can simplify the implementation of pthread cond var
 // methods for FCFSScheduler.
