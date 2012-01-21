@@ -24,22 +24,6 @@ void __attribute((weak)) InstallRuntime() {
   assert(0&&"A Runtime must define its own InstallRuntime() to instal itself!");
 }
 
-/*
-extern void __tern_prog_begin(void);  //  lib/runtime/helper.cpp
-extern void __tern_prog_end(void); //  lib/runtime/helper.cpp
-
-void tern___libc_start_main(void *func_ptr, int argc, char* argv[], void *init_func,
-  void *fini_func, void *stack_end)
-{
-  __tern_prog_begin();
-  int (*real_main) (void *a, int argc, char* argv[], void *b, void *c, void *d);
-  real_main = dlsym(RTLD_NEXT, "__libc_start_main");
-
-  __libc_start_main(func_ptr, argc, argv, init_func, fini_func, stack_end);
-  __tern_prog_end();
-}
-*/
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -246,9 +230,9 @@ void tern_pthread_exit(unsigned ins, void *retval) {
   // tern_prog_end() later (which calls tern_thread_end())
   if(Scheduler::self() != Scheduler::MainThreadTid)
   {
-    printf("calling tern_thread_end\n");
+    // printf("calling tern_thread_end\n");
     tern_thread_end(ins);
-    printf("calling tern_thread_end, done\n");
+    // printf("calling tern_thread_end, done\n");
   }
   pthread_exit(retval);
 }

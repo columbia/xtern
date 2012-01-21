@@ -166,8 +166,10 @@ inline short ExtraArgsRec::numArgsInRec() const {
   return std::min(rec_narg, (short)MAX_EXTRA_ARGS);
 }
 
-static inline int getLogFilename(char *buf, size_t sz, int tid) {
-  return snprintf(buf, sz, "tern-log-tid-%d", tid);
+static inline int getLogFilename(char *buf, size_t sz,
+                                 int tid, const char* ext) {
+  return snprintf(buf, sz, "%s/tid-%d%s",
+                  options::output_dir.c_str(), tid, ext);
 }
 
 } // namespace tern

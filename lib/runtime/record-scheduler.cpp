@@ -200,7 +200,7 @@ void RRSchedulerCV::signalHelper(void *chan, bool all,
   if(doLock)
     pthread_mutex_lock(&lock);
 
-  assert(chan && "can't signal/broadcast  NULL");
+  assert(chan && "can't signal/broadcast NULL");
   assert(!wild || self() == runq.front());
   dprintf("RRSchedulerCV: %d: %s %p\n",
           self(), (all?"broadcast":"signal"), chan);
