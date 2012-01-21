@@ -6,11 +6,12 @@
 #include <stdint.h>
 #include "stdio.h"
 #include <boost/static_assert.hpp>
-#include "syncfuncs.h"
+#include "tern/syncfuncs.h"
+#include "tern/options.h"
 
 namespace tern {
 
-#define RECORD_SIZE     (32U)  // has to be a define
+#define RECORD_SIZE     (32U)  // has to be a # define, not enum
 #define INSID_BITS      (29U)
 #define REC_TYPE_BITS   (3U)
 
