@@ -3,23 +3,17 @@
 import os
 import sys
 import logging
-#import argparse
+import argparse
 
-#parser = argparse.ArgumentParser('prepare binaries for use with tern');
-#parser.add_argument('program', metavar='Program.bc', nargs=1,
-#                  help='.bc or .ll program to prepare')
+parser = argparse.ArgumentParser(description
+                                 ='prepare binaries for use with tern');
+parser.add_argument('program', metavar='program.bc',
+                    help='.bc or .ll program to prepare')
+args = parser.parse_args();
 
-#args = parser.parse_args();
-#print args.program
+print args.program
 
-def usage():
-    print 'prepare <program.bc or program.ll>'
-    exit(0)
-
-if len(sys.argv) == 1:
-    usage()
-
-program = sys.argv[1]
+program = args.program
 program_without_ext = ''
 tern_obj_path = '/home/huayang/research/xtern/obj/Debug/'
 if program.endswith('.ll') or program.endswith('.bc'):
