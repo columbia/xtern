@@ -56,6 +56,9 @@ int __tern_pthread_create(pthread_t *thread,  const pthread_attr_t *attr,
 
 void __tern_prog_begin(void) {
   options::read_options("local.options");
+  options::read_env_options();
+  options::print_options("dump.options");
+
   tern::InstallRuntime();
   // atexit(__tern_prog_end);
   tern_prog_begin();

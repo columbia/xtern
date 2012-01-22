@@ -1,6 +1,8 @@
 DMT = 1
-runtime_type = RR
-scheduler_seed = 0x12345
 schedule_network  = 1
-log_type = txt
-output_dir = ./out
+
+runtime_type = RR
+scheduler_seed = 0x12345 # seed for seeded round-robin scheduler
+log_type = txt      # bin: binary log of instructions
+                    # txt: text log of synchronizations
+output_dir = ./out  # default output directory

@@ -4,8 +4,10 @@
 # generates an $options.h in directory $ARGV[1] and and $options.cpp file
 # in directory $ARGV[2].  The input options file is a collection of "key =
 # value" lines.  For each option key, this script creates a variable
-# options::key.  User calls read_options(options_file) to set these
-# variables to the value specified in options_file.
+# options::key.  Users call read_options(options_file) to set these
+# variables according to options_file.  Users can also can
+# read_env_options() to set threse variables according to environment
+# variable TERN_OPTIONS in the form of key1=val1:key2=val2
 
 eval 'exec perl -w -S $0 ${1+"$@"}'
     if 0;
@@ -42,20 +44,20 @@ sub read_optf($$)
 
     open OPTF, $file || die $!;
     while (<OPTF>) {
-	next if /^#/ || /^\s*$/; # skip comments
+        s/\#.*$//; # remove comments
+	next if /^\s*$/; # skip empty lines
 
         # check for simple typo
 	if(/^([^\s]+)\s*$/) {
-	    warn "warning: No value specified for option $1::$2 at line $. in $file!\n";
-	    exit(1);
+	    die "No value specified for option $1::$2 at line $. in $file!\n";
 	}
         if (/^([^\s=]+)\s+([^\s=]+)\s*$/) {
-	    warn "warning: missing = between  $1 and $2 at line $. in $file!\n";
-	    exit(1);
+	    die "missing = between  $1 and $2 at line $. in $file!\n";
 	}
+
+        # get key, value
         if (!/^([^\s]+)\s*=\s*([^\s]+)\s*$/) {
-            warn "mal-formated option at line $. in $file: $_";
-            exit(1);
+            die "mal-formated option at line $. in $file: $_";
         }
         my ($key, $val) = ($1, $2);
         $val =~ s/^\"(.*)\"$/$1/; # strip quotes
@@ -116,6 +118,7 @@ namespace options {
 $opt_decl
 
 bool read_options(const char *f);
+bool read_env_options();
 void print_options(void);
 void print_options(const char *f);
 
@@ -190,6 +193,7 @@ $opt_def
 static int read_option_inter (string &key, string &val);
 static void print_options_to_stream (ostream &o);
 static int parse_next_option(ifstream& f, string& key, string& val);
+static int parse_next_env_option(string& env, string& key, string& val);
 
 bool read_options(const char *f)
 {
@@ -199,6 +203,18 @@ bool read_options(const char *f)
 
   string key, val;
   while (parse_next_option (fs, key, val))
+    read_option_inter(key, val);
+  return true;
+}
+
+bool read_env_options()
+{
+  const char* opts = getenv("TERN_OPTIONS");
+  if (!opts)
+    return false;
+  string env(opts);
+  string key, val;
+  while (parse_next_env_option (env, key, val))
     read_option_inter(key, val);
   return true;
 }
@@ -224,33 +240,61 @@ static void print_options_to_stream (ostream &o)
 $print_options_body
 }
 
-static int parse_next_option(ifstream& f, string& key, string& val)
+static void split_key_val(string& line, string& key, string& val)
 {
-  string line;
-  while(!f.eof()){
-    getline(f, line);
-    if(line.size() > 0 && line[0] != '#')
-      break; // found a nonempty noncommented line
-    //found a comment line; skip it
-    f.ignore(65536, '\\n'); //breaks if > 65536 chars in a line
-  }
-  if(f.eof()) return 0;
-
-  f >> val;
-  if(!f.eof())
-    f.ignore(65536, '\\n'); //breaks if > 65536 chars in a line
-
-  string::size_type sep;
-  sep = line.find('=');
+  string::size_type sep = line.find('=');
   if(sep == string::npos){
     cerr << "Separator '=' not found in " << line << endl;
     assert(0 && \"invalid option\");
   }
   key = line.substr(0, sep);
-  key.erase(remove_if(key.begin(), key.end(), ::isspace), key.end());
-
+  assert(key.size() && "empty key");
   val = line.substr(sep+1);
-  val.erase(remove_if(val.begin(), val.end(), ::isspace), val.end());
+  assert(val.size() && "empty value");
+}
+
+static int parse_next_option(ifstream& f, string& key, string& val)
+{
+  string line;
+  string::size_type sep;
+
+  while(!f.eof()){
+    getline(f, line);
+
+    // remove comments
+    sep = line.find('#');
+    if(sep != string::npos)
+        line.erase(sep);
+    // remove spaces
+    line.erase(remove_if(line.begin(), line.end(), ::isspace), line.end());
+
+    if(line.size() > 0)
+      break; // found a non-empty line
+    // must be a comment line; try again
+  }
+  if(line.size() == 0) // cannot find a non-empty line; must be eof
+    return 0;
+
+  split_key_val(line, key, val);
+  return 1;
+}
+
+static int parse_next_env_option(string& env, string& key, string& val)
+{
+  string::size_type sep;
+  string line;
+
+  sep = env.find(':');
+  if(sep != string::npos) {
+      line = env.substr(0, sep);
+      env = env.substr(sep+1);
+  } else
+      line.swap(env);
+  line.erase(remove_if(line.begin(), line.end(), ::isspace), line.end());
+  if(line.size() == 0) // cannot find a non-empty line; must be eos
+    return 0;
+
+  split_key_val(line, key, val);
   return 1;
 }
 
