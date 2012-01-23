@@ -2,32 +2,48 @@
 
 import os
 import sys
-import logging
 import argparse
+
+def setup(file):
+    # create file with tern_symbolic()
+    body = '''
+    extern "C" void tern_symbolic(void *addr, int nbytes, char *name)
+    {
+    }
+    '''
+    fd = open(file, 'w')
+    fd.write('%s\n' % body)
+    fd.close()
+
+def teardown(file):
+    os.unlink(file);
 
 parser = argparse.ArgumentParser(description
                                  ='prepare binaries for use with tern');
 parser.add_argument('program', metavar='program.bc',
                     help='.bc or .ll program to prepare')
-args = parser.parse_args();
+parser.add_argument('-tooldir', dest='tern_obj_path',
+                    default='/home/huayang/research/xtern/obj/Debug/',
+                    help='directory to xtern tools')
+args = parser.parse_known_args();
+program = args[0].program
+tern_obj_path = args[0].tern_obj_path
 
-print args.program
-
-program = args.program
 program_without_ext = ''
-tern_obj_path = '/home/huayang/research/xtern/obj/Debug/'
 if program.endswith('.ll') or program.endswith('.bc'):
     program_without_ext = program.rstrip('lbc.')
 record   = '%s-record'   % program_without_ext
 analysis = '%s-analysis' % program_without_ext 
 replay   = '%s-replay'   % program_without_ext
 
+tern_symbolic = '/tmp/tern_symbolic.c'
+
 cmd1 = '%s/bin/tern-instr -S -with-uclibc %s -o %s' \
     % (tern_obj_path, program, program_without_ext)
 cmd2 = 'llc -o %s.s %s.ll' % (record, record)
-cmd3 = 'g++ -o %s %s.s tern_sym.c -L%s/lib -lruntime -linstr -lcommon -lpthread -lcrypt' \
-    % (record, record, tern_obj_path)
-cmd4 = ('./%s ' % record) + ' '.join(sys.argv[2:])
+cmd3 = 'g++ -o %s %s.s %s -L%s/lib -lruntime -lcommon -lpthread -lcrypt' \
+    % (record, record, tern_symbolic, tern_obj_path)
+cmd4 = ('%s ' % record) + ' '.join(args[1])
 
 commands = [cmd1, cmd2, cmd3, cmd4]
 
@@ -36,9 +52,8 @@ for th in [0, 1]:
         % (tern_obj_path, analysis, th, th)
 #    commands.append(cmd)
 
+setup(tern_symbolic)
 for cmd in commands:
     print 'running <%s>' % cmd
     os.system(cmd);
-
-
-
+teardown(tern_symbolic)
