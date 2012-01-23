@@ -2,8 +2,8 @@
 ; RUN: llc -o %t1.s %t1-record.ll
 ; RUN: g++ -o %t1 %t1.s %ternruntime -lpthread
 ; RUN: ./%t1
-; RUN: %projbindir/logprint -bc %t1-analysis.ll tern-log-tid-0 -r -v | FileCheck %s.out
-
+; RUN: env TERN_OPTIONS=log_type=bin:output_dir=%t1.outdir ./%t1
+; RUN: %projbindir/logprint -bc %t1-analysis.ll %t1.outdir/tid-0.bin -r -v | FileCheck %s.out
 
 ; ModuleID = 'two-transfers-test.ll'
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64"
