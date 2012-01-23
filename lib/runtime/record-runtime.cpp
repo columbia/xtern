@@ -159,8 +159,10 @@ void RecorderRT<_S>::pthreadMutexLockHelper(pthread_mutex_t *mu) {
   int ret;
   for(;;) {
     ret = pthread_mutex_trylock(mu);
-    if(ret == EBUSY)
+    if(ret != 0) {
+      assert(ret==EBUSY && "failed sync calls are not yet supported!");
       _S::wait(mu);
+    }
     else
       break;
     _S::getTurn();
@@ -678,9 +680,14 @@ int RecorderRT<_S>::semWait(unsigned ins, sem_t *sem) {
 
   for(;;) {
     _S::getTurn();
+    // WTH? pthread_mutex_trylock returns EBUSY if lock is held, yet
+    // sem_trywait returns -1 and sets errno to EAGAIN if semaphore is not
+    // available
     ret = sem_trywait(sem);
-    if(ret == EBUSY)
+    if(ret != 0) {
+      assert(errno==EAGAIN && "failed sync calls are not yet supported!");
       _S::wait(sem);
+    }
     else
       break;
   }
@@ -699,11 +706,10 @@ int RecorderRT<_S>::semTryWait(unsigned ins, sem_t *sem) {
 
   _S::getTurn();
   ret = sem_trywait(sem);
-  if(ret < 0)
+  if(ret != 0)
     assert(errno==EAGAIN && "failed sync calls are not yet supported!");
   nturn = _S::incTurnCount();
   _S::putTurn();
-
   Logger::the->logSync(ins, syncfunc::sem_trywait, nturn, true, (uint64_t)sem);
   return ret;
 }
