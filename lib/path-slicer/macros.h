@@ -20,6 +20,9 @@
 #define MAX_SLICING (get_option(tern_path_slicer,slicing_mode)==1)
 #define RANGE_SLICING (get_option(tern_path_slicer, slicing_mode)==2)
 
+#define KLEE_RECORDING (get_option(tern_path_slicer, trace_util_type)==0)
+#define XTERN_RECORDING (get_option(tern_path_slicer, trace_util_type)==1)
+
 #define SIZE_T_INVALID (size_t(-1))
 #define ASSERT(stmt) if(get_option(tern_path_slicer,print_debug_info)!=DBG0)assert(stmt)
 

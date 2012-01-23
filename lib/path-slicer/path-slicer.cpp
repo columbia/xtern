@@ -111,16 +111,33 @@ void PathSlicer::init(llvm::Module &M) {
   oprdSumm.initStat(&stat);
   PassManager *oprdPM = new PassManager;
   oprdPM->add(&oprdSumm);
-  if (NORMAL_SLICING)
+  if (NORMAL_SLICING) {
+    collectInternalFunctions(*origModule);
+    oprdSumm.initInternalFunctions(&internalFunctions);
     oprdPM->run(*origModule);
-  else if (MAX_SLICING)
+    
+  } else if (MAX_SLICING) {
+    collectInternalFunctions(*mxModule);
+    oprdSumm.initInternalFunctions(&internalFunctions);
     oprdPM->run(*mxModule);
-  else
+  } else {
+    collectInternalFunctions(*simModule);
+    oprdSumm.initInternalFunctions(&internalFunctions);
     oprdPM->run(*simModule);
+    assert(false);// TBD. NOT SURE WHETHER SHOULD PASS IN MX OR SIM MODULE HERE.
+  }
+
+  /* Init trace util. */
+  if (KLEE_RECORDING)
+    traceUtil = new KleeTraceUtil();
+  else if (XTERN_RECORDING)
+    traceUtil = new XTernTraceUtil();
+  else
+    assert(false);
 }
 
 void PathSlicer::loadTrace() {
-  
+  // play with traceUtil...
 }
 
 Module *PathSlicer::loadModule(const char *path) {
@@ -163,5 +180,12 @@ void PathSlicer::runPathSlicer(Module &M) {
   // Calculate stat results.
   calStat();
   
+}
+
+void PathSlicer::collectInternalFunctions(Module &M) {
+  for (Module::iterator f = M.begin(); f != M.end(); ++f) {
+    if (!f->isDeclaration())
+      internalFunctions.insert(f);
+  }
 }
 

@@ -62,7 +62,8 @@ namespace tern {
     void addDynInstr(DynInstr *dynInstr);
     static bool isConcurrent(InstrRegion *region1, InstrRegion *region2);
     bool happensBefore(InstrRegion *region);
-    void setTaken(DynInstr *dynInstr, bool isTaken, std::string reason = NOT_TAKEN_INSTR);
+    void setTaken(DynInstr *dynInstr, bool isTaken,
+      const char *reason = NOT_TAKEN_INSTR);
     bool isTaken(DynInstr *dynInstr);
     void setBrIncomeIdx(DynInstr *dynInstr, int index);
     int getBrIncomeIdx(DynInstr *dynInstr);

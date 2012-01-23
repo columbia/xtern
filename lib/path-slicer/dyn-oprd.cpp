@@ -18,13 +18,13 @@ DynInstr *DynOprd::getDynInstr() {
   return dynInstr;
 }
 
-llvm::Value *DynOprd::getStaticValue() {
+const llvm::Value *DynOprd::getStaticValue() {
   // TBD.
   return NULL;
 }
 
 bool DynOprd::isConstant() {
-  Value *v = getStaticValue();
+  const Value *v = getStaticValue();
   return isa<Constant>(v);
 }
 

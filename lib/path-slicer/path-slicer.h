@@ -17,12 +17,17 @@
 #include "intra-slicer.h"
 #include "cfg-mgr.h"
 #include "oprd-summ.h"
+#include "klee-trace-util.h"
+#include "xtern-trace-util.h"
 
 namespace tern {
   struct PathSlicer: public llvm::ModulePass {
   private:
     /* Statistics information of path slicer. */
     Stat stat;
+
+    /* The generic recording and loading interface of a trace. */
+    TraceUtil *traceUtil;
 
     /* Use vector rather than list here becuase we usually needs to start slicing from some index
     of the trace, and this vector is stable once trace is loaded. */
@@ -59,6 +64,11 @@ namespace tern {
     (orig, mx and simplified) LLVM modules. */
     OprdSumm oprdSumm;
 
+    /* Since KLEE will link in uclibc library, so some functions in the module may become
+    internal such as memcpy() after this linking. Our slicing only focus on guest program,
+    so we have to collect the set of all internal functions before uclibc is linked in. */
+    llvm::DenseSet<const llvm::Function *> internalFunctions;
+
   protected:
     /* Init all sub-components of the path-slicer. */
     void init(llvm::Module &M);
@@ -73,6 +83,7 @@ namespace tern {
     void calStat();
     void runPathSlicer(llvm::Module &M);
     llvm::Module *loadModule(const char *path);
+    void collectInternalFunctions(llvm::Module &M);
     
   public:
         static char ID;

@@ -14,13 +14,10 @@ namespace tern {
   class CfgMgr: public llvm::ModulePass {
   private:
     static char ID;
-
     Stat *stat;
     
-    /* Cache the nearest postdominators of a given instruction. */
-    llvm::DenseMap<const llvm::Instruction *, llvm::Instruction *> neareastPostDomInstr;
-
-    /* Store the info that whether for two instructions, the latter one postdominates the prev one. */
+    /* Store the info that whether for two instructions,
+      the latter one postdominates the prev one. */
     CacheUtil postDomCache;
 
   protected:

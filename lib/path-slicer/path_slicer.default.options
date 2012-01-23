@@ -22,3 +22,9 @@ tern_path_slicer::slicing_mode 0
 # AAOL debug level.
 tern_path_slicer::aaol_dbg_level 0
 
+# Trace recording/loading interface. 0 means KLEE, 1 means xtern.
+tern_path_slicer::trace_util_type 0
+
+# Context sensitive alias query.
+tern_path_slicer::context_sensitive_ailas_query 1
+

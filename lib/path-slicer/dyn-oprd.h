@@ -25,7 +25,7 @@ namespace tern {
     ~DynOprd();
     int getIndex();
     DynInstr *getDynInstr();
-    llvm::Value *getStaticValue();
+    const llvm::Value *getStaticValue();
     bool isConstant();
   };
 }

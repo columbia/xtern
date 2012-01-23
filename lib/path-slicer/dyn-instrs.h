@@ -32,12 +32,12 @@ namespace tern {
     size_t index;
 
     /* In normal and max slicing mode, this is the normal and max sliced calling context, respectively. */
-    std::vector<int> *callingCtx;
+    CallCtx *callingCtx;
 
     /* This is only valid in simplified slicing mode. 
       For each dynamic instruction, there should be only one callstack in simplified bc, right?
       TODO: MUST THINK OF A NICE WAY TO ELIMINATE THIS MEMORY TOO. */
-    std::vector<int> *simCallingCtx;
+    CallCtx *simCallingCtx;
 
   public:
     DynInstr();
@@ -50,16 +50,16 @@ namespace tern {
     size_t getIndex();
 
     /* TBD */
-    void setCallingCtx(std::vector<int> &ctx);
+    void setCallingCtx(std::vector<int> *ctx);
 
     /* TBD */
-    std::vector<int> *getCallingCtx();
+    CallCtx *getCallingCtx();
 
     /* TBD */
-    void setSimCallingCtx(std::vector<int> &ctx);
+    void setSimCallingCtx(std::vector<int> *ctx);
 
     /* TBD */
-    std::vector<int> *getSimCallingCtx();
+    CallCtx *getSimCallingCtx();
 
     /* TBD */
     int getOrigInstrId();
@@ -71,7 +71,7 @@ namespace tern {
     std::set<int> *getSimInstrId();
 
     /* TBD */
-    void setTaken(bool isTaken, std::string reason = NOT_TAKEN_INSTR);
+    void setTaken(bool isTaken, const char *reason = NOT_TAKEN_INSTR);
 
     /* TBD */
     bool isTaken();

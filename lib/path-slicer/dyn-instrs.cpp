@@ -3,11 +3,58 @@
 using namespace tern;
 
 DynInstr::DynInstr() {
-
+  region = NULL;
+  index = SIZE_T_INVALID;
+  callingCtx = NULL;
+  simCallingCtx = NULL;
 }
 
 DynInstr::~DynInstr() {
 
+}
+
+int DynInstr::getTid() {
+  return region->getTid();
+}
+
+size_t DynInstr::getIndex() {
+  return index;
+}
+
+void DynInstr::setCallingCtx(std::vector<int> *ctx) {
+  this->callingCtx = ctx;
+}
+
+CallCtx *DynInstr::getCallingCtx() {
+  return callingCtx;
+}
+
+void DynInstr::setSimCallingCtx(std::vector<int> *ctx) {
+  this->simCallingCtx = ctx;
+}
+
+CallCtx *DynInstr::getSimCallingCtx() {
+  return simCallingCtx;
+}
+
+int DynInstr::getOrigInstrId() {
+  return -1; // TBD
+}
+
+int DynInstr::getMxInstrId() {
+  return -1; // TBD
+}
+
+std::set<int> *DynInstr::getSimInstrId() {
+  return NULL; // TBD
+}
+
+void DynInstr::setTaken(bool isTaken, const char *reason) {
+  region->setTaken(this, isTaken, reason);
+}
+
+bool DynInstr::isTaken() {
+  return region->isTaken(this);
 }
 
 Instruction *DynInstr::getOrigInstr() {
@@ -75,6 +122,8 @@ llvm::Function *DynCallInstr::getCalledFunc() {
 }
 
 bool DynCallInstr::isInternalCall() {
+  /* Pay attention: this function may have problem if the path slicer is called 
+  with in C++ code and the passed in module has linked with uclibc. */
   return (!calledFunc->isDeclaration());
 }
 

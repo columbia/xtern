@@ -34,3 +34,28 @@ bool Util::isStore(DynInstr *dynInstr) {
 bool Util::isMem(DynInstr *dynInstr) {
   return isLoad(dynInstr) || isStore(dynInstr);
 }
+
+llvm::Function *Util::getFunction(llvm::Instruction *instr) {
+  return instr->getParent()->getParent();
+}
+
+llvm::BasicBlock *Util::getBasicBlock(llvm::Instruction *instr) {
+  return instr->getParent();
+}
+
+const llvm::Function *Util::getFunction(const llvm::Instruction *instr) {
+  return instr->getParent()->getParent();
+}
+
+const llvm::BasicBlock *Util::getBasicBlock(const llvm::Instruction *instr) {
+  return instr->getParent();
+}
+
+bool Util::isCall(llvm::Instruction *instr) {
+  return isCall(instr);
+}
+
+bool Util::isCall(const llvm::Instruction *instr) {
+  return instr->getOpcode() == Instruction::Call;
+}
+
