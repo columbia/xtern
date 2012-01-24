@@ -66,6 +66,7 @@ struct TxtLogger: public Logger {
   virtual void logSync(unsigned insid, unsigned short sync,
                        unsigned turn, bool after = true, ...);
   TxtLogger(int tid);
+  virtual ~TxtLogger();
 
 protected:
   int tid;

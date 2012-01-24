@@ -9,6 +9,7 @@
 #include <stdarg.h>
 #include <string.h>
 #include <pthread.h>
+#include <iostream>
 #include "tern/runtime/scheduler.h"
 #include "tern/runtime/loghooks.h"
 #include "tern/runtime/record-log.h"
@@ -33,7 +34,6 @@ void TxtLogger::logSync(unsigned insid, unsigned short sync,
 
   if(!syncfunc::isSync(sync))
     return;
-
   // YJF: why ignore prog_begin/end and thread_begin/end?
   const char *suffix = "";
   if(NumRecordsForSync(sync) == 2)
@@ -99,6 +99,11 @@ TxtLogger::TxtLogger(int thid) {
   tid = thid;
   ouf.open(logFile, ios::out|ios::trunc);
   assert(ouf && "can't open log file for write!");
+}
+
+TxtLogger::~TxtLogger()
+{
+  ouf.close();
 }
 
 void BinLogger::logInsid(unsigned insid) {
