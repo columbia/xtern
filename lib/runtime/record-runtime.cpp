@@ -104,7 +104,7 @@ void RecorderRT<_S>::threadEnd(unsigned insid) {
   _S::getTurn();
   nturn = _S::incTurnCount();
   _S::threadEnd(pthread_self());
-  tid_mapping.erase(th);
+  //tid_mapping.erase(th);
 
   Logger::the->logSync(insid, syncfunc::tern_thread_end, nturn, true, (uint64_t)th);
   Logger::threadEnd();
