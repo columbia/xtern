@@ -1,4 +1,4 @@
-testapps=aget apache bdb_rep
+testapps=bdb_rep
 root_path=$(PWD)
 EXE_PREFIX=
 

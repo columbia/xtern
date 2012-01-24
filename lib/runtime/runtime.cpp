@@ -458,6 +458,15 @@ int tern_select(unsigned ins, int nfds, fd_set *readfds, fd_set *writefds, fd_se
   return ret;
 }
 
+unsigned int tern_sleep(unsigned ins, unsigned int seconds)
+{
+  int ret;
+  Space::enterSys();
+  sleep(seconds);
+  Space::exitSys();
+  return ret;
+}
+
 /*
 int tern_poll(unsigned ins, struct pollfd *fds, nfds_t nfds, int timeout)
 {

@@ -34,6 +34,7 @@ extern "C" void FUNC_NAME(ARGS_WITH_NAME){
 #ifdef PRINT_DEBUG
 	fprintf(stderr, "%04d: FUNC_NAME is hooked.\n", (int) pthread_self());
 #endif
+    return;
   } else
 #else
 #ifdef PRINT_DEBUG

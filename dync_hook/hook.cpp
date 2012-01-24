@@ -15,7 +15,7 @@ using namespace tern;
 
 #define __NEED_INPUT_INSID
 #define __USE_TERN_RUNTIME
-#define PRINT_DEBUG
+//#define PRINT_DEBUG
 
 /*
 #ifdef __USE_TERN_RUNTIME

@@ -33,23 +33,18 @@ extern "C" int __libc_start_main(
 	dlclose(handle);
 
 #ifdef __USE_TERN_RUNTIME
-  if (Space::isApp()) {
-	  fprintf(stderr, "%04d: __tern_prog_begin() called.\n", (int) pthread_self());
-    __tern_prog_begin();
-	  fprintf(stderr, "%04d: __libc_start_main() called.\n", (int) pthread_self());
-  	ret = orig_func(func_ptr, argc, argv, init_func, fini_func, stack_end);
-	  fprintf(stderr, "%04d: __tern_prog_end() called.\n", (int) pthread_self());
-    __tern_prog_end();
 #ifdef PRINT_DEBUG
 	fprintf(stderr, "%04d: __libc_start_main is hooked.\n", (int) pthread_self());
 #endif
-  } else
-#else
-#ifdef PRINT_DEBUG
-	fprintf(stderr, "%04d: __libc_start_main is hooked.\n", (int) pthread_self());
+  //fprintf(stderr, "%04d: __tern_prog_begin() called.\n", (int) pthread_self());
+  __tern_prog_begin();
+	//fprintf(stderr, "%04d: __libc_start_main() called.\n", (int) pthread_self());
+  ret = orig_func(func_ptr, argc, argv, init_func, fini_func, stack_end);
+	//fprintf(stderr, "%04d: __tern_prog_end() called.\n", (int) pthread_self());
+  __tern_prog_end();
+  return ret;
 #endif
-#endif
-  	ret = orig_func(func_ptr, argc, argv, init_func, fini_func, stack_end);
+	ret = orig_func(func_ptr, argc, argv, init_func, fini_func, stack_end);
 
 	return ret;
 }

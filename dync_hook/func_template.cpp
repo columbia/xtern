@@ -42,7 +42,7 @@ extern "C" FUNC_RET_TYPE FUNC_NAME(ARGS_WITH_NAME){
 	fprintf(stdout, "%04d: FUNC_NAME returned.\n", (int) pthread_self());
   fflush(stdout);
 #endif
-
+    return ret;
   } else
 #else
 #ifdef PRINT_DEBUG

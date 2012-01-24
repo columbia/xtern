@@ -22,6 +22,8 @@
 #include "signal.h"
 #include "helper.h"
 #include <fstream>
+#include <map>
+#include <sys/types.h>
 
 //#define _DEBUG_RECORDER
 
@@ -37,10 +39,16 @@ namespace tern {
 
 __thread const char *FCFSScheduler::next_op = 0;
 
+static map<pthread_t, int> tid_mapping;
+static map<int, ofstream*> ouf;
+
 static ostream &output()
 {
-  static ofstream ouf("instr.log");
-  return ouf;
+  int tid = tid_mapping[pthread_self()];
+  if (ouf.find(tid) == ouf.end())
+    return cerr << "[uncaptured message] ";
+  else
+    return *ouf[tid];
 }
 
 void InstallRuntime() {
@@ -66,6 +74,11 @@ void RecorderRT<_S>::progBegin(void) {
 template <typename _S>
 void RecorderRT<_S>::progEnd(void) {
   //Logger::progEnd();
+  while (ouf.size())
+  {
+    ouf.begin()->second->close();
+    ouf.erase(ouf.begin());
+  }
 }
 
 template <typename _S>
@@ -79,6 +92,12 @@ void RecorderRT<_S>::threadBegin(void) {
 
   _S::threadBegin(th);
   getLogFilename(logFile, sizeof(logFile), _S::self());
+
+  tid_mapping[th] = _S::self();
+  char buffer[256];
+  sprintf(buffer, "instr_%x_%d.log", (int) getpid(), _S::self());
+  ouf[_S::self()] = new ofstream(buffer); 
+
   //Logger::threadBegin(logFile);
   nturn = _S::incTurnCount();
   _S::putTurn();
@@ -94,6 +113,7 @@ void RecorderRT<_S>::threadEnd(unsigned insid) {
   _S::getTurn();
   nturn = _S::incTurnCount();
   _S::threadEnd(pthread_self());
+  tid_mapping.erase(th);
 
   //Logger::the->logSync(insid, syncfunc::tern_thread_end, nturn, true, (uint64_t)th);
   //Logger::threadEnd();
