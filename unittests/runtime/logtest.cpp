@@ -70,11 +70,9 @@ std::ostream& operator<<(std::ostream& os,
 TEST(recordertest, raw_iterator) {
   const unsigned num = 10000;
 
-  char file[64];
-  getLogFilename(file, sizeof(file), 0);
-
+  options::log_type = "bin";
   Logger::progBegin();
-  Logger::threadBegin(file);
+  Logger::threadBegin(0);
 
   for(unsigned j=0; j<num; ++j) {
     unsigned i = j % (sizeof(loadstores)/sizeof(loadstores[0]));
@@ -91,6 +89,8 @@ TEST(recordertest, raw_iterator) {
   Logger::threadEnd();
   Logger::progEnd();
 
+  char file[64];
+  getLogFilename(file, sizeof(file), 0, ".bin");
   RawLog log(file);
 
   RawLog::iterator ri, rj;
@@ -145,11 +145,9 @@ TEST(recordertest, raw_iterator) {
 TEST(recordertest, iterator) {
   const unsigned num = 10000;
 
-  char file[64];
-  getLogFilename(file, sizeof(file), 0);
-
+  options::log_type = "bin";
   Logger::progBegin();
-  Logger::threadBegin(file);
+  Logger::threadBegin(0);
 
   for(unsigned j=0; j<num; ++j) {
     unsigned i = j % (sizeof(loadstores)/sizeof(loadstores[0]));
@@ -166,6 +164,8 @@ TEST(recordertest, iterator) {
   Logger::threadEnd();
   Logger::progEnd();
 
+  char file[64];
+  getLogFilename(file, sizeof(file), 0, ".bin");
   RawLog log(file);
 
   RawLog::iterator ii, ij;
@@ -176,11 +176,9 @@ TEST(recordertest, loadstore) {
 
   const unsigned num = 10000;
 
-  char file[64];
-  getLogFilename(file, sizeof(file), 0);
-
+  options::log_type = "bin";
   Logger::progBegin();
-  Logger::threadBegin(file);
+  Logger::threadBegin(0);
 
   for(unsigned j=0; j<num; ++j) {
     unsigned i = j % (sizeof(loadstores)/sizeof(loadstores[0]));
@@ -197,6 +195,8 @@ TEST(recordertest, loadstore) {
   Logger::threadEnd();
   Logger::progEnd();
 
+  char file[64];
+  getLogFilename(file, sizeof(file), 0, ".bin");
   RawLog log(file);
 
   RawLog::iterator ri;
@@ -251,11 +251,9 @@ TEST(recordertest, call) {
 
   const unsigned num = 10000;
 
-  char file[64];
-  getLogFilename(file, sizeof(file), 0);
-
+  options::log_type = "bin";
   Logger::progBegin();
-  Logger::threadBegin(file);
+  Logger::threadBegin(0);
 
   for(unsigned j=0; j<num; ++j) {
     unsigned i = j % (sizeof(calls)/sizeof(calls[0]));
@@ -311,6 +309,8 @@ TEST(recordertest, call) {
   Logger::threadEnd();
   Logger::progEnd();
 
+  char file[64];
+  getLogFilename(file, sizeof(file), 0, ".bin");
   RawLog log(file);
 
   RawLog::iterator ri;
