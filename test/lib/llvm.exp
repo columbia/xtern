@@ -66,6 +66,8 @@ proc substitute { line test tmpFile } {
   regsub -all {%gcc} $new_line "$gcc" new_line
   #replace %gxx with actual gxx
   regsub -all {%gxx} $new_line "$gxx" new_line
+  #replace %srcroot with project source root directory
+  regsub -all {%srcroot} $new_line "$srcroot" new_line
   #replace %llvmlibdir with LLVM library directory
   regsub -all {%llvmlibdir} $new_line "$llvmlibdir" new_line
   #replace %projlibdir with project library directory

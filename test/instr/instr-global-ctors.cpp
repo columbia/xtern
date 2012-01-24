@@ -1,13 +1,12 @@
 // RUN: %llvmgcc %s -c -o %t1.ll -S
-// need -dont-warn-escaped-functions to nuke stderr warning ...
-// RUN: %projbindir/tern-instr < %t1.ll -S -o %t2 -dont-warn-escaped-functions
+// RUN: %projbindir/tern-instr < %t1.ll -S -o %t2
 // RUN: llc -o %t2.s %t2-record.ll
 // RUN: %gxx -o %t2 %t2.s %ternruntime -lpthread
 // RUN: ./%t2
 
 // RUN: %llvmgcc %s -c -o %t1.ll -S
 // add -with-uclibc to test global ctors/dtors handling when linking with uclibc
-// RUN: %projbindir/tern-instr < %t1.ll -with-uclibc -S -o %t2 -dont-warn-escaped-functions
+// RUN: %projbindir/tern-instr < %t1.ll -with-uclibc -S -o %t2
 // RUN: llc -o %t2.s %t2-record.ll
 // RUN: %gxx -o %t2 %t2.s %ternruntime -lpthread
 // RUN: ./%t2

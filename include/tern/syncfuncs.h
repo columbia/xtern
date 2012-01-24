@@ -78,5 +78,3 @@ unsigned getTernNameID(const char* nameInTern);
 } // namespace tern
 
 #endif
-
-
