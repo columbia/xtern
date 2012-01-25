@@ -21,5 +21,5 @@ eval: prepare clean
 	$(EXE_PREFIX) $(MY_PREFIX) ./rep_mgr -C -h data3 -l 127.0.0.1:10003 -r 127.0.0.1:10001 -r 127.0.0.1:10002 2> rep3.log &
 	sleep 3
 	pkill rep_mgr_master
-	sleep 3
+	sleep 5
 	pkill rep_mgr

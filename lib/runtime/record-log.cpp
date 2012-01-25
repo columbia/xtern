@@ -50,7 +50,6 @@ void TxtLogger::logSync(unsigned insid, unsigned short sync,
     // log one sync var (common case)
   case syncfunc::pthread_mutex_lock:
   case syncfunc::pthread_mutex_unlock:
-  case syncfunc::pthread_barrier_init:
   case syncfunc::pthread_barrier_wait:
   case syncfunc::pthread_barrier_destroy:
   case syncfunc::pthread_cond_signal:
@@ -64,6 +63,7 @@ void TxtLogger::logSync(unsigned insid, unsigned short sync,
     // log two sync vars for cond_*wait
   case syncfunc::pthread_cond_wait:
   case syncfunc::pthread_cond_timedwait:
+  case syncfunc::pthread_barrier_init:
     ouf << hex
         << " 0x" << va_arg(args, uint64_t)
         << " 0x" << va_arg(args, uint64_t)

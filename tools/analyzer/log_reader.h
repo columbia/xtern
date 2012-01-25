@@ -8,6 +8,13 @@
 namespace tern
 {
 
+struct record_t
+{
+  unsigned op;
+  unsigned turn; 
+  std::vector<std::string> args;
+};
+
 class log_reader
 {
 public:
@@ -22,13 +29,7 @@ public:
   virtual unsigned get_turn() = 0; 
   virtual int get_int(int idx) = 0;
   virtual const char * get_str(int idx) = 0;
-};
-
-struct record_t
-{
-  unsigned op;
-  unsigned turn; 
-  std::vector<std::string> args;
+  virtual record_t get_current_rec() = 0;
 };
 
 class txt_log_reader : public log_reader
@@ -47,6 +48,7 @@ public:
   virtual unsigned get_turn();
   virtual int get_int(int idx);
   virtual const char * get_str(int idx);
+  virtual record_t get_current_rec() { return cur_rec; }
 
 protected:
   FILE *fin;

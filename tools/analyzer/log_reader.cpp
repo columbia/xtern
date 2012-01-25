@@ -5,6 +5,7 @@
 #include <cstdio>
 #include <sstream>
 #include <string>
+#include <cstring>
 
 using namespace tern;
 using namespace std;
@@ -38,10 +39,31 @@ void txt_log_reader::close()
   fin = NULL;
 }
 
+unsigned getNameIDFromEvent(string st)
+{
+  if (st.size() >= 6 && st.substr(st.size() - 6) == "_first")
+    return syncfunc::getNameID(st.substr(0, st.size() - 6).c_str());
+
+  if (st.size() >= 7 && st.substr(st.size() - 7) == "_second")
+    return syncfunc::getNameID(st.substr(0, st.size() - 7).c_str());
+
+  return syncfunc::getNameID(st.c_str());
+}
+
 void txt_log_reader::next()
 {
   if (!fin) return;
-  fgets(buffer, buffer_size, fin);
+  buffer[0] = 0;
+  if (!fgets(buffer, buffer_size, fin))
+  {
+    cur_rec.op = syncfunc::not_sync;
+    cur_rec.turn = -1;
+    cur_rec.args.clear();
+    return;
+  }
+
+  assert(strlen(buffer) > 5 && "how can you get a record with a short line?");
+
   istringstream is(buffer);
 
   string op_name;
@@ -52,12 +74,13 @@ void txt_log_reader::next()
 
   string st;
   while (is >> st) cur_rec.args.push_back(st); 
-  cur_rec.op = syncfunc::getNameID(op_name.c_str());
+  cur_rec.op = getNameIDFromEvent(op_name);
 }
 
 bool txt_log_reader::valid()
 {
   if (cur_rec.op == syncfunc::not_sync) return false;
+  if ((int) cur_rec.turn == -1) return false;
 
   return true;
 }
