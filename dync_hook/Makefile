@@ -37,7 +37,7 @@ runtests: test
 	LD_PRELOAD=$(XTERN_ROOT)/dync_hook/interpose.so ./all 10667
 	
 eval:
-	cd $(XTERN_ROOT)/apps/ && make -B EXE_PREFIX="LD_PRELOAD=$(XTERN_ROOT)/dync_hook/interpose.so"
+	cd $(XTERN_ROOT)/apps/ && make -B EXE_PREFIX="env LD_PRELOAD=$(XTERN_ROOT)/dync_hook/interpose.so"
 
 clean: 
 	rm -rf *.o

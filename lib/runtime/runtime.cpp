@@ -451,6 +451,23 @@ unsigned int tern_sleep(unsigned ins, unsigned int seconds)
   return ret;
 }
 
+int tern_usleep(unsigned ins, useconds_t usec)
+{
+  int ret;
+  Space::enterSys();
+  usleep(usec);
+  Space::exitSys();
+  return ret;
+}
+
+int tern_nanosleep(unsigned ins, const struct timespec *req, struct timespec *rem)
+{
+  int ret;
+  Space::enterSys();
+  nanosleep(req, rem);
+  Space::exitSys();
+}
+
 /*
 int tern_poll(unsigned ins, struct pollfd *fds, nfds_t nfds, int timeout)
 {
