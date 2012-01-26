@@ -464,8 +464,9 @@ int tern_nanosleep(unsigned ins, const struct timespec *req, struct timespec *re
 {
   int ret;
   Space::enterSys();
-  nanosleep(req, rem);
+  ret = nanosleep(req, rem);
   Space::exitSys();
+  return ret;
 }
 
 /*
