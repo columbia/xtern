@@ -335,10 +335,10 @@ void RRSchedulerCV::wakeup()
     if (net_events.begin()->tid != tid)
       pthread_cond_wait(&replaycv, &lock);
     else {
-      if (net_events.begin()->turn < turnCount)
+      if (net_events.begin()->turn < (int)turnCount)
       {
-        int t = net_events.front().turn;
-        int id = net_events.front().tid;
+        // int t = net_events.front().turn;
+        // int id = net_events.front().tid;
         exit(-1);
       }
 
