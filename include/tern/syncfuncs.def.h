@@ -88,6 +88,11 @@ DEF(epoll_wait,             BlockingSyscall, int, int epfd, struct epoll_event *
 DEF(sigwait,                BlockingSyscall, int, const sigset_t *set, int *sig)
 /* should include sched_yield */
 
+/* We don't consider exit a sync event because our instrumentation code
+ * uses other ways to intercept the end of program event.  Specifically,
+ * our static instrumentation code uses the static constructor/destructor,
+ * and our dynamic instrumentation code intercepts the init and fini
+ * functions used by libc. */
 /* DEF(exit,                   BlockingSyscall, void, int status) */
 /* DEF(syscall,                BlockingSyscall, tern_, int, int) */ /* FIXME: why include generic syscall entry point? */
 /* DEF(ap_mpm_pod_check,       BlockingSyscall, tern_) */ /* FIXME: ap_mpm_pod_check is not a real lib call; needed for apache */
