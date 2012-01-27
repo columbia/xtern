@@ -16,9 +16,9 @@
 #include "inter-slicer.h"
 #include "intra-slicer.h"
 #include "cfg-mgr.h"
-#include "oprd-summ.h"
 #include "klee-trace-util.h"
 #include "xtern-trace-util.h"
+#include "oprd-summ.h"
 
 namespace tern {
   struct PathSlicer: public llvm::ModulePass {
@@ -93,6 +93,13 @@ namespace tern {
     virtual ~PathSlicer();
     virtual bool runOnModule(llvm::Module &M);
     virtual void getAnalysisUsage(llvm::AnalysisUsage &AU) const;
+
+    /* Since uclibc would be linked in, some functions such as memcpy() would become internal
+    after this linking. But we only care about "guest" LLVM code in slicing. So, these functions are
+    the only places within the slicing system to determine which functions are internal or not. */
+    bool isInternalFunction(const llvm::Function *f);
+    bool isInternalCall(const llvm::Instruction *instr);
+    bool isInternalCall(DynInstr *dynInstr);
   };
 }
 

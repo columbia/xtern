@@ -6,6 +6,7 @@ using namespace llvm;
 #include "intra-slicer.h"
 #include "util.h"
 #include "macros.h"
+#include "path-slicer.h"
 using namespace tern;
 
 IntraSlicer::IntraSlicer() {
@@ -46,10 +47,12 @@ DynInstr *IntraSlicer::delTraceTail() {
   return dynInstr;
 }
 
-void IntraSlicer::init(const DynInstrVector *trace, size_t startIndex) {
+void IntraSlicer::init(PathSlicer *pathSlicer, const DynInstrVector *trace, size_t startIndex) {
+  this->pathSlicer = pathSlicer;
   this->trace = trace;
   curIndex = startIndex;
   live.clear();
+  live.initAliasMgr(aliasMgr);
 }
 
 void IntraSlicer::takeNonMem(DynInstr *dynInstr) {
@@ -140,7 +143,7 @@ void IntraSlicer::handleRet(DynInstr *dynInstr) {
 
 void IntraSlicer::handleCall(DynInstr *dynInstr) {
   DynCallInstr *callInstr = (DynCallInstr*)dynInstr;
-  if (callInstr->isInternalCall()) {
+  if (pathSlicer->isInternalCall(callInstr)) {
     takeNonMem(callInstr);
   } else {
     // TBD: QUERY FUNCTION SUMMARY.

@@ -35,6 +35,15 @@ namespace tern {
     /* Simplified Module. */
     llvm::Module *simModule;      
 
+    /* Orig instruction ID manager. */
+    llvm::IDAssigner *origIda;
+
+    /* Mx instruction ID manager. */
+    llvm::IDAssigner *mxIda;
+
+    /* Simplified instruction ID manager. */
+    llvm::IDAssigner *simIda;
+
     vector<LandmarkTraceRecord *> binLTR;
 
     /* We need both max sliced and simplified map since in some slicing mode we query max sliced bc
@@ -55,6 +64,8 @@ namespace tern {
     /* Map from a dynamic simplified instr id to it original instr. */
     HMAP<LongLongPair, std::set<Instruction *> *> simInstrMap; 
 
+    std::string lmTracePath;
+
   protected:
     /* Generate a long long pair key for a dynamic instr. */
     LongLongPair genKey(DynInstr *dynInstr);
@@ -73,6 +84,9 @@ namespace tern {
     /* Load the landmark trace (not full trace) from disk, this is important to setup the instr id mapping. */
     void loadBinLandmarkTrace(const char *fullPath);
 
+    /* Given a dynamic instr, return its instr id in orig module. */
+    int getOrigInstrId(const DynInstr *dynInstr);
+
     /* Given a dynamic instr, return its instr id in max sliced module. */
     int getMxInstrId(const DynInstr *dynInstr);
 
@@ -83,7 +97,13 @@ namespace tern {
     std::set<int *> *getSimInstrId(const DynInstr *dynInstr);
 
     /* Given a dynamic instr, return its set of instr in simplified module. */
-    set<llvm::Instruction *> *getSimInstr(const DynInstr *dynInstr);
+    std::set<llvm::Instruction *> *getSimInstr(const DynInstr *dynInstr);
+
+    /* Given an instruction id (in normal, mx or sim module), return the static instruction.
+    The input instruciton ids are all the ids within the corresponding modules. */
+    llvm::Instruction *getOrigInstr(int instrId);
+    llvm::Instruction *getMxInstr(int instrId);
+    llvm::Instruction *getSimInstr(int instrId); /* There is only one return instr pointer, yes. */
   };
 }
 

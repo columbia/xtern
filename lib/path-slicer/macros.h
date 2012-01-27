@@ -26,6 +26,8 @@
 #define SIZE_T_INVALID (size_t(-1))
 #define ASSERT(stmt) if(get_option(tern_path_slicer,print_debug_info)!=DBG0)assert(stmt)
 
+#define CTX_SENSITIVE (get_option(tern_path_slicer, context_sensitive_ailas_query)==1)
+
 #include <ext/hash_set>
 #include <ext/hash_map>
 //#define HSET __gnu_cxx::hash_set

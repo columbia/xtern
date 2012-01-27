@@ -4,10 +4,13 @@
 using namespace llvm;
 
 #include "inter-slicer.h"
+#include "path-slicer.h"
 using namespace tern;
 
 InterSlicer::InterSlicer() {
 }
 
-InterSlicer::~InterSlicer() {}
+InterSlicer::~InterSlicer() {
+
+}
 

@@ -135,9 +135,7 @@ namespace tern {
     DynCallInstr();
     ~DynCallInstr();
     void setCalledFunc(llvm::Function *f);
-    llvm::Function *getCalledFunc();
-    bool isInternalCall();
-    
+    llvm::Function *getCalledFunc();    
   };
 
   class DynSpawnThreadInstr: public DynCallInstr {

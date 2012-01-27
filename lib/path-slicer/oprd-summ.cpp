@@ -1,4 +1,5 @@
 #include "util.h"
+#include "path-slicer.h"
 #include "oprd-summ.h"
 using namespace tern;
 char tern::OprdSumm::ID = 0;
@@ -29,10 +30,6 @@ void OprdSumm::initStat(Stat *stat) {
   this->stat = stat;
 }
 
-void OprdSumm::initInternalFunctions(DenseSet<const Function *> *internalFunctions) {
-  this->internalFunctions = internalFunctions;
-}
-
 llvm::DenseSet<llvm::Instruction *> *OprdSumm::getLoadSummBetween(
       DynInstr *prevInstr, DynInstr *postInstr, bdd &bddResults) {
   return NULL;
@@ -46,17 +43,6 @@ llvm::DenseSet<llvm::Instruction *> *OprdSumm::getStoreSummBetween(
 llvm::DenseSet<llvm::Instruction *> *OprdSumm::getStoreSummInFunc(
       DynCallInstr *callInstr, bdd &bddResults) {
   return NULL;
-}
-
-bool OprdSumm::isInternalCall(const Instruction *instr) {
-  const CallInst *ci = dyn_cast<CallInst>(instr);
-  assert(ci);
-  const Function *f = ci->getCalledFunction();  
-  return isInternalFunction(f);
-}
-
-bool OprdSumm::isInternalFunction(const Function *f) {
-  return !f->isDeclaration() && internalFunctions->count(f) > 0;
 }
 
 void OprdSumm::initAllSumm(llvm::Module &M) {
@@ -73,7 +59,7 @@ void OprdSumm::collectSummLocal(llvm::Module &M) {
   for (Module::iterator f = M.begin(); f != M.end(); ++f) {
     if (visited.count(f) == 0) {
       visited.insert(f);
-      if (isInternalFunction(f)) {
+      if (pathSlicer->isInternalFunction(f)) {
         funcLoadSumm[f] = new InstrDenseSet;
         funcStoreSumm[f] = new InstrDenseSet;
         collectFuncSummLocal(f);
@@ -109,7 +95,7 @@ void OprdSumm::collectSummTopDown(llvm::Module &M) {
   for (Module::iterator f = M.begin(); f != M.end(); ++f) {
     if (visited.count(f) == 0) {
       visited.insert(f);
-      if (isInternalFunction(f)) {
+      if (pathSlicer->isInternalFunction(f)) {
         DFSTopDown(f);
       }
     }
@@ -119,7 +105,7 @@ void OprdSumm::collectSummTopDown(llvm::Module &M) {
 void OprdSumm::DFSTopDown(const llvm::Function *f) {
   for (Function::const_iterator b = f->begin(), be = f->end(); b != be; ++b) {
     for (BasicBlock::const_iterator i = b->begin(), ie = b->end(); i != ie; ++i) {
-      if (Util::isCall(i) && isInternalCall(i)) {
+      if (Util::isCall(i) && pathSlicer->isInternalCall(i)) {
         vector<Function *> calledFuncs = get_called_functions(i);//Inheritated from CallGraphFP
         for (size_t j = 0; j < calledFuncs.size(); ++j) {
           const Function *callee = calledFuncs[j];
@@ -127,7 +113,7 @@ void OprdSumm::DFSTopDown(const llvm::Function *f) {
           // First, do DFS to collect summary.
           if (visited.count(callee) == 0) {
             visited.insert(callee);
-            if (isInternalFunction(f)) {
+            if (pathSlicer->isInternalFunction(callee)) {
               DFSTopDown(callee);
             }
           }

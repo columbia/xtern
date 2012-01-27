@@ -113,16 +113,13 @@ void PathSlicer::init(llvm::Module &M) {
   oprdPM->add(&oprdSumm);
   if (NORMAL_SLICING) {
     collectInternalFunctions(*origModule);
-    oprdSumm.initInternalFunctions(&internalFunctions);
     oprdPM->run(*origModule);
     
   } else if (MAX_SLICING) {
     collectInternalFunctions(*mxModule);
-    oprdSumm.initInternalFunctions(&internalFunctions);
     oprdPM->run(*mxModule);
   } else {
     collectInternalFunctions(*simModule);
-    oprdSumm.initInternalFunctions(&internalFunctions);
     oprdPM->run(*simModule);
     assert(false);// TBD. NOT SURE WHETHER SHOULD PASS IN MX OR SIM MODULE HERE.
   }
@@ -174,7 +171,7 @@ void PathSlicer::runPathSlicer(Module &M) {
   size_t startIndex = trace.size();
   assert(startIndex > 0);
   startIndex--;
-  intraSlicer.init(&trace, startIndex); // Init intra threas slicer.
+  intraSlicer.init(this, &trace, startIndex); // Init intra threas slicer.
   // TBD. Take initial instruction and add init oprds.
   intraSlicer.detectInputDepRaces(); // Detect input dependent races.
   // Calculate stat results.
@@ -188,4 +185,26 @@ void PathSlicer::collectInternalFunctions(Module &M) {
       internalFunctions.insert(f);
   }
 }
+
+bool PathSlicer::isInternalCall(const Instruction *instr) {
+  const CallInst *ci = dyn_cast<CallInst>(instr);
+  assert(ci);
+  const Function *f = ci->getCalledFunction();  
+  if (!f) // If it is an indirect call (function pointer), return false conservatively.
+    return false;
+  else
+    return isInternalFunction(f);
+}
+
+bool PathSlicer::isInternalCall(DynInstr *dynInstr) {
+  DynCallInstr *callInstr = (DynCallInstr*)dynInstr;
+  Function *f = callInstr->getCalledFunc();
+  return isInternalFunction(f);
+}
+
+bool PathSlicer::isInternalFunction(const Function *f) {
+  // TBD: If the called function is a function pointer, would "f" be NULL?
+  return !f->isDeclaration() && internalFunctions.count(f) > 0;
+}
+
 

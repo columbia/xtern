@@ -58,8 +58,7 @@ namespace tern {
 
     /* Get pointee bdd. In max slicing or range analysis mode, it should return the pointee of 
         the max sliced module. */
-    bdd getPointTee(const std::vector<int> &ctx, const llvm::Value *v);
-    bdd getPointTee(const std::vector<int> &ctx, int iid, int opIdx);
+    bdd getPointTee(DynOprd *dynOprd);
   };
 }
 

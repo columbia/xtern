@@ -121,12 +121,6 @@ llvm::Function *DynCallInstr::getCalledFunc() {
   return calledFunc;
 }
 
-bool DynCallInstr::isInternalCall() {
-  /* Pay attention: this function may have problem if the path slicer is called 
-  with in C++ code and the passed in module has linked with uclibc. */
-  return (!calledFunc->isDeclaration());
-}
-
 DynSpawnThreadInstr::DynSpawnThreadInstr() {
 
 }

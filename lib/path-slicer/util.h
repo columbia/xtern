@@ -10,6 +10,11 @@ namespace tern {
   protected:
     
   public:
+    static llvm::Function *getFunction(llvm::Instruction *instr);
+    static llvm::BasicBlock *getBasicBlock(llvm::Instruction *instr);
+    static const llvm::Function *getFunction(const llvm::Instruction *instr);
+    static const llvm::BasicBlock *getBasicBlock(const llvm::Instruction *instr);
+    
     static bool isPHI(DynInstr *dynInstr);
     static bool isBr(DynInstr *dynInstr);
     static bool isRet(DynInstr *dynInstr);
@@ -17,12 +22,12 @@ namespace tern {
     static bool isLoad(DynInstr *dynInstr);
     static bool isStore(DynInstr *dynInstr);
     static bool isMem(DynInstr *dynInstr);
-    static llvm::Function *getFunction(llvm::Instruction *instr);
-    static llvm::BasicBlock *getBasicBlock(llvm::Instruction *instr);
-    static const llvm::Function *getFunction(const llvm::Instruction *instr);
-    static const llvm::BasicBlock *getBasicBlock(const llvm::Instruction *instr);
+    
     static bool isCall(llvm::Instruction *instr);
     static bool isCall(const llvm::Instruction *instr);
+    static bool isLoad(const llvm::Instruction *instr);
+    static bool isStore(const llvm::Instruction *instr);
+
   };
 }
 

@@ -14,6 +14,7 @@
 #include "stat.h"
 
 namespace tern {
+  class PathSlicer;
   /* This class is used to collect not-executed alias information.
 
   This class collects both stored pointer operands as well as their bdd, not just bdd,
@@ -30,9 +31,7 @@ namespace tern {
     static char ID;
     Stat *stat;
 
-    /* All internal functions. When computing oprd summary, do not go into "external" functions
-    (e.g., memcpy() after linking in uclibc library). */
-    llvm::DenseSet<const llvm::Function *> *internalFunctions;
+    PathSlicer *pathSlicer;
 
     /* All "reachable" store pointer operands. This is collected by a inter-procedural algorithm. */
     /* Used by mayWriteFunc() in intra-thread phase. */
@@ -62,9 +61,6 @@ namespace tern {
   protected:
     void initAllSumm(llvm::Module &M);
 
-    bool isInternalFunction(const llvm::Function *f);
-    bool isInternalCall(const llvm::Instruction *instr);
-
     /* Phase 1: compute store pointer operands for a function (locally).
       The summary of callees are ignores in this phase. */
     void collectSummLocal(llvm::Module &M);
@@ -82,7 +78,6 @@ namespace tern {
     OprdSumm();
     ~OprdSumm();
     void initStat(Stat *stat);
-    void initInternalFunctions(llvm::DenseSet<const llvm::Function *> *internalFunctions);
     virtual void getAnalysisUsage(llvm::AnalysisUsage &AU) const;
     virtual bool runOnModule(llvm::Module &M);
 

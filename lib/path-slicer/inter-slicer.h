@@ -15,8 +15,10 @@
 #include "cfg-mgr.h"
 
 namespace tern {
+  struct PathSlicer;
   struct InterSlicer {
   private:
+    PathSlicer *pathSlicer;
     Stat *stat;
     RWSet rwSet;
     Slice *targets;

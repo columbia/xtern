@@ -1,6 +1,7 @@
 #include "live-set.h"
 #include "type-defs.h"
 #include "macros.h"
+#include "util.h"
 using namespace tern;
 
 LiveSet::LiveSet() {
@@ -11,6 +12,10 @@ LiveSet::~LiveSet() {
 
 }
 
+void LiveSet::initAliasMgr(AliasMgr *aliasMgr) {
+  this->aliasMgr = aliasMgr;
+}
+
 size_t LiveSet::virtRegsSize() {
   return virtRegs.size();
 }
@@ -18,11 +23,24 @@ size_t LiveSet::virtRegsSize() {
 void LiveSet::clear() {
   virtRegs.clear();
   loadInstrs.clear();
-  loadInstrsBDD = bddfalse;
+}
+
+void LiveSet::addReg(CallCtx *ctx, const Value *v) {
+  if (isa<Constant>(v)) { // Discard it if it is a LLVM Constant.
+    CtxVPair p = std::make_pair(ctx, v);
+    ASSERT(!DS_IN(p, virtRegs));
+    virtRegs.insert(p);
+  }
 }
 
 void LiveSet::addReg(DynOprd *dynOprd) {
-
+  if (dynOprd->isConstant()) { // Discard it if it is a LLVM Constant.
+    CtxVPair p = std::make_pair(
+      dynOprd->getDynInstr()->getCallingCtx(), 
+      dynOprd->getStaticValue());
+    ASSERT(!DS_IN(p, virtRegs));
+    virtRegs.insert(p);
+  }
 }
 
 void LiveSet::delReg(DynOprd *dynOprd) {
@@ -45,27 +63,58 @@ bool LiveSet::regIn(DynOprd *dynOprd) {
 }
 
 void LiveSet::addUsedRegs(DynInstr *dynInstr) {
-
+  // TBD: DO WE NEED TO CONSIDER SIM CALL CTX HERE?
+  CallCtx *intCtx = dynInstr->getCallingCtx();
+  Instruction *instr = dynInstr->getOrigInstr();
+  if (Util::isCall(dynInstr)) {
+    CallSite cs  = CallSite(cast<CallInst>(instr));
+    // TBD: Some real function call may be wrapped by bitcast? YES WE SHOULD. 
+    // REFER TO EXECUTOR.CPP IN KLEE.
+    Function *f = cs.getCalledFunction();   
+    if (!f) {
+      Value *calledV = cs.getCalledValue();
+      calledV->dump();  // Debugging.
+      assert(calledV);
+      addReg(intCtx, calledV);
+    } else {
+      for (CallSite::arg_iterator ci = cs.arg_begin(), ce = cs.arg_end(); ci != ce; ++ci)
+        addReg(intCtx, *ci);
+    }
+  } else {
+    for (unsigned i = 0; i < instr->getNumOperands(); i++) {
+      addReg(intCtx, instr->getOperand(i));
+    }
+  }
 }
 
 void LiveSet::addLoadMem(DynInstr *dynInstr) {
-
+  ASSERT(!DS_IN(dynInstr, loadInstrs));
+  loadInstrs.insert(dynInstr);
 }
 
 void LiveSet::delLoadMem(DynInstr *dynInstr) {
-  
+  ASSERT(DS_IN(dynInstr, loadInstrs));
+  loadInstrs.erase(dynInstr);
 }
 
 DenseSet<DynInstr *> &LiveSet::getAllLoadInstrs() {
   return loadInstrs;
-  /*CtxVDenseSet::iterator itr(virtRegs.begin());
-  for (; itr != virtRegs.end(); ++itr) {
-    
-  }*/
 }
 
 const bdd LiveSet::getAllLoadMem() {
-  return loadInstrsBDD;
+  /* TBD: USE SLOW VERSION TEMPORARILLY UNTIL WE FIGURE OUT HOW TO IMPLEMENT
+  REF-COUNTED BDD. */
+  //return loadInstrsBdd.getBdd();
+  bdd retBDD = bddfalse;
+
+  DenseSet<DynInstr *>::iterator itr(loadInstrs.begin());
+  for (; itr != loadInstrs.end(); ++itr) {
+    DynInstr *loadInstr = *itr;
+    DynOprd loadPtrOprd(loadInstr, 0);
+    retBDD |= aliasMgr->getPointTee(&loadPtrOprd);
+  }
+
+  return retBDD;
 }
 
 

@@ -12,11 +12,13 @@
 #include "stat.h"
 #include "macros.h"
 #include "type-defs.h"
+#include "alias-mgr.h"
 
-namespace tern {
+namespace tern {  
   struct LiveSet {
   private:
     Stat *stat;
+    AliasMgr *aliasMgr;
 
     /** Store all the virtual registers, they are only calling context plus the value pointer 
           of virtual registers. **/
@@ -26,35 +28,46 @@ namespace tern {
     llvm::DenseSet<DynInstr *> loadInstrs;
 
     /** Store all the pointed to locations of pointer operands of all load instructions. **/
-    bdd loadInstrsBDD;
+    //RefCntBdd loadInstrsBdd;
 
   protected:
+    void addReg(CallCtx *ctx, const Value *v);
 
   public:
     LiveSet();
     ~LiveSet();
+    void initAliasMgr(AliasMgr *aliasMgr);
     size_t virtRegsSize();
     void clear();
 
     /** Virtual registers. **/
-    void addReg(DynOprd *dynOprd);          /** Add a virtual register to live set. Skip all constants 
-                                                                    such as @x and "1". Each register is a hash set of 
-                                                                    <call context, static value pointer>. **/
+    /** Add a virtual register to live set. Skip all constants such as @x and "1".
+    Each register is a hash set of <call context, static value pointer>. **/
+    void addReg(DynOprd *dynOprd);
     void delReg(DynOprd *dynOprd);
     bool regIn(DynOprd *dynOprd);
-    CtxVDenseSet &getAllRegs();  /** Get the hash set of all virtual regs in live set. **/
-    void addUsedRegs(DynInstr *dynInstr);    /** Add all the used operands of an instruction to live set 
-                                                                          (include call args). It uses the addReg() above. **/
+
+    /** Get the hash set of all virtual regs in live set. **/
+    CtxVDenseSet &getAllRegs();  
+
+    /** Add all the used operands of an instruction to live set (include call args).
+    It uses the addReg() above. **/
+    void addUsedRegs(DynInstr *dynInstr);    
  
     /** Load memory locations. **/
-    void addLoadMem(DynInstr *dynInstr);     /** Add a load memory location (the load instruction) to
-                                                                          live set. The pointed-to locations of them are 
-                                                                          represented as refcounted-bdd. **/
-    void delLoadMem(DynInstr *dynInstr);     /** Delete a load memory location from the refcounted-bdd. **/
-    llvm::DenseSet<DynInstr *> &getAllLoadInstrs();    /** Get all load instructions. This is used in handleMem(). **/
-    const bdd getAllLoadMem();   /** Get the abstract locations for all load memory locations.
-                                                This is used in writtenBetween() and mayWriteFunc(). **/
+    /** Add a load memory location (the load instruction) to live set.
+    The pointed-to locations of them are represented as refcounted-bdd. **/
+    void addLoadMem(DynInstr *dynInstr);
+                                                                          
+    /** Delete a load memory location from the refcounted-bdd. **/
+    void delLoadMem(DynInstr *dynInstr);     
 
+    /** Get all load instructions. This is used in handleMem(). **/
+    llvm::DenseSet<DynInstr *> &getAllLoadInstrs();    
+
+    /** Get the abstract locations for all load memory locations.
+    This is used in writtenBetween() and mayWriteFunc(). **/
+    const bdd getAllLoadMem();   
   };
 }
 

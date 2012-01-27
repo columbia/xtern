@@ -3,6 +3,9 @@
 #include "util.h"
 using namespace tern;
 
+#include "bc2bdd/BddAliasAnalysis.h"
+using namespace repair;
+
 AliasMgr::AliasMgr() {
   origAaol = NULL;
   mxAaol = NULL;
@@ -104,7 +107,7 @@ bool AliasMgr::mayAlias(DynOprd *dynOprd1, DynOprd *dynOprd2) {
     return result;
 
   // Query bdd.
-  if (get_option(tern_path_slicer, context_sensitive_ailas_query) == 1)
+  if (CTX_SENSITIVE)
     result = origAaol->aliasQuery(*ctx1, instrId1, opIndex1, *ctx2, instrId2, opIndex2);
   else
     result = origAaol->aliasQuery(instrId1, opIndex1, instrId2, opIndex2);
@@ -113,5 +116,47 @@ bool AliasMgr::mayAlias(DynOprd *dynOprd1, DynOprd *dynOprd2) {
   aliasCache.add((long)ctx1, instrId1, (long)ctx2, instrId2, result);
   
   return result;
+}
+
+bdd AliasMgr::getPointTee(DynOprd *dynOprd) {
+  DynInstr *dynInstr = dynOprd->getDynInstr();
+  Instruction *instr = NULL;
+  unsigned opIndex = dynOprd->getIndex();
+  BddAliasAnalysis *baa = NULL;
+  
+  if (CTX_SENSITIVE) {
+    vector<User *> usrCtx;
+    CallCtx *intCtx = dynInstr->getCallingCtx();
+    assert(intCtx);
+    if (NORMAL_SLICING) {
+      baa = (BddAliasAnalysis *)(origAaol->AAPass);
+      for (size_t i = 0; i < intCtx->size(); i++)
+        usrCtx.push_back(cast<User>(idMgr->getOrigInstr(intCtx->at(i))));
+      instr = dynInstr->getOrigInstr();
+    } else if (MAX_SLICING) {
+      baa = (BddAliasAnalysis *)(mxAaol->AAPass);
+      for (size_t i = 0; i < intCtx->size(); i++)
+        usrCtx.push_back(cast<User>(idMgr->getMxInstr(intCtx->at(i))));
+      instr = idMgr->getMxInstr(dynInstr);      
+    } else {
+      baa = (BddAliasAnalysis *)(simAaol->AAPass);
+      assert(false);  // range slicing: tbd.
+    }
+
+    return baa->getPointeeSet(&usrCtx, instr->getOperand(opIndex), 0);
+  } else {
+    if (NORMAL_SLICING) {
+      baa = (BddAliasAnalysis *)(origAaol->AAPass);
+      instr = dynInstr->getOrigInstr();
+    } else if (MAX_SLICING) {
+      baa = (BddAliasAnalysis *)(mxAaol->AAPass);
+      instr = idMgr->getMxInstr(dynInstr);      
+    } else {
+      baa = (BddAliasAnalysis *)(simAaol->AAPass);
+      assert(false);  // range slicing: tbd.
+    }
+
+    return baa->getPointeeSet(NULL, instr->getOperand(opIndex), 0);
+  }
 }
 

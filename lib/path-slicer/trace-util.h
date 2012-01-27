@@ -9,6 +9,8 @@
 #include "type-defs.h"
 #include "stat.h"
 
+#define TRACE_MAX_LEN 1024*1024*1024  /* 1G of binary trace. */
+
 namespace tern {
   /* Generic and abstract class to record and load trace. */
   class TraceUtil {

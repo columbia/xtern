@@ -59,3 +59,11 @@ bool Util::isCall(const llvm::Instruction *instr) {
   return instr->getOpcode() == Instruction::Call;
 }
 
+static bool isLoad(const llvm::Instruction *instr) {
+  return instr->getOpcode() == Instruction::Load;
+}
+
+static bool isStore(const llvm::Instruction *instr) {
+  return instr->getOpcode() == Instruction::Store;
+}
+
