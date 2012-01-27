@@ -35,7 +35,10 @@ runtests: test
 #	LD_PRELOAD=$(XTERN_ROOT)/dync_hook/interpose.so ./server 10144 &
 #	LD_PRELOAD=$(XTERN_ROOT)/dync_hook/interpose.so ./client 127.0.0.1 10144 &
 	LD_PRELOAD=$(XTERN_ROOT)/dync_hook/interpose.so ./all 10667
-	
+
+fft:
+	rm -rf out
+	LD_PRELOAD=$(XTERN_ROOT)/dync_hook/interpose.so ./FFT -m6 -p8
 eval:
 	cd $(XTERN_ROOT)/apps/ && make -B EXE_PREFIX="env LD_PRELOAD=$(XTERN_ROOT)/dync_hook/interpose.so"
 

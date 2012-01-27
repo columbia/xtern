@@ -131,6 +131,10 @@ vector<op_t> ops;
       //  the naive solution here is to add an edge from any operation 
       //  in the barrier to the destroy operation. 
 
+      //  FIXME it's brute-force
+      for (int i = 0; i < round; ++i)
+        for (set<int>::iterator it = first_ops[i].begin(); it != first_ops[i].end(); ++it)
+          hb.push_back(*it);
     }
   };
  
@@ -147,8 +151,6 @@ void build_barrier_hb(vector<op_t> &ops, vector<vector<int> > &hb_arrow)
   {
     switch (ops[i].rec.op)
     {
-//    case syncfunc::pthread_mutex_lock:
-//    case syncfunc::pthread_mutex_unlock:
     case syncfunc::pthread_barrier_init:
     {
       assert(ops[i].rec.args.size() > 1 && "missing arguments");
@@ -176,6 +178,8 @@ void build_barrier_hb(vector<op_t> &ops, vector<vector<int> > &hb_arrow)
       barrier_status[barrier].destroy(ops[i].tid, i, hb_arrow[i]);
       break;
     }
+//    case syncfunc::pthread_mutex_lock:
+//    case syncfunc::pthread_mutex_unlock:
 //    case syncfunc::pthread_cond_signal:
 //    case syncfunc::pthread_cond_broadcast:
 //    case syncfunc::sem_wait:
@@ -191,6 +195,29 @@ void build_barrier_hb(vector<op_t> &ops, vector<vector<int> > &hb_arrow)
       break;
     }
   }
+}
+
+void build_create_hb(vector<op_t> &ops, vector<vector<int> > &hb_arrow)
+{
+  printf("start building create partial order\n\n");
+  int n = ops.size();
+
+  for (int i = 0; i < n;++i)
+  {
+    switch (ops[i].rec.op)
+    {
+    case syncfunc::pthread_create:
+    default:
+      // skip it, not my work
+      break;
+    }
+  }
+}
+
+void build_mutex_hb(vector<op_t> &ops, vector<vector<int> > &hb_arrow)
+{
+  printf("start building mutex partial order\n\n");
+  int n = ops.size();
 }
 
 void analyze(vector<op_t> &ops)
@@ -212,6 +239,8 @@ void analyze(vector<op_t> &ops)
   }
 
   build_barrier_hb(ops, hb_arrow);
+  build_create_hb(ops, hb_arrow);
+  build_mutex_hb(ops, hb_arrow);
 }
 
 int main(int argc, char *argv[])

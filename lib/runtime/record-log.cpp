@@ -31,9 +31,22 @@ void TxtLogger::logSync(unsigned insid, unsigned short sync,
                         unsigned turn, bool after, ...) {
   assert(sync >= syncfunc::first_sync && sync < syncfunc::num_syncs
     && "trying to log unknown synchronization operation!");
-
+  
   if(!syncfunc::isSync(sync))
+  {
+    if (sync == syncfunc::tern_thread_begin)    //  for tests, i need to know the thread_mapping
+    {
+      va_list args;
+      va_start(args, after);
+      ouf << syncfunc::getName(sync)
+          << ' ' << turn
+          << ' ' << tid
+          << hex << " 0x" << va_arg(args, uint64_t) << dec;
+      va_end(args);
+      ouf << "\n";
+    }
     return;
+  }
   // YJF: why ignore prog_begin/end and thread_begin/end?
   const char *suffix = "";
   if(NumRecordsForSync(sync) == 2)
@@ -57,6 +70,7 @@ void TxtLogger::logSync(unsigned insid, unsigned short sync,
   case syncfunc::sem_wait:
   case syncfunc::sem_timedwait:
   case syncfunc::sem_post:
+  case syncfunc::pthread_join:
     ouf << hex << " 0x" << va_arg(args, uint64_t) << dec;
     break;
 
@@ -64,26 +78,36 @@ void TxtLogger::logSync(unsigned insid, unsigned short sync,
   case syncfunc::pthread_cond_wait:
   case syncfunc::pthread_cond_timedwait:
   case syncfunc::pthread_barrier_init:
-    ouf << hex
-        << " 0x" << va_arg(args, uint64_t)
-        << " 0x" << va_arg(args, uint64_t)
-        << dec;
-    break;
-
-    // log return value for try operations
+  case syncfunc::pthread_create:
   case syncfunc::pthread_mutex_trylock:
   case syncfunc::sem_trywait:
+    {
+      //  notice "<<" operator is explained from right to left.
+      uint64_t a = va_arg(args, uint64_t);
+      uint64_t b = va_arg(args, uint64_t);
+
+    ouf << hex
+        << " 0x" << a
+        << " 0x" << b
+        << dec;
+    }
+    break;
+
+/*  case syncfunc::pthread_mutex_trylock:
+  case syncfunc::sem_trywait:
+    // log return value for try operations
     ouf << hex << " 0x" << (uint64_t)va_arg(args, uint64_t) << dec
         << ' ' << va_arg(args, int);
     break;
-
+*/
     // pthread_create and pthread_join
-  case syncfunc::pthread_create:
+/*  case syncfunc::pthread_create:
     va_arg(args, uint64_t); // skip the pthread ID of the created thread
     ouf << ' ' << va_arg(args, int); // YJF: why log ret for pthread_create?
     break;
   case syncfunc::pthread_join:
     break;
+*/
 
   default:
     assert(0 && "sync not handled");

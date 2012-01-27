@@ -148,7 +148,7 @@ int RecorderRT<_S>::pthreadCreate(unsigned ins, pthread_t *thread,
 
   _S::putTurn();
 
-  Logger::the->logSync(ins, syncfunc::pthread_create, nturn, true, (uint64_t)*thread, ret);
+  Logger::the->logSync(ins, syncfunc::pthread_create, nturn, true, (uint64_t)*thread, (uint64_t) ret);
   return ret;
 }
 
@@ -220,7 +220,7 @@ int RecorderRT<_S>::pthreadMutexTryLock(unsigned ins, pthread_mutex_t *mu) {
   nturn = _S::incTurnCount();
   _S::putTurn();
 
-  Logger::the->logSync(ins, syncfunc::pthread_mutex_lock, nturn, true, (uint64_t)mu, ret);
+  Logger::the->logSync(ins, syncfunc::pthread_mutex_lock, nturn, true, (uint64_t)mu, (uint64_t) ret);
   return ret;
 }
 
@@ -263,7 +263,7 @@ int RecorderRT<_S>::pthreadBarrierInit(unsigned ins, pthread_barrier_t *barrier,
   nturn = _S::incTurnCount();
   _S::putTurn();
 
-  Logger::the->logSync(ins, syncfunc::pthread_barrier_init, nturn, true, (uint64_t)barrier, count);
+  Logger::the->logSync(ins, syncfunc::pthread_barrier_init, nturn, true, (uint64_t)barrier, (uint64_t) count);
 
   return ret;
 }
@@ -654,7 +654,7 @@ int RecorderRT<_S>::pthreadCondTimedWait(unsigned ins,
   _S::putTurn();
 
   Logger::the->logSync(ins, syncfunc::pthread_cond_timedwait, nturn1, /* before */ false, (uint64_t)cv, (uint64_t)mu);
-  Logger::the->logSync(ins, syncfunc::pthread_cond_timedwait, nturn2, /* after */ true, (uint64_t)cv, (uint64_t)mu, ret==ETIMEDOUT);
+  Logger::the->logSync(ins, syncfunc::pthread_cond_timedwait, nturn2, /* after */ true, (uint64_t)cv, (uint64_t)mu, (uint64_t) ret==ETIMEDOUT);
   return ret;
 }
 
@@ -731,7 +731,7 @@ int RecorderRT<_S>::semTryWait(unsigned ins, sem_t *sem) {
     assert(errno==EAGAIN && "failed sync calls are not yet supported!");
   nturn = _S::incTurnCount();
   _S::putTurn();
-  Logger::the->logSync(ins, syncfunc::sem_trywait, nturn, true, (uint64_t)sem);
+  Logger::the->logSync(ins, syncfunc::sem_trywait, nturn, true, (uint64_t)sem, (uint64_t) ret);
   return ret;
 }
 
@@ -830,7 +830,7 @@ int RecorderRT<FCFSScheduler>::pthreadCondTimedWait(unsigned ins,
   FCFSScheduler::putTurn();
 
   Logger::the->logSync(ins, syncfunc::pthread_cond_timedwait, nturn1, false, (uint64_t)cv, (uint64_t)mu);
-  Logger::the->logSync(ins, syncfunc::pthread_cond_timedwait, nturn2, true, (uint64_t)cv, (uint64_t)mu, ret==ETIMEDOUT);
+  Logger::the->logSync(ins, syncfunc::pthread_cond_timedwait, nturn2, true, (uint64_t)cv, (uint64_t)mu, (uint64_t) ret==ETIMEDOUT);
   return 0;
 }
 
