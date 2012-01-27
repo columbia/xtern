@@ -2,6 +2,8 @@
 #include "macros.h"
 using namespace tern;
 
+using namespace klee;
+
 DynInstr::DynInstr() {
   region = NULL;
   index = SIZE_T_INVALID;
@@ -15,6 +17,10 @@ DynInstr::~DynInstr() {
 
 int DynInstr::getTid() {
   return region->getTid();
+}
+
+void DynInstr::setIndex(size_t index) {
+  this->index = index;
 }
 
 size_t DynInstr::getIndex() {
@@ -145,19 +151,23 @@ DynMemInstr::~DynMemInstr() {
 
 }
 
-void DynMemInstr::setMemAddr(long memAddr) {
-  this->memAddr = memAddr;
+void DynMemInstr::setConAddr(long conAddr) {
+  this->conAddr = conAddr;
 }
 
-long DynMemInstr::getMemAddr() {
-  return memAddr;
+long DynMemInstr::getConAddr() {
+  return conAddr;
 }
 
-void DynMemInstr::setMemAddrSymbolic(bool sym) {
-  isAddrSymbolic = sym;
+void DynMemInstr::setSymAddr(ref<klee::Expr> symAddr) {
+  this->symAddr = symAddr;
 }
 
-bool DynMemInstr::isMemAddrSymbolic() {
-  return isAddrSymbolic;
+ref<klee::Expr> DynMemInstr::getSymAddr() {
+  return symAddr;
+}
+
+bool DynMemInstr::isAddrSymbolic() {
+  return isa<klee::ConstantExpr>(symAddr);
 }
 

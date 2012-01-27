@@ -10,7 +10,7 @@
 #include "trace-util.h"
 
 namespace tern {
-  class InstrRecord {
+  /*class InstrRecord {
   private:
 
   protected:
@@ -40,23 +40,31 @@ namespace tern {
     void setConAddr(long addr);
     long getConAddr();
     bool isAddrConstant();
-  };
+  };*/
   /* Class to record and load trace. Work with KLEE. */
   class KleeTraceUtil: public TraceUtil {
   private:
     klee::KModule *kmodule;
-    int fd;
+    DynInstrVector *trace;
+    /*int fd;
     unsigned long offset;
-    char *buf;
+    char *buf;*/
 
   protected:
+    /* Record routines. */
     void record(klee::KInstruction *kInstr, klee::ExecutionState *state);
+    void recordPHI(klee::KInstruction *kInstr, klee::ExecutionState *state);
+    void recordBr(klee::KInstruction *kInstr, klee::ExecutionState *state);
+    void recordRet(klee::KInstruction *kInstr, klee::ExecutionState *state);
+    void recordCall(klee::KInstruction *kInstr, klee::ExecutionState *state);
+    void recordNonMem(klee::KInstruction *kInstr, klee::ExecutionState *state);
     void recordLoad(klee::KInstruction *kInstr, klee::ExecutionState *state);
     void recordStore(klee::KInstruction *kInstr, klee::ExecutionState *state);
-    void recordNonMem(klee::KInstruction *kInstr, klee::ExecutionState *state);
-    void mapTrace(const char *tracePath);
-    void upmapTrace(const char *tracePath);
-    void checkOffset();
+
+    /* After a complete trace is recorded, we do some processing work such as calculating
+    incoming index for PHI instruction, and setting up callstack. */
+    void processTrace();
+    
     /* Borrowed from KLEE Executor.cpp */
     const klee::Cell& eval(klee::KInstruction *ki, unsigned index, 
       klee::ExecutionState &state) const;
@@ -65,6 +73,7 @@ namespace tern {
     KleeTraceUtil();
     ~KleeTraceUtil();
     void initKModule(klee::KModule *kmodule);
+    void initTrace(DynInstrVector *trace);
     virtual void load(const char *tracePath, DynInstrVector *trace);
     virtual void store(const char *tracePath);
     

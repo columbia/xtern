@@ -11,6 +11,8 @@ namespace tern {
   typedef DynInstrList::iterator DynInstrItr;
 }
 
+#include "klee/Expr.h"
+
 #include "dyn-oprd.h"
 #include "instr-region.h"
 
@@ -45,6 +47,9 @@ namespace tern {
 
     /* TBD */
     int getTid();
+
+    /* TBD */
+    void setIndex(size_t index);
 
     /* TBD */
     size_t getIndex();
@@ -155,18 +160,19 @@ namespace tern {
   class DynMemInstr: public DynInstr {
   private:
     /* Loaded or stored memory address from the pointer operand. */
-    long memAddr;
-    bool isAddrSymbolic;
+    long conAddr;
+    klee::ref<klee::Expr> symAddr;
 
   protected:
 
   public:
     DynMemInstr();
     ~DynMemInstr();
-    void setMemAddr(long memAddr);
-    long getMemAddr();
-    void setMemAddrSymbolic(bool sym);
-    bool isMemAddrSymbolic();
+    void setConAddr(long conAddr);
+    long getConAddr();
+    void setSymAddr(klee::ref<klee::Expr> symAddr);
+    klee::ref<klee::Expr> getSymAddr();
+    bool isAddrSymbolic();
   };
 }
 

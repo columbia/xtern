@@ -6,10 +6,11 @@
 
 #include "klee-trace-util.h"
 #include "util.h"
+#include "dyn-instrs.h"
 using namespace tern;
 
 using namespace klee;
-
+/*
 InstrRecord::InstrRecord() {
   tid = instrId = -1;
 }
@@ -53,11 +54,10 @@ klee::ref<klee::Expr> MemInstrRecord::getAddr() {
 bool MemInstrRecord::isAddrConstant() {
   return isa<klee::ConstantExpr>(addr);
 }
-
+*/
 KleeTraceUtil::KleeTraceUtil() {
   kmodule = NULL;
-  fd = -1;
-  offset = 0;
+  trace = NULL;
 }
 
 KleeTraceUtil::~KleeTraceUtil() {
@@ -69,7 +69,7 @@ void KleeTraceUtil::initKModule(KModule *kmodule) {
 }
 
 void KleeTraceUtil::load(const char *tracePath, DynInstrVector *trace) {
-  mapTrace(tracePath);
+  //mapTrace(tracePath);
   // TBD: LOOP TO READ BACK TRACE.
 }
 
@@ -92,32 +92,58 @@ void KleeTraceUtil::record(KInstruction *kInstr, ExecutionState *state) {
   }
 }
 
-void KleeTraceUtil::recordLoad(KInstruction *kInstr, ExecutionState *state) {
-  checkOffset();
-  MemInstrRecord *rec = (MemInstrRecord*)(buf+offset);
-  rec->setTid(0);   // Must be changed after the multithreaded KLEE is done.
-  rec->setInstrId(0);
-  rec->setAddr(0);
-  offset += KLEE_RECORD_SIZE;
+void KleeTraceUtil::recordPHI(klee::KInstruction *kInstr,
+  klee::ExecutionState *state) {
+  DynPHIInstr *phi = new DynPHIInstr;
+  phi->setIndex(trace->size());
+  trace->push_back(phi);
 }
 
-void KleeTraceUtil::recordStore(KInstruction *kInstr, ExecutionState *state) {
-  checkOffset();
-  MemInstrRecord *rec = (MemInstrRecord*)(buf+offset);
-  rec->setTid(0);   // Must be changed after the multithreaded KLEE is done.
-  rec->setInstrId(0);
-  rec->setAddr(0);
-  offset += KLEE_RECORD_SIZE;
+void KleeTraceUtil::recordBr(klee::KInstruction *kInstr,
+  klee::ExecutionState *state) {
+  DynBrInstr *br = new DynBrInstr;
+  br->setIndex(trace->size());
+  trace->push_back(br);
 }
 
-void KleeTraceUtil::recordNonMem(KInstruction *kInstr, ExecutionState *state) {
-  checkOffset();
-  InstrRecord *rec = (InstrRecord*)(buf+offset);
-  rec->setTid(0);   // Must be changed after the multithreaded KLEE is done.
-  rec->setInstrId(0);
-  offset += KLEE_RECORD_SIZE;
+void KleeTraceUtil::recordRet(klee::KInstruction *kInstr,
+  klee::ExecutionState *state) {
+  DynRetInstr *ret = new DynRetInstr;
+  ret->setIndex(trace->size());
+  trace->push_back(ret);
 }
 
+void KleeTraceUtil::recordCall(klee::KInstruction *kInstr,
+  klee::ExecutionState *state) {
+  DynCallInstr *call = new DynCallInstr;
+  call->setIndex(trace->size());
+  trace->push_back(call);
+}
+
+void KleeTraceUtil::recordNonMem(KInstruction *kInstr,
+  ExecutionState *state) {
+  DynInstr *instr = new DynInstr;
+  instr->setIndex(trace->size());
+  trace->push_back(instr);  
+}
+
+void KleeTraceUtil::recordLoad(KInstruction *kInstr,
+  ExecutionState *state) {
+  DynMemInstr *load = new DynMemInstr;
+  load->setIndex(trace->size());
+  // TBD: READ CON AND SYM MEM ADDR FROM CELLS.
+  trace->push_back(load);    
+}
+
+void KleeTraceUtil::recordStore(KInstruction *kInstr,
+  ExecutionState *state) {
+  DynMemInstr *store = new DynMemInstr;
+  store->setIndex(trace->size());
+  // TBD: READ CON AND SYM MEM ADDR FROM CELLS.
+  trace->push_back(store);      
+}
+
+/*
 void KleeTraceUtil::mapTrace(const char *tracePath) {
   fd = open(tracePath, O_RDWR|O_CREAT, 0644);
   assert(fd >= 0 && "can't open log file!");
@@ -138,11 +164,7 @@ void KleeTraceUtil::upmapTrace(const char *tracePath) {
   close(fd);
   fd = -1;
 }
-
-void KleeTraceUtil::checkOffset() {
-  assert(offset < TRACE_MAX_LEN);
-}
-
+*/
 const Cell& KleeTraceUtil::eval(KInstruction *ki, unsigned index, 
                            ExecutionState &state) const {
   assert(index < ki->inst->getNumOperands());
@@ -160,6 +182,10 @@ const Cell& KleeTraceUtil::eval(KInstruction *ki, unsigned index,
     StackFrame &sf = state.stack.back();
     return sf.locals[index];
   }
+}
+
+void KleeTraceUtil::initTrace(DynInstrVector *trace) {
+  this->trace = trace;
 }
 
 

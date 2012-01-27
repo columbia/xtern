@@ -178,8 +178,8 @@ void IntraSlicer::handleMem(DynInstr *dynInstr) {
     for (; itr != loadInstrs.end(); ++itr) {
       DynMemInstr *loadInstr = (DynMemInstr*)(*itr);
       DynOprd loadPtrOprd(loadInstr, 0);
-      if (loadInstr->getMemAddr() == storeInstr->getMemAddr()) {
-        if (loadInstr->isMemAddrSymbolic() || storeInstr->isMemAddrSymbolic()) {
+      if (loadInstr->getConAddr() == storeInstr->getConAddr()) {
+        if (loadInstr->isAddrSymbolic() || storeInstr->isAddrSymbolic()) {
           addMemAddrEqConstr(loadInstr, storeInstr);
         }
         live.delLoadMem(loadInstr);
