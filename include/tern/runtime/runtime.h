@@ -56,7 +56,7 @@ struct Runtime {
   virtual int semTimedWait(unsigned insid, sem_t *sem,
                            const struct timespec *abstime) = 0;
   virtual int semPost(unsigned insid, sem_t *sem) = 0;
- 
+
 /*
   virtual int __pthread_create(unsigned insid, pthread_t *th, const pthread_attr_t *a, void *(*func)(void*), void *arg)
   	{ return pthreadCreate(insid, th, const_cast<pthread_attr_t *>(a), func, arg); }
@@ -137,6 +137,11 @@ struct Runtime {
   virtual int __epoll_wait(unsigned ins, int epfd, struct epoll_event *events, int maxevents, int timeout);
 
   virtual int __sigwait(unsigned ins, const sigset_t *set, int *sig); 
+
+  // sleep
+  virtual unsigned int sleep(unsigned ins, unsigned int seconds);
+  virtual int usleep(unsigned ins, useconds_t usec);
+  virtual int nanosleep(unsigned ins, const struct timespec *req, struct timespec *rem);
 
   /// Installs a runtime as @the.  A runtime implementation must
   /// re-implement this function to install itself

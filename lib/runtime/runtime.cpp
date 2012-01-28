@@ -444,9 +444,9 @@ int tern_select(unsigned ins, int nfds, fd_set *readfds, fd_set *writefds, fd_se
 
 unsigned int tern_sleep(unsigned ins, unsigned int seconds)
 {
-  int ret;
+  unsigned int ret;
   Space::enterSys();
-  sleep(seconds);
+  ret = Runtime::the->sleep(ins, seconds);
   Space::exitSys();
   return ret;
 }
@@ -455,7 +455,7 @@ int tern_usleep(unsigned ins, useconds_t usec)
 {
   int ret;
   Space::enterSys();
-  usleep(usec);
+  ret = Runtime::the->usleep(ins, usec);
   Space::exitSys();
   return ret;
 }
@@ -464,7 +464,7 @@ int tern_nanosleep(unsigned ins, const struct timespec *req, struct timespec *re
 {
   int ret;
   Space::enterSys();
-  ret = nanosleep(req, rem);
+  ret = Runtime::the->nanosleep(ins, req, rem);
   Space::exitSys();
   return ret;
 }
@@ -663,3 +663,17 @@ int Runtime::__epoll_wait(unsigned ins, int epfd, struct epoll_event *events, in
   return epoll_wait(epfd, events, maxevents, timeout);
 }
 
+unsigned int Runtime::sleep(unsigned ins, unsigned int seconds)
+{
+  return ::sleep(seconds);
+}
+
+int Runtime::usleep(unsigned ins, useconds_t usec)
+{
+  return ::usleep(usec);
+}
+
+int Runtime::nanosleep(unsigned ins, const struct timespec *req, struct timespec *rem)
+{
+  return ::nanosleep(req, rem);
+}

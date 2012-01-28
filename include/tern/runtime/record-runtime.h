@@ -83,7 +83,12 @@ struct RecorderRT: public Runtime, public _Scheduler {
   int __select(unsigned ins, int nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds, struct timeval *timeout);  
   int __epoll_wait(unsigned ins, int epfd, struct epoll_event *events, int maxevents, int timeout);
   int __sigwait(unsigned ins, const sigset_t *set, int *sig); 
-  
+
+  // sleep
+  unsigned int sleep(unsigned ins, unsigned int seconds);
+  int usleep(unsigned ins, useconds_t usec);
+  int nanosleep(unsigned ins, const struct timespec *req, struct timespec *rem);
+
   RecorderRT(): _Scheduler(pthread_self()) {
     int ret = sem_init(&thread_create_sem, 0, 1); // main thread
     assert(!ret && "can't initialize semaphore!");
