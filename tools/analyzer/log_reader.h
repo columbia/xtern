@@ -4,6 +4,9 @@
 //#include "tern/syncfuncs.h"
 #include <vector>
 #include <string>
+#include <cstring>
+#include <deque>
+#include <stdint.h>
 
 namespace tern
 {
@@ -28,6 +31,7 @@ public:
   virtual unsigned get_op() = 0; 
   virtual unsigned get_turn() = 0; 
   virtual int get_int(int idx) = 0;
+  virtual int64_t get_int64(int idx) = 0;
   virtual const char * get_str(int idx) = 0;
   virtual record_t get_current_rec() = 0;
 };
@@ -47,6 +51,7 @@ public:
   virtual unsigned get_op(); 
   virtual unsigned get_turn();
   virtual int get_int(int idx);
+  virtual int64_t get_int64(int idx);
   virtual const char * get_str(int idx);
   virtual record_t get_current_rec() { return cur_rec; }
 

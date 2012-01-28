@@ -34,7 +34,8 @@ void TxtLogger::logSync(unsigned insid, unsigned short sync,
   
   if(!syncfunc::isSync(sync))
   {
-    if (sync == syncfunc::tern_thread_begin)    //  for tests, i need to know the thread_mapping
+    if (sync == syncfunc::tern_thread_begin
+      || sync == syncfunc::tern_thread_end)    //  for tests, i need to know the thread_mapping
     {
       va_list args;
       va_start(args, after);

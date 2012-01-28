@@ -25,18 +25,39 @@ struct op_t
   int tid;
   string get_string(int idx)
   {
+    ++idx;
     if (idx >= 0 && idx < (int) rec.args.size())
       return rec.args[idx];
     else
       return "";
   }
+#define cur_rec rec
   int get_int(int idx)
   {
-    if (idx >= 0 && idx < (int) rec.args.size())
-      return atoi(rec.args[idx].c_str());
+    ++idx;
+    if (idx >= 0 && idx < (int) cur_rec.args.size())
+    {
+      unsigned int x;
+      sscanf(cur_rec.args[idx].c_str(), "%x", &x);
+      return x; 
+    }
     else
       return -1;
   }
+
+  int64_t get_int64(int idx)
+  {
+    ++idx;
+    if (idx >= 0 && idx < (int) cur_rec.args.size())
+    {
+      uint64_t x;
+      sscanf(cur_rec.args[idx].c_str(), "%lx", &x);
+      return x; 
+    }
+    else
+      return -1;
+  }
+#undef cur_rec
 };
 
 int getdir (string dir, vector<string> &files)
@@ -178,18 +199,7 @@ void build_barrier_hb(vector<op_t> &ops, vector<vector<int> > &hb_arrow)
       barrier_status[barrier].destroy(ops[i].tid, i, hb_arrow[i]);
       break;
     }
-//    case syncfunc::pthread_mutex_lock:
-//    case syncfunc::pthread_mutex_unlock:
-//    case syncfunc::pthread_cond_signal:
-//    case syncfunc::pthread_cond_broadcast:
-//    case syncfunc::sem_wait:
-//    case syncfunc::sem_timedwait:
-//    case syncfunc::sem_post:
-//    case syncfunc::pthread_cond_wait:
-//    case syncfunc::pthread_cond_timedwait:
-//    case syncfunc::pthread_mutex_trylock:
-//    case syncfunc::sem_trywait:
-//    case syncfunc::pthread_create:
+
     default:
       // skip it, not my work
       break;
@@ -202,11 +212,51 @@ void build_create_hb(vector<op_t> &ops, vector<vector<int> > &hb_arrow)
   printf("start building create partial order\n\n");
   int n = ops.size();
 
+  typedef pair<int, int64_t> tid_pair;
+  map<tid_pair, int> create_op;
+  map<tid_pair, int> end_op;
+  set<tid_pair> thread_pool;
+
+  bool main_thread = true;
+
   for (int i = 0; i < n;++i)
   {
     switch (ops[i].rec.op)
     {
     case syncfunc::pthread_create:
+    {
+      tid_pair child = make_pair(ops[i].pid, ops[i].get_int64(0));
+      assert(create_op.find(child)  == create_op.end());
+      create_op[child] = i;
+      break;
+    }
+    case syncfunc::pthread_join:
+    {
+      tid_pair child = make_pair(ops[i].pid, ops[i].get_int64(0));
+      assert(end_op.find(child)  != end_op.end());
+      hb_arrow[i].push_back(end_op[child]);
+      end_op.erase(child);
+      break;
+    }
+    case syncfunc::tern_thread_end:
+    {
+      tid_pair me = make_pair(ops[i].pid, ops[i].get_int64(0));
+      assert(end_op.find(me) == end_op.end());
+      end_op[me] = i;
+      break;
+    }
+    case syncfunc::tern_thread_begin:
+    {
+      tid_pair me = make_pair(ops[i].pid, ops[i].get_int64(0));
+      if (!main_thread)
+      {
+        assert(create_op.find(me) != create_op.end());
+        hb_arrow[i].push_back(create_op[me]);
+        create_op.erase(me);
+      } else
+        main_thread = false;
+      break;
+    }
     default:
       // skip it, not my work
       break;
@@ -214,11 +264,262 @@ void build_create_hb(vector<op_t> &ops, vector<vector<int> > &hb_arrow)
   }
 }
 
+struct mutex_logic
+{
+  typedef pair<int, int64_t> sig_type;
+  map<sig_type, int> unlock_op;
+  map<sig_type, int> lock_op;
+  map<sig_type, vector<int> > trylock_op;
+  map<sig_type, int> status; 
+  enum { LOCK, UNLOCK };
+#define def_sig sig_type sig = make_pair(pid, mutex);
+  void lock(int pid, int tid, int64_t mutex, int idx, vector<int> &hb)
+  {
+    def_sig;
+    assert(status.find(sig) == status.end() || status[sig] == UNLOCK); 
+    assert(lock_op.find(sig) == lock_op.end());
+
+    if (unlock_op.find(sig) != unlock_op.end())
+    {
+      hb.push_back(unlock_op[sig]);
+      unlock_op.erase(sig);
+    }
+    lock_op[sig] = idx;
+    status[sig] = LOCK;
+    trylock_op[sig].clear();
+  }
+
+  void trylock(int pid, int tid, int64_t mutex, int idx, vector<int> &hb)
+  {
+    def_sig;
+    if (status.find(sig) == status.end() || status[sig] == UNLOCK)
+    {
+      //  successful lock
+      lock(pid, tid, mutex, idx, hb); 
+    } else
+    {
+      //  unsuccessful lock
+      assert(lock_op.find(sig) != lock_op.end());
+      hb.push_back(lock_op[sig]); 
+      trylock_op[sig].push_back(idx);
+    }
+  }
+
+  void unlock(int pid, int tid, int64_t mutex, int idx, vector<int> &hb)
+  {
+    def_sig;
+    assert(status.find(sig) != status.end() || status[sig] == LOCK); 
+    assert(unlock_op.find(sig) == unlock_op.end());
+    assert(lock_op.find(sig) != lock_op.end());
+
+    for (vector<int>::iterator it = trylock_op[sig].begin(); it != trylock_op[sig].end(); ++it)
+      hb.push_back(*it);
+
+    lock_op.erase(sig);
+    unlock_op[sig] = idx;
+    status[sig] = UNLOCK;
+    trylock_op[sig].clear();
+  }
+#undef def_sig
+};
+
+struct cond_logic
+{
+  typedef pair<int, int64_t> sig_type;
+  map<sig_type, int> signal_op;
+  map<sig_type, int> broadcast_op;
+  typedef pair<int, int> tid_pair; 
+  map<sig_type, map<tid_pair, int> > wakeup_set;
+  map<sig_type, map<tid_pair, int> > waiting_set;
+  //  FIXME mutex not considered here.
+#define def_sig sig_type sig = make_pair(pid, cond);
+  void signal(int pid, int tid, int64_t cond, int idx, vector<int> &hb)
+  {
+    def_sig;
+    signal_op[sig] = idx;
+  }
+
+  void broadcast(int pid, int tid, int64_t cond, int idx, vector<int> &hb)
+  {
+    def_sig;
+    map<tid_pair, int> &ws = waiting_set[sig];
+    map<tid_pair, int> &wake = wakeup_set[sig];
+    for (map<tid_pair, int>::iterator it = ws.begin(); it != ws.end(); ++it)
+    {
+      hb.push_back(it->second);
+      wake[it->first] = idx;
+    }
+    ws.clear();
+  }
+
+  void wait_first(int pid, int tid, int64_t cond, int idx, vector<int> &hb)
+  {
+    def_sig;
+    map<tid_pair, int> &ws = waiting_set[sig];
+    ws[make_pair(pid, tid)] = idx;
+  }
+
+  void wait_second(int pid, int tid, int64_t cond, int idx, vector<int> &hb)
+  {
+    def_sig;
+    tid_pair tp = make_pair(pid, tid);
+    map<tid_pair, int> &wake = wakeup_set[sig];
+    map<tid_pair, int> &ws = waiting_set[sig];
+    if (wake.find(tp) == wake.end())
+    {
+      //  wakeup by signal
+      assert(signal_op.find(sig) != signal_op.end());
+      assert(ws.find(tp) != ws.end());
+      hb.push_back(signal_op[sig]);
+      signal_op.erase(sig);
+      ws.erase(tp);
+    } else
+    {
+      //  wakeup by broadcast
+      hb.push_back(wake[tp]);
+      wake.erase(tp);
+    }
+  }
+
+#undef def_sig
+};
+
 void build_mutex_hb(vector<op_t> &ops, vector<vector<int> > &hb_arrow)
 {
   printf("start building mutex partial order\n\n");
   int n = ops.size();
+  cond_logic cl;
+  mutex_logic ml;
+  typedef pair<int, int> tid_pair;
+  set<tid_pair> cond_wait_flag;
+  for (int i = 0; i < n;++i)
+  {
+    tid_pair tp = make_pair(ops[i].pid, ops[i].tid);
+    switch (ops[i].rec.op)
+    {
+    case syncfunc::pthread_mutex_lock:
+    {
+      ml.lock(ops[i].pid, ops[i].tid, ops[i].get_int64(0), i, hb_arrow[i]);
+      break;
+    }
+    case syncfunc::pthread_mutex_unlock:
+    {
+      ml.unlock(ops[i].pid, ops[i].tid, ops[i].get_int64(0), i, hb_arrow[i]);
+      break;
+    }
+    case syncfunc::pthread_mutex_trylock:
+    {
+      ml.trylock(ops[i].pid, ops[i].tid, ops[i].get_int64(0), i, hb_arrow[i]);
+      break;
+    }
+    case syncfunc::pthread_cond_signal:
+    {
+      //  ops[i].get_int64(1) is mutex
+      cl.signal(ops[i].pid, ops[i].tid, ops[i].get_int64(0), i, hb_arrow[i]);
+      break;
+    }
+    case syncfunc::pthread_cond_broadcast:
+    {
+      //  ops[i].get_int64(1) is mutex
+      cl.broadcast(ops[i].pid, ops[i].tid, ops[i].get_int64(0), i, hb_arrow[i]);
+      break;
+    }
+    case syncfunc::pthread_cond_wait:
+    {
+      if (cond_wait_flag.find(tp) == cond_wait_flag.end())
+      {
+        //  cond_wait_first
+        cond_wait_flag.insert(tp);
+        
+        //  cond_wait_first is treated as a mutex_unlock
+        ml.unlock(ops[i].pid, ops[i].tid, ops[i].get_int64(1), i, hb_arrow[i]);
+        cl.wait_first(ops[i].pid, ops[i].tid, ops[i].get_int64(0), i, hb_arrow[i]);
+      } else
+      {
+        //  cond_wait_second
+        cond_wait_flag.erase(tp);
+
+        //  cond_wait_first is treated as a mutex_lock and a cond_wait
+        ml.lock(ops[i].pid, ops[i].tid, ops[i].get_int64(1), i, hb_arrow[i]);
+        cl.wait_second(ops[i].pid, ops[i].tid, ops[i].get_int64(0), i, hb_arrow[i]);
+      }
+      break;
+    }
+    case syncfunc::pthread_cond_timedwait:
+    {
+      assert(false && "cond_timedwait not handled yet.");
+      break;
+    }
+    default:
+      //  skip it, not my work
+      break;
+    }
+  }
 }
+
+struct sem_logic : public mutex_logic
+{
+#define def_sig sig_type sig = make_pair(pid, sem);
+  void wait(int pid, int tid, int64_t sem, int idx, vector<int> &hb)
+  {
+    lock(pid, tid, sem, idx, hb);
+  }
+
+  void post(int pid, int tid, int64_t sem, int idx, vector<int> &hb)
+  {
+    def_sig;
+    status[sig] = LOCK;
+    lock_op[sig] = idx; //  push arbitrary value
+    unlock(pid, tid, sem, idx, hb);
+  }
+
+  void trywait(int pid, int tid, int64_t sem, int idx, vector<int> &hb)
+  {
+    trylock(pid, tid, sem, idx, hb);
+  }
+#undef def_sig
+};
+
+void build_sem_hb(vector<op_t> &ops, vector<vector<int> > &hb_arrow)
+{
+  printf("start building semaphore partial order\n\n");
+  int n = ops.size();
+  sem_logic sl;
+  for (int i = 0; i < n;++i)
+  {
+    switch (ops[i].rec.op)
+    {
+    case syncfunc::sem_wait:
+    {
+      //  ops[i].get_int64(1) is mutex
+      sl.wait(ops[i].pid, ops[i].tid, ops[i].get_int64(0), i, hb_arrow[i]);
+      break;
+    }
+    case syncfunc::sem_timedwait:
+    {
+      assert(false && "sem_timewait not handled yet.");
+      break;
+    }
+    case syncfunc::sem_post:
+    {
+      sl.post(ops[i].pid, ops[i].tid, ops[i].get_int64(0), i, hb_arrow[i]);
+      break;
+    }
+    case syncfunc::sem_trywait:
+    {
+      sl.trywait(ops[i].pid, ops[i].tid, ops[i].get_int64(0), i, hb_arrow[i]);
+      break;
+    }
+    default:
+      //  skip it, not my job.
+      break;
+    }
+  }
+}
+
+#define OUF stderr
+#include "printer.xx"
+#undef OUF
 
 void analyze(vector<op_t> &ops)
 {
@@ -241,6 +542,9 @@ void analyze(vector<op_t> &ops)
   build_barrier_hb(ops, hb_arrow);
   build_create_hb(ops, hb_arrow);
   build_mutex_hb(ops, hb_arrow);
+  build_sem_hb(ops, hb_arrow);
+
+  print_trace(ops, hb_arrow);
 }
 
 int main(int argc, char *argv[])
