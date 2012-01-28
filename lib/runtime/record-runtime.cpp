@@ -1110,9 +1110,59 @@ int RecorderRT<_S>::__sigwait(unsigned ins, const sigset_t *set, int *sig)
   return ret;
 }
 
+
+// TODO: right now we treat sleep functions just as a turn; should convert
+// real time to logical time
+template <typename _S>
+unsigned int RecorderRT<_S>::sleep(unsigned ins, unsigned int seconds)
+{
+  _S::getTurn();
+  _S::incTurnCount();
+  _S::putTurn();
+  return 0;
+}
+
+template <typename _S>
+int RecorderRT<_S>::usleep(unsigned ins, useconds_t usec)
+{
+  _S::getTurn();
+  _S::incTurnCount();
+  _S::putTurn();
+  return 0;
+}
+
+template <typename _S>
+int RecorderRT<_S>::nanosleep(unsigned ins,
+                                         const struct timespec *req,
+                                         struct timespec *rem)
+{
+  _S::getTurn();
+  _S::incTurnCount();
+  _S::putTurn();
+  return 0;
+}
+
+template <>
+unsigned int RecorderRT<FCFSScheduler>::sleep(unsigned ins, unsigned int seconds)
+{
+  typedef Runtime _P;
+  return _P::sleep(ins, seconds);
+}
+
+template <>
+int RecorderRT<FCFSScheduler>::usleep(unsigned ins, useconds_t usec)
+{
+  typedef Runtime _P;
+  return _P::usleep(ins, usec);
+}
+
+template <>
+int RecorderRT<FCFSScheduler>::nanosleep(unsigned ins,
+                                         const struct timespec *req,
+                                         struct timespec *rem)
+{
+  typedef Runtime _P;
+  return _P::nanosleep(ins, req, rem);
+}
+
 } // namespace tern
-
-
-
-
-
