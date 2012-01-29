@@ -985,6 +985,9 @@ ssize_t RecorderRT<_S>::__sendmsg(unsigned ins, int sockfd, const struct msghdr 
 template <typename _S>
 ssize_t RecorderRT<_S>::__recv(unsigned ins, int sockfd, void *buf, size_t len, int flags)
 {
+  if (!options::schedule_network)
+    return Runtime::__recv(ins, sockfd, buf, len, flags);
+
   _S::block();  
 
   ssize_t ret = Runtime::__recv(ins, sockfd, buf, len, flags);
@@ -1001,6 +1004,9 @@ ssize_t RecorderRT<_S>::__recv(unsigned ins, int sockfd, void *buf, size_t len, 
 template <typename _S>
 ssize_t RecorderRT<_S>::__recvfrom(unsigned ins, int sockfd, void *buf, size_t len, int flags, struct sockaddr *src_addr, socklen_t *addrlen)
 {
+  if (!options::schedule_network)
+    return Runtime::__recvfrom(ins, sockfd, buf, len, flags, src_addr, addrlen);
+
   _S::block();
   ssize_t ret = Runtime::__recvfrom(ins, sockfd, buf, len, flags, src_addr, addrlen);
   //output() << "recvfrom_wakeup";
@@ -1015,6 +1021,9 @@ ssize_t RecorderRT<_S>::__recvfrom(unsigned ins, int sockfd, void *buf, size_t l
 template <typename _S>
 ssize_t RecorderRT<_S>::__recvmsg(unsigned ins, int sockfd, struct msghdr *msg, int flags)
 {
+  if (!options::schedule_network)
+    return __recvmsg(ins, sockfd, msg, flags);
+
   _S::block();
   ssize_t ret = Runtime::__recvmsg(ins, sockfd, msg, flags);
   //output() << "recvmsg_wakeup";
@@ -1059,6 +1068,9 @@ int RecorderRT<_S>::__close(unsigned ins, int fd)
 template <typename _S>
 ssize_t RecorderRT<_S>::__read(unsigned ins, int fd, void *buf, size_t count)
 {
+  if (!options::schedule_network)
+    return Runtime::__read(ins, fd, buf, count);
+
   _S::block();
   ssize_t ret = Runtime::__read(ins, fd, buf, count);
   //output() << "read_wakeup";
@@ -1079,6 +1091,9 @@ ssize_t RecorderRT<_S>::__write(unsigned ins, int fd, const void *buf, size_t co
 template <typename _S>
 int RecorderRT<_S>::__select(unsigned ins, int nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds, struct timeval *timeout)
 {
+  if (!options::schedule_network)
+    return Runtime::__select(ins, nfds, readfds, writefds, exceptfds, timeout);
+
   _S::block();
   int ret = Runtime::__select(ins, nfds, readfds, writefds, exceptfds, timeout);
   //output() << "select_wakeup";
@@ -1093,6 +1108,9 @@ int RecorderRT<_S>::__select(unsigned ins, int nfds, fd_set *readfds, fd_set *wr
 template <typename _S>
 int RecorderRT<_S>::__epoll_wait(unsigned ins, int epfd, struct epoll_event *events, int maxevents, int timeout)
 {
+  if (!options::schedule_network)
+    return epoll_wait(epfd, events, maxevents, timeout);
+
   _S::block();
   int ret = epoll_wait(epfd, events, maxevents, timeout);
   _S::set_op("epoll_wait");
@@ -1103,6 +1121,9 @@ int RecorderRT<_S>::__epoll_wait(unsigned ins, int epfd, struct epoll_event *eve
 template <typename _S>
 int RecorderRT<_S>::__sigwait(unsigned ins, const sigset_t *set, int *sig)
 {
+  if (!options::schedule_network)
+    return sigwait(set, sig); 
+
   _S::block();
   int ret = sigwait(set, sig); 
   _S::set_op("sigwait");

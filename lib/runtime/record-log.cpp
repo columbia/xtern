@@ -45,6 +45,7 @@ void TxtLogger::logSync(unsigned insid, unsigned short sync,
           << hex << " 0x" << va_arg(args, uint64_t) << dec;
       va_end(args);
       ouf << "\n";
+      ouf.flush();
     }
     return;
   }
@@ -115,6 +116,7 @@ void TxtLogger::logSync(unsigned insid, unsigned short sync,
   }
   va_end(args);
   ouf << "\n";
+  ouf.flush();
 }
 
 TxtLogger::TxtLogger(int thid) {
