@@ -1,8 +1,29 @@
+# This configuration file is used to generate options.h and options.cpp.
+# Execute lib/common/get_opt.pl to obtain the options codes like:
+#   get_opt.pl <default.options path> <options.h directory path> <options.cpp path>
+# 
+# In the runtime, a dump.options will be generated to backup options.
+# Also, you can create a local.options file to modify the options value
+# at runtime.
+
+# determine whether DMT system is turned on or not. 
 DMT = 1
+
+# determine network operations (including blocking functions) are hooked or not. 
 schedule_network  = 1
 
+# the runtime scheduler algorithm, options are:
+# 1.  FCFS    first come first serve
+# 2.  RR      round-robin
 runtime_type = RR
-scheduler_seed = 0x12345 # seed for seeded round-robin scheduler
-log_type = txt      # bin: binary log of instructions
-                    # txt: text log of synchronizations
-output_dir = ./out  # default output directory
+
+# seed for seeded round-robin scheduler
+scheduler_seed = 0x12345 
+
+# determine the output log format, options are:
+# 1.  bin     binary log of instructions
+# 2.  txt     text log of synchronizations
+log_type = txt      
+
+# default output directory                   
+output_dir = ./out 
