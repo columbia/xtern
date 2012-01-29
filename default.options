@@ -30,3 +30,6 @@ output_dir = ./out
 
 # if turned on, RR scheduler will skip thread which is blocked.
 RR_skip_zombie = 1
+
+# define the timeout threshold to skip as zombie thread in RR, in ms
+RR_skip_threshold = 100

@@ -29,7 +29,7 @@ static void *monitor(void *arg)
   RRSchedulerCV * sched = (RRSchedulerCV*) arg;
   while (true)
   {
-    usleep(100 * 1000);
+    usleep(options::RR_skip_threshold * 1000);
     //fprintf(stderr, "checking zombie\n");
     sched->check_zombie();
   }
