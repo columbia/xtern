@@ -32,19 +32,15 @@ extern "C" void FUNC_NAME(ARGS_WITH_NAME){
 #endif
 
 #ifdef PRINT_DEBUG
-	fprintf(stderr, "%04d: FUNC_NAME is hooked.\n", (int) pthread_self());
+	fprintf(stdout, "%04d: FUNC_NAME is hooked.\n", (int) pthread_self());
 #endif
-    return;
   } else
 #else
-#ifdef PRINT_DEBUG
-	fprintf(stderr, "%04d: FUNC_NAME is hooked.\n", (int) pthread_self());
-#endif
 #endif
   	orig_func(ARGS_ONLY_NAME);
 
 #ifdef PRINT_DEBUG
-	fprintf(stderr, "%04d: FUNC_NAME is hooked.\n", (int) pthread_self());
+	fprintf(stdout, "%04d: FUNC_NAME is hooked.\n", (int) pthread_self());
 #endif
 }
 #endif

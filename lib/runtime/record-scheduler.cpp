@@ -8,6 +8,7 @@
 #include <vector>
 #include <cstdio>
 #include <stdlib.h>
+#include <cstring>
 #include "tern/options.h"
 
 using namespace std;
@@ -23,6 +24,49 @@ using namespace tern;
 #  define dprintf(fmt...)
 #endif
 
+static void *monitor(void *arg)
+{
+  RRSchedulerCV * sched = (RRSchedulerCV*) arg;
+  while (true)
+  {
+    usleep(100 * 1000);
+    //fprintf(stderr, "checking zombie\n");
+    sched->check_zombie();
+  }
+  return 0;
+}
+
+void RRSchedulerCV::check_zombie(void)
+{
+/*
+ *  Each thread will update its timemark whenever getTurn or wakeup from wait,
+ *  so that the value of timemark can be used to determine whether a thread has
+ *  been in zombie state for a while.
+ *
+ *  If a thread is in zombie state, we simply skip its turn for once.
+ */
+  pthread_mutex_lock(&lock);
+  int n = runq.size();
+  while (n--)
+  {
+    int tid = runq.front();
+    if (timemark[tid] == timer)
+      break;
+    runq.pop_front();
+    runq.push_back(tid);
+    //fprintf(stderr, "we skipped %d\n", tid);
+    SELFCHECK;
+  }
+  ++timer;
+
+  if(!runq.empty()) {
+    int tid = runq.front();
+    pthread_cond_signal(&waitcv[tid]);
+  }
+
+  pthread_mutex_unlock(&lock);
+}
+
 void RRSchedulerCV::threadEnd(pthread_t self_th) {
   assert(self() == runq.front());
 
@@ -35,6 +79,7 @@ void RRSchedulerCV::threadEnd(pthread_t self_th) {
 
 RRSchedulerCV::~RRSchedulerCV()
 {
+  //if (monitor_th) { pthread_cancel(monitor_th); monitor_th = 0; }
   pthread_cond_destroy(&replaycv);
   pthread_cond_destroy(&tickcv);
   if (log)
@@ -91,6 +136,13 @@ RRSchedulerCV::RRSchedulerCV(pthread_t main_th): Parent(main_th) {
     fclose(fin);
   }
 #endif
+  if (options::RR_skip_zombie)
+  {
+    timer = 0;
+    memset(timemark, 0, sizeof(timemark));
+    pthread_create(&monitor_th, NULL, monitor, this);
+  } else
+    monitor_th = 0;
 }
 
 /// check if current thread is head of runq; otherwise, wait on the cond
@@ -98,6 +150,7 @@ RRSchedulerCV::RRSchedulerCV(pthread_t main_th): Parent(main_th) {
 /// this->lock
 void RRSchedulerCV::getTurnHelper(bool doLock, bool doUnlock) {
   int tid = self();
+  timemark[tid] = timer;
 
   if(doLock)
     pthread_mutex_lock(&lock);
@@ -113,6 +166,7 @@ void RRSchedulerCV::getTurnHelper(bool doLock, bool doUnlock) {
       pthread_cond_wait(&waitcv[tid], &lock);
     else 
       break;
+    timemark[tid] = timer;
   }
 
   SELFCHECK;
@@ -146,6 +200,8 @@ void RRSchedulerCV::waitHelper(void *chan, bool doLock, bool doUnlock) {
   int tid = self();
   while(waitvar[tid])
     pthread_cond_wait(&waitcv[tid], &lock);
+
+  timemark[tid] = timer;
 
   dprintf("RRSchedulerCV: %d: wake up from %p\n", self(), chan);
 
@@ -215,6 +271,7 @@ void RRSchedulerCV::signalHelper(void *chan, bool all,
       waitvar[tid] = NULL;
       waitq.erase(prv);
       runq.push_back(tid);
+      timemark[tid] = timer;
       pthread_cond_signal(&waitcv[tid]);
       dprintf("RRSchedulerCV: %d: signaled %d(%p)\n", self(), tid, chan);
       if(!all)

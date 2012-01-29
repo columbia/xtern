@@ -27,3 +27,6 @@ log_type = txt
 
 # default output directory                   
 output_dir = ./out 
+
+# if turned on, RR scheduler will skip thread which is blocked.
+RR_skip_zombie = 1

@@ -256,6 +256,8 @@ struct RRSchedulerCV: public Scheduler {
   RRSchedulerCV(pthread_t main_th);
   ~RRSchedulerCV();
 
+  void check_zombie();
+
 protected:
 
   /// same as getTurn but acquires or releases the scheduler lock based on
@@ -291,6 +293,9 @@ protected:
   pthread_cond_t replaycv;
   pthread_cond_t tickcv;
   FILE *log;
+  pthread_t monitor_th;
+  int timemark[MaxThreads];
+  int timer;
   
   // TODO: can potentially create a thread-local struct for each thread if
   // it improves performance

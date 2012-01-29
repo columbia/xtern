@@ -38,7 +38,7 @@ runtests: test
 
 test_aget:
 	rm -rf out
-	LD_PRELOAD=$(XTERN_ROOT)/dync_hook/interpose.so ./aget -f -n 8 http://www.cs.columbia.edu/~huayang/files/llg++
+	LD_PRELOAD=$(XTERN_ROOT)/dync_hook/interpose.so ./aget -f -n 8 http://www.cs.columbia.edu/~huayang/files/demeter.pdf
 
 fft:
 	rm -rf out
