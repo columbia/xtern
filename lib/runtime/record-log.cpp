@@ -78,7 +78,6 @@ void TxtLogger::logSync(unsigned insid, unsigned short sync,
 
     // log two sync vars for cond_*wait
   case syncfunc::pthread_cond_wait:
-  case syncfunc::pthread_cond_timedwait:
   case syncfunc::pthread_barrier_init:
   case syncfunc::pthread_create:
   case syncfunc::pthread_mutex_trylock:
@@ -91,6 +90,21 @@ void TxtLogger::logSync(unsigned insid, unsigned short sync,
     ouf << hex
         << " 0x" << a
         << " 0x" << b
+        << dec;
+    }
+    break;
+    // log three sync vars
+  case syncfunc::pthread_cond_timedwait:
+    {
+      //  notice "<<" operator is explained from right to left.
+      uint64_t a = va_arg(args, uint64_t);
+      uint64_t b = va_arg(args, uint64_t);
+      uint64_t c = va_arg(args, uint64_t);
+
+    ouf << hex
+        << " 0x" << a
+        << " 0x" << b
+        << " 0x" << c
         << dec;
     }
     break;

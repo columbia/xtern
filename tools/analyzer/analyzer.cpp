@@ -217,7 +217,7 @@ void build_create_hb(vector<op_t> &ops, vector<vector<int> > &hb_arrow)
   map<tid_pair, int> end_op;
   set<tid_pair> thread_pool;
 
-  bool main_thread = true;
+  set<int> main_thread;
 
   for (int i = 0; i < n;++i)
   {
@@ -248,13 +248,13 @@ void build_create_hb(vector<op_t> &ops, vector<vector<int> > &hb_arrow)
     case syncfunc::tern_thread_begin:
     {
       tid_pair me = make_pair(ops[i].pid, ops[i].get_int64(0));
-      if (!main_thread)
+      if (main_thread.find(ops[i].pid) != main_thread.end())
       {
         assert(create_op.find(me) != create_op.end());
         hb_arrow[i].push_back(create_op[me]);
         create_op.erase(me);
       } else
-        main_thread = false;
+        main_thread.insert(ops[i].pid);
       break;
     }
     default:
@@ -331,6 +331,7 @@ struct cond_logic
   typedef pair<int, int> tid_pair; 
   map<sig_type, map<tid_pair, int> > wakeup_set;
   map<sig_type, map<tid_pair, int> > waiting_set;
+  map<sig_type, map<tid_pair, int> > failed_set;
   //  FIXME mutex not considered here.
 #define def_sig sig_type sig = make_pair(pid, cond);
   void signal(int pid, int tid, int64_t cond, int idx, vector<int> &hb)
@@ -344,6 +345,11 @@ struct cond_logic
     def_sig;
     map<tid_pair, int> &ws = waiting_set[sig];
     map<tid_pair, int> &wake = wakeup_set[sig];
+    map<tid_pair, int> &fs = failed_set[sig];
+
+    for (map<tid_pair, int>::iterator it = fs.begin(); it != fs.end(); ++it)
+      hb.push_back(it->second);
+
     for (map<tid_pair, int>::iterator it = ws.begin(); it != ws.end(); ++it)
     {
       hb.push_back(it->second);
@@ -379,6 +385,14 @@ struct cond_logic
       hb.push_back(wake[tp]);
       wake.erase(tp);
     }
+  }
+
+  void wait_failed(int pid, int tid, int64_t cond, int idx, vector<int> &hb)
+  {
+    def_sig;
+    tid_pair tp = make_pair(pid, tid);
+    map<tid_pair, int> &fs = failed_set[sig];
+    fs[tp] = idx;
   }
 
 #undef def_sig
@@ -447,7 +461,27 @@ void build_mutex_hb(vector<op_t> &ops, vector<vector<int> > &hb_arrow)
     }
     case syncfunc::pthread_cond_timedwait:
     {
-      assert(false && "cond_timedwait not handled yet.");
+      if (cond_wait_flag.find(tp) == cond_wait_flag.end())
+      {
+        //  cond_timedwait_first
+        cond_wait_flag.insert(tp);
+        
+        //  cond_wait_first is treated as a mutex_unlock
+        ml.unlock(ops[i].pid, ops[i].tid, ops[i].get_int64(1), i, hb_arrow[i]);
+        cl.wait_first(ops[i].pid, ops[i].tid, ops[i].get_int64(0), i, hb_arrow[i]);
+      } else
+      {
+        //  cond_timedwait_second
+        cond_wait_flag.erase(tp);
+
+        //  cond_wait_first is treated as a mutex_lock and a cond_wait
+        ml.lock(ops[i].pid, ops[i].tid, ops[i].get_int64(1), i, hb_arrow[i]);
+        int ret = ops[i].get_int(2);
+        if (!ret) //  success
+          cl.wait_second(ops[i].pid, ops[i].tid, ops[i].get_int64(0), i, hb_arrow[i]);
+        else
+          cl.wait_failed(ops[i].pid, ops[i].tid, ops[i].get_int64(0), i, hb_arrow[i]);
+      }
       break;
     }
     default:
