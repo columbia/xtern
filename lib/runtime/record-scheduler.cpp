@@ -46,11 +46,12 @@ void RRSchedulerCV::check_zombie(void)
  *  If a thread is in zombie state, we simply skip its turn for once.
  */
   pthread_mutex_lock(&lock);
+
   int n = runq.size();
   while (n--)
   {
     int tid = runq.front();
-    if (timemark[tid] == timer)
+    if (timemark[tid] == timer || timemark[tid] == -1)
       break;
     runq.pop_front();
     runq.push_back(tid);
@@ -150,7 +151,7 @@ RRSchedulerCV::RRSchedulerCV(pthread_t main_th): Parent(main_th) {
 /// this->lock
 void RRSchedulerCV::getTurnHelper(bool doLock, bool doUnlock) {
   int tid = self();
-  timemark[tid] = timer;
+  timemark[tid] = -1;
 
   if(doLock)
     pthread_mutex_lock(&lock);
@@ -166,7 +167,6 @@ void RRSchedulerCV::getTurnHelper(bool doLock, bool doUnlock) {
       pthread_cond_wait(&waitcv[tid], &lock);
     else 
       break;
-    timemark[tid] = timer;
   }
 
   SELFCHECK;
@@ -187,6 +187,8 @@ void RRSchedulerCV::putTurnHelper(bool doLock, bool doUnlock) {
   next();
   SELFCHECK;
 
+  timemark[self()] = timer;
+
   if(doUnlock)
     pthread_mutex_unlock(&lock);
 }
@@ -200,8 +202,6 @@ void RRSchedulerCV::waitHelper(void *chan, bool doLock, bool doUnlock) {
   int tid = self();
   while(waitvar[tid])
     pthread_cond_wait(&waitcv[tid], &lock);
-
-  timemark[tid] = timer;
 
   dprintf("RRSchedulerCV: %d: wake up from %p\n", self(), chan);
 
@@ -271,7 +271,6 @@ void RRSchedulerCV::signalHelper(void *chan, bool all,
       waitvar[tid] = NULL;
       waitq.erase(prv);
       runq.push_back(tid);
-      timemark[tid] = timer;
       pthread_cond_signal(&waitcv[tid]);
       dprintf("RRSchedulerCV: %d: signaled %d(%p)\n", self(), tid, chan);
       if(!all)

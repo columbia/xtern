@@ -197,6 +197,7 @@ struct RRSchedulerCV: public Scheduler {
     assert(self() == runq.front());
     Parent::threadCreate(new_th);
     runq.push_back(getTernTid(new_th));
+    timemark[getTernTid(new_th)] = -1;
   }
 
   void threadBegin(pthread_t self_th) {

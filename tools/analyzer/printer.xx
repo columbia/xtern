@@ -36,7 +36,7 @@ void print_trace(vector<op_t> &ops, vector<vector<int> > &hb_arrow)
   fprintf(OUF, "   ");
   for (tops_t::iterator it = thread_ops.begin(); it != thread_ops.end(); ++it)
   {
-    printf(" ");
+    fprintf(OUF, " ");
     sprintf(buffer, "(%d, %d)", it->first.first, it->first.second);
     print_item(buffer);
   }
