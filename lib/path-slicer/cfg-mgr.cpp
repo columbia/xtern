@@ -10,6 +10,10 @@ CfgMgr::CfgMgr(): ModulePass(&ID) {
   postDomCache.clear();
 }
 
+CfgMgr::~CfgMgr() {
+  
+}
+
 void CfgMgr::initStat(Stat *stat) {
   this->stat = stat;
 }

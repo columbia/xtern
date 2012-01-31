@@ -65,7 +65,7 @@ void PathSlicer::getAnalysisUsage(AnalysisUsage &AU) const {
 
 bool PathSlicer::runOnModule(Module &M) {
   init(M);
-  runPathSlicer(M);
+  //runPathSlicer(M);
   return false;
 }
 
@@ -125,16 +125,13 @@ void PathSlicer::init(llvm::Module &M) {
   }
 
   /* Init trace util. */
-  if (KLEE_RECORDING)
+  if (KLEE_RECORDING) {
     traceUtil = new KleeTraceUtil();
-  else if (XTERN_RECORDING)
+    ((KleeTraceUtil *)traceUtil)->initTrace(&trace);
+  } else if (XTERN_RECORDING)
     traceUtil = new XTernTraceUtil();
   else
     assert(false);
-}
-
-void PathSlicer::loadTrace() {
-  // play with traceUtil...
 }
 
 Module *PathSlicer::loadModule(const char *path) {
@@ -156,9 +153,12 @@ void PathSlicer::enforceRacyEdges() {
   // Enforce all racy edges, and split new regions.
 }
 
-void PathSlicer::runPathSlicer(Module &M) {
-  // Load trace.
-  loadTrace();
+void PathSlicer::record(void *instr, void *state, void *f) {
+  traceUtil->record(instr, state, f);
+}
+
+
+void PathSlicer::runPathSlicer(set<BranchInst *> &brInstrs) {
   assert(trace.size() > 0);
   
   // Enforce racy edges.
@@ -205,6 +205,10 @@ bool PathSlicer::isInternalCall(DynInstr *dynInstr) {
 bool PathSlicer::isInternalFunction(const Function *f) {
   // TBD: If the called function is a function pointer, would "f" be NULL?
   return !f->isDeclaration() && internalFunctions.count(f) > 0;
+}
+
+void PathSlicer::calStat() {
+  
 }
 
 

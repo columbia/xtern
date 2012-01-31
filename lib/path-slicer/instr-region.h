@@ -19,6 +19,7 @@
 */
 
 namespace tern {
+  class RWSet;
   class InstrRegion {
   private:
     /* A complete trace. */
@@ -39,16 +40,11 @@ namespace tern {
 
     /* Exclusive (if it is not thread/process exits) total order of the starting sync event. */    
     int endSyncId;
-
-    /* All the taken dynamic instructions in slicing.
-        TODO: Probably we can make the string to be only a char pointer, which could save 
-        much memory. */
-    llvm::DenseMap<DynInstr *, const char *> takenInstrs;
     
     /* We need to have per instr region cache for read write set, this is because the read write
     set of each instr region can be different. */
-    RWSet readSet;
-    RWSet writeSet;
+    //RWSet readSet;
+    //RWSet writeSet;
 
   protected:
 
@@ -62,9 +58,6 @@ namespace tern {
     void addDynInstr(DynInstr *dynInstr);
     static bool isConcurrent(InstrRegion *region1, InstrRegion *region2);
     bool happensBefore(InstrRegion *region);
-    void setTaken(DynInstr *dynInstr, bool isTaken,
-      const char *reason = NOT_TAKEN_INSTR);
-    bool isTaken(DynInstr *dynInstr);
     void setBrIncomeIdx(DynInstr *dynInstr, int index);
     int getBrIncomeIdx(DynInstr *dynInstr);
     void setChildTid(DynInstr *dynInstr, int childTid);

@@ -3,32 +3,32 @@ using namespace tern;
 
 bool Util::isPHI(DynInstr *dynInstr) {
   Instruction *instr = dynInstr->getOrigInstr();
-  return instr->getOpcode() == Instruction::PHI;
+  return isPHI(instr);
 }
 
 bool Util::isBr(DynInstr *dynInstr) {
   Instruction *instr = dynInstr->getOrigInstr();
-  return instr->getOpcode() == Instruction::Br;
+  return isBr(instr);
 }
 
 bool Util::isRet(DynInstr *dynInstr) {
   Instruction *instr = dynInstr->getOrigInstr();
-  return instr->getOpcode() == Instruction::Ret;
+  return isRet(instr);
 }
 
 bool Util::isCall(DynInstr *dynInstr) {
   Instruction *instr = dynInstr->getOrigInstr();
-  return instr->getOpcode() == Instruction::Call;
+  return isCall(instr);
 }
 
 bool Util::isLoad(DynInstr *dynInstr) {
   Instruction *instr = dynInstr->getOrigInstr();
-  return instr->getOpcode() == Instruction::Load;
+  return isLoad(instr);
 }
 
 bool Util::isStore(DynInstr *dynInstr) {
   Instruction *instr = dynInstr->getOrigInstr();
-  return instr->getOpcode() == Instruction::Store;
+  return isStore(instr);
 }
 
 bool Util::isMem(DynInstr *dynInstr) {
@@ -51,8 +51,16 @@ const llvm::BasicBlock *Util::getBasicBlock(const llvm::Instruction *instr) {
   return instr->getParent();
 }
 
-bool Util::isCall(llvm::Instruction *instr) {
-  return isCall(instr);
+bool Util::isPHI(const llvm::Instruction *instr) {
+  return instr->getOpcode() == Instruction::PHI;
+}
+
+bool Util::isBr(const llvm::Instruction *instr) {
+  return instr->getOpcode() == Instruction::Br;
+}
+
+bool Util::isRet(const llvm::Instruction *instr) {
+  return instr->getOpcode() == Instruction::Ret;
 }
 
 bool Util::isCall(const llvm::Instruction *instr) {
@@ -66,4 +74,9 @@ bool Util::isLoad(const llvm::Instruction *instr) {
 bool Util::isStore(const llvm::Instruction *instr) {
   return instr->getOpcode() == Instruction::Store;
 }
+
+bool Util::isMem(const llvm::Instruction *instr) {
+  return isLoad(instr) || isStore(instr);
+}
+
 

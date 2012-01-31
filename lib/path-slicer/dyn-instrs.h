@@ -41,6 +41,15 @@ namespace tern {
       TODO: MUST THINK OF A NICE WAY TO ELIMINATE THIS MEMORY TOO. */
     CallCtx *simCallingCtx;
 
+    /* The static instruction id from orig bc module. */
+    int instrId;
+
+    /* The xtern self-maintanied thread id. */
+    char tid;
+
+    /* Identify a dynamic instruction is taken or not; 0 is not taken; and !0 means taken reaons. */
+    unsigned char takenFlag;
+
   public:
     DynInstr();
     ~DynInstr();
@@ -76,10 +85,13 @@ namespace tern {
     std::set<int> *getSimInstrId();
 
     /* TBD */
-    void setTaken(bool isTaken, const char *reason = NOT_TAKEN_INSTR);
+    void setTaken(unsigned char takenFlag);
 
     /* TBD */
     bool isTaken();
+
+    /* TBD */
+    const char *takenReason();
 
     /* Whether an instruction is a slicing target already, currently it is the same as taken. */
     bool isTarget();

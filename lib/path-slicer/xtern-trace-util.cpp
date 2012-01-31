@@ -17,6 +17,6 @@ void XTernTraceUtil::store(const char *tracePath) {
 
 }
 
-void XTernTraceUtil::record(void *instr, void *state) {
+void XTernTraceUtil::record(void *instr, void *state, void *f) {
   
 }

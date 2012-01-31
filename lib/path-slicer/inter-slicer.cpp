@@ -14,3 +14,7 @@ InterSlicer::~InterSlicer() {
 
 }
 
+void InterSlicer::detectInputDepRaces(InstrRegions *instrRegions) {
+  // TBD.
+}
+

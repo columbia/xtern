@@ -23,10 +23,13 @@ namespace tern {
     static bool isStore(DynInstr *dynInstr);
     static bool isMem(DynInstr *dynInstr);
     
-    static bool isCall(llvm::Instruction *instr);
+    static bool isPHI(const llvm::Instruction *instr);
+    static bool isBr(const llvm::Instruction *instr);
+    static bool isRet(const llvm::Instruction *instr);
     static bool isCall(const llvm::Instruction *instr);
     static bool isLoad(const llvm::Instruction *instr);
     static bool isStore(const llvm::Instruction *instr);
+    static bool isMem(const llvm::Instruction *instr);
 
   };
 }

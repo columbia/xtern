@@ -9,12 +9,7 @@ InstrRegion::~InstrRegion() {
 
 }
 
-void InstrRegion::setTaken(DynInstr *dynInstr, bool isTaken, const char *reason) {
-  if (isTaken)
-    takenInstrs[dynInstr] = reason;
-}
-
-bool InstrRegion::isTaken(DynInstr *dynInstr) {
-  return DM_IN(dynInstr, takenInstrs);
+Instruction *InstrRegion::getOrigInstr(DynInstr *dynInstr) {
+  return NULL;  
 }
 

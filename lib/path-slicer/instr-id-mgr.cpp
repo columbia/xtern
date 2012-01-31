@@ -1,6 +1,8 @@
 #include "instr-id-mgr.h"
 using namespace tern;
 
+using namespace llvm;
+
 InstrIdMgr::InstrIdMgr() {
   origModule = mxModule = simModule = NULL;
   origIda = mxIda = simIda = NULL;
@@ -44,6 +46,10 @@ void InstrIdMgr::initModules(llvm::Module *origModule, llvm::Module *mxModule,
   } else
     simIda = NULL;
 
+}
+
+Instruction *InstrIdMgr::getMxInstr(const DynInstr *dynInstr) {
+  return NULL; // TBD.
 }
 
 Instruction *InstrIdMgr::getOrigInstr(int instrId) {

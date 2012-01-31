@@ -1,9 +1,21 @@
-#ifndef __TERN_PATH_SLICER_DBG_PRINT_H
-#define __TERN_PATH_SLICER_DBG_PRINT_H
+#ifndef __TERN_PATH_SLICER_MACROS_H
+#define __TERN_PATH_SLICER_MACROS_H
 
 #define DBG0 0 /* No dbg print. */
 #define DBG1 1 /* Dbg print everything. */
 #define DBG2 2 /* Dbg print only some important events. */
+
+#if __WORDSIZE == 64
+#define U64 "%lu"
+#define X64 "%lx"
+#define SZ "%lu"
+#define UU "%u"
+#else
+#define U64 "%llu"
+#define X64 "%llx"
+#define SZ "%u"
+#define UU "%u"
+#endif
 
 #include "options.h"
 #include "path_slicer-options.h"
@@ -24,19 +36,19 @@
 #define XTERN_RECORDING (get_option(tern_path_slicer, trace_util_type)==1)
 
 #define SIZE_T_INVALID (size_t(-1))
+#define U_NEG1 (unsigned(-1))
 #define ASSERT(stmt) if(get_option(tern_path_slicer,print_debug_info)!=DBG0)assert(stmt)
 
 #define CTX_SENSITIVE (get_option(tern_path_slicer, context_sensitive_ailas_query)==1)
 
 #include <ext/hash_set>
 #include <ext/hash_map>
-//#define HSET __gnu_cxx::hash_set
 #define HMAP __gnu_cxx::hash_map
 #define HM_IN(ELEM, SET) (SET.find(ELEM) != SET.end())
-//#define HS_IN(ELEM, SET) HM_IN(ELEM, SET)
 #define DM_IN(ELEM, SET) (SET.count(ELEM) > 0)
 #define DS_IN(ELEM, SET) DM_IN(ELEM, SET)
-#define NOT_TAKEN_INSTR "NOT TAKEN"
+
+#include "taken-flags.h"
 
 #endif
 

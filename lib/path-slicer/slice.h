@@ -16,7 +16,7 @@ namespace tern {
   public:
     Slice();
     ~Slice();
-    void add(DynInstr *dynInstr, const char *reason);
+    void add(DynInstr *dynInstr, unsigned char reason);
     void dump();
     size_t size();
     void clear();

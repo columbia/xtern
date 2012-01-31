@@ -49,7 +49,9 @@ namespace tern {
     void handleMem(DynInstr *dynInstr);
     bool empty();
     DynInstr *delTraceTail();
-    void takeNonMem(DynInstr *dynInstr);
+
+    /* TBD: all places using this function should indicate the specific taken reason. */
+    void takeNonMem(DynInstr *dynInstr, unsigned char reason = INTRA_NON_MEM);
     void delRegOverWritten(DynInstr *dynInstr);
     bool regOverWritten(DynInstr *dynInstr);
     bool retRegOverWritten(DynInstr *dynInstr);

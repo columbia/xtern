@@ -20,8 +20,8 @@ namespace tern {
     DynInstrVector recordedInstrs;
 
   public:
-    TraceUtil();
-    ~TraceUtil();
+    TraceUtil() {}
+    ~TraceUtil() {}
     
     /* Load all recorded instructions from the trace path to memory; loaded results are stored in
     to the trace vector. */
@@ -32,7 +32,7 @@ namespace tern {
 
     /* Record one dynamic instruction. The passed in pointer can be any type depending on
     recording targets (KLEE or xtern). */
-    virtual void record(void *instr, void *state) = 0;
+    virtual void record(void *instr, void *state, void *f) = 0;
   };
 }
 

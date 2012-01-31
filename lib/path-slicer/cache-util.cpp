@@ -9,6 +9,11 @@ CacheUtil::~CacheUtil() {
 
 }
 
+void CacheUtil::clear() {
+  mutualCache.clear();
+  singleCache.clear();
+}
+
 bool CacheUtil::in(long high1, long low1, long high2, long low2, bool 
   &cachedResult) {
 

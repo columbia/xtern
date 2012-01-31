@@ -15,7 +15,7 @@ namespace tern {
     ~XTernTraceUtil();
     virtual void load(const char *tracePath, DynInstrVector *trace);
     virtual void store(const char *tracePath);
-    virtual void record(void *instr, void *state);
+    virtual void record(void *instr, void *state, void *f);
   };
 }
 

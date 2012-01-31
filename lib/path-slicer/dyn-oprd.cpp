@@ -23,6 +23,10 @@ const llvm::Value *DynOprd::getStaticValue() {
   return NULL;
 }
 
+int DynOprd::getIndex() {
+  return oprdIndex;
+}
+
 bool DynOprd::isConstant() {
   const Value *v = getStaticValue();
   return isa<Constant>(v);

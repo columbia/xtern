@@ -6,6 +6,8 @@ using namespace tern;
 #include "bc2bdd/BddAliasAnalysis.h"
 using namespace repair;
 
+using namespace llvm;
+
 AliasMgr::AliasMgr() {
   origAaol = NULL;
   mxAaol = NULL;

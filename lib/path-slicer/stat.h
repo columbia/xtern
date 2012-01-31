@@ -32,7 +32,7 @@ namespace tern {
       intraSlicingTime = 0;
     }
 
-    ~Stat();
+    ~Stat() {}
     
     void printStat(const char *tag = NULL) {
       // TBD.

@@ -9,6 +9,9 @@ DynInstr::DynInstr() {
   index = SIZE_T_INVALID;
   callingCtx = NULL;
   simCallingCtx = NULL;
+  instrId = -1;
+  tid = -1;
+  takenFlag = -1;
 }
 
 DynInstr::~DynInstr() {
@@ -16,7 +19,7 @@ DynInstr::~DynInstr() {
 }
 
 int DynInstr::getTid() {
-  return region->getTid();
+  return tid;
 }
 
 void DynInstr::setIndex(size_t index) {
@@ -55,12 +58,17 @@ std::set<int> *DynInstr::getSimInstrId() {
   return NULL; // TBD
 }
 
-void DynInstr::setTaken(bool isTaken, const char *reason) {
-  region->setTaken(this, isTaken, reason);
+void DynInstr::setTaken(unsigned char takenFlag) {
+  this->takenFlag = takenFlag;
 }
 
 bool DynInstr::isTaken() {
-  return region->isTaken(this);
+  return takenFlag != NOT_TAKEN;
+}
+
+const char *DynInstr::takenReason() {
+  return NULL;
+  // TBD: ADD A GLOBAL ARRAY INDEXED WITH TAKEN FLAG WITH TAKEN REASON.
 }
 
 Instruction *DynInstr::getOrigInstr() {
@@ -68,11 +76,11 @@ Instruction *DynInstr::getOrigInstr() {
 }
 
 bool DynInstr::isTarget() {
-  return isTaken();
+  return isTaken() && takenFlag < INTRA_PHASE_BASE;
 }
 
 DynPHIInstr::DynPHIInstr() {
-
+  index = U_NEG1;
 }
 
 DynPHIInstr::~DynPHIInstr() {
@@ -96,7 +104,7 @@ DynBrInstr::~DynBrInstr() {
 }
 
 DynRetInstr::DynRetInstr() {
-
+  dynCallInstr = NULL;
 }
 
 DynRetInstr::~DynRetInstr() {
@@ -112,7 +120,7 @@ DynInstr *DynRetInstr::getDynCallInstr() {
 }
 
 DynCallInstr::DynCallInstr() {
-
+  calledFunc = NULL;
 }
 
 DynCallInstr::~DynCallInstr() {
@@ -128,7 +136,7 @@ llvm::Function *DynCallInstr::getCalledFunc() {
 }
 
 DynSpawnThreadInstr::DynSpawnThreadInstr() {
-
+  childTid = -1;
 }
 
 DynSpawnThreadInstr::~DynSpawnThreadInstr() {
@@ -144,7 +152,8 @@ int DynSpawnThreadInstr::getChildTid() {
 }
 
 DynMemInstr::DynMemInstr() {
-
+  conAddr = 0;
+  // DO NOT INIT SYMADDR YET.
 }
 
 DynMemInstr::~DynMemInstr() {

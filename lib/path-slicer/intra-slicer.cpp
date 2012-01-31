@@ -55,10 +55,10 @@ void IntraSlicer::init(PathSlicer *pathSlicer, const DynInstrVector *trace, size
   live.initAliasMgr(aliasMgr);
 }
 
-void IntraSlicer::takeNonMem(DynInstr *dynInstr) {
+void IntraSlicer::takeNonMem(DynInstr *dynInstr, unsigned char reason) {
   delRegOverWritten(dynInstr);
   live.addUsedRegs(dynInstr);
-  slice->add(dynInstr, __func__);
+  slice->add(dynInstr, reason);
 }
 
 void IntraSlicer::delRegOverWritten(DynInstr *dynInstr) {
@@ -106,9 +106,9 @@ void IntraSlicer::handlePHI(DynInstr *dynInstr) {
       live.addReg(&oprd);
     } else {
       DynInstr *prevInstr = prevDynInstr(phiInstr);
-      prevInstr->setTaken(true, __func__);
+      prevInstr->setTaken(INTRA_PHI_BR_CTRL_DEP);
     }
-    slice->add(phiInstr, __func__);
+    slice->add(phiInstr, INTRA_PHI);
   }
 }
 
@@ -132,12 +132,18 @@ void IntraSlicer::handleRet(DynInstr *dynInstr) {
   if (retRegOverWritten(retInstr)) {
     delRegOverWritten(retInstr);
     live.addUsedRegs(retInstr);
-    slice->add(retInstr, __func__);
-  } else if (mayCallEvent(retInstr, calledFunc) || 
-  mayWriteFunc(retInstr, calledFunc)) {
-    slice->add(retInstr, __func__);
+    slice->add(retInstr, INTRA_RET_REG_OW);
   } else {
-    removeRange(retInstr);
+    bool reason1 = mayCallEvent(retInstr, calledFunc);
+    bool reason2 = mayWriteFunc(retInstr, calledFunc);
+    if (reason1 && reason2)
+      slice->add(retInstr, INTRA_RET_BOTH);
+    else if (reason1 && !reason2)
+      slice->add(retInstr, INTRA_RET_CALL_EVENT);
+    else if (!reason1 && reason2)
+      slice->add(retInstr, INTRA_RET_WRITE_FUNC);
+    else
+      removeRange(retInstr);
   }
 }
 
@@ -158,12 +164,18 @@ void IntraSlicer::handleNonMem(DynInstr *dynInstr) {
 void IntraSlicer::handleMem(DynInstr *dynInstr) {
   if (Util::isLoad(dynInstr)) {
     DynMemInstr *loadInstr = (DynMemInstr*)dynInstr;
-    if (loadInstr->isTarget() || regOverWritten(loadInstr)) {
-      delRegOverWritten(loadInstr);
+    bool reason1 = loadInstr->isTarget();
+    bool reason2 = regOverWritten(loadInstr);
+    if (reason1 || reason2) {
+      if (reason2)
+        delRegOverWritten(loadInstr);
       DynOprd loadPtrOprd(loadInstr, 0);
       live.addReg(&loadPtrOprd);
       live.addLoadMem(loadInstr);
-      slice->add(loadInstr, __func__);
+      if (reason1 /* no matter whether reason2 is true */)
+        slice->add(loadInstr, INTER_LOAD_TGT);
+      else if (reason2)
+        slice->add(loadInstr, INTRA_LOAD_OW);
     }
   } else {
     DynMemInstr *storeInstr = (DynMemInstr*)dynInstr;
@@ -171,7 +183,7 @@ void IntraSlicer::handleMem(DynInstr *dynInstr) {
     DynOprd storePtrOprd(storeInstr, 1);
     if (storeInstr->isTarget()) {
       live.addReg(&storePtrOprd);
-      slice->add(storeInstr, __func__);
+      slice->add(storeInstr, INTER_STORE_TGT);
     }
     DenseSet<DynInstr *> loadInstrs = live.getAllLoadInstrs();
     DenseSet<DynInstr *>::iterator itr(loadInstrs.begin());
@@ -186,13 +198,13 @@ void IntraSlicer::handleMem(DynInstr *dynInstr) {
         live.addReg(&storeValue);
         if (!storeInstr->isTaken()) {
           live.addReg(&storePtrOprd);
-          slice->add(storeInstr, __func__);
+          slice->add(storeInstr, INTRA_STORE_OW);
         }
       } else if (aliasMgr->mayAlias(&loadPtrOprd, &storePtrOprd)) {
         live.addReg(&storeValue);
         if (!storeInstr->isTaken()) {
           live.addReg(&storePtrOprd);
-          slice->add(storeInstr, __func__);
+          slice->add(storeInstr, INTRA_STORE_ALIAS);
         }
       }
     }
