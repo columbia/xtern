@@ -13,7 +13,7 @@ using namespace tern;
 using namespace klee;
 
 static RegisterPass<PathSlicer> X(
-		"path-slicer",
+		"tern-path-slicer",
 		"Tern Path Slicer",
 		false,
 		true); // is analysis
@@ -53,7 +53,7 @@ static cl::opt<string> SchedLeaf(
 char PathSlicer::ID = 0;
 
 PathSlicer::PathSlicer(): ModulePass(&ID) {
-
+  fprintf(stderr, "PathSlicer::PathSlicer()\n");
 }
 
 PathSlicer::~PathSlicer() {
@@ -160,6 +160,8 @@ void PathSlicer::runPathSlicer(void *pathId, set<BranchInst *> &brInstrs) {
   DynInstrVector *trace = allPathTraces[pathId];
   assert(trace->size() > 0);
   traceUtil->preProcess(trace);
+
+#if 0
   
   // Enforce racy edges.
   enforceRacyEdges();
@@ -177,6 +179,7 @@ void PathSlicer::runPathSlicer(void *pathId, set<BranchInst *> &brInstrs) {
 
   // Calculate stat results.
   calStat();
+#endif
 
   // Free the trace along current path.
   freeCurPathTrace(pathId);

@@ -141,7 +141,6 @@ void KleeTraceUtil::preProcess(DynInstrVector *trace) {
     (1) Fop each dynamic phi instruction, setup incoming index.
     (2) For each dynamic instruction, setup calling context.
     (3) For each dynamic ret instruction, setup its dynamic call instruction. 
-
   */
 
   // Debug print.
