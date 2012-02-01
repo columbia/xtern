@@ -17,6 +17,11 @@ void XTernTraceUtil::store(const char *tracePath) {
 
 }
 
-void XTernTraceUtil::record(void *instr, void *state, void *f) {
+void XTernTraceUtil::record(DynInstrVector *trace, void *instr, void *state, void *f) {
   
 }
+
+void XTernTraceUtil::preProcess(DynInstrVector *trace) {
+
+}
+

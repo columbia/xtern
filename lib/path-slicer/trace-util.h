@@ -32,7 +32,11 @@ namespace tern {
 
     /* Record one dynamic instruction. The passed in pointer can be any type depending on
     recording targets (KLEE or xtern). */
-    virtual void record(void *instr, void *state, void *f) = 0;
+    virtual void record(DynInstrVector *trace, void *instr, void *state, void *f) = 0;
+
+    /* After a complete trace is recorded, we do some pre-processing work such as calculating
+    incoming index for PHI instruction, and setting up callstack. */
+    virtual void preProcess(DynInstrVector *trace) = 0;
   };
 }
 

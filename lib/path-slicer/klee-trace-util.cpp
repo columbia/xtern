@@ -15,7 +15,6 @@ using namespace llvm;
 
 KleeTraceUtil::KleeTraceUtil() {
   kmodule = NULL;
-  trace = NULL;
 }
 
 KleeTraceUtil::~KleeTraceUtil() {
@@ -38,52 +37,53 @@ void KleeTraceUtil::store(const char *tracePath) {
   //NOP.
 }
 
-void KleeTraceUtil::record(void *instr, void *state, void *f) {
-  record((KInstruction *)instr, (ExecutionState *)state, (Function *)f);
+void KleeTraceUtil::record(DynInstrVector *trace, void *instr, void *state, void *f) {
+  record(trace, (KInstruction *)instr, (ExecutionState *)state, (Function *)f);
 }
 
-void KleeTraceUtil::record(KInstruction *kInstr, ExecutionState *state, Function *f) {
+void KleeTraceUtil::record(DynInstrVector *trace, KInstruction *kInstr,
+  ExecutionState *state, Function *f) {
   Instruction *instr = kInstr->inst;
   if (Util::isPHI(instr)) {
-    recordPHI(kInstr, state);
+    recordPHI(trace, kInstr, state);
   } else if (Util::isBr(instr)) {
-    recordBr(kInstr, state);
+    recordBr(trace, kInstr, state);
   }  else if (Util::isRet(instr)) {
-    recordRet(kInstr, state);
+    recordRet(trace, kInstr, state);
   }  else if (Util::isCall(instr)) {
-    recordCall(kInstr, state, f);
+    recordCall(trace, kInstr, state, f);
   } else if (Util::isMem(instr)) {
     if (Util::isLoad(instr))
-      recordLoad(kInstr, state);
+      recordLoad(trace, kInstr, state);
     else if (Util::isStore(instr))
-      recordStore(kInstr, state);
+      recordStore(trace, kInstr, state);
   } else {
-    recordNonMem(kInstr, state);    
+    recordNonMem(trace, kInstr, state);    
   }
 }
 
-void KleeTraceUtil::recordPHI(klee::KInstruction *kInstr,
+void KleeTraceUtil::recordPHI(DynInstrVector *trace, klee::KInstruction *kInstr,
   klee::ExecutionState *state) {
   DynPHIInstr *phi = new DynPHIInstr;
   phi->setIndex(trace->size());
   trace->push_back(phi);
 }
 
-void KleeTraceUtil::recordBr(klee::KInstruction *kInstr,
+void KleeTraceUtil::recordBr(DynInstrVector *trace, klee::KInstruction *kInstr,
   klee::ExecutionState *state) {
   DynBrInstr *br = new DynBrInstr;
   br->setIndex(trace->size());
   trace->push_back(br);
 }
 
-void KleeTraceUtil::recordRet(klee::KInstruction *kInstr,
+void KleeTraceUtil::recordRet(DynInstrVector *trace, klee::KInstruction *kInstr,
   klee::ExecutionState *state) {
   DynRetInstr *ret = new DynRetInstr;
   ret->setIndex(trace->size());
   trace->push_back(ret);
 }
 
-void KleeTraceUtil::recordCall(klee::KInstruction *kInstr,
+void KleeTraceUtil::recordCall(DynInstrVector *trace, klee::KInstruction *kInstr,
   klee::ExecutionState *state, Function *f) {
   DynCallInstr *call = new DynCallInstr;
   call->setIndex(trace->size());
@@ -91,14 +91,14 @@ void KleeTraceUtil::recordCall(klee::KInstruction *kInstr,
   trace->push_back(call);
 }
 
-void KleeTraceUtil::recordNonMem(KInstruction *kInstr,
+void KleeTraceUtil::recordNonMem(DynInstrVector *trace, KInstruction *kInstr,
   ExecutionState *state) {
   DynInstr *instr = new DynInstr;
   instr->setIndex(trace->size());
   trace->push_back(instr);  
 }
 
-void KleeTraceUtil::recordLoad(KInstruction *kInstr,
+void KleeTraceUtil::recordLoad(DynInstrVector *trace, KInstruction *kInstr,
   ExecutionState *state) {
   DynMemInstr *load = new DynMemInstr;
   load->setIndex(trace->size());
@@ -107,7 +107,7 @@ void KleeTraceUtil::recordLoad(KInstruction *kInstr,
   trace->push_back(load);    
 }
 
-void KleeTraceUtil::recordStore(KInstruction *kInstr,
+void KleeTraceUtil::recordStore(DynInstrVector *trace, KInstruction *kInstr,
   ExecutionState *state) {
   DynMemInstr *store = new DynMemInstr;
   store->setIndex(trace->size());
@@ -136,11 +136,7 @@ const Cell& KleeTraceUtil::eval(KInstruction *ki, unsigned index,
   }
 }
 
-void KleeTraceUtil::initTrace(DynInstrVector *trace) {
-  this->trace = trace;
-}
-
-void KleeTraceUtil::processTrace() {
+void KleeTraceUtil::preProcess(DynInstrVector *trace) {
   /* TBD: 
     (1) Fop each dynamic phi instruction, setup incoming index.
     (2) For each dynamic instruction, setup calling context.

@@ -9,6 +9,8 @@
 #include "llvm/Module.h"
 #include "llvm/ADT/DenseSet.h"
 
+#include "klee/Internal/Module/KModule.h"
+
 #include "stat.h"
 #include "dyn-instrs.h"
 #include "slice.h"
@@ -32,7 +34,7 @@ namespace tern {
 
     /* Use vector rather than list here becuase we usually needs to start slicing from some index
     of the trace, and this vector is stable once trace is loaded. */
-    DynInstrVector trace;
+    llvm::DenseMap<void *, DynInstrVector *> allPathTraces;
 
     /* Slicing targets, can come from inter-thread phase or specified by users manually. */
     DynInstrList targets;
@@ -81,6 +83,7 @@ namespace tern {
     void calStat();
     llvm::Module *loadModule(const char *path);
     void collectInternalFunctions(llvm::Module &M);
+    void freeCurPathTrace(void *pathId);
     
   public:
         static char ID;
@@ -91,12 +94,14 @@ namespace tern {
     virtual bool runOnModule(llvm::Module &M);
     virtual void getAnalysisUsage(llvm::AnalysisUsage &AU) const;
 
+    void initKModule(klee::KModule *kmodule);
+
     /* The uniformed recording interface to record an in-memory execution trace. */
-    void record(void *instr, void *state, void *f);
+    void record(void *pathId, void *instr, void *state, void *f);
 
 
     /* The key function called by other modules (such as KLEE) to get relevant branches. */
-    void runPathSlicer(std::set<llvm::BranchInst *> &brInstrs);
+    void runPathSlicer(void *pathId, std::set<llvm::BranchInst *> &brInstrs);
 
     /* Since uclibc would be linked in, some functions such as memcpy() would become internal
     after this linking. But we only care about "guest" LLVM code in slicing. So, these functions are

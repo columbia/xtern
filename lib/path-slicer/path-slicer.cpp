@@ -10,6 +10,8 @@ using namespace llvm;
 #include "path-slicer.h"
 using namespace tern;
 
+using namespace klee;
+
 static RegisterPass<PathSlicer> X(
 		"path-slicer",
 		"Tern Path Slicer",
@@ -125,10 +127,9 @@ void PathSlicer::init(llvm::Module &M) {
   }
 
   /* Init trace util. */
-  if (KLEE_RECORDING) {
+  if (KLEE_RECORDING)
     traceUtil = new KleeTraceUtil();
-    ((KleeTraceUtil *)traceUtil)->initTrace(&trace);
-  } else if (XTERN_RECORDING)
+  else if (XTERN_RECORDING)
     traceUtil = new XTernTraceUtil();
   else
     assert(false);
@@ -153,30 +154,41 @@ void PathSlicer::enforceRacyEdges() {
   // Enforce all racy edges, and split new regions.
 }
 
-void PathSlicer::record(void *instr, void *state, void *f) {
-  traceUtil->record(instr, state, f);
-}
-
-
-void PathSlicer::runPathSlicer(set<BranchInst *> &brInstrs) {
-  assert(trace.size() > 0);
+void PathSlicer::runPathSlicer(void *pathId, set<BranchInst *> &brInstrs) {
+  // Get trace of current path and do some pre-processing.
+  assert(DM_IN(pathId, allPathTraces));
+  DynInstrVector *trace = allPathTraces[pathId];
+  assert(trace->size() > 0);
+  traceUtil->preProcess(trace);
   
   // Enforce racy edges.
   enforceRacyEdges();
   
-  // Run intra-slicer.
+  // Run inter-slicer.
   interSlicer.detectInputDepRaces(&instrRegions);
 
-  // Run inter-slicer.
-  size_t startIndex = trace.size();
+  // Run intra-slicer.
+  size_t startIndex = trace->size();
   assert(startIndex > 0);
   startIndex--;
-  intraSlicer.init(this, &trace, startIndex); // Init intra threas slicer.
+  intraSlicer.init(this, trace, startIndex); // Init intra threas slicer.
   // TBD. Take initial instruction and add init oprds.
   intraSlicer.detectInputDepRaces(); // Detect input dependent races.
+
   // Calculate stat results.
   calStat();
-  
+
+  // Free the trace along current path.
+  freeCurPathTrace(pathId);
+}
+
+void PathSlicer::freeCurPathTrace(void *pathId) {
+  assert(DM_IN(pathId, allPathTraces));
+  DynInstrVector *trace = allPathTraces[pathId];
+  for (size_t i = 0; i < trace->size(); i++)
+    delete trace->at(i);
+  trace->clear();
+  allPathTraces.erase(pathId);
 }
 
 void PathSlicer::collectInternalFunctions(Module &M) {
@@ -211,4 +223,16 @@ void PathSlicer::calStat() {
   
 }
 
+void PathSlicer::initKModule(KModule *kmodule) {
+  if (KLEE_RECORDING)
+    ((KleeTraceUtil *)traceUtil)->initKModule(kmodule);
+  else
+    assert(false);
+}
+
+void PathSlicer::record(void *pathId, void *instr, void *state, void *f) {
+  if (!DM_IN(pathId, allPathTraces))
+    allPathTraces[pathId] = new DynInstrVector;
+  traceUtil->record(allPathTraces[pathId], instr, state, f);
+}
 

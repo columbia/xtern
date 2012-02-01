@@ -16,24 +16,27 @@ namespace tern {
   class KleeTraceUtil: public TraceUtil {
   private:
     klee::KModule *kmodule;
-    DynInstrVector *trace;
+    //DynInstrVector *trace;
     llvm::IDAssigner *idAssigner;
 
   protected:
     /* Record routines. */
-    void record(klee::KInstruction *kInstr, klee::ExecutionState *state, llvm::Function *f);
-    void recordPHI(klee::KInstruction *kInstr, klee::ExecutionState *state);
-    void recordBr(klee::KInstruction *kInstr, klee::ExecutionState *state);
-    void recordRet(klee::KInstruction *kInstr, klee::ExecutionState *state);
-    void recordCall(klee::KInstruction *kInstr, klee::ExecutionState *state, llvm::Function *f);
-    void recordNonMem(klee::KInstruction *kInstr, klee::ExecutionState *state);
-    void recordLoad(klee::KInstruction *kInstr, klee::ExecutionState *state);
-    void recordStore(klee::KInstruction *kInstr, klee::ExecutionState *state);
-
-    /* After a complete trace is recorded, we do some processing work such as calculating
-    incoming index for PHI instruction, and setting up callstack. */
-    void processTrace();
-    
+    void record(DynInstrVector *trace, klee::KInstruction *kInstr,
+      klee::ExecutionState *state, llvm::Function *f);
+    void recordPHI(DynInstrVector *trace, klee::KInstruction *kInstr,
+      klee::ExecutionState *state);
+    void recordBr(DynInstrVector *trace, klee::KInstruction *kInstr, 
+      klee::ExecutionState *state);
+    void recordRet(DynInstrVector *trace, klee::KInstruction *kInstr, 
+      klee::ExecutionState *state);
+    void recordCall(DynInstrVector *trace, klee::KInstruction *kInstr, 
+      klee::ExecutionState *state, llvm::Function *f);
+    void recordNonMem(DynInstrVector *trace, klee::KInstruction *kInstr, 
+      klee::ExecutionState *state);
+    void recordLoad(DynInstrVector *trace, klee::KInstruction *kInstr, 
+      klee::ExecutionState *state);
+    void recordStore(DynInstrVector *trace, klee::KInstruction *kInstr, 
+      klee::ExecutionState *state);    
     /* Borrowed from KLEE Executor.cpp */
     const klee::Cell& eval(klee::KInstruction *ki, unsigned index, 
       klee::ExecutionState &state) const;
@@ -44,13 +47,13 @@ namespace tern {
 
     /* This function must be called before uclibc is linked in. */
     void initKModule(klee::KModule *kmodule);
-    void initTrace(DynInstrVector *trace);
     virtual void load(const char *tracePath, DynInstrVector *trace);
     virtual void store(const char *tracePath);
     
     /* This is the key function inserted to KLEE interpreter to record each instruction
     (at the place before they are executed). */
-    virtual void record(void *instr, void *state, void *f);
+    virtual void record(DynInstrVector *trace, void *instr, void *state, void *f);
+    virtual void preProcess(DynInstrVector *trace);
   };
 }
 
