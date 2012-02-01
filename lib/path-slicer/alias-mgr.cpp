@@ -27,8 +27,10 @@ void AliasMgr::initInstrIdMgr(InstrIdMgr *idMgr) {
   this->idMgr = idMgr;
 }
 
-void AliasMgr::initModules(llvm::Module *origModule, llvm::Module *mxModule,
-      llvm::Module *simModule) {
+void AliasMgr::initModules(Module *origModule, Module *mxModule,
+    Module *simModule) {
+  fprintf(stderr, "AliasMgr::initModules begin %p, %p, %p\n", (void *)origModule, 
+    (void *)mxModule, (void *)simModule);
   // Init the three AAOLs.
   assert(origModule);
   initAAOL(&origAaol, origModule);
@@ -36,12 +38,14 @@ void AliasMgr::initModules(llvm::Module *origModule, llvm::Module *mxModule,
     initAAOL(&mxAaol, mxModule);
   if (simModule)
     initAAOL(&simAaol, simModule);
-
+  fprintf(stderr, "AliasMgr::initModules end\n");
+  
   // Init adv alias.
   // TBD.
 }
 
 void AliasMgr::initAAOL(AAOLClient **aaol, llvm::Module *module) {
+  fprintf(stderr, "AliasMgr::initAAOL begin\n");
   std::string llvmRoot(getenv("LLVM_ROOT"));
   assert(llvmRoot != "");
   std::string aaolLib = llvmRoot + "/install/lib/libaaol.so";
@@ -55,6 +59,7 @@ void AliasMgr::initAAOL(AAOLClient **aaol, llvm::Module *module) {
   if(!(*aaol)->begin())
     exit(1);
   (*aaol)->setDebugLevel(get_option(tern_path_slicer, aaol_dbg_level));
+  fprintf(stderr, "AliasMgr::initAAOL end\n");
 }
 
 void AliasMgr::genInstrMap(Module &module,

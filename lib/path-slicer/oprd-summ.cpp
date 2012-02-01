@@ -20,9 +20,11 @@ void OprdSumm::getAnalysisUsage(AnalysisUsage &AU) const {
 }
 
 bool OprdSumm::runOnModule(Module &M) {
+  fprintf(stderr, "OprdSumm::runOnModule begin\n");
   CallGraphFP::runOnModule(M);
   collectSummLocal(M);
   collectSummTopDown(M);
+  fprintf(stderr, "OprdSumm::runOnModule end\n");
   return false;
 }
 

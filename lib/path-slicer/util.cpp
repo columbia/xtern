@@ -1,3 +1,6 @@
+#include "llvm/Target/TargetData.h"
+using namespace llvm;
+
 #include "util.h"
 using namespace tern;
 
@@ -79,4 +82,13 @@ bool Util::isMem(const llvm::Instruction *instr) {
   return isLoad(instr) || isStore(instr);
 }
 
+void Util::addTargetDataToPM(Module *module, PassManager *pm) {
+  assert(module && pm);
+  TargetData *TD = 0;
+  const std::string &ModuleDataLayout = module->getDataLayout();
+  if (!ModuleDataLayout.empty())
+    TD = new TargetData(ModuleDataLayout);
+  if (TD)
+    pm->add(TD);
+}
 

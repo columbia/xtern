@@ -25,6 +25,7 @@ void KleeTraceUtil::initKModule(KModule *kmodule) {
   this->kmodule = kmodule;
   idAssigner = new IDAssigner();
   PassManager *pm = new PassManager;
+  Util::addTargetDataToPM(kmodule->module, pm);
   pm->add(idAssigner);
   pm->run(*(kmodule->module));
 }
@@ -146,10 +147,10 @@ void KleeTraceUtil::preProcess(DynInstrVector *trace) {
   // Debug print.
   for (size_t i = 0; i < trace->size(); i++) {
     DynInstr *dynInstr = trace->at(i);
-    Instruction *instr = idAssigner->getInstruction(dynInstr->getOrigInstrId());
+    //Instruction *instr = idAssigner->getInstruction(dynInstr->getOrigInstrId());
     fprintf(stderr, "INDEX " SZ ", THREAD-ID: %d, INSTR-ID: %d, OP: %s\n",
       dynInstr->getIndex(), dynInstr->getTid(), dynInstr->getOrigInstrId(),
-      instr->getOpcodeName());
+      "NIL"/*instr->getOpcodeName()*/);
   }
 }
 

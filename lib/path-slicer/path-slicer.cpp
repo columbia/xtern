@@ -7,6 +7,7 @@
 #include "llvm/Attributes.h"
 using namespace llvm;
 
+#include "util.h"
 #include "path-slicer.h"
 using namespace tern;
 
@@ -54,10 +55,11 @@ char PathSlicer::ID = 0;
 
 PathSlicer::PathSlicer(): ModulePass(&ID) {
   fprintf(stderr, "PathSlicer::PathSlicer()\n");
+  internalFunctions.clear();
 }
 
 PathSlicer::~PathSlicer() {
-
+  fprintf(stderr, "PathSlicer::~PathSlicer()\n");
 }
 
 void PathSlicer::getAnalysisUsage(AnalysisUsage &AU) const {
@@ -72,6 +74,7 @@ bool PathSlicer::runOnModule(Module &M) {
 }
 
 void PathSlicer::init(llvm::Module &M) {
+  fprintf(stderr, "PathSlicer::init begin\n");
   Module *origModule = &M;
   Module *mxModule = NULL;
   Module *simModule = NULL;
@@ -90,6 +93,28 @@ void PathSlicer::init(llvm::Module &M) {
     assert(false && "Slicing mode should be valid.");
   }
 
+  /* Init oprd summary. */
+  oprdSumm.initStat(&stat);
+  PassManager *oprdPM = new PassManager;
+  if (NORMAL_SLICING) {
+    collectInternalFunctions(*origModule);
+    Util::addTargetDataToPM(origModule, oprdPM);
+    oprdPM->add(&oprdSumm);
+    //oprdPM->run(*origModule);    FIXME: THIS SHOULD NOT BE COMMENTED OUT.
+  } else if (MAX_SLICING) {
+    collectInternalFunctions(*mxModule);
+    Util::addTargetDataToPM(mxModule, oprdPM);
+    oprdPM->add(&oprdSumm);
+    oprdPM->run(*mxModule);
+  } else {
+    collectInternalFunctions(*simModule);
+    Util::addTargetDataToPM(simModule, oprdPM);
+    oprdPM->add(&oprdSumm);
+    oprdPM->run(*simModule);
+    assert(false);// TBD. NOT SURE WHETHER SHOULD PASS IN MX OR SIM MODULE HERE.
+  }
+  fprintf(stderr, "PathSlicer::init 3\n");
+
   /* Init instruction id manager. */
   idMgr.initStat(&stat);
   idMgr.initModules(origModule, mxModule, simModule, LmTrace.c_str());
@@ -98,33 +123,19 @@ void PathSlicer::init(llvm::Module &M) {
   ctxMgr.initStat(&stat);
   ctxMgr.initInstrIdMgr(&idMgr);
 
+  /* Init CFG manager. */
+  cfgMgr.initStat(&stat);
+  PassManager *cfgPM = new PassManager;
+  Util::addTargetDataToPM(origModule, cfgPM);
+  cfgPM->add(&cfgMgr);
+  cfgPM->run(*origModule);
+  fprintf(stderr, "PathSlicer::init 2\n");
+
   /* Init alias manager. */
   aliasMgr.initStat(&stat);
   aliasMgr.initInstrIdMgr(&idMgr);
   aliasMgr.initModules(origModule, mxModule, simModule);
-
-  /* Init CFG manager. */
-  cfgMgr.initStat(&stat);
-  PassManager *cfgPM = new PassManager;
-  cfgPM->add(&cfgMgr);
-  cfgPM->run(*origModule);
-
-  /* Init oprd summary. */
-  oprdSumm.initStat(&stat);
-  PassManager *oprdPM = new PassManager;
-  oprdPM->add(&oprdSumm);
-  if (NORMAL_SLICING) {
-    collectInternalFunctions(*origModule);
-    oprdPM->run(*origModule);
-    
-  } else if (MAX_SLICING) {
-    collectInternalFunctions(*mxModule);
-    oprdPM->run(*mxModule);
-  } else {
-    collectInternalFunctions(*simModule);
-    oprdPM->run(*simModule);
-    assert(false);// TBD. NOT SURE WHETHER SHOULD PASS IN MX OR SIM MODULE HERE.
-  }
+  fprintf(stderr, "PathSlicer::init 1\n");
 
   /* Init trace util. */
   if (KLEE_RECORDING)
@@ -133,6 +144,8 @@ void PathSlicer::init(llvm::Module &M) {
     traceUtil = new XTernTraceUtil();
   else
     assert(false);
+
+  fprintf(stderr, "PathSlicer::init end\n");
 }
 
 Module *PathSlicer::loadModule(const char *path) {
@@ -195,10 +208,15 @@ void PathSlicer::freeCurPathTrace(void *pathId) {
 }
 
 void PathSlicer::collectInternalFunctions(Module &M) {
+  fprintf(stderr, "PathSlicer::collectInternalFunctions begin\n");
   for (Module::iterator f = M.begin(); f != M.end(); ++f) {
-    if (!f->isDeclaration())
+    if (!f->isDeclaration()) {
       internalFunctions.insert(f);
+      fprintf(stderr, "Function %s(%p) is internal, current size %u.\n", 
+        f->getNameStr().c_str(), (void *)f, internalFunctions.size());
+    }
   }
+  fprintf(stderr, "PathSlicer::collectInternalFunctions end\n");
 }
 
 bool PathSlicer::isInternalCall(const Instruction *instr) {
@@ -219,7 +237,12 @@ bool PathSlicer::isInternalCall(DynInstr *dynInstr) {
 
 bool PathSlicer::isInternalFunction(const Function *f) {
   // TBD: If the called function is a function pointer, would "f" be NULL?
-  return !f->isDeclaration() && internalFunctions.count(f) > 0;
+  fprintf(stderr, "Function %s(%p) is isInternalFunction?\n", 
+    f->getNameStr().c_str(), (void *)f);
+  bool result = !f->isDeclaration() && internalFunctions.count(f) > 0;
+  fprintf(stderr, "Function %s is isInternalFunction %d.\n", 
+    f->getNameStr().c_str(), result);
+  return result;
 }
 
 void PathSlicer::calStat() {

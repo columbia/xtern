@@ -1,6 +1,8 @@
 #ifndef __TERN_PATH_SLICER_COMMON_UTIL_H
 #define __TERN_PATH_SLICER_COMMON_UTIL_H
 
+
+
 #include "dyn-instrs.h"
 
 namespace tern {
@@ -30,7 +32,8 @@ namespace tern {
     static bool isLoad(const llvm::Instruction *instr);
     static bool isStore(const llvm::Instruction *instr);
     static bool isMem(const llvm::Instruction *instr);
-
+    
+    static void addTargetDataToPM(llvm::Module *module, llvm::PassManager *pm);
   };
 }
 

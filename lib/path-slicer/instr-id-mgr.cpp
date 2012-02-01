@@ -1,3 +1,4 @@
+#include "util.h"
 #include "instr-id-mgr.h"
 using namespace tern;
 
@@ -27,12 +28,14 @@ void InstrIdMgr::initModules(llvm::Module *origModule, llvm::Module *mxModule,
   assert(origModule);
   origIda = new IDAssigner();
   PassManager *origIdPm = new PassManager;
+  Util::addTargetDataToPM(origModule, origIdPm);
   origIdPm->add(origIda);
   origIdPm->run(*origModule);
 
    if (mxModule) {
     mxIda = new IDAssigner();
     PassManager *mxIdPm = new PassManager;
+    Util::addTargetDataToPM(mxModule, mxIdPm);
     mxIdPm->add(mxIda);
     mxIdPm->run(*mxModule);
   } else
@@ -41,6 +44,7 @@ void InstrIdMgr::initModules(llvm::Module *origModule, llvm::Module *mxModule,
    if (simModule) {
     simIda = new IDAssigner();
     PassManager *simIdPm = new PassManager;
+    Util::addTargetDataToPM(simModule, simIdPm);
     simIdPm->add(simIda);
     simIdPm->run(*simModule);
   } else
