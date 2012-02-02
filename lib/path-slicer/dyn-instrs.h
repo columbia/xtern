@@ -55,7 +55,10 @@ namespace tern {
     ~DynInstr();
 
     /* TBD */
-    int getTid();
+    void setTid(char tid);
+
+    /* TBD */
+    char getTid();
 
     /* TBD */
     void setIndex(size_t index);
@@ -74,6 +77,9 @@ namespace tern {
 
     /* TBD */
     CallCtx *getSimCallingCtx();
+
+    /* TBD */
+    void setOrigInstrId(int instrId);
 
     /* TBD */
     int getOrigInstrId();

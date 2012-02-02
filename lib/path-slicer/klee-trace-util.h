@@ -16,7 +16,6 @@ namespace tern {
   class KleeTraceUtil: public TraceUtil {
   private:
     klee::KModule *kmodule;
-    //DynInstrVector *trace;
     llvm::IDAssigner *idAssigner;
 
   protected:
@@ -45,8 +44,12 @@ namespace tern {
     KleeTraceUtil();
     ~KleeTraceUtil();
 
-    /* This function must be called before uclibc is linked in. */
+    /* This function must be called on the original module. */
+    void initIdMap(llvm::Module &M);
+
+    /* This function is called after uclibc is linked in. */
     void initKModule(klee::KModule *kmodule);
+
     virtual void load(const char *tracePath, DynInstrVector *trace);
     virtual void store(const char *tracePath);
     

@@ -138,9 +138,10 @@ void PathSlicer::init(llvm::Module &M) {
   fprintf(stderr, "PathSlicer::init 1\n");
 
   /* Init trace util. */
-  if (KLEE_RECORDING)
+  if (KLEE_RECORDING) {
     traceUtil = new KleeTraceUtil();
-  else if (XTERN_RECORDING)
+    ((KleeTraceUtil *)traceUtil)->initIdMap(M);
+  } else if (XTERN_RECORDING)
     traceUtil = new XTernTraceUtil();
   else
     assert(false);
@@ -171,7 +172,8 @@ void PathSlicer::runPathSlicer(void *pathId, set<BranchInst *> &brInstrs) {
   // Get trace of current path and do some pre-processing.
   assert(DM_IN(pathId, allPathTraces));
   DynInstrVector *trace = allPathTraces[pathId];
-  assert(trace->size() > 0);
+  if (trace->size() == 0)
+    return;
   traceUtil->preProcess(trace);
 
 #if 0

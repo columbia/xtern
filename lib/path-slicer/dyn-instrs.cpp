@@ -18,7 +18,11 @@ DynInstr::~DynInstr() {
 
 }
 
-int DynInstr::getTid() {
+void DynInstr::setTid(char tid) {
+  this->tid = tid;
+}
+
+char DynInstr::getTid() {
   return tid;
 }
 
@@ -46,8 +50,12 @@ CallCtx *DynInstr::getSimCallingCtx() {
   return simCallingCtx;
 }
 
+void DynInstr::setOrigInstrId(int instrId) {
+  this->instrId = instrId;
+}
+
 int DynInstr::getOrigInstrId() {
-  return -1; // TBD
+  return instrId;
 }
 
 int DynInstr::getMxInstrId() {

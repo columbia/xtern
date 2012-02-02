@@ -21,13 +21,16 @@ KleeTraceUtil::~KleeTraceUtil() {
 
 }
 
-void KleeTraceUtil::initKModule(KModule *kmodule) {
-  this->kmodule = kmodule;
+void KleeTraceUtil::initIdMap(Module &M) {
   idAssigner = new IDAssigner();
   PassManager *pm = new PassManager;
-  Util::addTargetDataToPM(kmodule->module, pm);
+  Util::addTargetDataToPM(&M, pm);
   pm->add(idAssigner);
-  pm->run(*(kmodule->module));
+  pm->run(M);
+}
+
+void KleeTraceUtil::initKModule(KModule *kmodule) {
+  this->kmodule = kmodule;
 }
 
 void KleeTraceUtil::load(const char *tracePath, DynInstrVector *trace) {
@@ -45,6 +48,11 @@ void KleeTraceUtil::record(DynInstrVector *trace, void *instr, void *state, void
 void KleeTraceUtil::record(DynInstrVector *trace, KInstruction *kInstr,
   ExecutionState *state, Function *f) {
   Instruction *instr = kInstr->inst;
+  // Ignore an instruction if it is not from the original module.
+  if (idAssigner->getInstructionID(instr) == U_NEG1)
+    return;
+
+  // Real recording.
   if (Util::isPHI(instr)) {
     recordPHI(trace, kInstr, state);
   } else if (Util::isBr(instr)) {
@@ -67,13 +75,19 @@ void KleeTraceUtil::recordPHI(DynInstrVector *trace, klee::KInstruction *kInstr,
   klee::ExecutionState *state) {
   DynPHIInstr *phi = new DynPHIInstr;
   phi->setIndex(trace->size());
+  phi->setTid(0);
+  phi->setOrigInstrId(idAssigner->getInstructionID(kInstr->inst));
   trace->push_back(phi);
 }
 
 void KleeTraceUtil::recordBr(DynInstrVector *trace, klee::KInstruction *kInstr,
   klee::ExecutionState *state) {
+  /*errs() << "KleeTraceUtil::recordBr: " << idAssigner->getInstructionID(kInstr->inst)
+    << ": " << *(kInstr->inst) << "\n";*/
   DynBrInstr *br = new DynBrInstr;
   br->setIndex(trace->size());
+  br->setTid(0);
+  br->setOrigInstrId(idAssigner->getInstructionID(kInstr->inst));
   trace->push_back(br);
 }
 
@@ -81,6 +95,8 @@ void KleeTraceUtil::recordRet(DynInstrVector *trace, klee::KInstruction *kInstr,
   klee::ExecutionState *state) {
   DynRetInstr *ret = new DynRetInstr;
   ret->setIndex(trace->size());
+  ret->setTid(0);
+  ret->setOrigInstrId(idAssigner->getInstructionID(kInstr->inst));
   trace->push_back(ret);
 }
 
@@ -88,6 +104,8 @@ void KleeTraceUtil::recordCall(DynInstrVector *trace, klee::KInstruction *kInstr
   klee::ExecutionState *state, Function *f) {
   DynCallInstr *call = new DynCallInstr;
   call->setIndex(trace->size());
+  call->setTid(0);
+  call->setOrigInstrId(idAssigner->getInstructionID(kInstr->inst));
   call->setCalledFunc(f);
   trace->push_back(call);
 }
@@ -96,6 +114,8 @@ void KleeTraceUtil::recordNonMem(DynInstrVector *trace, KInstruction *kInstr,
   ExecutionState *state) {
   DynInstr *instr = new DynInstr;
   instr->setIndex(trace->size());
+  instr->setTid(0);
+  instr->setOrigInstrId(idAssigner->getInstructionID(kInstr->inst));
   trace->push_back(instr);  
 }
 
@@ -103,6 +123,8 @@ void KleeTraceUtil::recordLoad(DynInstrVector *trace, KInstruction *kInstr,
   ExecutionState *state) {
   DynMemInstr *load = new DynMemInstr;
   load->setIndex(trace->size());
+  load->setTid(0);
+  load->setOrigInstrId(idAssigner->getInstructionID(kInstr->inst));
   load->setConAddr(0);// TBD: add sym/concrete hybrid execution and get concrete mem addr.
   load->setSymAddr(eval(kInstr, 0, *state).value);
   trace->push_back(load);    
@@ -112,6 +134,8 @@ void KleeTraceUtil::recordStore(DynInstrVector *trace, KInstruction *kInstr,
   ExecutionState *state) {
   DynMemInstr *store = new DynMemInstr;
   store->setIndex(trace->size());
+  store->setTid(0);
+  store->setOrigInstrId(idAssigner->getInstructionID(kInstr->inst));
   store->setConAddr(0);// TBD: add sym/concrete hybrid execution and get concrete mem addr.
   store->setSymAddr(eval(kInstr, 1, *state).value);
   trace->push_back(store);      
@@ -147,10 +171,10 @@ void KleeTraceUtil::preProcess(DynInstrVector *trace) {
   // Debug print.
   for (size_t i = 0; i < trace->size(); i++) {
     DynInstr *dynInstr = trace->at(i);
-    //Instruction *instr = idAssigner->getInstruction(dynInstr->getOrigInstrId());
+    Instruction *instr = idAssigner->getInstruction(dynInstr->getOrigInstrId());
     fprintf(stderr, "INDEX " SZ ", THREAD-ID: %d, INSTR-ID: %d, OP: %s\n",
       dynInstr->getIndex(), dynInstr->getTid(), dynInstr->getOrigInstrId(),
-      "NIL"/*instr->getOpcodeName()*/);
+      instr->getOpcodeName());
   }
 }
 
