@@ -20,15 +20,16 @@ void IntraSlicer::detectInputDepRaces() {
   DynInstr *cur = NULL;
   while (!empty()) {
     cur = delTraceTail();
-    if (Util::isPHI(cur)) {
+    Instruction *instr = idMgr->getOrigInstr(cur);
+    if (Util::isPHI(instr)) {
       handlePHI(cur);
-    } else if (Util::isBr(cur)) {
+    } else if (Util::isBr(instr)) {
       handleBranch(cur);
-    } else if (Util::isRet(cur)) {
+    } else if (Util::isRet(instr)) {
       handleRet(cur);
-    } else if (Util::isCall(cur)) { /* Invoke is lowered to call. */
+    } else if (Util::isCall(instr)) { /* Invoke is lowered to call. */
       handleCall(cur);
-    } else if (Util::isMem(cur)) {
+    } else if (Util::isMem(instr)) {
       handleMem(cur);
     } else { /* Handle all the other non-memory instructions. */
       handleNonMem(cur);
@@ -47,15 +48,17 @@ DynInstr *IntraSlicer::delTraceTail() {
   return dynInstr;
 }
 
-void IntraSlicer::init(PathSlicer *pathSlicer, const DynInstrVector *trace, size_t startIndex) {
+void IntraSlicer::init(PathSlicer *pathSlicer, InstrIdMgr *idMgr, 
+  const DynInstrVector *trace, size_t startIndex) {
   this->pathSlicer = pathSlicer;
+  this->idMgr = idMgr;
   this->trace = trace;
   curIndex = startIndex;
   live.clear();
-  live.initAliasMgr(aliasMgr);
+  live.init(aliasMgr, idMgr);
 }
 
-void IntraSlicer::takeNonMem(DynInstr *dynInstr, unsigned char reason) {
+void IntraSlicer::takeNonMem(DynInstr *dynInstr, uchar reason) {
   delRegOverWritten(dynInstr);
   live.addUsedRegs(dynInstr);
   slice->add(dynInstr, reason);
@@ -127,7 +130,7 @@ void IntraSlicer::handleBranch(DynInstr *dynInstr) {
 
 void IntraSlicer::handleRet(DynInstr *dynInstr) {
   DynRetInstr *retInstr = (DynRetInstr*)dynInstr;
-  Instruction *instr = retInstr->getOrigInstr();
+  Instruction *instr = idMgr->getOrigInstr(retInstr);
   Function *calledFunc = instr->getParent()->getParent();
   if (retRegOverWritten(retInstr)) {
     delRegOverWritten(retInstr);
@@ -162,7 +165,8 @@ void IntraSlicer::handleNonMem(DynInstr *dynInstr) {
 }
 
 void IntraSlicer::handleMem(DynInstr *dynInstr) {
-  if (Util::isLoad(dynInstr)) {
+  Instruction *instr = idMgr->getOrigInstr(dynInstr);
+  if (Util::isLoad(instr)) {
     DynMemInstr *loadInstr = (DynMemInstr*)dynInstr;
     bool reason1 = loadInstr->isTarget();
     bool reason2 = regOverWritten(loadInstr);

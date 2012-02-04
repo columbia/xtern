@@ -13,12 +13,14 @@
 #include "macros.h"
 #include "type-defs.h"
 #include "alias-mgr.h"
+#include "instr-id-mgr.h"
 
 namespace tern {  
   struct LiveSet {
   private:
     Stat *stat;
     AliasMgr *aliasMgr;
+    InstrIdMgr *idMgr;
 
     /** Store all the virtual registers, they are only calling context plus the value pointer 
           of virtual registers. **/
@@ -36,7 +38,7 @@ namespace tern {
   public:
     LiveSet();
     ~LiveSet();
-    void initAliasMgr(AliasMgr *aliasMgr);
+    void init(AliasMgr *aliasMgr, InstrIdMgr *idMgr);
     size_t virtRegsSize();
     void clear();
 

@@ -9,7 +9,7 @@ Slice::~Slice() {
 
 }
 
-void Slice::add(DynInstr *dynInstr, unsigned char reason) {
+void Slice::add(DynInstr *dynInstr, uchar reason) {
 
 }
 

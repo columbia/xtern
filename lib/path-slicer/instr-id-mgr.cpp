@@ -52,19 +52,28 @@ void InstrIdMgr::initModules(llvm::Module *origModule, llvm::Module *mxModule,
 
 }
 
-Instruction *InstrIdMgr::getMxInstr(const DynInstr *dynInstr) {
+Instruction *InstrIdMgr::getMxInstr(DynInstr *dynInstr) {
   return NULL; // TBD.
 }
 
-Instruction *InstrIdMgr::getOrigInstr(int instrId) {
+Instruction *InstrIdMgr::getOrigInstrCtx(int instrId) {
   return origIda->getInstruction(instrId);
 }
 
-Instruction *InstrIdMgr::getMxInstr(int instrId) {
+Instruction *InstrIdMgr::getMxInstrCtx(int instrId) {
   return mxIda->getInstruction(instrId);
 }
 
-Instruction *InstrIdMgr::getSimInstr(int instrId) {
+Instruction *InstrIdMgr::getSimInstrCtx(int instrId) {
   return simIda->getInstruction(instrId);
 }
+
+Instruction *InstrIdMgr::getOrigInstr(DynInstr *dynInstr) {
+  return getOrigInstrCtx(dynInstr->getOrigInstrId());
+}
+
+int InstrIdMgr::getMxInstrId(DynInstr *dynInstr) {
+  return -1;//TBD
+}
+
 

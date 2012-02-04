@@ -58,16 +58,6 @@ namespace tern {
     void addDynInstr(DynInstr *dynInstr);
     static bool isConcurrent(InstrRegion *region1, InstrRegion *region2);
     bool happensBefore(InstrRegion *region);
-    void setBrIncomeIdx(DynInstr *dynInstr, int index);
-    int getBrIncomeIdx(DynInstr *dynInstr);
-    void setChildTid(DynInstr *dynInstr, int childTid);
-    int getChildTid(DynInstr *dynInstr);
-    int getOrigInstrId(DynInstr *dynInstr);
-    int getMxInstrId(DynInstr *dynInstr);
-    std::set<int> *getSimInstrId(DynInstr *dynInstr);
-    llvm::Instruction *getOrigInstr(DynInstr *dynInstr);
-    llvm::Instruction *getMxInstr(DynInstr *dynInstr);
-    std::set<llvm::Instruction * > *getSimInstr(DynInstr *dynInstr);
   };
 
   /* Regions. */

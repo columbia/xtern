@@ -7,7 +7,7 @@ char tern::OprdSumm::ID = 0;
 using namespace llvm;
 
 OprdSumm::OprdSumm(): CallGraphFP(&ID) {
-
+  pathSlicer = NULL;
 }
 
 OprdSumm::~OprdSumm() {
@@ -21,7 +21,6 @@ void OprdSumm::getAnalysisUsage(AnalysisUsage &AU) const {
 
 bool OprdSumm::runOnModule(Module &M) {
   fprintf(stderr, "OprdSumm::runOnModule begin\n");
-  CallGraphFP::runOnModule(M);
   collectSummLocal(M);
   collectSummTopDown(M);
   fprintf(stderr, "OprdSumm::runOnModule end\n");
@@ -30,6 +29,10 @@ bool OprdSumm::runOnModule(Module &M) {
 
 void OprdSumm::initStat(Stat *stat) {
   this->stat = stat;
+}
+
+void OprdSumm::initPathSlicer(PathSlicer *pathSlicer) {
+  this->pathSlicer = pathSlicer;
 }
 
 llvm::DenseSet<llvm::Instruction *> *OprdSumm::getLoadSummBetween(

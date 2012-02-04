@@ -12,8 +12,9 @@ LiveSet::~LiveSet() {
 
 }
 
-void LiveSet::initAliasMgr(AliasMgr *aliasMgr) {
+void LiveSet::init(AliasMgr *aliasMgr, InstrIdMgr *idMgr) {
   this->aliasMgr = aliasMgr;
+  this->idMgr = idMgr;
 }
 
 size_t LiveSet::virtRegsSize() {
@@ -65,8 +66,8 @@ bool LiveSet::regIn(DynOprd *dynOprd) {
 void LiveSet::addUsedRegs(DynInstr *dynInstr) {
   // TBD: DO WE NEED TO CONSIDER SIM CALL CTX HERE?
   CallCtx *intCtx = dynInstr->getCallingCtx();
-  Instruction *instr = dynInstr->getOrigInstr();
-  if (Util::isCall(dynInstr)) {
+  Instruction *instr = idMgr->getOrigInstr(dynInstr);
+  if (Util::isCall(instr)) {
     CallSite cs  = CallSite(cast<CallInst>(instr));
     // TBD: Some real function call may be wrapped by bitcast? YES WE SHOULD. 
     // REFER TO EXECUTOR.CPP IN KLEE.

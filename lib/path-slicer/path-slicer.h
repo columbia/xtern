@@ -83,7 +83,6 @@ namespace tern {
     void calStat();
     llvm::Module *loadModule(const char *path);
     void collectInternalFunctions(llvm::Module &M);
-    void freeCurPathTrace(void *pathId);
     
   public:
         static char ID;

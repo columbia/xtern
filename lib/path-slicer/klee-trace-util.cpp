@@ -162,20 +162,67 @@ const Cell& KleeTraceUtil::eval(KInstruction *ki, unsigned index,
 }
 
 void KleeTraceUtil::preProcess(DynInstrVector *trace) {
-  /* TBD: 
-    (1) Fop each dynamic phi instruction, setup incoming index.
-    (2) For each dynamic instruction, setup calling context.
-    (3) For each dynamic ret instruction, setup its dynamic call instruction. 
-  */
-
-  // Debug print.
+  // For each path, must clear ctx mgr.
+  ctxMgr->clear();
+  
   for (size_t i = 0; i < trace->size(); i++) {
     DynInstr *dynInstr = trace->at(i);
     Instruction *instr = idAssigner->getInstruction(dynInstr->getOrigInstrId());
-    fprintf(stderr, "INDEX " SZ ", THREAD-ID: %d, INSTR-ID: %d, OP: %s\n",
+    
+    // (1) For each dynamic instruction, setup calling context.
+    ctxMgr->setCallStack(dynInstr);
+
+    // (2) For each dynamic phi instruction, setup incoming index.
+    if (Util::isPHI(instr)) {
+      DynInstr *prevInstr = NULL;
+      for (int j = i - 1; j >= 0; j--) {
+        prevInstr = trace->at(i);
+        if (prevInstr->getTid() == dynInstr->getTid())
+          break;
+      }
+      assert(prevInstr);
+      BasicBlock *bb = Util::getBasicBlock(idAssigner->getInstruction(prevInstr->getOrigInstrId()));
+      PHINode *phi = dyn_cast<PHINode>(instr);
+      int idx = phi->getBasicBlockIndex(bb);
+      ((DynPHIInstr *)dynInstr)->setIncomingIndex(idx);
+    }
+    
+    // (3) For each dynamic ret instruction, setup its dynamic call instruction.
+    if (Util::isRet(instr)) {
+      DynRetInstr *ret = (DynRetInstr *)dynInstr;
+      DynCallInstr *call = ctxMgr->getCallOfRet(ret);
+      if (!call)
+        assert(ret->getCallingCtx()->size() == 0);
+      else 
+        ret->setDynCallInstr(call);
+    }
+    
+    // (4) For each dynamic pthread_create(), setup its child thread id.
+    if (Util::isCall(instr)) {
+      DynCallInstr *call = (DynCallInstr *)dynInstr;
+      if (Util::isThreadCreate(call))
+        ((DynSpawnThreadInstr *)call)->setChildTid(call->getTid()+1);
+      /* Must make sure Gang's thread model in KLEE still make this rule hold:
+      a child's tid is the parent's +1. */
+    }
+
+    // (5) Update per-tid callstack. This must happen after (3), which calls getCallOfRet().
+    if (Util::isCall(instr) || Util::isRet(instr))
+      ctxMgr->updateCallStack(dynInstr);
+
+    // Debug print.
+    fprintf(stderr, "\n\nINDEX " SZ ", THREAD-ID: %d, INSTR-ID: %d, OP: %s\n",
       dynInstr->getIndex(), dynInstr->getTid(), dynInstr->getOrigInstrId(),
       instr->getOpcodeName());
+    ctxMgr->printCallStack(dynInstr);
+    fprintf(stderr, "\n\n");
   }
+}
+
+void KleeTraceUtil::postProcess(DynInstrVector *trace) {
+  for (size_t i = 0; i < trace->size(); i++)
+    delete trace->at(i);
+  trace->clear();
 }
 
 

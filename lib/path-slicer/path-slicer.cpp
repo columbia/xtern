@@ -95,12 +95,13 @@ void PathSlicer::init(llvm::Module &M) {
 
   /* Init oprd summary. */
   oprdSumm.initStat(&stat);
+  oprdSumm.initPathSlicer(this);
   PassManager *oprdPM = new PassManager;
   if (NORMAL_SLICING) {
     collectInternalFunctions(*origModule);
     Util::addTargetDataToPM(origModule, oprdPM);
     oprdPM->add(&oprdSumm);
-    //oprdPM->run(*origModule);    FIXME: THIS SHOULD NOT BE COMMENTED OUT.
+    oprdPM->run(*origModule);
   } else if (MAX_SLICING) {
     collectInternalFunctions(*mxModule);
     Util::addTargetDataToPM(mxModule, oprdPM);
@@ -120,8 +121,7 @@ void PathSlicer::init(llvm::Module &M) {
   idMgr.initModules(origModule, mxModule, simModule, LmTrace.c_str());
 
   /* Init call stack manager. */
-  ctxMgr.initStat(&stat);
-  ctxMgr.initInstrIdMgr(&idMgr);
+  ctxMgr.init(&stat, &idMgr, this);
 
   /* Init CFG manager. */
   cfgMgr.initStat(&stat);
@@ -141,8 +141,11 @@ void PathSlicer::init(llvm::Module &M) {
   if (KLEE_RECORDING) {
     traceUtil = new KleeTraceUtil();
     ((KleeTraceUtil *)traceUtil)->initIdMap(M);
-  } else if (XTERN_RECORDING)
+    traceUtil->initCallStackMgr(&ctxMgr);
+  } else if (XTERN_RECORDING) {
     traceUtil = new XTernTraceUtil();
+    traceUtil->initCallStackMgr(&ctxMgr);
+  }
   else
     assert(false);
 
@@ -188,7 +191,7 @@ void PathSlicer::runPathSlicer(void *pathId, set<BranchInst *> &brInstrs) {
   size_t startIndex = trace->size();
   assert(startIndex > 0);
   startIndex--;
-  intraSlicer.init(this, trace, startIndex); // Init intra threas slicer.
+  intraSlicer.init(this, &idMgr, trace, startIndex); // Init intra threas slicer.
   // TBD. Take initial instruction and add init oprds.
   intraSlicer.detectInputDepRaces(); // Detect input dependent races.
 
@@ -196,17 +199,10 @@ void PathSlicer::runPathSlicer(void *pathId, set<BranchInst *> &brInstrs) {
   calStat();
 #endif
 
-  // Free the trace along current path.
-  freeCurPathTrace(pathId);
-}
-
-void PathSlicer::freeCurPathTrace(void *pathId) {
-  assert(DM_IN(pathId, allPathTraces));
-  DynInstrVector *trace = allPathTraces[pathId];
-  for (size_t i = 0; i < trace->size(); i++)
-    delete trace->at(i);
-  trace->clear();
+  // Free the trace along current path. 
+  traceUtil->postProcess(trace);
   allPathTraces.erase(pathId);
+  delete trace;
 }
 
 void PathSlicer::collectInternalFunctions(Module &M) {

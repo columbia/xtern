@@ -12,6 +12,7 @@
 #include "dyn-instrs.h"
 #include "slice.h"
 #include "live-set.h"
+#include "instr-id-mgr.h"
 #include "alias-mgr.h"
 #include "cfg-mgr.h"
 
@@ -27,6 +28,7 @@ namespace tern {
     Stat *stat;
     LiveSet live;
     Slice *slice;
+    InstrIdMgr *idMgr;
     AliasMgr *aliasMgr;
     CfgMgr *cfgMgr;
     const DynInstrVector *trace;
@@ -51,7 +53,7 @@ namespace tern {
     DynInstr *delTraceTail();
 
     /* TBD: all places using this function should indicate the specific taken reason. */
-    void takeNonMem(DynInstr *dynInstr, unsigned char reason = INTRA_NON_MEM);
+    void takeNonMem(DynInstr *dynInstr, uchar reason = INTRA_NON_MEM);
     void delRegOverWritten(DynInstr *dynInstr);
     bool regOverWritten(DynInstr *dynInstr);
     bool retRegOverWritten(DynInstr *dynInstr);
@@ -67,7 +69,7 @@ namespace tern {
   public:
     IntraSlicer();
     ~IntraSlicer();
-    void init(PathSlicer *pathSlicer, const DynInstrVector *trace, size_t startIndex);
+    void init(PathSlicer *pathSlicer, InstrIdMgr *idMgr, const DynInstrVector *trace, size_t startIndex);
     void detectInputDepRaces();
   };
 }

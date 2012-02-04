@@ -57,6 +57,7 @@ namespace tern {
     (at the place before they are executed). */
     virtual void record(DynInstrVector *trace, void *instr, void *state, void *f);
     virtual void preProcess(DynInstrVector *trace);
+    virtual void postProcess(DynInstrVector *trace);
   };
 }
 

@@ -9,7 +9,3 @@ InstrRegion::~InstrRegion() {
 
 }
 
-Instruction *InstrRegion::getOrigInstr(DynInstr *dynInstr) {
-  return NULL;  
-}
-

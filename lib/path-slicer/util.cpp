@@ -4,6 +4,23 @@ using namespace llvm;
 #include "util.h"
 using namespace tern;
 
+Function *Util::getFunction(Instruction *instr) {
+  return instr->getParent()->getParent();
+}
+
+BasicBlock *Util::getBasicBlock(Instruction *instr) {
+  return instr->getParent();
+}
+
+const Function *Util::getFunction(const Instruction *instr) {
+  return instr->getParent()->getParent();
+}
+
+const BasicBlock *Util::getBasicBlock(const Instruction *instr) {
+  return instr->getParent();
+}
+
+/*
 bool Util::isPHI(DynInstr *dynInstr) {
   Instruction *instr = dynInstr->getOrigInstr();
   return isPHI(instr);
@@ -37,49 +54,43 @@ bool Util::isStore(DynInstr *dynInstr) {
 bool Util::isMem(DynInstr *dynInstr) {
   return isLoad(dynInstr) || isStore(dynInstr);
 }
+*/
 
-llvm::Function *Util::getFunction(llvm::Instruction *instr) {
-  return instr->getParent()->getParent();
-}
-
-llvm::BasicBlock *Util::getBasicBlock(llvm::Instruction *instr) {
-  return instr->getParent();
-}
-
-const llvm::Function *Util::getFunction(const llvm::Instruction *instr) {
-  return instr->getParent()->getParent();
-}
-
-const llvm::BasicBlock *Util::getBasicBlock(const llvm::Instruction *instr) {
-  return instr->getParent();
-}
-
-bool Util::isPHI(const llvm::Instruction *instr) {
+bool Util::isPHI(const Instruction *instr) {
   return instr->getOpcode() == Instruction::PHI;
 }
 
-bool Util::isBr(const llvm::Instruction *instr) {
+bool Util::isBr(const Instruction *instr) {
   return instr->getOpcode() == Instruction::Br;
 }
 
-bool Util::isRet(const llvm::Instruction *instr) {
+bool Util::isRet(const Instruction *instr) {
   return instr->getOpcode() == Instruction::Ret;
 }
 
-bool Util::isCall(const llvm::Instruction *instr) {
+bool Util::isCall(const Instruction *instr) {
   return instr->getOpcode() == Instruction::Call;
 }
 
-bool Util::isLoad(const llvm::Instruction *instr) {
+bool Util::isLoad(const Instruction *instr) {
   return instr->getOpcode() == Instruction::Load;
 }
 
-bool Util::isStore(const llvm::Instruction *instr) {
+bool Util::isStore(const Instruction *instr) {
   return instr->getOpcode() == Instruction::Store;
 }
 
-bool Util::isMem(const llvm::Instruction *instr) {
+bool Util::isMem(const Instruction *instr) {
   return isLoad(instr) || isStore(instr);
+}
+
+bool Util::isThreadCreate(DynCallInstr *call) {
+  Function *f = call->getCalledFunc();
+  if (f && f->hasName() &&
+    f->getNameStr().find("pthread_create") != std::string::npos)
+    return true;
+  else
+    return false;
 }
 
 void Util::addTargetDataToPM(Module *module, PassManager *pm) {

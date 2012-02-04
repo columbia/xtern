@@ -78,6 +78,7 @@ namespace tern {
     OprdSumm();
     ~OprdSumm();
     void initStat(Stat *stat);
+    void initPathSlicer(PathSlicer *pathSlicer);
     virtual void getAnalysisUsage(llvm::AnalysisUsage &AU) const;
     virtual bool runOnModule(llvm::Module &M);
 

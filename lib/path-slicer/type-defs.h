@@ -10,5 +10,6 @@ typedef std::pair< std::vector<int> *, const llvm::Value * > CtxVPair;
 typedef llvm::DenseSet< CtxVPair > CtxVDenseSet;
 typedef std::vector<int> CallCtx;
 typedef llvm::DenseSet<const llvm::Instruction * > InstrDenseSet;
+typedef unsigned char uchar;
 
 #endif

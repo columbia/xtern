@@ -5,7 +5,7 @@ using namespace tern;
 using namespace klee;
 
 DynInstr::DynInstr() {
-  region = NULL;
+  //region = NULL;
   index = SIZE_T_INVALID;
   callingCtx = NULL;
   simCallingCtx = NULL;
@@ -18,11 +18,11 @@ DynInstr::~DynInstr() {
 
 }
 
-void DynInstr::setTid(char tid) {
+void DynInstr::setTid(uchar tid) {
   this->tid = tid;
 }
 
-char DynInstr::getTid() {
+uchar DynInstr::getTid() {
   return tid;
 }
 
@@ -58,15 +58,7 @@ int DynInstr::getOrigInstrId() {
   return instrId;
 }
 
-int DynInstr::getMxInstrId() {
-  return -1; // TBD
-}
-
-std::set<int> *DynInstr::getSimInstrId() {
-  return NULL; // TBD
-}
-
-void DynInstr::setTaken(unsigned char takenFlag) {
+void DynInstr::setTaken(uchar takenFlag) {
   this->takenFlag = takenFlag;
 }
 
@@ -79,9 +71,9 @@ const char *DynInstr::takenReason() {
   // TBD: ADD A GLOBAL ARRAY INDEXED WITH TAKEN FLAG WITH TAKEN REASON.
 }
 
-Instruction *DynInstr::getOrigInstr() {
+/*Instruction *DynInstr::getOrigInstr() {
   return region->getOrigInstr(this);
-}
+}*/
 
 bool DynInstr::isTarget() {
   return isTaken() && takenFlag < INTRA_PHASE_BASE;
@@ -119,11 +111,11 @@ DynRetInstr::~DynRetInstr() {
 
 }
 
-void DynRetInstr::setDynCallInstr(DynInstr *dynInstr) {
+void DynRetInstr::setDynCallInstr(DynCallInstr *dynInstr) {
   dynCallInstr = dynInstr;
 }
 
-DynInstr *DynRetInstr::getDynCallInstr() {
+DynCallInstr *DynRetInstr::getDynCallInstr() {
   return dynCallInstr;
 }
 

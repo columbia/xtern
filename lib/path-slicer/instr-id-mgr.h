@@ -75,6 +75,8 @@ namespace tern {
     bool isMxBcInstr(const llvm::Instruction *instr);
     bool isSimBcInstr(const llvm::Instruction *instr);
 
+
+
   public:
     InstrIdMgr();
     ~InstrIdMgr();
@@ -84,26 +86,29 @@ namespace tern {
     /* Load the landmark trace (not full trace) from disk, this is important to setup the instr id mapping. */
     void loadBinLandmarkTrace(const char *fullPath);
 
-    /* Given a dynamic instr, return its instr id in orig module. */
-    int getOrigInstrId(const DynInstr *dynInstr);
+    llvm::Instruction *getOrigInstr(DynInstr *dynInstr);
 
     /* Given a dynamic instr, return its instr id in max sliced module. */
-    int getMxInstrId(const DynInstr *dynInstr);
+    int getMxInstrId(DynInstr *dynInstr);
 
     /* Given a dynamic instr, return its instr in max sliced module. */
-    llvm::Instruction *getMxInstr(const DynInstr *dynInstr);
+    llvm::Instruction *getMxInstr(DynInstr *dynInstr);
 
     /* Given a dynamic instr, return its set of instr id in simplified module. */
-    std::set<int *> *getSimInstrId(const DynInstr *dynInstr);
+    std::set<int *> *getSimInstrId(DynInstr *dynInstr);
 
     /* Given a dynamic instr, return its set of instr in simplified module. */
-    std::set<llvm::Instruction *> *getSimInstr(const DynInstr *dynInstr);
+    std::set<llvm::Instruction *> *getSimInstr(DynInstr *dynInstr);
+
 
     /* Given an instruction id (in normal, mx or sim module), return the static instruction.
-    The input instruciton ids are all the ids within the corresponding modules. */
-    llvm::Instruction *getOrigInstr(int instrId);
-    llvm::Instruction *getMxInstr(int instrId);
-    llvm::Instruction *getSimInstr(int instrId); /* There is only one return instr pointer, yes. */
+    The input instruciton ids are all the ids within the corresponding modules.
+    These functions should be used only when translating call stack integers back to instructions. */
+    llvm::Instruction *getOrigInstrCtx(int origInstrId);
+    llvm::Instruction *getMxInstrCtx(int mxInstrId);
+    llvm::Instruction *getSimInstrCtx(int simInstrId); /* There is only one return instr pointer, yes. */
+
+
   };
 }
 

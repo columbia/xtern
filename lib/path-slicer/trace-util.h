@@ -8,6 +8,7 @@
 #include "dyn-instrs.h"
 #include "type-defs.h"
 #include "stat.h"
+#include "callstack-mgr.h"
 
 #define TRACE_MAX_LEN 1024*1024*1024  /* 1G of binary trace. */
 
@@ -17,11 +18,12 @@ namespace tern {
   private:
 
   protected:
-    DynInstrVector recordedInstrs;
+    CallStackMgr *ctxMgr;
+
 
   public:
-    TraceUtil() {}
-    ~TraceUtil() {}
+    TraceUtil();
+    ~TraceUtil();
     
     /* Load all recorded instructions from the trace path to memory; loaded results are stored in
     to the trace vector. */
@@ -37,6 +39,11 @@ namespace tern {
     /* After a complete trace is recorded, we do some pre-processing work such as calculating
     incoming index for PHI instruction, and setting up callstack. */
     virtual void preProcess(DynInstrVector *trace) = 0;
+
+    /* After slicing, free the trace. */
+    virtual void postProcess(DynInstrVector *trace) = 0;
+
+    void initCallStackMgr(tern::CallStackMgr *ctxMgr);
   };
 }
 

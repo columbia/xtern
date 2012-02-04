@@ -80,7 +80,7 @@ bool AliasMgr::mayAlias(DynOprd *dynOprd1, DynOprd *dynOprd2) {
   bool result = false;
   DynInstr *dynInstr1 = dynOprd1->getDynInstr();
   DynInstr *dynInstr2 = dynOprd2->getDynInstr();
-  assert(Util::isMem(dynInstr1) && Util::isMem(dynInstr2));
+  //assert(Util::isMem(dynInstr1) && Util::isMem(dynInstr2));
 
   CallCtx *ctx1 = NULL;
   CallCtx *ctx2 = NULL;
@@ -98,8 +98,8 @@ bool AliasMgr::mayAlias(DynOprd *dynOprd1, DynOprd *dynOprd2) {
     // In max slicing mode, getCallingCtx() is the call stack of max sliced bc.
     ctx1 = dynInstr1->getCallingCtx();  
     ctx2 = dynInstr2->getCallingCtx();
-    instrId1 = dynInstr1->getMxInstrId();
-    instrId2 = dynInstr2->getMxInstrId();
+    instrId1 = idMgr->getMxInstrId(dynInstr1);
+    instrId2 = idMgr->getMxInstrId(dynInstr2);
   } else if (RANGE_SLICING) {
     /* TBD: NOT SURE ABOUT THE NEW CALL CONTEXT OF ADV ALIAS.
         There could be multiple simplified calling context with respected to 
@@ -138,12 +138,12 @@ bdd AliasMgr::getPointTee(DynOprd *dynOprd) {
     if (NORMAL_SLICING) {
       baa = (BddAliasAnalysis *)(origAaol->AAPass);
       for (size_t i = 0; i < intCtx->size(); i++)
-        usrCtx.push_back(cast<User>(idMgr->getOrigInstr(intCtx->at(i))));
-      instr = dynInstr->getOrigInstr();
+        usrCtx.push_back(cast<User>(idMgr->getOrigInstrCtx(intCtx->at(i))));
+      instr = idMgr->getOrigInstr(dynInstr);
     } else if (MAX_SLICING) {
       baa = (BddAliasAnalysis *)(mxAaol->AAPass);
       for (size_t i = 0; i < intCtx->size(); i++)
-        usrCtx.push_back(cast<User>(idMgr->getMxInstr(intCtx->at(i))));
+        usrCtx.push_back(cast<User>(idMgr->getMxInstrCtx(intCtx->at(i))));
       instr = idMgr->getMxInstr(dynInstr);      
     } else {
       baa = (BddAliasAnalysis *)(simAaol->AAPass);
@@ -154,7 +154,7 @@ bdd AliasMgr::getPointTee(DynOprd *dynOprd) {
   } else {
     if (NORMAL_SLICING) {
       baa = (BddAliasAnalysis *)(origAaol->AAPass);
-      instr = dynInstr->getOrigInstr();
+      instr = idMgr->getOrigInstr(dynInstr);
     } else if (MAX_SLICING) {
       baa = (BddAliasAnalysis *)(mxAaol->AAPass);
       instr = idMgr->getMxInstr(dynInstr);      

@@ -25,3 +25,7 @@ void XTernTraceUtil::preProcess(DynInstrVector *trace) {
 
 }
 
+void XTernTraceUtil::postProcess(DynInstrVector *trace) {
+
+}
+

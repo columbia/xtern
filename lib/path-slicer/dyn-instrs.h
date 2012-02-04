@@ -27,7 +27,8 @@ namespace tern {
   protected:
     /* A pointer to the region that this instr belongs to, the region contains as many as shared info
       of instructions within this region, such as thread id and vector clock. */
-    InstrRegion *region;
+    //InstrRegion *region;
+    // TBD: this should be here when I start to implement inter-thread phase.
 
     /* The total order of execution index of this dynamic instr.
         Question: does xtern still have this feature? */
@@ -45,20 +46,20 @@ namespace tern {
     int instrId;
 
     /* The xtern self-maintanied thread id. */
-    char tid;
+    uchar tid;
 
     /* Identify a dynamic instruction is taken or not; 0 is not taken; and !0 means taken reaons. */
-    unsigned char takenFlag;
+    uchar takenFlag;
 
   public:
     DynInstr();
     ~DynInstr();
 
     /* TBD */
-    void setTid(char tid);
+    void setTid(uchar tid);
 
     /* TBD */
-    char getTid();
+    uchar getTid();
 
     /* TBD */
     void setIndex(size_t index);
@@ -85,13 +86,7 @@ namespace tern {
     int getOrigInstrId();
 
     /* TBD */
-    int getMxInstrId();
-
-    /* TBD */
-    std::set<int> *getSimInstrId();
-
-    /* TBD */
-    void setTaken(unsigned char takenFlag);
+    void setTaken(uchar takenFlag);
 
     /* TBD */
     bool isTaken();
@@ -101,9 +96,6 @@ namespace tern {
 
     /* Whether an instruction is a slicing target already, currently it is the same as taken. */
     bool isTarget();
-
-    /* TBD */
-    llvm::Instruction *getOrigInstr();
   };
 
   class DynPHIInstr: public DynInstr {
@@ -131,21 +123,6 @@ namespace tern {
     
   };
 
-  class DynRetInstr: public DynInstr {
-  private:
-    /* The dynamic call instruction corresponds to this return instruction. */
-    DynInstr *dynCallInstr;
-
-  protected:
-
-  public:
-    DynRetInstr();
-    ~DynRetInstr();
-    void setDynCallInstr(DynInstr *dynInstr);
-    DynInstr *getDynCallInstr();
-    
-  };
-
   class DynCallInstr: public DynInstr {
   private:
 
@@ -159,6 +136,21 @@ namespace tern {
     ~DynCallInstr();
     void setCalledFunc(llvm::Function *f);
     llvm::Function *getCalledFunc();    
+  };
+
+  class DynRetInstr: public DynInstr {
+  private:
+    /* The dynamic call instruction corresponds to this return instruction. */
+    DynCallInstr *dynCallInstr;
+
+  protected:
+
+  public:
+    DynRetInstr();
+    ~DynRetInstr();
+    void setDynCallInstr(DynCallInstr *dynInstr);
+    DynCallInstr *getDynCallInstr();
+    
   };
 
   class DynSpawnThreadInstr: public DynCallInstr {
