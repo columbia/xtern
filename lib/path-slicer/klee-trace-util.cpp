@@ -42,11 +42,11 @@ void KleeTraceUtil::store(const char *tracePath) {
 }
 
 void KleeTraceUtil::record(DynInstrVector *trace, void *instr, void *state, void *f) {
-  record(trace, (KInstruction *)instr, (ExecutionState *)state, (Function *)f);
+  record(trace, (KInstruction *)instr, (ThreadState *)state, (Function *)f);
 }
 
 void KleeTraceUtil::record(DynInstrVector *trace, KInstruction *kInstr,
-  ExecutionState *state, Function *f) {
+  ThreadState *state, Function *f) {
   Instruction *instr = kInstr->inst;
   // Ignore an instruction if it is not from the original module.
   if (idAssigner->getInstructionID(instr) == U_NEG1)
@@ -72,58 +72,58 @@ void KleeTraceUtil::record(DynInstrVector *trace, KInstruction *kInstr,
 }
 
 void KleeTraceUtil::recordPHI(DynInstrVector *trace, klee::KInstruction *kInstr,
-  klee::ExecutionState *state) {
+  ThreadState *state) {
   DynPHIInstr *phi = new DynPHIInstr;
   phi->setIndex(trace->size());
-  phi->setTid(0);
+  phi->setTid((uchar)state->id);
   phi->setOrigInstrId(idAssigner->getInstructionID(kInstr->inst));
   trace->push_back(phi);
 }
 
 void KleeTraceUtil::recordBr(DynInstrVector *trace, klee::KInstruction *kInstr,
-  klee::ExecutionState *state) {
+  ThreadState *state) {
   /*errs() << "KleeTraceUtil::recordBr: " << idAssigner->getInstructionID(kInstr->inst)
     << ": " << *(kInstr->inst) << "\n";*/
   DynBrInstr *br = new DynBrInstr;
   br->setIndex(trace->size());
-  br->setTid(0);
+  br->setTid((uchar)state->id);
   br->setOrigInstrId(idAssigner->getInstructionID(kInstr->inst));
   trace->push_back(br);
 }
 
 void KleeTraceUtil::recordRet(DynInstrVector *trace, klee::KInstruction *kInstr,
-  klee::ExecutionState *state) {
+  ThreadState *state) {
   DynRetInstr *ret = new DynRetInstr;
   ret->setIndex(trace->size());
-  ret->setTid(0);
+  ret->setTid((uchar)state->id);
   ret->setOrigInstrId(idAssigner->getInstructionID(kInstr->inst));
   trace->push_back(ret);
 }
 
 void KleeTraceUtil::recordCall(DynInstrVector *trace, klee::KInstruction *kInstr,
-  klee::ExecutionState *state, Function *f) {
+  ThreadState *state, Function *f) {
   DynCallInstr *call = new DynCallInstr;
   call->setIndex(trace->size());
-  call->setTid(0);
+  call->setTid((uchar)state->id);
   call->setOrigInstrId(idAssigner->getInstructionID(kInstr->inst));
   call->setCalledFunc(f);
   trace->push_back(call);
 }
 
 void KleeTraceUtil::recordNonMem(DynInstrVector *trace, KInstruction *kInstr,
-  ExecutionState *state) {
+  ThreadState *state) {
   DynInstr *instr = new DynInstr;
   instr->setIndex(trace->size());
-  instr->setTid(0);
+  instr->setTid((uchar)state->id);
   instr->setOrigInstrId(idAssigner->getInstructionID(kInstr->inst));
   trace->push_back(instr);  
 }
 
 void KleeTraceUtil::recordLoad(DynInstrVector *trace, KInstruction *kInstr,
-  ExecutionState *state) {
+  ThreadState *state) {
   DynMemInstr *load = new DynMemInstr;
   load->setIndex(trace->size());
-  load->setTid(0);
+  load->setTid((uchar)state->id);
   load->setOrigInstrId(idAssigner->getInstructionID(kInstr->inst));
   load->setConAddr(0);// TBD: add sym/concrete hybrid execution and get concrete mem addr.
   load->setSymAddr(eval(kInstr, 0, *state).value);
@@ -131,10 +131,10 @@ void KleeTraceUtil::recordLoad(DynInstrVector *trace, KInstruction *kInstr,
 }
 
 void KleeTraceUtil::recordStore(DynInstrVector *trace, KInstruction *kInstr,
-  ExecutionState *state) {
+  ThreadState *state) {
   DynMemInstr *store = new DynMemInstr;
   store->setIndex(trace->size());
-  store->setTid(0);
+  store->setTid((uchar)state->id);
   store->setOrigInstrId(idAssigner->getInstructionID(kInstr->inst));
   store->setConAddr(0);// TBD: add sym/concrete hybrid execution and get concrete mem addr.
   store->setSymAddr(eval(kInstr, 1, *state).value);
@@ -143,7 +143,7 @@ void KleeTraceUtil::recordStore(DynInstrVector *trace, KInstruction *kInstr,
 
 /* Borrowed from the Executor.cpp in klee. */
 const Cell& KleeTraceUtil::eval(KInstruction *ki, unsigned index, 
-                           ExecutionState &state) const {
+                           ThreadState &state) const {
   assert(index < ki->inst->getNumOperands());
   int vnumber = ki->operands[index];
 

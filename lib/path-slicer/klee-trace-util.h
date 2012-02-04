@@ -21,24 +21,24 @@ namespace tern {
   protected:
     /* Record routines. */
     void record(DynInstrVector *trace, klee::KInstruction *kInstr,
-      klee::ExecutionState *state, llvm::Function *f);
+      klee::ThreadState *state, llvm::Function *f);
     void recordPHI(DynInstrVector *trace, klee::KInstruction *kInstr,
-      klee::ExecutionState *state);
+      klee::ThreadState *state);
     void recordBr(DynInstrVector *trace, klee::KInstruction *kInstr, 
-      klee::ExecutionState *state);
+      klee::ThreadState *state);
     void recordRet(DynInstrVector *trace, klee::KInstruction *kInstr, 
-      klee::ExecutionState *state);
+      klee::ThreadState *state);
     void recordCall(DynInstrVector *trace, klee::KInstruction *kInstr, 
-      klee::ExecutionState *state, llvm::Function *f);
+      klee::ThreadState *state, llvm::Function *f);
     void recordNonMem(DynInstrVector *trace, klee::KInstruction *kInstr, 
-      klee::ExecutionState *state);
+      klee::ThreadState *state);
     void recordLoad(DynInstrVector *trace, klee::KInstruction *kInstr, 
-      klee::ExecutionState *state);
+      klee::ThreadState *state);
     void recordStore(DynInstrVector *trace, klee::KInstruction *kInstr, 
-      klee::ExecutionState *state);    
+      klee::ThreadState *state);    
     /* Borrowed from KLEE Executor.cpp */
     const klee::Cell& eval(klee::KInstruction *ki, unsigned index, 
-      klee::ExecutionState &state) const;
+      klee::ThreadState &state) const;
 
   public:
     KleeTraceUtil();
