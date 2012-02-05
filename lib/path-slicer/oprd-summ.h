@@ -12,9 +12,9 @@
 #include "type-defs.h"
 #include "cache-util.h"
 #include "stat.h"
+#include "func-summ.h"
 
 namespace tern {
-  class PathSlicer;
   /* This class is used to collect not-executed alias information.
 
   This class collects both stored pointer operands as well as their bdd, not just bdd,
@@ -31,7 +31,7 @@ namespace tern {
     static char ID;
     Stat *stat;
 
-    PathSlicer *pathSlicer;
+    FuncSumm *funcSumm;
 
     /* All "reachable" store pointer operands. This is collected by a inter-procedural algorithm. */
     /* Used by mayWriteFunc() in intra-thread phase. */
@@ -78,7 +78,7 @@ namespace tern {
     OprdSumm();
     ~OprdSumm();
     void initStat(Stat *stat);
-    void initPathSlicer(PathSlicer *pathSlicer);
+    void initFuncSumm(FuncSumm *funcSumm);
     virtual void getAnalysisUsage(llvm::AnalysisUsage &AU) const;
     virtual bool runOnModule(llvm::Module &M);
 

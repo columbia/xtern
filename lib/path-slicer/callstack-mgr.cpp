@@ -1,6 +1,5 @@
 #include "util.h"
 #include "callstack-mgr.h"
-#include "path-slicer.h"
 using namespace tern;
 
 using namespace std;
@@ -37,10 +36,10 @@ void CallStackMgr::clear() {
   // TBD.
 }
 
-void CallStackMgr::init(Stat *stat, InstrIdMgr *idMgr, PathSlicer *pathSlicer) {
+void CallStackMgr::init(Stat *stat, InstrIdMgr *idMgr, FuncSumm *funcSumm) {
   this->stat = stat;
   this->idMgr = idMgr;
-  this->pathSlicer = pathSlicer;
+  this->funcSumm = funcSumm;
 }
 
 void CallStackMgr::updateCallStack(DynInstr *dynInstr) {
@@ -49,7 +48,7 @@ void CallStackMgr::updateCallStack(DynInstr *dynInstr) {
   Instruction *instr = idMgr->getOrigInstr(dynInstr);
 
   // Update call seq, push or pop.
-  if (Util::isCall(instr) && pathSlicer->isInternalCall((DynCallInstr *)dynInstr)) {
+  if (Util::isCall(instr) && funcSumm->isInternalCall((DynCallInstr *)dynInstr)) {
     curSeq->push_back((DynCallInstr *)dynInstr);  // Push.
   } else {
     if (curSeq->size() > 0)

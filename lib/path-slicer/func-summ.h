@@ -26,9 +26,15 @@ namespace tern {
     FuncSumm();
     ~FuncSumm();
 
+    void init();
+
+    /* Since uclibc would be linked in, some functions such as memcpy() would become internal
+    after this linking. But we only care about "guest" LLVM code in slicing. So, these functions are
+    the only places within the slicing system to determine which functions are internal or not. */
     bool isInternalFunction(const llvm::Function *f);
     bool isInternalCall(const llvm::Instruction *instr);
     bool isInternalCall(DynInstr *dynInstr);
+    void addInternelFunction(const llvm::Function *f);
   };
 
 }

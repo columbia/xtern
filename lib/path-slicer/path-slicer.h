@@ -22,6 +22,7 @@
 #include "klee-trace-util.h"
 #include "xtern-trace-util.h"
 #include "oprd-summ.h"
+#include "func-summ.h"
 
 namespace tern {
   struct PathSlicer: public llvm::ModulePass {
@@ -67,10 +68,8 @@ namespace tern {
     (orig, mx and simplified) LLVM modules. */
     OprdSumm oprdSumm;
 
-    /* Since KLEE will link in uclibc library, so some functions in the module may become
-    internal such as memcpy() after this linking. Our slicing only focus on guest program,
-    so we have to collect the set of all internal functions before uclibc is linked in. */
-    llvm::DenseSet<const llvm::Function *> internalFunctions;
+    /* Function summary. */
+    FuncSumm funcSumm;
 
   protected:
     /* Init all sub-components of the path-slicer. */
@@ -101,13 +100,6 @@ namespace tern {
 
     /* The key function called by other modules (such as KLEE) to get relevant branches. */
     void runPathSlicer(void *pathId, std::set<llvm::BranchInst *> &brInstrs);
-
-    /* Since uclibc would be linked in, some functions such as memcpy() would become internal
-    after this linking. But we only care about "guest" LLVM code in slicing. So, these functions are
-    the only places within the slicing system to determine which functions are internal or not. */
-    bool isInternalFunction(const llvm::Function *f);
-    bool isInternalCall(const llvm::Instruction *instr);
-    bool isInternalCall(DynInstr *dynInstr);
   };
 }
 

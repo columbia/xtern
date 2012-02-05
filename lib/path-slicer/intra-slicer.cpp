@@ -48,9 +48,9 @@ DynInstr *IntraSlicer::delTraceTail() {
   return dynInstr;
 }
 
-void IntraSlicer::init(PathSlicer *pathSlicer, InstrIdMgr *idMgr, 
+void IntraSlicer::init(FuncSumm *funcSumm, InstrIdMgr *idMgr, 
   const DynInstrVector *trace, size_t startIndex) {
-  this->pathSlicer = pathSlicer;
+  this->funcSumm = funcSumm;
   this->idMgr = idMgr;
   this->trace = trace;
   curIndex = startIndex;
@@ -152,7 +152,7 @@ void IntraSlicer::handleRet(DynInstr *dynInstr) {
 
 void IntraSlicer::handleCall(DynInstr *dynInstr) {
   DynCallInstr *callInstr = (DynCallInstr*)dynInstr;
-  if (pathSlicer->isInternalCall(callInstr)) {
+  if (funcSumm->isInternalCall(callInstr)) {
     takeNonMem(callInstr);
   } else {
     // TBD: QUERY FUNCTION SUMMARY.

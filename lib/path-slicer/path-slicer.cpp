@@ -55,7 +55,6 @@ char PathSlicer::ID = 0;
 
 PathSlicer::PathSlicer(): ModulePass(&ID) {
   fprintf(stderr, "PathSlicer::PathSlicer()\n");
-  internalFunctions.clear();
 }
 
 PathSlicer::~PathSlicer() {
@@ -93,9 +92,12 @@ void PathSlicer::init(llvm::Module &M) {
     assert(false && "Slicing mode should be valid.");
   }
 
+  /* Init function summary. */  
+  funcSumm.init();
+
   /* Init oprd summary. */
   oprdSumm.initStat(&stat);
-  oprdSumm.initPathSlicer(this);
+  oprdSumm.initFuncSumm(&funcSumm);
   PassManager *oprdPM = new PassManager;
   if (NORMAL_SLICING) {
     collectInternalFunctions(*origModule);
@@ -114,14 +116,14 @@ void PathSlicer::init(llvm::Module &M) {
     oprdPM->run(*simModule);
     assert(false);// TBD. NOT SURE WHETHER SHOULD PASS IN MX OR SIM MODULE HERE.
   }
-  fprintf(stderr, "PathSlicer::init 3\n");
+
 
   /* Init instruction id manager. */
   idMgr.initStat(&stat);
   idMgr.initModules(origModule, mxModule, simModule, LmTrace.c_str());
 
   /* Init call stack manager. */
-  ctxMgr.init(&stat, &idMgr, this);
+  ctxMgr.init(&stat, &idMgr, &funcSumm);
 
   /* Init CFG manager. */
   cfgMgr.initStat(&stat);
@@ -209,38 +211,12 @@ void PathSlicer::collectInternalFunctions(Module &M) {
   fprintf(stderr, "PathSlicer::collectInternalFunctions begin\n");
   for (Module::iterator f = M.begin(); f != M.end(); ++f) {
     if (!f->isDeclaration()) {
-      internalFunctions.insert(f);
-      fprintf(stderr, "Function %s(%p) is internal, current size %u.\n", 
-        f->getNameStr().c_str(), (void *)f, internalFunctions.size());
+      funcSumm.addInternelFunction(f);
+      fprintf(stderr, "Function %s(%p) is internal.\n", 
+        f->getNameStr().c_str(), (void *)f);
     }
   }
   fprintf(stderr, "PathSlicer::collectInternalFunctions end\n");
-}
-
-bool PathSlicer::isInternalCall(const Instruction *instr) {
-  const CallInst *ci = dyn_cast<CallInst>(instr);
-  assert(ci);
-  const Function *f = ci->getCalledFunction();  
-  if (!f) // If it is an indirect call (function pointer), return false conservatively.
-    return false;
-  else
-    return isInternalFunction(f);
-}
-
-bool PathSlicer::isInternalCall(DynInstr *dynInstr) {
-  DynCallInstr *callInstr = (DynCallInstr*)dynInstr;
-  Function *f = callInstr->getCalledFunc();
-  return isInternalFunction(f);
-}
-
-bool PathSlicer::isInternalFunction(const Function *f) {
-  // TBD: If the called function is a function pointer, would "f" be NULL?
-  fprintf(stderr, "Function %s(%p) is isInternalFunction?\n", 
-    f->getNameStr().c_str(), (void *)f);
-  bool result = !f->isDeclaration() && internalFunctions.count(f) > 0;
-  fprintf(stderr, "Function %s is isInternalFunction %d.\n", 
-    f->getNameStr().c_str(), result);
-  return result;
 }
 
 void PathSlicer::calStat() {

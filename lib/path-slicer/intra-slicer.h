@@ -15,16 +15,16 @@
 #include "instr-id-mgr.h"
 #include "alias-mgr.h"
 #include "cfg-mgr.h"
+#include "func-summ.h"
 
 namespace tern {
-  struct PathSlicer;
   /* Note:
     Current slicing algorithm which suits for PEREGRINE ignores "values", which would be required by 
     the directed symbolic execution project.
   */
   struct IntraSlicer {
   private:
-    PathSlicer *pathSlicer;
+    FuncSumm *funcSumm;
     Stat *stat;
     LiveSet live;
     Slice *slice;
@@ -69,7 +69,7 @@ namespace tern {
   public:
     IntraSlicer();
     ~IntraSlicer();
-    void init(PathSlicer *pathSlicer, InstrIdMgr *idMgr, const DynInstrVector *trace, size_t startIndex);
+    void init(FuncSumm *funcSumm, InstrIdMgr *idMgr, const DynInstrVector *trace, size_t startIndex);
     void detectInputDepRaces();
   };
 }

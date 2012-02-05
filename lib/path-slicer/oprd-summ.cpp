@@ -1,5 +1,4 @@
 #include "util.h"
-#include "path-slicer.h"
 #include "oprd-summ.h"
 using namespace tern;
 char tern::OprdSumm::ID = 0;
@@ -7,7 +6,7 @@ char tern::OprdSumm::ID = 0;
 using namespace llvm;
 
 OprdSumm::OprdSumm(): CallGraphFP(&ID) {
-  pathSlicer = NULL;
+  funcSumm = NULL;
 }
 
 OprdSumm::~OprdSumm() {
@@ -31,8 +30,8 @@ void OprdSumm::initStat(Stat *stat) {
   this->stat = stat;
 }
 
-void OprdSumm::initPathSlicer(PathSlicer *pathSlicer) {
-  this->pathSlicer = pathSlicer;
+void OprdSumm::initFuncSumm(FuncSumm *funcSumm) {
+  this->funcSumm = funcSumm;
 }
 
 llvm::DenseSet<llvm::Instruction *> *OprdSumm::getLoadSummBetween(
@@ -64,7 +63,7 @@ void OprdSumm::collectSummLocal(llvm::Module &M) {
   for (Module::iterator f = M.begin(); f != M.end(); ++f) {
     if (visited.count(f) == 0) {
       visited.insert(f);
-      if (pathSlicer->isInternalFunction(f)) {
+      if (funcSumm->isInternalFunction(f)) {
         funcLoadSumm[f] = new InstrDenseSet;
         funcStoreSumm[f] = new InstrDenseSet;
         collectFuncSummLocal(f);
@@ -100,7 +99,7 @@ void OprdSumm::collectSummTopDown(llvm::Module &M) {
   for (Module::iterator f = M.begin(); f != M.end(); ++f) {
     if (visited.count(f) == 0) {
       visited.insert(f);
-      if (pathSlicer->isInternalFunction(f)) {
+      if (funcSumm->isInternalFunction(f)) {
         DFSTopDown(f);
       }
     }
@@ -110,7 +109,7 @@ void OprdSumm::collectSummTopDown(llvm::Module &M) {
 void OprdSumm::DFSTopDown(const llvm::Function *f) {
   for (Function::const_iterator b = f->begin(), be = f->end(); b != be; ++b) {
     for (BasicBlock::const_iterator i = b->begin(), ie = b->end(); i != ie; ++i) {
-      if (Util::isCall(i) && pathSlicer->isInternalCall(i)) {
+      if (Util::isCall(i) && funcSumm->isInternalCall(i)) {
         vector<Function *> calledFuncs = get_called_functions(i);//Inheritated from CallGraphFP
         for (size_t j = 0; j < calledFuncs.size(); ++j) {
           const Function *callee = calledFuncs[j];
@@ -118,7 +117,7 @@ void OprdSumm::DFSTopDown(const llvm::Function *f) {
           // First, do DFS to collect summary.
           if (visited.count(callee) == 0) {
             visited.insert(callee);
-            if (pathSlicer->isInternalFunction(callee)) {
+            if (funcSumm->isInternalFunction(callee)) {
               DFSTopDown(callee);
             }
           }

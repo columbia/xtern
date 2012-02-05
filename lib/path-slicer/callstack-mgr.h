@@ -6,12 +6,12 @@
 #include "dyn-instrs.h"
 #include "instr-id-mgr.h"
 #include "stat.h"
+#include "func-summ.h"
 
 namespace tern {
-  class PathSlicer;
   class CallStackMgr {
   private:
-    PathSlicer *pathSlicer;
+    FuncSumm *funcSumm;
     Stat *stat;
     InstrIdMgr *idMgr;
     /* Map from thread id to a sequence of current active dynamic call instructions. */
@@ -34,7 +34,7 @@ namespace tern {
     CallStackMgr();
     ~CallStackMgr();
     void clear();
-    void init(Stat *stat, InstrIdMgr *idMgr, PathSlicer *pathSlicer);
+    void init(Stat *stat, InstrIdMgr *idMgr, FuncSumm *funcSumm);
     
     /* For normal slicing mode, this is the orig call stack;
         for mx slicing mode, this is the mx call stack. */
