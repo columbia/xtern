@@ -188,18 +188,18 @@ void PathSlicer::runPathSlicer(void *pathId, set<BranchInst *> &brInstrs) {
   
   // Run inter-slicer.
   interSlicer.detectInputDepRaces(&instrRegions);
+#endif
 
   // Run intra-slicer.
   size_t startIndex = trace->size();
   assert(startIndex > 0);
   startIndex--;
-  intraSlicer.init(this, &idMgr, trace, startIndex); // Init intra threas slicer.
+  intraSlicer.init((ExecutionState *)pathId, &funcSumm, &idMgr, trace, startIndex);
   // TBD. Take initial instruction and add init oprds.
   intraSlicer.detectInputDepRaces(); // Detect input dependent races.
 
   // Calculate stat results.
   calStat();
-#endif
 
   // Free the trace along current path. 
   traceUtil->postProcess(trace);
@@ -228,6 +228,10 @@ void PathSlicer::initKModule(KModule *kmodule) {
     ((KleeTraceUtil *)traceUtil)->initKModule(kmodule);
   else
     assert(false);
+}
+
+void PathSlicer::initSolver(klee::Solver *solver) {
+  intraSlicer.initSolver(solver);
 }
 
 void PathSlicer::record(void *pathId, void *instr, void *state, void *f) {

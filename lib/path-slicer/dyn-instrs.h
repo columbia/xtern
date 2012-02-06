@@ -170,18 +170,15 @@ namespace tern {
   class DynMemInstr: public DynInstr {
   private:
     /* Loaded or stored memory address from the pointer operand. */
-    long conAddr;
-    klee::ref<klee::Expr> symAddr;
+    klee::ref<klee::Expr> addr;
 
   protected:
 
   public:
     DynMemInstr();
     ~DynMemInstr();
-    void setConAddr(long conAddr);
-    long getConAddr();
-    void setSymAddr(klee::ref<klee::Expr> symAddr);
-    klee::ref<klee::Expr> getSymAddr();
+    void setAddr(klee::ref<klee::Expr> symAddr);
+    klee::ref<klee::Expr> getAddr();
     bool isAddrSymbolic();
   };
 }

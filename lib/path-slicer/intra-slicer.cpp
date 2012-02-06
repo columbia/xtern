@@ -9,6 +9,8 @@ using namespace llvm;
 #include "path-slicer.h"
 using namespace tern;
 
+using namespace klee;
+
 IntraSlicer::IntraSlicer() {
 
 }
@@ -48,14 +50,19 @@ DynInstr *IntraSlicer::delTraceTail() {
   return dynInstr;
 }
 
-void IntraSlicer::init(FuncSumm *funcSumm, InstrIdMgr *idMgr, 
+void IntraSlicer::init(ExecutionState *state, FuncSumm *funcSumm, InstrIdMgr *idMgr, 
   const DynInstrVector *trace, size_t startIndex) {
+  this->state = state;
   this->funcSumm = funcSumm;
   this->idMgr = idMgr;
   this->trace = trace;
   curIndex = startIndex;
   live.clear();
   live.init(aliasMgr, idMgr);
+}
+
+void IntraSlicer::initSolver(klee::Solver *solver) {
+  this->solver = solver;
 }
 
 void IntraSlicer::takeNonMem(DynInstr *dynInstr, uchar reason) {
@@ -194,7 +201,7 @@ void IntraSlicer::handleMem(DynInstr *dynInstr) {
     for (; itr != loadInstrs.end(); ++itr) {
       DynMemInstr *loadInstr = (DynMemInstr*)(*itr);
       DynOprd loadPtrOprd(loadInstr, 0);
-      if (loadInstr->getConAddr() == storeInstr->getConAddr()) {
+      if (mustBeSame(loadInstr->getAddr(), storeInstr->getAddr())) {
         if (loadInstr->isAddrSymbolic() || storeInstr->isAddrSymbolic()) {
           addMemAddrEqConstr(loadInstr, storeInstr);
         }
@@ -216,6 +223,19 @@ void IntraSlicer::handleMem(DynInstr *dynInstr) {
   }
 }
 
+bool IntraSlicer::mustBeSame(klee::ref<klee::Expr> expr1, klee::ref<klee::Expr> expr2) {
+  if (isa<klee::ConstantExpr>(expr1) && isa<klee::ConstantExpr>(expr2)) {
+    return cast<klee::ConstantExpr>(expr1)->getZExtValue() ==
+      cast<klee::ConstantExpr>(expr2)->getZExtValue();
+  } else {
+    bool isTrue = false;
+    ref<Expr> eqExpr = EqExpr::create(expr1, expr1);
+    /* TBD: borrowed from TimingSolver::mustBeTrue(). The solver below is regular solver.
+    Do we actually need to check isTrue is true here? */
+    return solver->mustBeTrue(Query(state->constraints, eqExpr), isTrue) && isTrue;
+  }
+}
+
 DynInstr *IntraSlicer::prevDynInstr(DynInstr *dynInstr) {
   return NULL;
 }
@@ -230,7 +250,7 @@ void IntraSlicer::removeRange(DynInstr *dynInstr) {
 
 void IntraSlicer::addMemAddrEqConstr(DynMemInstr *loadInstr,
   DynMemInstr *storeInstr) {
-
+  // Shall we add the constraint to constraints of current ExecutionState?
 }
 
 

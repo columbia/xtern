@@ -125,8 +125,7 @@ void KleeTraceUtil::recordLoad(DynInstrVector *trace, KInstruction *kInstr,
   load->setIndex(trace->size());
   load->setTid((uchar)state->id);
   load->setOrigInstrId(idAssigner->getInstructionID(kInstr->inst));
-  load->setConAddr(0);// TBD: add sym/concrete hybrid execution and get concrete mem addr.
-  load->setSymAddr(eval(kInstr, 0, *state).value);
+  load->setAddr(eval(kInstr, 0, *state).value);
   trace->push_back(load);    
 }
 
@@ -136,8 +135,7 @@ void KleeTraceUtil::recordStore(DynInstrVector *trace, KInstruction *kInstr,
   store->setIndex(trace->size());
   store->setTid((uchar)state->id);
   store->setOrigInstrId(idAssigner->getInstructionID(kInstr->inst));
-  store->setConAddr(0);// TBD: add sym/concrete hybrid execution and get concrete mem addr.
-  store->setSymAddr(eval(kInstr, 1, *state).value);
+  store->setAddr(eval(kInstr, 1, *state).value);
   trace->push_back(store);      
 }
 

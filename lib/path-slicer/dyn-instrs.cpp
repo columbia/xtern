@@ -152,7 +152,6 @@ int DynSpawnThreadInstr::getChildTid() {
 }
 
 DynMemInstr::DynMemInstr() {
-  conAddr = 0;
   // DO NOT INIT SYMADDR YET.
 }
 
@@ -160,23 +159,15 @@ DynMemInstr::~DynMemInstr() {
 
 }
 
-void DynMemInstr::setConAddr(long conAddr) {
-  this->conAddr = conAddr;
+void DynMemInstr::setAddr(ref<klee::Expr> addr) {
+  this->addr = addr;
 }
 
-long DynMemInstr::getConAddr() {
-  return conAddr;
-}
-
-void DynMemInstr::setSymAddr(ref<klee::Expr> symAddr) {
-  this->symAddr = symAddr;
-}
-
-ref<klee::Expr> DynMemInstr::getSymAddr() {
-  return symAddr;
+ref<klee::Expr> DynMemInstr::getAddr() {
+  return addr;
 }
 
 bool DynMemInstr::isAddrSymbolic() {
-  return isa<klee::ConstantExpr>(symAddr);
+  return isa<klee::ConstantExpr>(addr);
 }
 

@@ -8,6 +8,9 @@
 #include "llvm/Module.h"
 #include "llvm/ADT/DenseSet.h"
 
+#include "klee/Solver.h"
+#include "klee/ExecutionState.h"
+
 #include "stat.h"
 #include "dyn-instrs.h"
 #include "slice.h"
@@ -24,6 +27,11 @@ namespace tern {
   */
   struct IntraSlicer {
   private:
+    /* We need to pass in the solver from KLEE to check whether two memory addresses of two
+    load/store instructions must be always the same in the intra-slicing. The solver must be a regular
+    solver, not a timing solver, for soundness of the silcing algorithm. */
+    klee::Solver *solver;
+    klee::ExecutionState *state;
     FuncSumm *funcSumm;
     Stat *stat;
     LiveSet live;
@@ -65,11 +73,14 @@ namespace tern {
     DynInstr *prevDynInstr(DynInstr *dynInstr);
     void removeRange(DynInstr *dynInstr);
     void addMemAddrEqConstr(DynMemInstr *loadInstr, DynMemInstr *storeInstr);
+    bool mustBeSame(klee::ref<klee::Expr> expr1, klee::ref<klee::Expr> expr2);
 
   public:
     IntraSlicer();
     ~IntraSlicer();
-    void init(FuncSumm *funcSumm, InstrIdMgr *idMgr, const DynInstrVector *trace, size_t startIndex);
+    void init(klee::ExecutionState *state, FuncSumm *funcSumm, InstrIdMgr *idMgr,
+      const DynInstrVector *trace, size_t startIndex);
+    void initSolver(klee::Solver *solver);
     void detectInputDepRaces();
   };
 }
