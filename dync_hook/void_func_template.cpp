@@ -24,9 +24,12 @@ extern "C" void FUNC_NAME(ARGS_WITH_NAME){
 
 #ifdef __USE_TERN_RUNTIME
 	if (Space::isApp()) {
+    Space::enterSys();
+    void *eip = options::dync_geteip ? get_eip() : 0;
+    Space::exitSys();
 
 #ifdef __NEED_INPUT_INSID
-  	tern_FUNC_NAME(0, ARGS_ONLY_NAME);
+  	tern_FUNC_NAME((unsigned)(uint64_t) eip, ARGS_ONLY_NAME);
 #else
   	tern_FUNC_NAME(ARGS_ONLY_NAME);
 #endif

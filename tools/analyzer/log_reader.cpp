@@ -70,6 +70,7 @@ void txt_log_reader::next()
   cur_rec.args.clear();
 
   is >> op_name;
+  is >> hex >> cur_rec.insid >> dec;
   is >> cur_rec.turn;
 
   string st;

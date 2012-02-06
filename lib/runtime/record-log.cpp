@@ -10,6 +10,7 @@
 #include <string.h>
 #include <pthread.h>
 #include <iostream>
+#include <iomanip>
 #include "tern/runtime/scheduler.h"
 #include "tern/runtime/loghooks.h"
 #include "tern/runtime/record-log.h"
@@ -40,6 +41,7 @@ void TxtLogger::logSync(unsigned insid, unsigned short sync,
       va_list args;
       va_start(args, after);
       ouf << syncfunc::getName(sync)
+          << " 0x" << hex << insid << dec
           << ' ' << turn
           << ' ' << tid
           << hex << " 0x" << va_arg(args, uint64_t) << dec;
@@ -55,6 +57,7 @@ void TxtLogger::logSync(unsigned insid, unsigned short sync,
     suffix = (after?"_second":"_first");
 
   ouf << syncfunc::getName(sync) << suffix
+      << " 0x" << hex << setfill('0') << setw(8) << insid << dec
       << ' ' << turn
       << ' ' << tid;
 

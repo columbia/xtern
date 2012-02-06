@@ -9,6 +9,7 @@
 #include <execinfo.h>
 #include <tern/hooks.h>
 #include <tern/space.h>
+#include <tern/options.h>
 #include <tern/runtime/runtime.h>
 
 using namespace tern;
@@ -62,6 +63,19 @@ static void print_stack()
   // Free the string pointers
   free( funcNames );
 #endif
+}
+
+void *get_eip()
+{
+  void *tracePtrs[3];
+  int count = backtrace(tracePtrs, 3);
+
+  //std::cout << std::hex << tracePtrs[2] << std::dec << std::endl;
+  //char** funcNames = backtrace_symbols( tracePtrs, count );
+  //printf( "%s\n", funcNames[2] );
+  //printf(stderr, "reteip: %p\n", tracePtrs[1]);
+
+  return tracePtrs[2];  //  this is ret_eip of my caller
 }
 
 #include "spec_hooks.cpp"
