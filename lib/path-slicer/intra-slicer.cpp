@@ -18,10 +18,12 @@ IntraSlicer::IntraSlicer() {
 IntraSlicer::~IntraSlicer() {}
 
 /* Core function for intra-thread slicer. */
-void IntraSlicer::detectInputDepRaces() {
+void IntraSlicer::detectInputDepRaces(uchar tid) {
   DynInstr *cur = NULL;
   while (!empty()) {
-    cur = delTraceTail();
+    cur = delTraceTail(tid);
+    if (!cur)
+      return;
     Instruction *instr = idMgr->getOrigInstr(cur);
     if (Util::isPHI(instr)) {
       handlePHI(cur);
@@ -43,10 +45,17 @@ bool IntraSlicer::empty() {
   return curIndex != SIZE_T_INVALID;
 }
 
-DynInstr *IntraSlicer::delTraceTail() {
-  ASSERT(!empty() && curIndex < trace->size());
-  DynInstr *dynInstr = trace->at(curIndex);
-  curIndex--;
+DynInstr *IntraSlicer::delTraceTail(uchar tid) {
+  ASSERT(curIndex < trace->size());
+  DynInstr *dynInstr = NULL;
+  while (!empty()) {
+    if (trace->at(curIndex)->getTid() == tid) {
+      dynInstr = trace->at(curIndex);
+      curIndex--;
+      break;
+    } else
+      curIndex--;
+  }
   return dynInstr;
 }
 
@@ -59,10 +68,6 @@ void IntraSlicer::init(ExecutionState *state, FuncSumm *funcSumm, InstrIdMgr *id
   curIndex = startIndex;
   live.clear();
   live.init(aliasMgr, idMgr);
-}
-
-void IntraSlicer::initSolver(klee::Solver *solver) {
-  this->solver = solver;
 }
 
 void IntraSlicer::takeNonMem(DynInstr *dynInstr, uchar reason) {
@@ -110,7 +115,7 @@ void IntraSlicer::handlePHI(DynInstr *dynInstr) {
   DynPHIInstr *phiInstr = (DynPHIInstr*)dynInstr;
   if (regOverWritten(phiInstr)) {
     delRegOverWritten(phiInstr);
-    unsigned index = phiInstr->getIncomingIndex();
+    uchar index = phiInstr->getIncomingIndex();
     DynOprd oprd(phiInstr, index);
     if (oprd.isConstant()) {
       live.addReg(&oprd);
@@ -201,7 +206,7 @@ void IntraSlicer::handleMem(DynInstr *dynInstr) {
     for (; itr != loadInstrs.end(); ++itr) {
       DynMemInstr *loadInstr = (DynMemInstr*)(*itr);
       DynOprd loadPtrOprd(loadInstr, 0);
-      if (mustBeSame(loadInstr->getAddr(), storeInstr->getAddr())) {
+      if (mustAlias(&loadPtrOprd, &storePtrOprd)) {
         if (loadInstr->isAddrSymbolic() || storeInstr->isAddrSymbolic()) {
           addMemAddrEqConstr(loadInstr, storeInstr);
         }
@@ -219,33 +224,45 @@ void IntraSlicer::handleMem(DynInstr *dynInstr) {
         }
       }
     }
-
   }
 }
 
-bool IntraSlicer::mustBeSame(klee::ref<klee::Expr> expr1, klee::ref<klee::Expr> expr2) {
-  if (isa<klee::ConstantExpr>(expr1) && isa<klee::ConstantExpr>(expr2)) {
-    return cast<klee::ConstantExpr>(expr1)->getZExtValue() ==
-      cast<klee::ConstantExpr>(expr2)->getZExtValue();
-  } else {
-    bool isTrue = false;
-    ref<Expr> eqExpr = EqExpr::create(expr1, expr1);
-    /* TBD: borrowed from TimingSolver::mustBeTrue(). The solver below is regular solver.
-    Do we actually need to check isTrue is true here? */
-    return solver->mustBeTrue(Query(state->constraints, eqExpr), isTrue) && isTrue;
-  }
+bool IntraSlicer::mustAlias(DynOprd *oprd1, DynOprd *oprd2) {
+  const Value *v1 = oprd1->getStaticValue();
+  const Value *v2 = oprd2->getStaticValue();
+  return isa<Constant>(v1) && isa<Constant>(v2) && v1 == v2;
 }
 
 DynInstr *IntraSlicer::prevDynInstr(DynInstr *dynInstr) {
-  return NULL;
+  uchar tid = dynInstr->getTid();
+  size_t tmpIndex = curIndex;
+  DynInstr *prevInstr = NULL;
+  while (tmpIndex != SIZE_T_INVALID) {
+    if (trace->at(tmpIndex)->getTid() == tid) {
+      prevInstr = trace->at(tmpIndex);
+      break;
+    } else
+      tmpIndex--;
+  }
+  return prevInstr;
 }
 
 bool IntraSlicer::postDominate(DynInstr *dynPostInstr, DynInstr *dynPrevInstr) {
-  return false;
+  return cfgMgr->postDominate(idMgr->getOrigInstr(dynPrevInstr),
+    idMgr->getOrigInstr(dynPostInstr));
 }
 
-void IntraSlicer::removeRange(DynInstr *dynInstr) {
-
+void IntraSlicer::removeRange(DynRetInstr *dynRetInstr) {
+  size_t callIndex = 0;
+  DynCallInstr *call = dynRetInstr->getDynCallInstr();
+  if (call)
+    callIndex = call->getIndex();
+  while (curIndex != callIndex) {
+    assert(!trace->at(curIndex)->isTaken());
+    curIndex--;
+  }
+  assert(!trace->at(curIndex)->isTaken());
+  curIndex--;
 }
 
 void IntraSlicer::addMemAddrEqConstr(DynMemInstr *loadInstr,

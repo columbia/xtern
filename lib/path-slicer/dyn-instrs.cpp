@@ -87,11 +87,11 @@ DynPHIInstr::~DynPHIInstr() {
 
 }
 
-void DynPHIInstr::setIncomingIndex(unsigned index) {
+void DynPHIInstr::setIncomingIndex(uchar index) {
   incomingIndex = index;
 }
 
-unsigned DynPHIInstr::getIncomingIndex() {
+uchar DynPHIInstr::getIncomingIndex() {
   return incomingIndex;
 }
 

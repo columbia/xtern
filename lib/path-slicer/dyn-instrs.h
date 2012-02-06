@@ -100,16 +100,15 @@ namespace tern {
 
   class DynPHIInstr: public DynInstr {
   private:
-    unsigned incomingIndex;
+    uchar incomingIndex;
 
   protected:
     
   public:
     DynPHIInstr();
     ~DynPHIInstr();
-    void setIncomingIndex(unsigned index);
-    unsigned getIncomingIndex();
-    
+    void setIncomingIndex(uchar index);
+    uchar getIncomingIndex();
   };
 
   class DynBrInstr: public DynInstr {

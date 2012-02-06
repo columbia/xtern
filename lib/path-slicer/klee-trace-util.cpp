@@ -182,7 +182,7 @@ void KleeTraceUtil::preProcess(DynInstrVector *trace) {
       BasicBlock *bb = Util::getBasicBlock(idAssigner->getInstruction(prevInstr->getOrigInstrId()));
       PHINode *phi = dyn_cast<PHINode>(instr);
       int idx = phi->getBasicBlockIndex(bb);
-      ((DynPHIInstr *)dynInstr)->setIncomingIndex(idx);
+      ((DynPHIInstr *)dynInstr)->setIncomingIndex((uchar)idx);
     }
     
     // (3) For each dynamic ret instruction, setup its dynamic call instruction.

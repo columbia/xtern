@@ -93,24 +93,25 @@ void PathSlicer::init(llvm::Module &M) {
   }
 
   /* Init function summary. */  
-  funcSumm.init();
+  funcSumm.initEvents(*origModule);
+  PassManager *funcPM = new PassManager;
+  Util::addTargetDataToPM(origModule, funcPM);
+  funcPM->add(&funcSumm);
+  funcPM->run(*origModule);
 
   /* Init oprd summary. */
   oprdSumm.initStat(&stat);
   oprdSumm.initFuncSumm(&funcSumm);
   PassManager *oprdPM = new PassManager;
   if (NORMAL_SLICING) {
-    collectInternalFunctions(*origModule);
     Util::addTargetDataToPM(origModule, oprdPM);
     oprdPM->add(&oprdSumm);
     oprdPM->run(*origModule);
   } else if (MAX_SLICING) {
-    collectInternalFunctions(*mxModule);
     Util::addTargetDataToPM(mxModule, oprdPM);
     oprdPM->add(&oprdSumm);
     oprdPM->run(*mxModule);
   } else {
-    collectInternalFunctions(*simModule);
     Util::addTargetDataToPM(simModule, oprdPM);
     oprdPM->add(&oprdSumm);
     oprdPM->run(*simModule);
@@ -195,9 +196,15 @@ void PathSlicer::runPathSlicer(void *pathId, set<BranchInst *> &brInstrs) {
   assert(startIndex > 0);
   startIndex--;
   intraSlicer.init((ExecutionState *)pathId, &funcSumm, &idMgr, trace, startIndex);
-  // TBD. Take initial instruction and add init oprds.
-  intraSlicer.detectInputDepRaces(); // Detect input dependent races.
 
+  // TBD. Take initial instruction and add init oprds.
+
+  // TBD: should have a thread-id loops to traverse all thread ids.
+  uchar tid = 0;
+  do {
+    intraSlicer.detectInputDepRaces(tid); // Detect input dependent races.
+  } while (0);
+  
   // Calculate stat results.
   calStat();
 
@@ -205,18 +212,6 @@ void PathSlicer::runPathSlicer(void *pathId, set<BranchInst *> &brInstrs) {
   traceUtil->postProcess(trace);
   allPathTraces.erase(pathId);
   delete trace;
-}
-
-void PathSlicer::collectInternalFunctions(Module &M) {
-  fprintf(stderr, "PathSlicer::collectInternalFunctions begin\n");
-  for (Module::iterator f = M.begin(); f != M.end(); ++f) {
-    if (!f->isDeclaration()) {
-      funcSumm.addInternelFunction(f);
-      fprintf(stderr, "Function %s(%p) is internal.\n", 
-        f->getNameStr().c_str(), (void *)f);
-    }
-  }
-  fprintf(stderr, "PathSlicer::collectInternalFunctions end\n");
 }
 
 void PathSlicer::calStat() {
@@ -228,10 +223,6 @@ void PathSlicer::initKModule(KModule *kmodule) {
     ((KleeTraceUtil *)traceUtil)->initKModule(kmodule);
   else
     assert(false);
-}
-
-void PathSlicer::initSolver(klee::Solver *solver) {
-  intraSlicer.initSolver(solver);
 }
 
 void PathSlicer::record(void *pathId, void *instr, void *state, void *f) {

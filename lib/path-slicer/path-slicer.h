@@ -81,7 +81,6 @@ namespace tern {
     void enforceRacyEdges();
     void calStat();
     llvm::Module *loadModule(const char *path);
-    void collectInternalFunctions(llvm::Module &M);
     
   public:
         static char ID;
@@ -93,7 +92,6 @@ namespace tern {
     virtual void getAnalysisUsage(llvm::AnalysisUsage &AU) const;
 
     void initKModule(klee::KModule *kmodule);
-    void initSolver(klee::Solver *solver);
 
     /* The uniformed recording interface to record an in-memory execution trace. */
     void record(void *pathId, void *instr, void *state, void *f);

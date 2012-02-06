@@ -4,7 +4,11 @@
 #include "llvm/Instruction.h"
 #include "llvm/Function.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/Pass.h"
 
+#include "common/callgraph-fp.h"
+
+#include "event-func.h"
 #include "dyn-instrs.h"
 
 namespace tern {
@@ -16,17 +20,36 @@ namespace tern {
     (2) Whether a function is internal (in the orig module, not including linking of uclibc).
     ...
   */
-  class FuncSumm {
+  class FuncSumm: public llvm::ModulePass {
+  public:
+    static char ID;
+
   private:
+    /* Set of events such as lock()/unlock(), or fopen()/fclose(). */
+    llvm::DenseSet<const llvm::Function *> events;
+    /* Set of all functions that may reach any events in the function body. */
+    llvm::DenseSet<const llvm::Function *> eventFunctions;
+
+    /* Set of all internal functions from original bc module (regardless of uclibc). */
     llvm::DenseSet<const llvm::Function *> internalFunctions;
 
   protected:
+    void collectInternalFunctions(llvm::Module &M);
 
   public:
     FuncSumm();
     ~FuncSumm();
 
-    void init();
+    virtual void getAnalysisUsage(AnalysisUsage &AU) const;
+    virtual bool runOnModule(Module &M);
+
+    /* Event functions. */
+    /* The initEvents() must be called before run() on this func-summ, since event-func will
+    be run before func-summ is run. */
+    void initEvents(llvm::Module &M);
+    bool isEventFunction(const llvm::Function *f);
+    bool isEventCall(const llvm::Instruction *instr);
+    bool isEventCall(DynInstr *dynInstr);
 
     /* Since uclibc would be linked in, some functions such as memcpy() would become internal
     after this linking. But we only care about "guest" LLVM code in slicing. So, these functions are
@@ -34,7 +57,6 @@ namespace tern {
     bool isInternalFunction(const llvm::Function *f);
     bool isInternalCall(const llvm::Instruction *instr);
     bool isInternalCall(DynInstr *dynInstr);
-    void addInternelFunction(const llvm::Function *f);
   };
 
 }

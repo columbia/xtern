@@ -8,7 +8,6 @@
 #include "llvm/Module.h"
 #include "llvm/ADT/DenseSet.h"
 
-#include "klee/Solver.h"
 #include "klee/ExecutionState.h"
 
 #include "stat.h"
@@ -27,10 +26,6 @@ namespace tern {
   */
   struct IntraSlicer {
   private:
-    /* We need to pass in the solver from KLEE to check whether two memory addresses of two
-    load/store instructions must be always the same in the intra-slicing. The solver must be a regular
-    solver, not a timing solver, for soundness of the silcing algorithm. */
-    klee::Solver *solver;
     klee::ExecutionState *state;
     FuncSumm *funcSumm;
     Stat *stat;
@@ -58,7 +53,7 @@ namespace tern {
     void handleNonMem(DynInstr *dynInstr);
     void handleMem(DynInstr *dynInstr);
     bool empty();
-    DynInstr *delTraceTail();
+    DynInstr *delTraceTail(uchar tid);
 
     /* TBD: all places using this function should indicate the specific taken reason. */
     void takeNonMem(DynInstr *dynInstr, uchar reason = INTRA_NON_MEM);
@@ -70,18 +65,21 @@ namespace tern {
     bool mayWriteFunc(DynInstr *dynInstr, llvm::Function *func);
     bool mayCallEvent(DynInstr *dynInstr, llvm::Function *func);
     DynInstr *getCallInstrWithRet(DynInstr *retDynInstr);
+
+    /* Find previous dynamic instruction in the trace with the same thread id. */
     DynInstr *prevDynInstr(DynInstr *dynInstr);
-    void removeRange(DynInstr *dynInstr);
+
+    /* Make curIndex points to the previous instruction of the call instruction of the ret instruction. */
+    void removeRange(DynRetInstr *dynRetInstr);
     void addMemAddrEqConstr(DynMemInstr *loadInstr, DynMemInstr *storeInstr);
-    bool mustBeSame(klee::ref<klee::Expr> expr1, klee::ref<klee::Expr> expr2);
+    bool mustAlias(DynOprd *oprd1, DynOprd *oprd2);
 
   public:
     IntraSlicer();
     ~IntraSlicer();
     void init(klee::ExecutionState *state, FuncSumm *funcSumm, InstrIdMgr *idMgr,
       const DynInstrVector *trace, size_t startIndex);
-    void initSolver(klee::Solver *solver);
-    void detectInputDepRaces();
+    void detectInputDepRaces(uchar tid);
   };
 }
 
