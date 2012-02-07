@@ -25,9 +25,13 @@ parser.add_argument('program', metavar='program.bc',
 parser.add_argument('-tooldir', dest='tern_obj_path',
                     default='/home/huayang/research/xtern/obj/Debug/',
                     help='directory to xtern tools')
+parser.add_argument('-l', dest='additional_libs', default='',
+                    help='comma separated list of libraries for linking')
 args = parser.parse_known_args();
 program = args[0].program
 tern_obj_path = args[0].tern_obj_path
+additional_libs = ' '.join(map(lambda s: '-l%s' % s,
+                               args[0].additional_libs.split(',')))
 
 program_without_ext = ''
 if program.endswith('.ll') or program.endswith('.bc'):
@@ -38,14 +42,14 @@ replay   = '%s-replay'   % program_without_ext
 
 tern_symbolic = '/tmp/tern_symbolic.c'
 
-cmd1 = '%s/bin/tern-instr -S -with-uclibc %s -o %s' \
-    % (tern_obj_path, program, program_without_ext)
-cmd2 = 'llc -o %s.s %s.ll' % (record, record)
-cmd3 = 'g++ -o %s %s.s %s -L%s/lib -lruntime -lcommon -lpthread -lcrypt' \
-    % (record, record, tern_symbolic, tern_obj_path)
-cmd4 = ('%s ' % record) + ' '.join(args[1])
-
-commands = [cmd1, cmd2, cmd3, cmd4]
+commands = [
+    '%s/bin/tern-instr -S -with-uclibc %s -o %s' \
+        % (tern_obj_path, program, program_without_ext),
+    'llc -o %s.s %s.ll' % (record, record),
+    'g++ -o %s %s.s %s -L%s/lib -lruntime -lcommon -lpthread -lcrypt %s' \
+        % (record, record, tern_symbolic, tern_obj_path, additional_libs),
+    ('./%s ' % record) + ' '.join(args[1])
+    ];
 
 for th in [0, 1]:
     cmd = '%s/bin/logprint -r -v -bc %s.ll tern-log-tid-%d > out%d.txt' \
