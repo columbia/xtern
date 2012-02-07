@@ -291,7 +291,7 @@ protected:
   pthread_cond_t replaycv;
   pthread_cond_t tickcv;
   FILE *log;
-  
+
   // TODO: can potentially create a thread-local struct for each thread if
   // it improves performance
   pthread_cond_t  waitcv[MaxThreads];
@@ -327,6 +327,53 @@ struct SeededRRSchedulerCV: public RRSchedulerCV {
 
   Random rand;
 };
+
+
+struct RRSchedulerSem: public Scheduler {
+  typedef Scheduler Parent;
+
+  void getTurn(void);
+  void putTurn(void);
+  void wait(void *chan);
+
+  void threadCreate(pthread_t new_th) {
+    assert(self() == runq.front());
+    Parent::threadCreate(new_th);
+    runq.push_back(getTernTid(new_th));
+  }
+  void threadBegin(pthread_t self_th) {
+    // FIXME: this can race
+    Parent::threadBegin(self_th);
+    getTurn();
+  }
+  void threadEnd(pthread_t self_th);
+  void signal(void *chan) {
+    signalHelper(chan, false);
+  }
+  void broadcast(void *chan) {
+    signalHelper(chan, true);
+  }
+
+  RRSchedulerSem(pthread_t main_th);
+  ~RRSchedulerSem();
+
+protected:
+
+  void signalHelper(void *chan, bool all);
+
+  /// for debugging
+  void selfcheck(void);
+  std::ostream& dump(std::ostream& o);
+
+  std::list<int>  runq;
+  std::list<int>  waitq;
+
+  // TODO: can potentially create a thread-local struct for each thread if
+  // it improves performance
+  sem_t  waitsem[MaxThreads];
+  void*  waitvar[MaxThreads];
+};
+
 
 /// replay scheduler using semaphores
 struct ReplaySchedulerSem: public Scheduler {

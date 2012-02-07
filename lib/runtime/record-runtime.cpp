@@ -55,7 +55,8 @@ void InstallRuntime() {
   if (options::runtime_type == "RRuntime")
     Runtime::the = new RRuntime();
   else if (options::runtime_type == "RR")
-    Runtime::the = new RecorderRT<RRSchedulerCV>;
+    //Runtime::the = new RecorderRT<RRSchedulerCV>;
+    Runtime::the = new RecorderRT<RRSchedulerSem>;
   else if (options::runtime_type == "SeededRR") {
     RecorderRT<SeededRRSchedulerCV> *rt = new RecorderRT<SeededRRSchedulerCV>;
     static_cast<SeededRRSchedulerCV*>(rt)->setSeed(options::scheduler_seed);
@@ -563,10 +564,10 @@ int RecorderRT<_S>::pthreadBarrierDestroy(unsigned ins,
 ///  advantage is that it ensures that all sync vars except original cond
 ///  vars have the same internal states
 ///
-///  solution 4: lock + semaphore.  deterministic, good if sync frequency
+///  solution 4: semaphore.  deterministic, good if sync frequency
 ///  low.
 ///
-///  solution 4 optimization: lock + flag.  deterministic, good if sync
+///  solution 4 optimization: flag.  deterministic, good if sync
 ///  frequency high
 ///
 ///  solution 5: probably not worth it
@@ -817,33 +818,34 @@ int RecorderRT<FCFSScheduler>::pthreadCondWait(unsigned ins,
 template <>
 int RecorderRT<FCFSScheduler>::pthreadCondTimedWait(unsigned ins,
     pthread_cond_t *cv, pthread_mutex_t *mu, const struct timespec *abstime){
+  typedef FCFSScheduler _S;
+
   unsigned nturn1, nturn2;
-
-  FCFSScheduler::getTurn();
+  _S::getTurn();
   pthread_mutex_unlock(mu);
-  nturn1 = FCFSScheduler::incTurnCount();
+  nturn1 = _S::incTurnCount();
 
-  int ret = pthread_cond_timedwait(cv, FCFSScheduler::getLock(), abstime);
+  int ret = pthread_cond_timedwait(cv, _S::getLock(), abstime);
 
   pthreadMutexLockHelper(mu);
-  nturn2 = FCFSScheduler::incTurnCount();
-  FCFSScheduler::putTurn();
+  nturn2 = _S::incTurnCount();
+  _S::putTurn();
 
   Logger::the->logSync(ins, syncfunc::pthread_cond_timedwait, nturn1, false, (uint64_t)cv, (uint64_t)mu);
   Logger::the->logSync(ins, syncfunc::pthread_cond_timedwait, nturn2, true, (uint64_t)cv, (uint64_t)mu, (uint64_t) ret==ETIMEDOUT);
   return 0;
 }
 
-
 template <>
 int RecorderRT<FCFSScheduler>::pthreadCondSignal(unsigned ins,
                                                  pthread_cond_t *cv){
-  unsigned nturn;
+  typedef FCFSScheduler _S;
 
-  FCFSScheduler::getTurn();
+  unsigned nturn;
+  _S::getTurn();
   pthread_cond_signal(cv);
-  nturn = FCFSScheduler::incTurnCount();
-  FCFSScheduler::putTurn();
+  nturn = _S::incTurnCount();
+  _S::putTurn();
 
   Logger::the->logSync(ins, syncfunc::pthread_cond_signal, nturn, true, (uint64_t)cv);
   return 0;
@@ -852,12 +854,88 @@ int RecorderRT<FCFSScheduler>::pthreadCondSignal(unsigned ins,
 template <>
 int RecorderRT<FCFSScheduler>::pthreadCondBroadcast(unsigned ins,
                                                     pthread_cond_t*cv){
-  unsigned nturn;
+  typedef FCFSScheduler _S;
 
-  FCFSScheduler::getTurn();
+  unsigned nturn;
+  _S::getTurn();
   pthread_cond_broadcast(cv);
-  nturn = FCFSScheduler::incTurnCount();
-  FCFSScheduler::putTurn();
+  nturn = _S::incTurnCount();
+  _S::putTurn();
+
+  Logger::the->logSync(ins, syncfunc::pthread_cond_broadcast, nturn, true, (uint64_t)cv);
+  return 0;
+}
+
+template <>
+int RecorderRT<RRSchedulerSem>::pthreadCondWait(unsigned ins,
+                pthread_cond_t *cv, pthread_mutex_t *mu){
+  typedef RRSchedulerSem _S;
+
+  unsigned nturn1, nturn2;
+  _S::getTurn();
+  pthread_mutex_unlock(mu);
+  _S::signal(mu);
+  nturn1 = _S::incTurnCount();
+  _S::wait(cv);
+
+  _S::getTurn();
+  pthreadMutexLockHelper(mu);
+  nturn2 = _S::incTurnCount();
+  _S::putTurn();
+
+  Logger::the->logSync(ins, syncfunc::pthread_cond_wait, nturn1, false, (uint64_t)cv, (uint64_t)mu);
+  Logger::the->logSync(ins, syncfunc::pthread_cond_wait, nturn2, true, (uint64_t)cv, (uint64_t)mu);
+  return 0;
+}
+
+// FIXME: timedwiat = wait
+template <>
+int RecorderRT<RRSchedulerSem>::pthreadCondTimedWait(unsigned ins,
+    pthread_cond_t *cv, pthread_mutex_t *mu, const struct timespec *abstime){
+  typedef RRSchedulerSem _S;
+
+  unsigned nturn1, nturn2;
+  _S::getTurn();
+  pthread_mutex_unlock(mu);
+  _S::signal(mu);
+  nturn1 = _S::incTurnCount();
+  _S::wait(cv);
+
+  _S::getTurn();
+  pthreadMutexLockHelper(mu);
+  nturn2 = _S::incTurnCount();
+  _S::putTurn();
+
+  Logger::the->logSync(ins, syncfunc::pthread_cond_timedwait, nturn1, false, (uint64_t)cv, (uint64_t)mu);
+  Logger::the->logSync(ins, syncfunc::pthread_cond_timedwait, nturn2, true, (uint64_t)cv, (uint64_t)mu, (uint64_t)0);
+  return 0;
+}
+
+template <>
+int RecorderRT<RRSchedulerSem>::pthreadCondSignal(unsigned ins,
+                                                  pthread_cond_t *cv){
+  typedef RRSchedulerSem _S;
+
+  unsigned nturn;
+  _S::getTurn();
+  nturn = _S::incTurnCount();
+  _S::signal(cv);
+  _S::putTurn();
+
+  Logger::the->logSync(ins, syncfunc::pthread_cond_signal, nturn, true, (uint64_t)cv);
+  return 0;
+}
+
+template <>
+int RecorderRT<RRSchedulerSem>::pthreadCondBroadcast(unsigned ins,
+                                                     pthread_cond_t*cv){
+  typedef RRSchedulerSem _S;
+
+  unsigned nturn;
+  _S::getTurn();
+  nturn = _S::incTurnCount();
+  _S::broadcast(cv);
+  _S::putTurn();
 
   Logger::the->logSync(ins, syncfunc::pthread_cond_broadcast, nturn, true, (uint64_t)cv);
   return 0;

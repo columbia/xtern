@@ -111,7 +111,7 @@ void RRSchedulerCV::getTurnHelper(bool doLock, bool doUnlock) {
     }
     if (tid != runq.front())
       pthread_cond_wait(&waitcv[tid], &lock);
-    else 
+    else
       break;
   }
 
@@ -161,7 +161,7 @@ void RRSchedulerCV::waitFirstHalf(void *chan, bool doLock) {
   if(doLock)
     pthread_mutex_lock(&lock);
 
-  dprintf("RRSchedulerCV: %d: waiting (no CV) on %p\n", self(), chan);
+  dprintf("RRSchedulerCV: %d: waiting (%p)\n", self(), chan);
 
   int tid = self();
   assert(waitvar[tid]==NULL && "thread already waits!");
@@ -391,4 +391,154 @@ void SeededRRSchedulerCV::choose(void)
   assert(it != runq.end());
   runq.erase(it);
   runq.push_front(*it);
+}
+
+void RRSchedulerSem::getTurn(void)
+{
+  int tid = self();
+  assert(tid>=0 && tid < Scheduler::nthread);
+  sem_wait(&waitsem[tid]);
+  SELFCHECK;
+}
+
+void RRSchedulerSem::putTurn(void)
+{
+  int tid = self(), next_tid;
+  assert(tid == runq.front());
+  runq.push_back(tid);
+
+  runq.pop_front();
+  next_tid = runq.front();
+  assert(next_tid>=0 && next_tid < Scheduler::nthread);
+  dprintf("RRSchedulerSem: %d gives turn to %d\n", tid, next_tid);
+  SELFCHECK;
+  sem_post(&waitsem[next_tid]);
+}
+
+void RRSchedulerSem::wait(void *chan)
+{
+  int tid = self(), next_tid;
+  assert(tid == runq.front());
+  waitvar[tid] = chan;
+  waitq.push_back(tid);
+
+  runq.pop_front();
+  assert(!runq.empty() && "all threads wait; deadlock!");
+  next_tid = runq.front();
+  assert(next_tid>=0 && next_tid < Scheduler::nthread);
+  dprintf("RRSchedulerSem: %d wait(%p)\n", tid, chan);
+  SELFCHECK;
+  sem_post(&waitsem[next_tid]);
+}
+
+void RRSchedulerSem::threadEnd(pthread_t self_th)
+{
+  assert(self() == runq.front());
+  signal((void*)self_th);
+  Parent::threadEnd(self_th);
+
+  runq.pop_front();
+  if(runq.empty()) // all threads done
+    return;
+  int next_tid = runq.front();
+  assert(next_tid>=0 && next_tid < Scheduler::nthread);
+  dprintf("RRSchedulerSem: %d ends; gives turn to %d\n", self(), next_tid);
+  SELFCHECK;
+  sem_post(&waitsem[next_tid]);
+}
+
+void RRSchedulerSem::signalHelper(void *chan, bool all)
+{
+  list<int>::iterator prv, cur;
+
+  assert(chan && "can't signal/broadcast NULL");
+  assert(self() == runq.front());
+  dprintf("RRSchedulerSem: %d: %s %p\n",
+          self(), (all?"broadcast":"signal"), chan);
+
+  // use delete-safe way of iterating the list in case @all is true
+  for(cur=waitq.begin(); cur!=waitq.end();) {
+    prv = cur ++;
+
+    int tid = *prv;
+    assert(tid >=0 && tid < Scheduler::nthread);
+    if(waitvar[tid] == chan) {
+      waitvar[tid] = NULL;
+      waitq.erase(prv);
+      runq.push_back(tid);
+      dprintf("RRSchedulerSem: %d signals %d(%p)\n", self(), tid, chan);
+      if(!all)
+        break;
+    }
+  }
+  SELFCHECK;
+}
+
+RRSchedulerSem::RRSchedulerSem(pthread_t main_th): Parent(main_th) {
+  for(unsigned i=0; i<MaxThreads; ++i) {
+    sem_init(&waitsem[i], 0, 0);
+    waitvar[i] = NULL;
+  }
+  // main thread
+  assert(self() == MainThreadTid && "tid hasn't been initialized!");
+  runq.push_back(self());
+  sem_post(&waitsem[MainThreadTid]);
+}
+
+void RRSchedulerSem::selfcheck(void) {
+  tr1::unordered_set<int> tids;
+
+  // no duplicate tids on runq
+  for(list<int>::iterator th=runq.begin(); th!=runq.end(); ++th) {
+    if(*th < 0 || *th > Scheduler::nthread) {
+      dump(cerr);
+      assert(0 && "invalid tid on runq!");
+    }
+    if(tids.find(*th) != tids.end()) {
+      dump(cerr);
+      assert(0 && "duplicate tids on runq!");
+    }
+    tids.insert(*th);
+  }
+
+  // no duplicate tids on waitq
+  for(list<int>::iterator th=waitq.begin(); th!=waitq.end(); ++th) {
+    if(*th < 0 || *th > Scheduler::nthread) {
+      dump(cerr);
+      assert(0 && "invalid tid on waitq!");
+    }
+    if(tids.find(*th) != tids.end()) {
+      dump(cerr);
+      assert(0 && "duplicate tids on runq or waitq!");
+    }
+    tids.insert(*th);
+  }
+
+  // TODO: check that tids have all tids
+
+  // threads on runq have NULL waitvars
+  for(list<int>::iterator th=runq.begin(); th!=runq.end(); ++th)
+    if(waitvar[*th] != NULL) {
+      dump(cerr);
+      assert(0 && "thread on runq but has non NULL wait var!");
+    }
+
+  // threads on waitq have non-NULL waitvars
+  for(list<int>::iterator th=waitq.begin(); th!=waitq.end(); ++th)
+    if(waitvar[*th] == NULL) {
+      dump(cerr);
+      assert (0 && "thread on waitq but has NULL wait var!");
+    }
+}
+
+ostream& RRSchedulerSem::dump(ostream& o) {
+  o << "nthread " << Scheduler::nthread << ": " << turnCount;
+  o << " [runq ";
+  copy(runq.begin(), runq.end(), ostream_iterator<int>(o, " "));
+  o << "]";
+  o << " [waitq ";
+  for(list<int>::iterator th=waitq.begin(); th!=waitq.end(); ++th)
+    o << *th << "(" << waitvar[*th] << ") ";
+  o << "]\n";
+  return o;
 }
