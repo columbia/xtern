@@ -18,6 +18,7 @@
 #include "alias-mgr.h"
 #include "cfg-mgr.h"
 #include "func-summ.h"
+#include "oprd-summ.h"
 
 namespace tern {
   /* Note:
@@ -27,6 +28,7 @@ namespace tern {
   struct IntraSlicer {
   private:
     klee::ExecutionState *state;
+    OprdSumm *oprdSumm;
     FuncSumm *funcSumm;
     Stat *stat;
     LiveSet live;
@@ -60,9 +62,9 @@ namespace tern {
     void delRegOverWritten(DynInstr *dynInstr);
     bool regOverWritten(DynInstr *dynInstr);
     bool retRegOverWritten(DynInstr *dynInstr);
-    bool eventBetween(DynInstr *dynInstr);
-    bool writtenBetween(DynInstr *dynInstr);
-    bool mayWriteFunc(DynInstr *dynInstr, llvm::Function *func);
+    bool eventBetween(DynBrInstr *dynBrInstr, DynInstr *dynPostInstr);
+    bool writtenBetween(DynBrInstr *dynBrInstr, DynInstr *dynPostInstr);
+    bool mayWriteFunc(DynRetInstr *dynRetInstr, llvm::Function *func);
     bool mayCallEvent(DynInstr *dynInstr, llvm::Function *func);
     DynInstr *getCallInstrWithRet(DynInstr *retDynInstr);
 
@@ -77,8 +79,8 @@ namespace tern {
   public:
     IntraSlicer();
     ~IntraSlicer();
-    void init(klee::ExecutionState *state, FuncSumm *funcSumm, InstrIdMgr *idMgr,
-      const DynInstrVector *trace, size_t startIndex);
+    void init(klee::ExecutionState *state, OprdSumm *oprdSumm, FuncSumm *funcSumm,
+      InstrIdMgr *idMgr, const DynInstrVector *trace, size_t startIndex);
     void detectInputDepRaces(uchar tid);
   };
 }

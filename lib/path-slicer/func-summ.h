@@ -8,7 +8,7 @@
 
 #include "common/callgraph-fp.h"
 
-#include "event-func.h"
+#include "event-mgr.h"
 #include "dyn-instrs.h"
 
 namespace tern {
@@ -47,9 +47,9 @@ namespace tern {
     /* The initEvents() must be called before run() on this func-summ, since event-func will
     be run before func-summ is run. */
     void initEvents(llvm::Module &M);
-    bool isEventFunction(const llvm::Function *f);
-    bool isEventCall(const llvm::Instruction *instr);
-    bool isEventCall(DynInstr *dynInstr);
+    bool mayCallEvent(const llvm::Function *f);
+    bool mayCallEvent(DynInstr *dynInstr);
+    bool eventBetween(llvm::BranchInst *prevInstr, llvm::Instruction *postInstr);
 
     /* Since uclibc would be linked in, some functions such as memcpy() would become internal
     after this linking. But we only care about "guest" LLVM code in slicing. So, these functions are

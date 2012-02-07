@@ -18,7 +18,7 @@ FuncSumm::~FuncSumm() {
 
 void FuncSumm::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();
-  AU.addRequired<EventFunc>();
+  AU.addRequired<EventMgr>();
   ModulePass::getAnalysisUsage(AU);
 }
 
@@ -39,24 +39,27 @@ void FuncSumm::initEvents(Module &M) {
   }
   
   // Add all sync operations from syncfunc.cpp in xtern or fopen()/fclose() APIs.
-  EventFunc &EF = getAnalysis<EventFunc>();
-  EF.setupEvents(eventList);
+  EventMgr &EM = getAnalysis<EventMgr>();
+  EM.setupEvents(eventList);
 }
 
-bool FuncSumm::isEventFunction(const llvm::Function *f) {
+bool FuncSumm::mayCallEvent(const llvm::Function *f) {
   long intF = (long)f;  
-  EventFunc &EF = getAnalysis<EventFunc>();
-  return EF.contains_sync_operation((Function *)intF);
+  EventMgr &EM = getAnalysis<EventMgr>();
+  return EM.mayCallEvent((Function *)intF);
 }
 
-bool FuncSumm::isEventCall(const llvm::Instruction *instr) {
-  return false; // TBD
+bool FuncSumm::mayCallEvent(DynInstr *dynInstr) {
+  DynCallInstr *callInstr = (DynCallInstr*)dynInstr;
+  Function *f = callInstr->getCalledFunc();
+  assert(f);
+  return mayCallEvent(f);
 }
 
-bool FuncSumm::isEventCall(DynInstr *dynInstr) {
-  return false; // TBD
+bool FuncSumm::eventBetween(llvm::BranchInst *prevInstr, llvm::Instruction *postInstr) {
+  EventMgr &EM = getAnalysis<EventMgr>();
+  return EM.eventBetween(prevInstr, postInstr);
 }
-
 
 void FuncSumm::collectInternalFunctions(Module &M) {
   fprintf(stderr, "FuncSumm::collectInternalFunctions begin\n");

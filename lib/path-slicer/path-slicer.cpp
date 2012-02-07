@@ -195,7 +195,8 @@ void PathSlicer::runPathSlicer(void *pathId, set<BranchInst *> &brInstrs) {
   size_t startIndex = trace->size();
   assert(startIndex > 0);
   startIndex--;
-  intraSlicer.init((ExecutionState *)pathId, &funcSumm, &idMgr, trace, startIndex);
+  intraSlicer.init((ExecutionState *)pathId, &oprdSumm, &funcSumm,
+    &idMgr, trace, startIndex);
 
   // TBD. Take initial instruction and add init oprds.
 

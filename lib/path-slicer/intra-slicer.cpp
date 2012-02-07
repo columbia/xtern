@@ -59,9 +59,10 @@ DynInstr *IntraSlicer::delTraceTail(uchar tid) {
   return dynInstr;
 }
 
-void IntraSlicer::init(ExecutionState *state, FuncSumm *funcSumm, InstrIdMgr *idMgr, 
-  const DynInstrVector *trace, size_t startIndex) {
+void IntraSlicer::init(klee::ExecutionState *state, OprdSumm *oprdSumm, FuncSumm *funcSumm,
+      InstrIdMgr *idMgr, const DynInstrVector *trace, size_t startIndex) {
   this->state = state;
+  this->oprdSumm = oprdSumm;
   this->funcSumm = funcSumm;
   this->idMgr = idMgr;
   this->trace = trace;
@@ -95,20 +96,31 @@ bool IntraSlicer::retRegOverWritten(DynInstr *dynInstr) {
   return regOverWritten(callDynInstr);
 }
 
-bool IntraSlicer::eventBetween(DynInstr *dynInstr) {
-  return false;
+bool IntraSlicer::eventBetween(DynBrInstr *dynBrInstr, DynInstr *dynPostInstr) {
+  Instruction *prevInstr = idMgr->getOrigInstr((DynInstr *)dynBrInstr);
+  BranchInst *branch = dyn_cast<BranchInst>(prevInstr);
+  assert(branch);
+  Instruction *postInstr = idMgr->getOrigInstr((DynInstr *)dynPostInstr);
+  return funcSumm->eventBetween(branch, postInstr);
 }
 
-bool IntraSlicer::writtenBetween(DynInstr *dynInstr) {
-  return false;
+bool IntraSlicer::writtenBetween(DynBrInstr *dynBrInstr, DynInstr *dynPostInstr) {
+  bdd bddBetween = bddfalse;
+  oprdSumm->getStoreSummBetween((DynInstr *)dynBrInstr, dynPostInstr, bddBetween);
+  const bdd bddOfLive = live.getAllLoadMem();
+  return (bddBetween & bddOfLive) != bddfalse;
 }
 
-bool IntraSlicer::mayWriteFunc(DynInstr *dynInstr, Function *func) {
-  return false;
+bool IntraSlicer::mayWriteFunc(DynRetInstr *dynRetInstr, Function *func) {
+  DynCallInstr *dynCallInstr = dynRetInstr->getDynCallInstr();
+  bdd bddOfCall = bddfalse;
+  oprdSumm->getStoreSummInFunc(dynCallInstr, bddOfCall);
+  const bdd bddOfLive = live.getAllLoadMem();
+  return (bddOfCall & bddOfLive) != bddfalse;
 }
 
 bool IntraSlicer::mayCallEvent(DynInstr *dynInstr, Function *func) {
-  return false;
+  return funcSumm->mayCallEvent(dynInstr);
 }
 
 void IntraSlicer::handlePHI(DynInstr *dynInstr) {
@@ -133,8 +145,8 @@ void IntraSlicer::handleBranch(DynInstr *dynInstr) {
     takeNonMem(brInstr);
   } else {
     DynInstr *head = slice->getHead();
-    if (!postDominate(head, brInstr) || eventBetween(brInstr) ||
-      writtenBetween(brInstr)) {
+    if (!postDominate(head, brInstr) || eventBetween(brInstr, head) ||
+      writtenBetween(brInstr, head)) {
       takeNonMem(brInstr);
     }
   }
