@@ -8,7 +8,6 @@
 
 extern "C" void __tern_prog_begin(void);  //  lib/runtime/helper.cpp
 extern "C" void __tern_prog_end(void); //  lib/runtime/helper.cpp
-//extern "C" void tern_exit(unsigned ins, int status); //  lib/runtime/runtime.cpp
 
 typedef int (*main_type)(int, char**, char**);
 
