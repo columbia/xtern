@@ -129,16 +129,12 @@ void PathSlicer::init(llvm::Module &M) {
     assert(false && "Slicing mode should be valid.");
   }
   
-#if 0
   /* Init function summary. */  
-  funcSumm.initEvents(*origModule);
   PassManager *funcPM = new PassManager;
   Util::addTargetDataToPM(origModule, funcPM);
   funcPM->add(&funcSumm);
   funcPM->run(*origModule);
-#endif
 
-#if 0
   /* Init oprd summary. */
   oprdSumm.initStat(&stat);
   oprdSumm.initFuncSumm(&funcSumm);
@@ -157,7 +153,6 @@ void PathSlicer::init(llvm::Module &M) {
     oprdPM->run(*simModule);
     assert(false);// TBD. NOT SURE WHETHER SHOULD PASS IN MX OR SIM MODULE HERE.
   }
-#endif 
 
   /* Init instruction id manager. */
   idMgr.initStat(&stat);

@@ -13,7 +13,9 @@ FuncSumm::FuncSumm(): ModulePass(&ID) {
 }
 
 FuncSumm::~FuncSumm() {
-
+  fprintf(stderr, "FuncSumm::~FuncSumm\n");
+  EventMgr &EM = getAnalysis<EventMgr>();
+  EM.clean();
 }
 
 void FuncSumm::getAnalysisUsage(AnalysisUsage &AU) const {
@@ -25,24 +27,6 @@ void FuncSumm::getAnalysisUsage(AnalysisUsage &AU) const {
 bool FuncSumm::runOnModule(Module &M) {
   collectInternalFunctions(M);
   return false;
-}
-
-void FuncSumm::initEvents(Module &M) {
-  /*vector<Function *> eventList;
-  // Get function list from syncfuncs.h.
-  for (Module::iterator f = M.begin(); f != M.end(); ++f) {
-    if (f->hasName()) {
-      unsigned nr = tern::syncfunc::getNameID(f->getNameStr().c_str());
-      fprintf(stderr, "FuncSumm::initEvents %s %u\n", f->getNameStr().c_str(), 
-      nr);
-      if (nr != tern::syncfunc::not_sync)
-        eventList.push_back(f);
-    }
-  }*/
-  
-  // Add all sync operations from syncfunc.cpp in xtern or fopen()/fclose() APIs.
-  //EventMgr &EM = getAnalysis<EventMgr>();
-  //EM.setupEvents(eventList);
 }
 
 bool FuncSumm::mayCallEvent(const llvm::Function *f) {
@@ -65,13 +49,13 @@ bool FuncSumm::eventBetween(llvm::BranchInst *prevInstr, llvm::Instruction *post
 
 void FuncSumm::collectInternalFunctions(Module &M) {
   fprintf(stderr, "FuncSumm::collectInternalFunctions begin\n");
-  for (Module::iterator f = M.begin(); f != M.end(); ++f) {
+  /*for (Module::iterator f = M.begin(); f != M.end(); ++f) {
     if (!f->isDeclaration()) {
       internalFunctions.insert(f);
       fprintf(stderr, "Function %s(%p) is internal.\n", 
         f->getNameStr().c_str(), (void *)f);
     }
-  }
+  }*/
   fprintf(stderr, "FuncSumm::collectInternalFunctions end\n");
 }
 

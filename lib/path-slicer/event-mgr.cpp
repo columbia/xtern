@@ -4,6 +4,7 @@
 using namespace tern;
 
 #include "common/util.h"
+#include "common/callgraph-fp.h"
 using namespace llvm;
 
 using namespace std;
@@ -12,15 +13,26 @@ char tern::EventMgr::ID = 0;
 
 namespace {
   static RegisterPass<tern::EventMgr> X(
-    "event-func",
+    "event-manager",
     "Get functions with event operations",
     false,
     true); // is analysis
 }
 
+EventMgr::~EventMgr() {
+  fprintf(stderr, "EventMgr::~EventMgr\n");
+}
+
+void EventMgr::clean() {
+  fprintf(stderr, "EventMgr::destroy\n");
+  //CallGraphFP &CG = getAnalysis<CallGraphFP>();
+  //CG.destroy();
+}
+
 void EventMgr::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();
-  CallGraphFP::getAnalysisUsage(AU);
+  AU.addRequired<CallGraphFP>();
+  ModulePass::getAnalysisUsage(AU);
 }
 
 void EventMgr::setupEvents(Module &M) {
@@ -52,7 +64,8 @@ bool EventMgr::is_sync_function(Function *f) {
 
 void EventMgr::DFS(Function *f) {
   visited.insert(f);
-  InstList css = get_call_sites(f);
+  CallGraphFP &CG = getAnalysis<CallGraphFP>();
+  InstList css = CG.get_call_sites(f);
   for (size_t i = 0; i < css.size(); ++i) {
     Function *caller = css[i]->getParent()->getParent();
     if (visited.count(caller) == 0) {
@@ -97,6 +110,7 @@ bool EventMgr::eventBetween(BranchInst *prevInstr, Instruction *postInstr) {
   
   /* Flood fill from <bb> until reaching <post_dominator_bb> */
   bbVisited.clear();
+  CallGraphFP &CG = getAnalysis<CallGraphFP>();
   for (Function::iterator bi = func->begin(); bi != func->end(); ++bi)
     bbVisited[bi] = false;
   for (unsigned i = 0; i < prevInstr->getNumSuccessors(); i++)
@@ -108,7 +122,7 @@ bool EventMgr::eventBetween(BranchInst *prevInstr, Instruction *postInstr) {
     // cerr << "Visited BB: " << bi->getNameStr() << endl;
     for (BasicBlock::iterator ii = bi->begin(); ii != bi->end(); ++ii) {
       if (is_call(ii) && !is_intrinsic_call(ii)) {
-        vector<Function *> called_funcs = get_called_functions(ii);
+        vector<Function *> called_funcs = CG.get_called_functions(ii);
         for (size_t i = 0; i < called_funcs.size(); ++i) {
           if (mayCallEvent(called_funcs[i]))
             return true;
@@ -166,9 +180,14 @@ void EventMgr::stats(const Module &M) const {
 }
 
 bool EventMgr::runOnModule(Module &M) {
-  CallGraphFP::runOnModule(M);
+  //CallGraphFP::runOnModule(M);
   setupEvents(M);
   traverse_call_graph(M);
+
+  // Clean callgraph-fp.
+  CallGraphFP &CG = getAnalysis<CallGraphFP>();
+  CG.destroy();
+  
   return false;
 }
 

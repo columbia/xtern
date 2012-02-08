@@ -15,11 +15,8 @@
 #include "llvm/Transforms/Utils/ValueMapper.h"
 #include "llvm/ADT/DenseSet.h"
 
-#include "common/util.h"
-#include "common/callgraph-fp.h"
-
 namespace tern {
-  struct EventMgr: public llvm::CallGraphFP {	
+  struct EventMgr: public llvm::ModulePass {	
   public:
     static char ID;
 
@@ -42,7 +39,9 @@ namespace tern {
     void setupEvents(llvm::Module &M);
 
   public:
-    EventMgr(): llvm::CallGraphFP(&ID) {}
+    EventMgr(): llvm::ModulePass(&ID) {}
+    ~EventMgr();
+    void clean();
     virtual void getAnalysisUsage(llvm::AnalysisUsage &AU) const;
     virtual bool runOnModule(llvm::Module &M);
     virtual void print(llvm::raw_ostream &O, const llvm::Module *M) const;
@@ -50,11 +49,11 @@ namespace tern {
     bool eventBetween(llvm::BranchInst *prevInstr, llvm::Instruction *postInstr);
     bool is_sync_function(llvm::Function *f);
     void output(const llvm::Module &M) const;
-    virtual void *getAdjustedAnalysisPointer(const llvm::PassInfo *PI) {   
+    /*virtual void *getAdjustedAnalysisPointer(const llvm::PassInfo *PI) {   
       if (PI->isPassID(&llvm::CallGraph::ID))
         return (llvm::CallGraph*)this;
       return this;
-    }
+    }*/
   };
 }
 

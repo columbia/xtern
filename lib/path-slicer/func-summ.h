@@ -46,7 +46,6 @@ namespace tern {
     /* Event functions. */
     /* The initEvents() must be called before run() on this func-summ, since event-func will
     be run before func-summ is run. */
-    void initEvents(llvm::Module &M);
     bool mayCallEvent(const llvm::Function *f);
     bool mayCallEvent(DynInstr *dynInstr);
     bool eventBetween(llvm::BranchInst *prevInstr, llvm::Instruction *postInstr);
