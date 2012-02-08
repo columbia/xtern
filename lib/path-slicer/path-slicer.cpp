@@ -53,8 +53,45 @@ static cl::opt<string> SchedLeaf(
 
 char PathSlicer::ID = 0;
 
+const char *takenReasons[NUM_TAKEN_FLAGS];
+
+void initTakenReasons() {
+  takenReasons[NOT_TAKEN] = "NOT_TAKEN";
+
+  takenReasons[TAKEN_EVENT] = "TAKEN_EVENT";
+  takenReasons[TAKEN_RACE] = "TAKEN_RACE";
+
+  takenReasons[INTER_INSTR2] = "INTER_INSTR2";
+  takenReasons[INTER_LOAD_TGT] = "INTER_LOAD_TGT";
+  takenReasons[INTER_STORE_TGT] = "INTER_STORE_TGT";
+
+  takenReasons[INTER_BR_INSTR] = "INTER_BR_INSTR";
+
+  takenReasons[INTER_BR_BR] = "INTER_BR_BR";
+
+  takenReasons[INTRA_PHI] = "INTRA_PHI";
+  takenReasons[INTRA_PHI_BR_CTRL_DEP] = "INTRA_PHI_BR_CTRL_DEP";
+
+  takenReasons[INTRA_BR] = "INTRA_BR";
+
+  takenReasons[INTRA_RET_REG_OW] = "INTRA_RET_REG_OW";
+  takenReasons[INTRA_RET_CALL_EVENT] = "INTRA_RET_CALL_EVENT";
+  takenReasons[INTRA_RET_WRITE_FUNC] = "INTRA_RET_WRITE_FUNC";
+  takenReasons[INTRA_RET_BOTH] = "INTRA_RET_BOTH";
+
+  takenReasons[INTRA_CALL] = "INTRA_CALL";
+
+  takenReasons[INTRA_LOAD_OW] = "INTRA_LOAD_OW";
+
+  takenReasons[INTRA_STORE_OW] = "INTRA_STORE_OW";
+  takenReasons[INTRA_STORE_ALIAS] = "INTRA_STORE_ALIAS";
+
+  takenReasons[INTRA_NON_MEM] = "INTRA_NON_MEM";
+}
+
 PathSlicer::PathSlicer(): ModulePass(&ID) {
   fprintf(stderr, "PathSlicer::PathSlicer()\n");
+  initTakenReasons();
 }
 
 PathSlicer::~PathSlicer() {
@@ -91,14 +128,17 @@ void PathSlicer::init(llvm::Module &M) {
   } else {
     assert(false && "Slicing mode should be valid.");
   }
-
+  
+#if 0
   /* Init function summary. */  
   funcSumm.initEvents(*origModule);
   PassManager *funcPM = new PassManager;
   Util::addTargetDataToPM(origModule, funcPM);
   funcPM->add(&funcSumm);
   funcPM->run(*origModule);
+#endif
 
+#if 0
   /* Init oprd summary. */
   oprdSumm.initStat(&stat);
   oprdSumm.initFuncSumm(&funcSumm);
@@ -117,7 +157,7 @@ void PathSlicer::init(llvm::Module &M) {
     oprdPM->run(*simModule);
     assert(false);// TBD. NOT SURE WHETHER SHOULD PASS IN MX OR SIM MODULE HERE.
   }
-
+#endif 
 
   /* Init instruction id manager. */
   idMgr.initStat(&stat);
@@ -143,7 +183,7 @@ void PathSlicer::init(llvm::Module &M) {
   /* Init trace util. */
   if (KLEE_RECORDING) {
     traceUtil = new KleeTraceUtil();
-    ((KleeTraceUtil *)traceUtil)->initIdMap(M);
+    ((KleeTraceUtil *)traceUtil)->init(&idMgr, &stat);
     traceUtil->initCallStackMgr(&ctxMgr);
   } else if (XTERN_RECORDING) {
     traceUtil = new XTernTraceUtil();
@@ -151,7 +191,7 @@ void PathSlicer::init(llvm::Module &M) {
   }
   else
     assert(false);
-
+  
   fprintf(stderr, "PathSlicer::init end\n");
 }
 
@@ -171,7 +211,7 @@ Module *PathSlicer::loadModule(const char *path) {
 }
 
 void PathSlicer::enforceRacyEdges() {
-  // Enforce all racy edges, and split new regions.
+  // TBD: enforce all racy edges, and split new regions.
 }
 
 void PathSlicer::runPathSlicer(void *pathId, set<BranchInst *> &brInstrs) {
@@ -183,13 +223,11 @@ void PathSlicer::runPathSlicer(void *pathId, set<BranchInst *> &brInstrs) {
   traceUtil->preProcess(trace);
 
 #if 0
-  
   // Enforce racy edges.
   enforceRacyEdges();
   
   // Run inter-slicer.
   interSlicer.detectInputDepRaces(&instrRegions);
-#endif
 
   // Run intra-slicer.
   size_t startIndex = trace->size();
@@ -208,6 +246,7 @@ void PathSlicer::runPathSlicer(void *pathId, set<BranchInst *> &brInstrs) {
   
   // Calculate stat results.
   calStat();
+#endif
 
   // Free the trace along current path. 
   traceUtil->postProcess(trace);

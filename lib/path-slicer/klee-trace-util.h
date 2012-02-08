@@ -9,6 +9,8 @@
 #include "klee/Internal/Module/Cell.h"
 #include "klee/Internal/Module/KModule.h"
 
+#include "stat.h"
+#include "instr-id-mgr.h"
 #include "trace-util.h"
 
 namespace tern {
@@ -16,7 +18,8 @@ namespace tern {
   class KleeTraceUtil: public TraceUtil {
   private:
     klee::KModule *kmodule;
-    llvm::IDAssigner *idAssigner;
+    InstrIdMgr *idMgr;
+    Stat *stat;
 
   protected:
     /* Record routines. */
@@ -44,8 +47,7 @@ namespace tern {
     KleeTraceUtil();
     ~KleeTraceUtil();
 
-    /* This function must be called on the original module. */
-    void initIdMap(llvm::Module &M);
+    void init(InstrIdMgr *idMgr, Stat *stat);
 
     /* This function is called after uclibc is linked in. */
     void initKModule(klee::KModule *kmodule);

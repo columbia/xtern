@@ -39,7 +39,8 @@ namespace tern {
     void print_call_chain(llvm::Function *f);
     void print_calling_functions(llvm::Function *f);
     void stats(const llvm::Module &M) const;
-    
+    void setupEvents(llvm::Module &M);
+
   public:
     EventMgr(): llvm::CallGraphFP(&ID) {}
     virtual void getAnalysisUsage(llvm::AnalysisUsage &AU) const;
@@ -54,7 +55,6 @@ namespace tern {
         return (llvm::CallGraph*)this;
       return this;
     }
-    void setupEvents(std::vector<llvm::Function *> &eventList);
   };
 }
 

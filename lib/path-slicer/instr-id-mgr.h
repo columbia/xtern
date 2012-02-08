@@ -88,6 +88,8 @@ namespace tern {
 
     llvm::Instruction *getOrigInstr(DynInstr *dynInstr);
 
+    int getOrigInstrId(llvm::Instruction *instr);
+
     /* Given a dynamic instr, return its instr id in max sliced module. */
     int getMxInstrId(DynInstr *dynInstr);
 

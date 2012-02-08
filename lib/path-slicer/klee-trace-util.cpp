@@ -21,12 +21,9 @@ KleeTraceUtil::~KleeTraceUtil() {
 
 }
 
-void KleeTraceUtil::initIdMap(Module &M) {
-  idAssigner = new IDAssigner();
-  PassManager *pm = new PassManager;
-  Util::addTargetDataToPM(&M, pm);
-  pm->add(idAssigner);
-  pm->run(M);
+void KleeTraceUtil::init(InstrIdMgr *idMgr, Stat *stat) {
+  this->idMgr = idMgr;
+  this->stat = stat;
 }
 
 void KleeTraceUtil::initKModule(KModule *kmodule) {
@@ -48,8 +45,9 @@ void KleeTraceUtil::record(DynInstrVector *trace, void *instr, void *state, void
 void KleeTraceUtil::record(DynInstrVector *trace, KInstruction *kInstr,
   ThreadState *state, Function *f) {
   Instruction *instr = kInstr->inst;
+  
   // Ignore an instruction if it is not from the original module.
-  if (idAssigner->getInstructionID(instr) == U_NEG1)
+  if (idMgr->getOrigInstrId(instr) == -1)
     return;
 
   // Real recording.
@@ -76,7 +74,7 @@ void KleeTraceUtil::recordPHI(DynInstrVector *trace, klee::KInstruction *kInstr,
   DynPHIInstr *phi = new DynPHIInstr;
   phi->setIndex(trace->size());
   phi->setTid((uchar)state->id);
-  phi->setOrigInstrId(idAssigner->getInstructionID(kInstr->inst));
+  phi->setOrigInstrId(idMgr->getOrigInstrId(kInstr->inst));
   trace->push_back(phi);
 }
 
@@ -87,7 +85,7 @@ void KleeTraceUtil::recordBr(DynInstrVector *trace, klee::KInstruction *kInstr,
   DynBrInstr *br = new DynBrInstr;
   br->setIndex(trace->size());
   br->setTid((uchar)state->id);
-  br->setOrigInstrId(idAssigner->getInstructionID(kInstr->inst));
+  br->setOrigInstrId(idMgr->getOrigInstrId(kInstr->inst));
   trace->push_back(br);
 }
 
@@ -96,7 +94,7 @@ void KleeTraceUtil::recordRet(DynInstrVector *trace, klee::KInstruction *kInstr,
   DynRetInstr *ret = new DynRetInstr;
   ret->setIndex(trace->size());
   ret->setTid((uchar)state->id);
-  ret->setOrigInstrId(idAssigner->getInstructionID(kInstr->inst));
+  ret->setOrigInstrId(idMgr->getOrigInstrId(kInstr->inst));
   trace->push_back(ret);
 }
 
@@ -105,7 +103,7 @@ void KleeTraceUtil::recordCall(DynInstrVector *trace, klee::KInstruction *kInstr
   DynCallInstr *call = new DynCallInstr;
   call->setIndex(trace->size());
   call->setTid((uchar)state->id);
-  call->setOrigInstrId(idAssigner->getInstructionID(kInstr->inst));
+  call->setOrigInstrId(idMgr->getOrigInstrId(kInstr->inst));
   call->setCalledFunc(f);
   trace->push_back(call);
 }
@@ -115,7 +113,7 @@ void KleeTraceUtil::recordNonMem(DynInstrVector *trace, KInstruction *kInstr,
   DynInstr *instr = new DynInstr;
   instr->setIndex(trace->size());
   instr->setTid((uchar)state->id);
-  instr->setOrigInstrId(idAssigner->getInstructionID(kInstr->inst));
+  instr->setOrigInstrId(idMgr->getOrigInstrId(kInstr->inst));
   trace->push_back(instr);  
 }
 
@@ -124,7 +122,7 @@ void KleeTraceUtil::recordLoad(DynInstrVector *trace, KInstruction *kInstr,
   DynMemInstr *load = new DynMemInstr;
   load->setIndex(trace->size());
   load->setTid((uchar)state->id);
-  load->setOrigInstrId(idAssigner->getInstructionID(kInstr->inst));
+  load->setOrigInstrId(idMgr->getOrigInstrId(kInstr->inst));
   load->setAddr(eval(kInstr, 0, *state).value);
   trace->push_back(load);    
 }
@@ -134,7 +132,7 @@ void KleeTraceUtil::recordStore(DynInstrVector *trace, KInstruction *kInstr,
   DynMemInstr *store = new DynMemInstr;
   store->setIndex(trace->size());
   store->setTid((uchar)state->id);
-  store->setOrigInstrId(idAssigner->getInstructionID(kInstr->inst));
+  store->setOrigInstrId(idMgr->getOrigInstrId(kInstr->inst));
   store->setAddr(eval(kInstr, 1, *state).value);
   trace->push_back(store);      
 }
@@ -165,7 +163,7 @@ void KleeTraceUtil::preProcess(DynInstrVector *trace) {
   
   for (size_t i = 0; i < trace->size(); i++) {
     DynInstr *dynInstr = trace->at(i);
-    Instruction *instr = idAssigner->getInstruction(dynInstr->getOrigInstrId());
+    Instruction *instr = idMgr->getOrigInstr(dynInstr);
     
     // (1) For each dynamic instruction, setup calling context.
     ctxMgr->setCallStack(dynInstr);
@@ -179,7 +177,7 @@ void KleeTraceUtil::preProcess(DynInstrVector *trace) {
           break;
       }
       assert(prevInstr);
-      BasicBlock *bb = Util::getBasicBlock(idAssigner->getInstruction(prevInstr->getOrigInstrId()));
+      BasicBlock *bb = Util::getBasicBlock(idMgr->getOrigInstr(prevInstr));
       PHINode *phi = dyn_cast<PHINode>(instr);
       int idx = phi->getBasicBlockIndex(bb);
       ((DynPHIInstr *)dynInstr)->setIncomingIndex((uchar)idx);
@@ -209,11 +207,12 @@ void KleeTraceUtil::preProcess(DynInstrVector *trace) {
       ctxMgr->updateCallStack(dynInstr);
 
     // Debug print.
-    fprintf(stderr, "\n\nINDEX " SZ ", THREAD-ID: %d, INSTR-ID: %d, OP: %s\n",
+    /*fprintf(stderr, "\n\nINDEX " SZ ", THREAD-ID: %d, INSTR-ID: %d, OP: %s\n",
       dynInstr->getIndex(), dynInstr->getTid(), dynInstr->getOrigInstrId(),
       instr->getOpcodeName());
     ctxMgr->printCallStack(dynInstr);
-    fprintf(stderr, "\n\n");
+    fprintf(stderr, "\n\n");*/
+    stat->printDynInstr(dynInstr, __func__);
   }
 }
 

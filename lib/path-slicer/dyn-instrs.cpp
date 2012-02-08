@@ -67,13 +67,8 @@ bool DynInstr::isTaken() {
 }
 
 const char *DynInstr::takenReason() {
-  return NULL;
-  // TBD: ADD A GLOBAL ARRAY INDEXED WITH TAKEN FLAG WITH TAKEN REASON.
+  return takenReasons[takenFlag];
 }
-
-/*Instruction *DynInstr::getOrigInstr() {
-  return region->getOrigInstr(this);
-}*/
 
 bool DynInstr::isTarget() {
   return isTaken() && takenFlag < INTRA_PHASE_BASE;

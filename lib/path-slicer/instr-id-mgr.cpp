@@ -32,28 +32,30 @@ void InstrIdMgr::initModules(llvm::Module *origModule, llvm::Module *mxModule,
   origIdPm->add(origIda);
   origIdPm->run(*origModule);
 
-   if (mxModule) {
+  if (mxModule) {
     mxIda = new IDAssigner();
     PassManager *mxIdPm = new PassManager;
     Util::addTargetDataToPM(mxModule, mxIdPm);
     mxIdPm->add(mxIda);
     mxIdPm->run(*mxModule);
-  } else
-    mxIda = NULL;
+  }
 
-   if (simModule) {
+  if (simModule) {
     simIda = new IDAssigner();
     PassManager *simIdPm = new PassManager;
     Util::addTargetDataToPM(simModule, simIdPm);
     simIdPm->add(simIda);
     simIdPm->run(*simModule);
-  } else
-    simIda = NULL;
+  }
 
 }
 
 Instruction *InstrIdMgr::getMxInstr(DynInstr *dynInstr) {
   return NULL; // TBD.
+}
+
+int InstrIdMgr::getOrigInstrId(llvm::Instruction *instr) {
+  return (int)origIda->getInstructionID(instr);
 }
 
 Instruction *InstrIdMgr::getOrigInstrCtx(int instrId) {

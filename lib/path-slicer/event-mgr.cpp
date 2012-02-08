@@ -1,5 +1,6 @@
 #include "util.h"
 #include "event-mgr.h"
+#include "tern/syncfuncs.h"
 using namespace tern;
 
 #include "common/util.h"
@@ -22,9 +23,22 @@ void EventMgr::getAnalysisUsage(AnalysisUsage &AU) const {
   CallGraphFP::getAnalysisUsage(AU);
 }
 
-void EventMgr::setupEvents(std::vector<llvm::Function *> &eventList) {
-  sync_funcs.clear();
-  sync_funcs.insert(sync_funcs.begin(), eventList.begin(), eventList.end());
+void EventMgr::setupEvents(Module &M) {
+  //sync_funcs.clear();
+  //sync_funcs.insert(sync_funcs.begin(), eventList.begin(), eventList.end());
+  // Get function list from syncfuncs.h.
+  for (Module::iterator f = M.begin(); f != M.end(); ++f) {
+    if (f->hasName()) {
+      unsigned nr = tern::syncfunc::getNameID(f->getNameStr().c_str());
+      fprintf(stderr, "FuncSumm::initEvents %s %u\n", f->getNameStr().c_str(), 
+      nr);
+      if (nr != tern::syncfunc::not_sync)
+        sync_funcs.push_back(f);
+    }
+  }
+
+  // TBD: add fopen/fclose() if necessary in the future.
+  
 }
 
 // TODO: search in vector may be slow
@@ -153,6 +167,7 @@ void EventMgr::stats(const Module &M) const {
 
 bool EventMgr::runOnModule(Module &M) {
   CallGraphFP::runOnModule(M);
+  setupEvents(M);
   traverse_call_graph(M);
   return false;
 }

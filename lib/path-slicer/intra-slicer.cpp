@@ -56,6 +56,8 @@ DynInstr *IntraSlicer::delTraceTail(uchar tid) {
     } else
       curIndex--;
   }
+  if (!dynInstr)
+    stat->printDynInstr(dynInstr, "IntraSlicer::delTraceTail");
   return dynInstr;
 }
 
