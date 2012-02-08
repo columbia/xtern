@@ -7,9 +7,10 @@ extern const char *takenReasons[NUM_TAKEN_FLAGS];
 /* Flags to identify whether a dynamic instruction is taken, and reasons of taken. */
 #define NOT_TAKEN 0
 
-/* Reasons of taken by handling important events synch calls, real races. */
-#define TAKEN_EVENT 1
-#define TAKEN_RACE 2
+/* Reasons of taken by handling important events (star target or buggy points, synch calls, real races). */
+#define START_TARGET 1
+#define TAKEN_EVENT 2
+#define TAKEN_RACE 3
 // TBD
 
 #define INTER_PHASE_BASE 29  /* Base of inter-thread phase. */

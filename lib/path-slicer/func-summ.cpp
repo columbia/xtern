@@ -79,11 +79,11 @@ bool FuncSumm::isInternalFunction(const Function *f) {
   if (!f)
     return false;
   
-  fprintf(stderr, "Function %s(%p) is isInternalFunction?\n", 
-    f->getNameStr().c_str(), (void *)f);
+  /*fprintf(stderr, "Function %s(%p) is isInternalFunction?\n", 
+    f->getNameStr().c_str(), (void *)f);*/
   bool result = !f->isDeclaration() && internalFunctions.count(f) > 0;
-  fprintf(stderr, "Function %s is isInternalFunction %d.\n", 
-    f->getNameStr().c_str(), result);
+  /*fprintf(stderr, "Function %s is isInternalFunction %d.\n", 
+    f->getNameStr().c_str(), result);*/
   return result;
 }
 

@@ -32,7 +32,7 @@ namespace tern {
     FuncSumm *funcSumm;
     Stat *stat;
     LiveSet live;
-    Slice *slice;
+    Slice slice;
     InstrIdMgr *idMgr;
     AliasMgr *aliasMgr;
     CfgMgr *cfgMgr;
@@ -40,11 +40,6 @@ namespace tern {
     size_t curIndex;
 
   protected:
-    void take(LiveSet &live, Slice &slice, DynInstr *dynInstr, const char *reason);
-    bool mayWrite(DynInstr *dynInstr, LiveSet &live);
-    bool mayWriteFunc(DynInstr *dynRetInstr, llvm::Function *func, LiveSet &live);
-    bool writtenBetween(DynInstr *dynInstr, DynInstr *dynHeadInstr, LiveSet &live);
-    llvm::Instruction *getStaticPostDominator(DynInstr *dynInstr);
     bool postDominate(DynInstr *dynPostInstr, DynInstr *dynPrevInstr);
     DynInstrItr current();
     DynInstr *delFromTrace();
@@ -57,7 +52,6 @@ namespace tern {
     bool empty();
     DynInstr *delTraceTail(uchar tid);
 
-    /* TBD: all places using this function should indicate the specific taken reason. */
     void takeNonMem(DynInstr *dynInstr, uchar reason = INTRA_NON_MEM);
     void delRegOverWritten(DynInstr *dynInstr);
     bool regOverWritten(DynInstr *dynInstr);
@@ -81,7 +75,16 @@ namespace tern {
     ~IntraSlicer();
     void init(klee::ExecutionState *state, OprdSumm *oprdSumm, FuncSumm *funcSumm,
       InstrIdMgr *idMgr, const DynInstrVector *trace, size_t startIndex);
+
+    /* The function to run the intra-thread slicing. */
     void detectInputDepRaces(uchar tid);
+
+    /* The function to initially take a instruction for path-slicer (for reachability only). */
+    void takeStartTarget(DynInstr *dynInstr);
+
+    /* This function could be called by the path-slicer to setup init dyn oprds to live set,
+    depending on different slicing goals (reachability only, or reachability + values of used oprds). */
+    void addDynOprd(DynOprd *dynOprd);
   };
 }
 

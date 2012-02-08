@@ -217,8 +217,11 @@ void KleeTraceUtil::preProcess(DynInstrVector *trace) {
 }
 
 void KleeTraceUtil::postProcess(DynInstrVector *trace) {
-  for (size_t i = 0; i < trace->size(); i++)
-    delete trace->at(i);
+  for (size_t i = 0; i < trace->size(); i++) {
+    DynInstr *dynInstr = trace->at(i);
+    stat->printDynInstr(dynInstr, __func__);
+    delete dynInstr;
+  }
   trace->clear();
 }
 

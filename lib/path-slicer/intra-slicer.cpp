@@ -19,7 +19,9 @@ IntraSlicer::~IntraSlicer() {}
 
 /* Core function for intra-thread slicer. */
 void IntraSlicer::detectInputDepRaces(uchar tid) {
+  fprintf(stderr, "IntraSlicer::detectInputDepRaces tid %u, start index " SZ "\n", tid, curIndex);
   DynInstr *cur = NULL;
+  
   while (!empty()) {
     cur = delTraceTail(tid);
     if (!cur)
@@ -57,7 +59,7 @@ DynInstr *IntraSlicer::delTraceTail(uchar tid) {
       curIndex--;
   }
   if (!dynInstr)
-    stat->printDynInstr(dynInstr, "IntraSlicer::delTraceTail");
+    stat->printDynInstr(dynInstr, __func__);
   return dynInstr;
 }
 
@@ -70,13 +72,14 @@ void IntraSlicer::init(klee::ExecutionState *state, OprdSumm *oprdSumm, FuncSumm
   this->trace = trace;
   curIndex = startIndex;
   live.clear();
+  slice.clear();
   live.init(aliasMgr, idMgr);
 }
 
 void IntraSlicer::takeNonMem(DynInstr *dynInstr, uchar reason) {
   delRegOverWritten(dynInstr);
   live.addUsedRegs(dynInstr);
-  slice->add(dynInstr, reason);
+  slice.add(dynInstr, reason);
 }
 
 void IntraSlicer::delRegOverWritten(DynInstr *dynInstr) {
@@ -137,7 +140,7 @@ void IntraSlicer::handlePHI(DynInstr *dynInstr) {
       DynInstr *prevInstr = prevDynInstr(phiInstr);
       prevInstr->setTaken(INTRA_PHI_BR_CTRL_DEP);
     }
-    slice->add(phiInstr, INTRA_PHI);
+    slice.add(phiInstr, INTRA_PHI);
   }
 }
 
@@ -146,7 +149,7 @@ void IntraSlicer::handleBranch(DynInstr *dynInstr) {
   if (brInstr->isTaken() || brInstr->isTarget()) {
     takeNonMem(brInstr);
   } else {
-    DynInstr *head = slice->getHead();
+    DynInstr *head = slice.getHead();
     if (!postDominate(head, brInstr) || eventBetween(brInstr, head) ||
       writtenBetween(brInstr, head)) {
       takeNonMem(brInstr);
@@ -161,16 +164,16 @@ void IntraSlicer::handleRet(DynInstr *dynInstr) {
   if (retRegOverWritten(retInstr)) {
     delRegOverWritten(retInstr);
     live.addUsedRegs(retInstr);
-    slice->add(retInstr, INTRA_RET_REG_OW);
+    slice.add(retInstr, INTRA_RET_REG_OW);
   } else {
     bool reason1 = mayCallEvent(retInstr, calledFunc);
     bool reason2 = mayWriteFunc(retInstr, calledFunc);
     if (reason1 && reason2)
-      slice->add(retInstr, INTRA_RET_BOTH);
+      slice.add(retInstr, INTRA_RET_BOTH);
     else if (reason1 && !reason2)
-      slice->add(retInstr, INTRA_RET_CALL_EVENT);
+      slice.add(retInstr, INTRA_RET_CALL_EVENT);
     else if (!reason1 && reason2)
-      slice->add(retInstr, INTRA_RET_WRITE_FUNC);
+      slice.add(retInstr, INTRA_RET_WRITE_FUNC);
     else
       removeRange(retInstr);
   }
@@ -203,9 +206,9 @@ void IntraSlicer::handleMem(DynInstr *dynInstr) {
       live.addReg(&loadPtrOprd);
       live.addLoadMem(loadInstr);
       if (reason1 /* no matter whether reason2 is true */)
-        slice->add(loadInstr, INTER_LOAD_TGT);
+        slice.add(loadInstr, INTER_LOAD_TGT);
       else if (reason2)
-        slice->add(loadInstr, INTRA_LOAD_OW);
+        slice.add(loadInstr, INTRA_LOAD_OW);
     }
   } else {
     DynMemInstr *storeInstr = (DynMemInstr*)dynInstr;
@@ -213,7 +216,7 @@ void IntraSlicer::handleMem(DynInstr *dynInstr) {
     DynOprd storePtrOprd(storeInstr, 1);
     if (storeInstr->isTarget()) {
       live.addReg(&storePtrOprd);
-      slice->add(storeInstr, INTER_STORE_TGT);
+      slice.add(storeInstr, INTER_STORE_TGT);
     }
     DenseSet<DynInstr *> loadInstrs = live.getAllLoadInstrs();
     DenseSet<DynInstr *>::iterator itr(loadInstrs.begin());
@@ -228,13 +231,13 @@ void IntraSlicer::handleMem(DynInstr *dynInstr) {
         live.addReg(&storeValue);
         if (!storeInstr->isTaken()) {
           live.addReg(&storePtrOprd);
-          slice->add(storeInstr, INTRA_STORE_OW);
+          slice.add(storeInstr, INTRA_STORE_OW);
         }
       } else if (aliasMgr->mayAlias(&loadPtrOprd, &storePtrOprd)) {
         live.addReg(&storeValue);
         if (!storeInstr->isTaken()) {
           live.addReg(&storePtrOprd);
-          slice->add(storeInstr, INTRA_STORE_ALIAS);
+          slice.add(storeInstr, INTRA_STORE_ALIAS);
         }
       }
     }
@@ -282,6 +285,14 @@ void IntraSlicer::removeRange(DynRetInstr *dynRetInstr) {
 void IntraSlicer::addMemAddrEqConstr(DynMemInstr *loadInstr,
   DynMemInstr *storeInstr) {
   // Shall we add the constraint to constraints of current ExecutionState?
+}
+
+void IntraSlicer::takeStartTarget(DynInstr *dynInstr) {
+  slice.add(dynInstr, START_TARGET);
+}
+
+void IntraSlicer::addDynOprd(DynOprd *dynOprd) {
+  // TBD.
 }
 
 

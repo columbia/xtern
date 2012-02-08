@@ -1,5 +1,7 @@
 #include "stat.h"
 #include "dyn-instrs.h"
+#include "instr-id-mgr.h"
+#include "callstack-mgr.h"
 using namespace tern;
 
 using namespace llvm;
@@ -12,7 +14,12 @@ Stat::Stat() {
 Stat::~Stat() {
 
 }
-    
+
+void Stat::init(InstrIdMgr *idMgr, CallStackMgr *ctxMgr) {
+  this->idMgr = idMgr;
+  this->ctxMgr = ctxMgr;
+}
+
 void Stat::printStat(const char *tag) {
   // TBD.
 }
@@ -29,7 +36,6 @@ const char *Stat::printInstr(const llvm::Instruction *instr) {
     newStream->flush();
     return str->c_str();
   }
-    return NULL;
 }
     
 const char *Stat::printValue(const llvm::Value *v) {
@@ -37,14 +43,16 @@ const char *Stat::printValue(const llvm::Value *v) {
 }
 
 void Stat::printDynInstr(DynInstr *dynInstr, const char *tag) {
+  //fprintf(stderr, "Stat::printDynInstr %d\n", DBG);
   if (DBG) {
-    errs() << "DynInstr {" << tag
+    errs() << "\n"
+      << "DynInstr {" << tag
       << "} IDX: " << dynInstr->getIndex()
-      << ": TID: " << dynInstr->getTid()
+      << ": TID: " << (int)dynInstr->getTid()
       << ": INSTRID: " << dynInstr->getOrigInstrId()
       << ": TAKEN: " << dynInstr->takenReason()
+      << ": INSTR: " << printInstr(idMgr->getOrigInstr(dynInstr))
       << "\n";
-      // << printInstr() TBD: print LLVM instruction.
   }
 }
 

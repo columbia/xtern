@@ -9,12 +9,15 @@
 #include "llvm/Support/raw_ostream.h"
 
 #include "macros.h"
-//#include "stat.h"
 
 namespace tern {
   class DynInstr;
+  class InstrIdMgr;
+  class CallStackMgr;
   class Stat {
   private:
+    InstrIdMgr *idMgr;
+    CallStackMgr *ctxMgr;
     HMAP<long, llvm::raw_string_ostream * > buf;
 
   protected:
@@ -30,6 +33,7 @@ namespace tern {
 
     Stat();
     ~Stat();
+    void init(InstrIdMgr *idMgr, CallStackMgr *ctxMgr);
     void printStat(const char *tag = NULL);
     const char *printInstr(const llvm::Instruction *instr);    
     const char *printValue(const llvm::Value *v);

@@ -58,6 +58,7 @@ const char *takenReasons[NUM_TAKEN_FLAGS];
 void initTakenReasons() {
   takenReasons[NOT_TAKEN] = "NOT_TAKEN";
 
+  takenReasons[START_TARGET] = "START_TARGET";
   takenReasons[TAKEN_EVENT] = "TAKEN_EVENT";
   takenReasons[TAKEN_RACE] = "TAKEN_RACE";
 
@@ -92,6 +93,7 @@ void initTakenReasons() {
 PathSlicer::PathSlicer(): ModulePass(&ID) {
   fprintf(stderr, "PathSlicer::PathSlicer()\n");
   initTakenReasons();
+  load_options("local.options");
 }
 
 PathSlicer::~PathSlicer() {
@@ -186,6 +188,9 @@ void PathSlicer::init(llvm::Module &M) {
   }
   else
     assert(false);
+
+  // Init stat.
+  stat.init(&idMgr, &ctxMgr);
   
   fprintf(stderr, "PathSlicer::init end\n");
 }
@@ -223,25 +228,33 @@ void PathSlicer::runPathSlicer(void *pathId, set<BranchInst *> &brInstrs) {
   
   // Run inter-slicer.
   interSlicer.detectInputDepRaces(&instrRegions);
+#endif
 
   // Run intra-slicer.
-  size_t startIndex = trace->size();
-  assert(startIndex > 0);
-  startIndex--;
-  intraSlicer.init((ExecutionState *)pathId, &oprdSumm, &funcSumm,
-    &idMgr, trace, startIndex);
-
-  // TBD. Take initial instruction and add init oprds.
-
   // TBD: should have a thread-id loops to traverse all thread ids.
-  uchar tid = 0;
   do {
-    intraSlicer.detectInputDepRaces(tid); // Detect input dependent races.
+    // (1) Specify current slicing thread id.
+    uchar tid = 1;
+
+    // (2) Init slicing start index (target instruction).
+    size_t startIndex = trace->size();
+    assert(startIndex > 0);
+    startIndex--;
+
+    /* (3) Init slicing sub modules. This function will also clean live set and 
+      slice set in the intra-thread slicer. */
+    intraSlicer.init((ExecutionState *)pathId, &oprdSumm, &funcSumm,
+      &idMgr, trace, startIndex);
+
+    // (4) Take target instruction, and add dyn oprds of the instruction, depending on slicing goals.
+    intraSlicer.takeStartTarget(trace->at(startIndex));
+
+    // (5) Do intra-thread slicing.
+    intraSlicer.detectInputDepRaces(tid);
   } while (0);
   
   // Calculate stat results.
   calStat();
-#endif
 
   // Free the trace along current path. 
   traceUtil->postProcess(trace);

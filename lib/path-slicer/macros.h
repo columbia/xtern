@@ -21,7 +21,7 @@
 #include "path_slicer-options.h"
 #define SERRS if(get_option(tern_path_slicer,print_debug_info)==DBG1)errs()
 #define SERRS2 if(get_option(tern_path_slicer,print_debug_info)==DBG2)errs()
-#define DBG (get_option(tern_path_slicer,print_debug_info)!=DBG0)
+#define DBG (get_option(tern_path_slicer,print_debug_info))
 
 #define GETTIME(clock) gettimeofday(&clock,NULL)
 #define ADDTIME(num, clock_st, clock_end) \

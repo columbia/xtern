@@ -11,7 +11,7 @@ DynInstr::DynInstr() {
   simCallingCtx = NULL;
   instrId = -1;
   tid = -1;
-  takenFlag = -1;
+  takenFlag = NOT_TAKEN;
 }
 
 DynInstr::~DynInstr() {
