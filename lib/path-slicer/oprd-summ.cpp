@@ -3,9 +3,10 @@
 using namespace tern;
 char tern::OprdSumm::ID = 0;
 
+#include "common/callgraph-fp.h"
 using namespace llvm;
 
-OprdSumm::OprdSumm(): CallGraphFP(&ID) {
+OprdSumm::OprdSumm(): ModulePass(&ID) {
   funcSumm = NULL;
 }
 
@@ -15,7 +16,8 @@ OprdSumm::~OprdSumm() {
 
 void OprdSumm::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();
-  CallGraphFP::getAnalysisUsage(AU);
+  AU.addRequired<CallGraphFP>();
+  ModulePass::getAnalysisUsage(AU);
 }
 
 bool OprdSumm::runOnModule(Module &M) {
@@ -23,8 +25,21 @@ bool OprdSumm::runOnModule(Module &M) {
   collectSummLocal(M);
   collectSummTopDown(M);
   fprintf(stderr, "OprdSumm::runOnModule end\n");
+  clean();
   return false;
 }
+
+void OprdSumm::clean() {
+  fprintf(stderr, "EventMgr::clean\n");
+  CallGraphFP &CG = getAnalysis<CallGraphFP>();
+  CG.destroy();
+  /* We have to destroy the CallGraph here, since when uclibc is linking in, 
+  LLVM would remove some functions in original modules and link in ones in 
+  uclibc, and the removal would cause crash if we do not free the CallGraph 
+  before hand. But there is no problem because callgraph-fp maintains callsites
+  independently. */
+}
+
 
 void OprdSumm::initStat(Stat *stat) {
   this->stat = stat;
@@ -107,10 +122,11 @@ void OprdSumm::collectSummTopDown(llvm::Module &M) {
 }
 
 void OprdSumm::DFSTopDown(const llvm::Function *f) {
+  CallGraphFP &CG = getAnalysis<CallGraphFP>();
   for (Function::const_iterator b = f->begin(), be = f->end(); b != be; ++b) {
     for (BasicBlock::const_iterator i = b->begin(), ie = b->end(); i != ie; ++i) {
       if (Util::isCall(i) && funcSumm->isInternalCall(i)) {
-        vector<Function *> calledFuncs = get_called_functions(i);//Inheritated from CallGraphFP
+        vector<Function *> calledFuncs = CG.get_called_functions(i);
         for (size_t j = 0; j < calledFuncs.size(); ++j) {
           const Function *callee = calledFuncs[j];
 

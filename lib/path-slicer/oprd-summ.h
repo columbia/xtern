@@ -6,7 +6,6 @@
 #include "llvm/Pass.h"
 #include "llvm/ADT/DenseSet.h"
 #include "bc2bdd/ext/JavaBDD/buddy/src/bdd.h"
-#include "common/callgraph-fp.h"
 
 #include "dyn-instrs.h"
 #include "type-defs.h"
@@ -26,7 +25,7 @@ namespace tern {
   In intra-thread phase, it is used to collect stored pointer operands and their bdd
   from writtenBetween() when checking not-executed branches, and mayWriteFunc()
   for return instructions. */
-  class OprdSumm: public CallGraphFP {
+  class OprdSumm: public llvm::ModulePass {
   private:
     static char ID;
     Stat *stat;
@@ -59,6 +58,7 @@ namespace tern {
     DenseSet<const Function *> visited;
 
   protected:
+    void clean();
     void initAllSumm(llvm::Module &M);
 
     /* Phase 1: compute store pointer operands for a function (locally).
