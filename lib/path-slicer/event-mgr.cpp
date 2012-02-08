@@ -24,9 +24,14 @@ EventMgr::~EventMgr() {
 }
 
 void EventMgr::clean() {
-  fprintf(stderr, "EventMgr::destroy\n");
-  //CallGraphFP &CG = getAnalysis<CallGraphFP>();
-  //CG.destroy();
+  fprintf(stderr, "EventMgr::clean\n");
+  CallGraphFP &CG = getAnalysis<CallGraphFP>();
+  CG.destroy();
+  /* We have to destroy the CallGraph here, since when uclibc is linking in, 
+  LLVM would remove some functions in original modules and link in ones in 
+  uclibc, and the removal would cause crash if we do not free the CallGraph 
+  before hand. But there is no problem because callgraph-fp maintains callsites
+  independently. */
 }
 
 void EventMgr::getAnalysisUsage(AnalysisUsage &AU) const {
@@ -36,8 +41,6 @@ void EventMgr::getAnalysisUsage(AnalysisUsage &AU) const {
 }
 
 void EventMgr::setupEvents(Module &M) {
-  //sync_funcs.clear();
-  //sync_funcs.insert(sync_funcs.begin(), eventList.begin(), eventList.end());
   // Get function list from syncfuncs.h.
   for (Module::iterator f = M.begin(); f != M.end(); ++f) {
     if (f->hasName()) {
@@ -49,8 +52,8 @@ void EventMgr::setupEvents(Module &M) {
     }
   }
 
-  // TBD: add fopen/fclose() if necessary in the future.
-  
+  // Add fopen/fclose() if necessary in the future.
+  // TBD
 }
 
 // TODO: search in vector may be slow
@@ -185,8 +188,7 @@ bool EventMgr::runOnModule(Module &M) {
   traverse_call_graph(M);
 
   // Clean callgraph-fp.
-  CallGraphFP &CG = getAnalysis<CallGraphFP>();
-  CG.destroy();
+  clean();
   
   return false;
 }

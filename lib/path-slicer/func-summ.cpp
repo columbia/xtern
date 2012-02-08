@@ -14,8 +14,6 @@ FuncSumm::FuncSumm(): ModulePass(&ID) {
 
 FuncSumm::~FuncSumm() {
   fprintf(stderr, "FuncSumm::~FuncSumm\n");
-  EventMgr &EM = getAnalysis<EventMgr>();
-  EM.clean();
 }
 
 void FuncSumm::getAnalysisUsage(AnalysisUsage &AU) const {
@@ -49,13 +47,13 @@ bool FuncSumm::eventBetween(llvm::BranchInst *prevInstr, llvm::Instruction *post
 
 void FuncSumm::collectInternalFunctions(Module &M) {
   fprintf(stderr, "FuncSumm::collectInternalFunctions begin\n");
-  /*for (Module::iterator f = M.begin(); f != M.end(); ++f) {
+  for (Module::iterator f = M.begin(); f != M.end(); ++f) {
     if (!f->isDeclaration()) {
       internalFunctions.insert(f);
       fprintf(stderr, "Function %s(%p) is internal.\n", 
         f->getNameStr().c_str(), (void *)f);
     }
-  }*/
+  }
   fprintf(stderr, "FuncSumm::collectInternalFunctions end\n");
 }
 

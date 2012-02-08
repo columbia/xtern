@@ -53,6 +53,15 @@ namespace tern {
     /* Since uclibc would be linked in, some functions such as memcpy() would become internal
     after this linking. But we only care about "guest" LLVM code in slicing. So, these functions are
     the only places within the slicing system to determine which functions are internal or not. */
+
+    /* Note that there is a huge challenge here: after uclibc is linked in, most external functions in
+    the original bc would be deleted (so their pointers are gone) and relinked with functions in uclibc.
+    For instance, fwrite() -> fwrite_unlocked(). But there is no problem, because all internal functions
+    are still there, the pointers are not changed (although some names would be changed, e.g.,
+    __user_main). When we are using callgraph-fp, or function summary, must pay attention to the
+    removed and relinked "external" functions.
+    Of couse, this feature might bring troubles for me writing external function summaries.
+    */
     bool isInternalFunction(const llvm::Function *f);
     bool isInternalCall(const llvm::Instruction *instr);
     bool isInternalCall(DynInstr *dynInstr);
