@@ -80,6 +80,7 @@ void TxtLogger::logSync(unsigned insid, unsigned short sync,
     break;
 
     // log two sync vars for cond_*wait
+  case syncfunc::pthread_mutex_timedlock:
   case syncfunc::pthread_cond_wait:
   case syncfunc::pthread_barrier_init:
   case syncfunc::pthread_create:

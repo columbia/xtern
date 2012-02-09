@@ -78,6 +78,52 @@ void *get_eip()
   return tracePtrs[2];  //  this is ret_eip of my caller
 }
 
+#define HOOK_MUTEX_COND
+#define HOOK_BARRIER
+#define HOOK_SEMAPHORE
+#define HOOK_BLOCKING_FUNCS
+
+#ifndef HOOK_MUTEX_COND
+#define __SPEC_HOOK_pthread_mutex_init
+#define __SPEC_HOOK_pthread_mutex_lock
+#define __SPEC_HOOK_pthread_mutex_unlock
+#define __SPEC_HOOK_pthread_mutex_trylock
+#define __SPEC_HOOK_pthread_mutex_timedlock
+#define __SPEC_HOOK_pthread_cond_wait
+#define __SPEC_HOOK_pthread_cond_signal
+#define __SPEC_HOOK_pthread_cond_timedwait
+#define __SPEC_HOOK_pthread_cond_broadcast
+#endif
+
+#ifndef HOOK_BARRIER
+#define __SPEC_HOOK_pthread_barrier_wait
+#define __SPEC_HOOK_pthread_barrier_init
+#define __SPEC_HOOK_pthread_barrier_destroy
+#endif
+
+#ifndef HOOK_SEMAPHORE
+#define __SPEC_HOOK_sem_wait
+#define __SPEC_HOOK_sem_trywait
+#define __SPEC_HOOK_sem_timedwait
+#define __SPEC_HOOK_sem_post
+#endif
+
+#ifndef HOOK_BLOCKING_FUNCS
+#define __SPEC_HOOK_recv
+#define __SPEC_HOOK_connect
+#define __SPEC_HOOK_accept
+#define __SPEC_HOOK_read
+#define __SPEC_HOOK_write
+#define __SPEC_HOOK_sigwait
+#define __SPEC_HOOK_select
+#define __SPEC_HOOK_recvfrom
+#define __SPEC_HOOK_recvmsg
+#define __SPEC_HOOK_sleep
+#define __SPEC_HOOK_usleep
+#define __SPEC_HOOK_nanosleep
+#define __SPEC_HOOK_epoll_wait
+#endif
+
 #include "spec_hooks.cpp"
 #include "template.cpp"
 

@@ -174,21 +174,21 @@ int RecorderRT<_S>::pthreadJoin(unsigned ins, pthread_t th, void **rv) {
   return ret;
 }
 
-
 template <typename _S>
-void RecorderRT<_S>::pthreadMutexLockHelper(pthread_mutex_t *mu) {
+int RecorderRT<_S>::pthreadMutexLockHelper(pthread_mutex_t *mu) {
   int ret;
-  for(;;) {
+  for (;;) {
     ret = pthread_mutex_trylock(mu);
     if(ret != 0) {
       assert(ret==EBUSY && "failed sync calls are not yet supported!");
       _S::wait(mu);
     }
     else
-      break;
+      return true;
     _S::getTurn();
   }
-  assert(!ret && "failed sync calls are not yet supported!");
+  return false;
+  //assert(!ret && "failed sync calls are not yet supported!");
 }
 
 template <typename _S>
@@ -227,8 +227,35 @@ int RecorderRT<_S>::pthreadMutexTryLock(unsigned ins, pthread_mutex_t *mu) {
 template <typename _S>
 int RecorderRT<_S>::pthreadMutexTimedLock(unsigned ins, pthread_mutex_t *mu,
                                                 const struct timespec *abstime) {
-  // FIXME: treat timed-lock as just lock
-  return pthreadMutexLock(ins, mu);
+  unsigned nturn;
+  int good = 0;
+  int ret;
+  int times = 5;
+
+  _S::getTurn();
+  
+  while(times--) {
+    ret = pthread_mutex_trylock(mu);
+    if(ret == 0) 
+    {
+      good = true;
+      break;
+    } else
+    {
+      _S::putTurn();
+      _S::getTurn();
+    }
+  }
+
+  nturn = _S::incTurnCount();
+  if (good)
+    ret = 0;
+  else
+    ret = ETIMEDOUT;
+  Logger::the->logSync(ins, syncfunc::pthread_mutex_timedlock, nturn, true, (uint64_t)mu, (uint64_t) ret);
+  _S::putTurn();
+
+  return ret;
 }
 
 template <typename _S>
@@ -634,8 +661,19 @@ int RecorderRT<_S>::pthreadCondTimedWait(unsigned ins,
   _S::waitFirstHalf(cv);
   Logger::the->logSync(ins, syncfunc::pthread_cond_timedwait, nturn1, /* before */ false, (uint64_t)cv, (uint64_t)mu, (uint64_t) 0);
 
-  int m_ret = pthread_cond_timedwait(cv, _S::getLock(), abstime);
+  int m_ret = ETIMEDOUT, retry = 0;
+  while (m_ret && retry++ < 5)
+  {
+    struct timespec ts;
+    if (abstime)
+    {
+      ts.tv_sec = time(NULL) + 3.0;
+      ts.tv_nsec = 0.0;
+    }
+    m_ret = pthread_cond_timedwait(cv, _S::getLock(), abstime ? &ts : 0);
+  }
   dprintf("abstime = %p\n", (void*)abstime);
+  assert(m_ret == 0 || m_ret == ETIMEDOUT);
   int ret = 0;
 
   // NOTE: we can't use the return value of pthread_cond_timedwait above
@@ -649,6 +687,8 @@ int RecorderRT<_S>::pthreadCondTimedWait(unsigned ins,
     dprintf("%d timed out from timedwait\n", _S::self());
   } else
     assert(!m_ret && "timedwait failed!!!!!!");
+
+  ret = m_ret;  //  TODO  this is a fix for deadlock
 
   _S::getTurnNU();
   pthreadMutexLockHelper(mu);
@@ -825,16 +865,33 @@ int RecorderRT<FCFSScheduler>::pthreadCondTimedWait(unsigned ins,
   nturn1 = FCFSScheduler::incTurnCount();
   Logger::the->logSync(ins, syncfunc::pthread_cond_timedwait, nturn1, false, (uint64_t)cv, (uint64_t)mu);
 
-  int ret = pthread_cond_timedwait(cv, FCFSScheduler::getLock(), abstime);
+  int m_ret = ETIMEDOUT, retry = 0;
+  while (m_ret && retry++ < 1)
+  {
+    struct timespec ts;
+    if (abstime)
+    {
+      if (abstime->tv_sec > time(NULL))
+        ts.tv_sec = abstime->tv_sec;
+      else
+        ts.tv_sec = time(NULL) + 1;
+      ts.tv_nsec = abstime->tv_nsec;
+    }
+
+    m_ret = pthread_cond_timedwait(cv, FCFSScheduler::getLock(), abstime ? &ts : 0);
+  }
+
+  //int ret = pthread_cond_timedwait(cv, FCFSScheduler::getLock(), abstime);
+  int ret = m_ret ? m_ret : 0;
+  assert(ret == 0 || ret == ETIMEDOUT);
 
   pthreadMutexLockHelper(mu);
   nturn2 = FCFSScheduler::incTurnCount();
   Logger::the->logSync(ins, syncfunc::pthread_cond_timedwait, nturn2, true, (uint64_t)cv, (uint64_t)mu, (uint64_t) ret==ETIMEDOUT);
   FCFSScheduler::putTurn();
 
-  return 0;
+  return ret;
 }
-
 
 template <>
 int RecorderRT<FCFSScheduler>::pthreadCondSignal(unsigned ins,
