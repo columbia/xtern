@@ -667,8 +667,11 @@ int RecorderRT<_S>::pthreadCondTimedWait(unsigned ins,
     struct timespec ts;
     if (abstime)
     {
-      ts.tv_sec = time(NULL) + 3.0;
-      ts.tv_nsec = 0.0;
+      if (abstime->tv_sec > time(NULL))
+        ts.tv_sec = abstime->tv_sec;
+      else
+        ts.tv_sec = time(NULL) + 1;
+      ts.tv_nsec = abstime->tv_nsec;
     }
     m_ret = pthread_cond_timedwait(cv, _S::getLock(), abstime ? &ts : 0);
   }
@@ -1080,7 +1083,7 @@ template <typename _S>
 ssize_t RecorderRT<_S>::__recvmsg(unsigned ins, int sockfd, struct msghdr *msg, int flags)
 {
   if (!options::schedule_network)
-    return __recvmsg(ins, sockfd, msg, flags);
+    return Runtime::__recvmsg(ins, sockfd, msg, flags);
 
   _S::block();
   ssize_t ret = Runtime::__recvmsg(ins, sockfd, msg, flags);
@@ -1198,6 +1201,8 @@ unsigned int RecorderRT<_S>::sleep(unsigned ins, unsigned int seconds)
   _S::getTurn();
   _S::incTurnCount();
   _S::putTurn();
+  if (options::exec_sleep)
+    ::sleep(seconds);
   return 0;
 }
 
@@ -1207,6 +1212,8 @@ int RecorderRT<_S>::usleep(unsigned ins, useconds_t usec)
   _S::getTurn();
   _S::incTurnCount();
   _S::putTurn();
+  if (options::exec_sleep)
+    ::usleep(usec);
   return 0;
 }
 
@@ -1218,6 +1225,8 @@ int RecorderRT<_S>::nanosleep(unsigned ins,
   _S::getTurn();
   _S::incTurnCount();
   _S::putTurn();
+  if (options::exec_sleep)
+    ::nanosleep(req, rem);
   return 0;
 }
 
