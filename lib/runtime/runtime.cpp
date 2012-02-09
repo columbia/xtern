@@ -48,7 +48,7 @@ void tern_symbolic_real(unsigned insid, void *addr,
 }
 
 void tern_thread_begin(void) {
-  // thread starts in Sys space
+  // thread begins in Sys space
   Runtime::the->threadBegin();
   Space::exitSys();
 }

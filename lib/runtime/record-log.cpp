@@ -1,6 +1,7 @@
 #include <sys/mman.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <errno.h>
 #include <fcntl.h>
 #include <unistd.h>
 #include <assert.h>
@@ -31,7 +32,7 @@ void TxtLogger::logSync(unsigned insid, unsigned short sync,
                         unsigned turn, bool after, ...) {
   assert(sync >= syncfunc::first_sync && sync < syncfunc::num_syncs
     && "trying to log unknown synchronization operation!");
-  
+
   if(!syncfunc::isSync(sync))
   {
     if (sync == syncfunc::tern_thread_begin)    //  for tests, i need to know the thread_mapping
@@ -68,7 +69,6 @@ void TxtLogger::logSync(unsigned insid, unsigned short sync,
   case syncfunc::pthread_cond_signal:
   case syncfunc::pthread_cond_broadcast:
   case syncfunc::sem_wait:
-  case syncfunc::sem_timedwait:
   case syncfunc::sem_post:
   case syncfunc::pthread_join:
     ouf << hex << " 0x" << va_arg(args, uint64_t) << dec;
@@ -80,9 +80,11 @@ void TxtLogger::logSync(unsigned insid, unsigned short sync,
   case syncfunc::pthread_barrier_init:
   case syncfunc::pthread_create:
   case syncfunc::pthread_mutex_trylock:
+  case syncfunc::pthread_mutex_timedlock:
   case syncfunc::sem_trywait:
+  case syncfunc::sem_timedwait:
     {
-      //  notice "<<" operator is explained from right to left.
+      //  notice "<<" operator is expanded from right to left.
       uint64_t a = va_arg(args, uint64_t);
       uint64_t b = va_arg(args, uint64_t);
 
@@ -92,22 +94,6 @@ void TxtLogger::logSync(unsigned insid, unsigned short sync,
         << dec;
     }
     break;
-
-/*  case syncfunc::pthread_mutex_trylock:
-  case syncfunc::sem_trywait:
-    // log return value for try operations
-    ouf << hex << " 0x" << (uint64_t)va_arg(args, uint64_t) << dec
-        << ' ' << va_arg(args, int);
-    break;
-*/
-    // pthread_create and pthread_join
-/*  case syncfunc::pthread_create:
-    va_arg(args, uint64_t); // skip the pthread ID of the created thread
-    ouf << ' ' << va_arg(args, int); // YJF: why log ret for pthread_create?
-    break;
-  case syncfunc::pthread_join:
-    break;
-*/
 
   default:
     assert(0 && "sync not handled");
@@ -329,11 +315,99 @@ void BinLogger::mapLogTrunk(void) {
   foff += TRUNK_SIZE;
 }
 
+
+void TestLogger::logSync(unsigned insid, unsigned short sync,
+                        unsigned turn, bool after, ...) {
+  assert(sync >= syncfunc::first_sync && sync < syncfunc::num_syncs
+    && "trying to log unknown synchronization operation!");
+
+  const char *suffix = "";
+  if(NumRecordsForSync(sync) == 2)
+    suffix = (after?"_second":"_first");
+
+  ouf << syncfunc::getName(sync) << suffix
+      << ' ' << turn
+      << ' ' << tid;
+
+  va_list args;
+  uint64_t a, b, c;
+
+  va_start(args, after);
+  switch(sync) {
+    // log one arg (common case)
+  case syncfunc::pthread_mutex_lock:
+  case syncfunc::pthread_mutex_unlock:
+  case syncfunc::pthread_barrier_wait:
+  case syncfunc::pthread_barrier_destroy:
+  case syncfunc::pthread_cond_signal:
+  case syncfunc::pthread_cond_broadcast:
+  case syncfunc::sem_wait:
+  case syncfunc::sem_post:
+  case syncfunc::pthread_join:
+  case syncfunc::tern_thread_begin:
+  case syncfunc::tern_thread_end:
+    a = va_arg(args, uint64_t);
+    ouf << hex << " 0x" << a << dec;
+    break;
+
+    // log two args
+  case syncfunc::pthread_cond_wait:
+  case syncfunc::pthread_barrier_init:
+  case syncfunc::pthread_create:
+  case syncfunc::pthread_mutex_trylock:
+  case syncfunc::pthread_mutex_timedlock:
+  case syncfunc::sem_trywait:
+  case syncfunc::sem_timedwait:
+    a = va_arg(args, uint64_t);
+    b = va_arg(args, uint64_t);
+    ouf << hex
+        << " 0x" << a
+        << " 0x" << b
+        << dec;
+    break;
+
+    // log three args
+  case syncfunc::pthread_cond_timedwait:
+    a = va_arg(args, uint64_t);
+    b = va_arg(args, uint64_t);
+    if(after)
+      c = va_arg(args, uint64_t);
+    ouf << hex
+        << " 0x" << a
+        << " 0x" << b;
+    if(after)
+      ouf << " 0x" << c;
+    ouf << dec;
+    break;
+
+  default:
+    assert(0 && "sync not handled");
+  }
+  va_end(args);
+  ouf << "\n";
+}
+
+TestLogger::TestLogger(int thid) {
+  char logFile[64];
+  getLogFilename(logFile, sizeof(logFile), thid, ".txt");
+
+  tid = thid;
+  ouf.open(logFile, ios::out|ios::trunc);
+  assert(ouf && "can't open log file for write!");
+}
+
+TestLogger::~TestLogger()
+{
+  ouf.close();
+}
+
 void Logger::threadBegin(int tid) {
   if(options::log_type == "txt") {
     the = new TxtLogger(tid);
   } else if(options::log_type == "bin") {
     the = new BinLogger(tid);
+  } else if(options::log_type == "test") {
+    the = new TestLogger(tid);
   } else
     assert (0 && "unknown log_type");
 

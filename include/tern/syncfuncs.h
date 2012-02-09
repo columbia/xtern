@@ -16,7 +16,7 @@ namespace syncfunc {
 enum {
   not_sync = 0, // not a sync operation
 # define DEF(func,kind,...) func,
-# define DEFTERNAUTO(func)      func,
+# define DEFTERNAUTO(func)  func,
 # define DEFTERNUSER(func)  func,
 # include "syncfuncs.def.h"
 # undef DEF

@@ -12,7 +12,7 @@ namespace syncfunc {
 const int kind[] = {
   -1, // not_sync
 # define DEF(func,kind,...) kind,
-# define DEFTERNAUTO(func)      TernAuto,
+# define DEFTERNAUTO(func)  TernAuto,
 # define DEFTERNUSER(func)  TernUser,
 # include "tern/syncfuncs.def.h"
 # undef DEF
@@ -23,7 +23,7 @@ const int kind[] = {
 const char* name[] = {
   NULL, // not_sync
 # define DEF(func,kind,...) #func,
-# define DEFTERNAUTO(func)      #func,
+# define DEFTERNAUTO(func)  #func,
 # define DEFTERNUSER(func)  #func,
 # include "tern/syncfuncs.def.h"
 # undef DEF
