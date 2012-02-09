@@ -65,6 +65,7 @@ test_yfs: clean_yfs run_yfs
 	-sudo umount yfs1
 	-sudo umount yfs2
 	-sudo umount yfs3
+	grep yfs_client tmp
 
 AAAAA=$(shell date +%N > PORT.log)
 RAND_NUM=$(shell cat PORT.log)
@@ -94,7 +95,8 @@ run_yfs: prepare_yfs
 	$(PREFIX) ./yfs_client yfs2 $(EXTENT_PORT) $(LOCK_PORT) > yfs_client2.log 2>&1  &
 	sleep 1
 	./rand_tester yfs1 yfs2 &
-	sleep 300
+	sleep 5
+	mount > tmp 
 
 fft:
 	rm -rf out
