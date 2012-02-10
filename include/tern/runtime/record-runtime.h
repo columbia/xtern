@@ -17,7 +17,7 @@ struct barrier_t {
 typedef std::tr1::unordered_map<pthread_barrier_t*, barrier_t> barrier_map;
 
 typedef std::tr1::unordered_map<pthread_t, int> tid_map_t;
-typedef std::tr1::unordered_map<void*, std::list<int> > waiting_tid_t; 
+typedef std::tr1::unordered_map<void*, std::list<int> > waiting_tid_t;
 
 template <typename _Scheduler>
 struct RecorderRT: public Runtime, public _Scheduler {
