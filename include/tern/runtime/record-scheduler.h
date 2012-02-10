@@ -109,6 +109,8 @@ protected:
   unsigned nextTimeout();
   /// pop the @runq and wakes up the thread at the front of @runq
   void next(bool at_thread_end=false);
+  /// child classes can override this method to reorder threads in @runq
+  virtual void reorderRunq(void) {}
 
   /// for debugging
   void selfcheck(void);
@@ -266,7 +268,7 @@ struct Random {
 /// the next thread to run.  Such a scheduler is deterministic, yet it can
 /// generate different deterministic sequences based on the seed.
 struct SeededRRScheduler: public RRScheduler {
-  virtual void choose(void);
+  virtual void reorderRunq(void);
   void setSeed(unsigned seed);
   Random rand;
 };

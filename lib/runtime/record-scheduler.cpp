@@ -383,7 +383,7 @@ void SeededRRScheduler::setSeed(unsigned seed)
   rand.srand(seed);
 }
 
-void SeededRRScheduler::choose(void)
+void SeededRRScheduler::reorderRunq(void)
 {
   // find next thread using @rand.  complexity is O(runq.size()), but
   // shouldn't matter much anyway as the number of threads is small
@@ -453,6 +453,8 @@ void RRScheduler::next(bool at_thread_end)
       return;
     }
   }
+
+  reorderRunq();
 
   next_tid = runq.front();
   assert(next_tid>=0 && next_tid < Scheduler::nthread);
