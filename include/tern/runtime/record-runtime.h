@@ -96,7 +96,7 @@ struct RecorderRT: public Runtime, public _Scheduler {
 
 protected:
 
-  void pthreadMutexLockHelper(pthread_mutex_t *mutex);
+  int pthreadMutexLockHelper(pthread_mutex_t *mutex);
 
   /// for each pthread barrier, track the count of the number and number
   /// of threads arrived at the barrier

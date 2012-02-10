@@ -10,6 +10,7 @@
 #include <string.h>
 #include <pthread.h>
 #include <iostream>
+#include <iomanip>
 #include "tern/runtime/scheduler.h"
 #include "tern/runtime/loghooks.h"
 #include "tern/runtime/record-log.h"
@@ -40,6 +41,7 @@ void TxtLogger::logSync(unsigned insid, unsigned short sync,
       va_list args;
       va_start(args, after);
       ouf << syncfunc::getName(sync)
+          << " 0x" << hex << insid << dec
           << ' ' << turn
           << ' ' << tid
           << hex << " 0x" << va_arg(args, uint64_t) << dec;
@@ -55,6 +57,7 @@ void TxtLogger::logSync(unsigned insid, unsigned short sync,
     suffix = (after?"_second":"_first");
 
   ouf << syncfunc::getName(sync) << suffix
+      << " 0x" << hex << setfill('0') << setw(8) << insid << dec
       << ' ' << turn
       << ' ' << tid;
 
@@ -77,8 +80,8 @@ void TxtLogger::logSync(unsigned insid, unsigned short sync,
     break;
 
     // log two sync vars for cond_*wait
+  case syncfunc::pthread_mutex_timedlock:
   case syncfunc::pthread_cond_wait:
-  case syncfunc::pthread_cond_timedwait:
   case syncfunc::pthread_barrier_init:
   case syncfunc::pthread_create:
   case syncfunc::pthread_mutex_trylock:
@@ -91,6 +94,21 @@ void TxtLogger::logSync(unsigned insid, unsigned short sync,
     ouf << hex
         << " 0x" << a
         << " 0x" << b
+        << dec;
+    }
+    break;
+    // log three sync vars
+  case syncfunc::pthread_cond_timedwait:
+    {
+      //  notice "<<" operator is explained from right to left.
+      uint64_t a = va_arg(args, uint64_t);
+      uint64_t b = va_arg(args, uint64_t);
+      uint64_t c = va_arg(args, uint64_t);
+
+    ouf << hex
+        << " 0x" << a
+        << " 0x" << b
+        << " 0x" << c
         << dec;
     }
     break;

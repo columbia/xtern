@@ -13,6 +13,7 @@ namespace tern
 
 struct record_t
 {
+  unsigned insid;
   unsigned op;
   unsigned turn; 
   std::vector<std::string> args;

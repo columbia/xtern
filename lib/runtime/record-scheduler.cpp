@@ -47,16 +47,21 @@ void RRSchedulerCV::check_zombie(void)
  */
   pthread_mutex_lock(&lock);
 
-  int n = runq.size();
-  while (n--)
+  int n = runq.size() ;
+
+  if (n > 0)
   {
-    int tid = runq.front();
-    if (timemark[tid] == timer || timemark[tid] == -1)
-      break;
-    runq.pop_front();
-    runq.push_back(tid);
-    //fprintf(stderr, "we skipped %d\n", tid);
-    SELFCHECK;
+    ++n;
+    while (n--)
+    {
+      int tid = runq.front();
+      if (timemark[tid] == timer || timemark[tid] == -1)
+        break;
+      runq.pop_front();
+      runq.push_back(tid);
+      fprintf(stderr, "we skipped %d\n", tid);
+      SELFCHECK;
+    }
   }
   ++timer;
 

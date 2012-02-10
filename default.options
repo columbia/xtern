@@ -33,3 +33,9 @@ RR_skip_zombie = 1
 
 # define the timeout threshold to skip as zombie thread in RR, in ms
 RR_skip_threshold = 100
+
+# if turned on, dynamic library will obtain eip
+dync_geteip = 1
+
+# if turned on, record-schedule will do sleep, otherwise simple bypass sleep.
+exec_sleep = 1
