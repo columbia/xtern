@@ -100,6 +100,23 @@ protected:
   off_t      foff;
 };
 
+
+/// logger for testing; prints out a canonicalized log that remains the
+/// same across different deterministic runs.  Note that pointer addresses
+/// are fine because our testing script canonicalizes them
+struct TestLogger: public Logger {
+  virtual void logSync(unsigned insid, unsigned short sync,
+                       unsigned turn, bool after = true, ...);
+  TestLogger(int tid);
+  virtual ~TestLogger();
+
+protected:
+
+  int tid;
+  std::fstream ouf;
+};
+
+
 }
 
 #endif

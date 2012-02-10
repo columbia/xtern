@@ -141,7 +141,7 @@ void SyncInstr::replaceFunctionInCall(Module &M, Instruction *I,
   for(CallSite::arg_iterator ai=cs.arg_begin(),ae=cs.arg_end(); ai!=ae; ++ai) {
     assert(*ai);
     Value *v = *ai;
-    //  force casting parameter types, otherwise exception throwed sometimes. 
+    //  force casting parameter types, otherwise exception throwed sometimes.
     if(v->getType()->isPointerTy())
       v = CastInst::CreatePointerCast(v, functype->getParamType(i + 1), "", I);
     ++i;
