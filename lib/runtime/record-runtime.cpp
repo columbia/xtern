@@ -251,7 +251,7 @@ int RecorderRT<_S>::pthreadMutexLock(unsigned ins, pthread_mutex_t *mu) {
   unsigned nturn;
 
   _S::getTurn();
-  // we need to use a while loop here for both 
+  // we need to use a while loop here
   while((ret=pthread_mutex_trylock(mu))) {
     assert(ret==EBUSY && "failed sync calls are not yet supported!");
     wait(mu);
@@ -680,7 +680,7 @@ template <typename _S>
 int RecorderRT<_S>::pthreadCondTimedWait(unsigned ins,
     pthread_cond_t *cv, pthread_mutex_t *mu, const struct timespec *abstime){
 
-  int ret = 0;
+  int ret, saved_ret = 0;
   unsigned nturn1, nturn2;
 
   if(abstime == NULL)
@@ -693,7 +693,7 @@ int RecorderRT<_S>::pthreadCondTimedWait(unsigned ins,
   pthread_mutex_unlock(mu);
   nturn1 = _S::incTurnCount();
   _S::signal(mu);
-  ret = _S::wait(cv, timeout);
+  saved_ret = ret = _S::wait(cv, timeout);
 
   if(ret == ETIMEDOUT) {
     dprintf("%d timed out from timedwait\n", _S::self());
@@ -707,8 +707,8 @@ int RecorderRT<_S>::pthreadCondTimedWait(unsigned ins,
   _S::putTurn();
 
   Logger::the->logSync(ins, syncfunc::pthread_cond_timedwait, nturn1, /* before */ false, (uint64_t)cv, (uint64_t)mu);
-  Logger::the->logSync(ins, syncfunc::pthread_cond_timedwait, nturn2, /* after */ true, (uint64_t)cv, (uint64_t)mu, (uint64_t) ret);
-  return ret;
+  Logger::the->logSync(ins, syncfunc::pthread_cond_timedwait, nturn2, /* after */ true, (uint64_t)cv, (uint64_t)mu, (uint64_t) saved_ret);
+  return saved_ret;
 }
 
 template <typename _S>
@@ -774,8 +774,29 @@ int RecorderRT<_S>::semTryWait(unsigned ins, sem_t *sem) {
 template <typename _S>
 int RecorderRT<_S>::semTimedWait(unsigned ins, sem_t *sem,
                                      const struct timespec *abstime) {
-  // FIXME: treat timed-wait as just wait
-  return semWait(ins, sem);
+  int ret, saved_err = 0;
+  unsigned nturn;
+
+  if(abstime == NULL)
+    return semWait(ins, sem);
+
+  _S::getTurn();
+  unsigned timeout = absTimeToTurn(abstime);
+  while((ret=sem_trywait(sem))) {
+    assert(errno==EAGAIN && "failed sync calls are not yet supported!");
+    ret = _S::wait(sem, timeout);
+    if(ret == ETIMEDOUT) {
+      ret = -1;
+      saved_err = ETIMEDOUT;
+      break;
+    }
+  }
+  nturn = _S::incTurnCount();
+  _S::putTurn();
+
+  Logger::the->logSync(ins, syncfunc::sem_timedwait, nturn, true, (uint64_t)sem, (uint64_t)ret);
+  errno = saved_err;
+  return ret;
 }
 
 template <typename _S>
@@ -863,6 +884,43 @@ int RecorderRT<RecordSerializer>::pthreadMutexTimedLock(unsigned ins, pthread_mu
   _S::putTurn();
 
   Logger::the->logSync(ins, syncfunc::pthread_mutex_timedlock, nturn, true, (uint64_t)mu, (uint64_t)ret);
+  return ret;
+}
+
+template <>
+int RecorderRT<RecordSerializer>::semTimedWait(unsigned ins, sem_t *sem,
+                                               const struct timespec *abstime) {
+  typedef RecordSerializer _S;
+  unsigned nturn;
+  int ret, saved_err = 0;
+
+  if(abstime == NULL)
+    return semWait(ins, sem);
+
+  _S::getTurn();
+  while((ret=sem_trywait(sem))) {
+    assert(errno==EAGAIN && "failed sync calls are not yet supported!");
+    _S::putTurn();
+    sched_yield();
+    _S::getTurn();
+
+    struct timespec curtime;
+    struct timeval curtimetv;
+    gettimeofday(&curtimetv, NULL);
+    curtime.tv_sec = curtimetv.tv_sec;
+    curtime.tv_nsec = curtimetv.tv_usec * 1000;
+    if(curtime.tv_sec > abstime->tv_sec
+       || (curtime.tv_sec == abstime->tv_sec &&
+           curtime.tv_nsec >= abstime->tv_nsec)) {
+      ret = -1;
+      saved_err = ETIMEDOUT;
+      break;
+    }
+  }
+  nturn = _S::incTurnCount();
+  _S::putTurn();
+  Logger::the->logSync(ins, syncfunc::sem_timedwait, nturn, true, (uint64_t)sem, (uint64_t)ret);
+  errno = saved_err;
   return ret;
 }
 
@@ -963,7 +1021,7 @@ int RecorderRT<RecordSerializer>::pthreadCondTimedWait(unsigned ins,
 
   Logger::the->logSync(ins, syncfunc::pthread_cond_timedwait, nturn1, false, (uint64_t)cv, (uint64_t)mu);
   Logger::the->logSync(ins, syncfunc::pthread_cond_timedwait, nturn2, true, (uint64_t)cv, (uint64_t)mu, (uint64_t) ret);
-  return 0;
+  return ret;
 }
 
 template <>

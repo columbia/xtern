@@ -395,24 +395,20 @@ void SeededRRScheduler::choose(void)
   runq.push_front(*it);
 }
 
-int RRScheduler::fireTimers()
+unsigned RRScheduler::nextTimeout()
 {
-  unsigned min_timeout = FOREVER;
+  unsigned next_timeout = FOREVER;
   list<int>::iterator i;
   for(i=waitq.begin(); i!=waitq.end(); ++i) {
     int t = *i;
-    if(waits[t].timeout < min_timeout)
-      min_timeout = waits[t].timeout;
+    if(waits[t].timeout < next_timeout)
+      next_timeout = waits[t].timeout;
   }
+  return next_timeout;
+}
 
-  if(min_timeout == FOREVER)
-    return 0;
-
-  // fast-forward turn
-  dprintf("RRScheduler: fast-forward turn from %u to %u\n",
-          turnCount, min_timeout+1);
-  turnCount = min_timeout + 1;
-
+int RRScheduler::fireTimeouts()
+{
   int timedout = 0;
   list<int>::iterator prv, cur;
   // use delete-safe way of iterating the list
@@ -441,15 +437,23 @@ void RRScheduler::next(bool at_thread_end)
   if(runq.empty()) {
     // if there are any timed-waiting threads, we can fast forward the
     // turn to wake up these threads
-    int fired = fireTimers();
-    // if cannot find any timed waiter, this must be the last thread and
-    // it is existing
-    if(fired == 0) {
-      assert(at_thread_end && (runq.size()+waitq.size()) == 0
+    unsigned next_timeout = nextTimeout();
+    if(next_timeout != FOREVER) {
+      // fast-forward turn
+      dprintf("RRScheduler: fast-forward turn from %u to %u\n",
+              turnCount, next_timeout+1);
+      turnCount = next_timeout + 1;
+      fireTimeouts();
+    }
+
+    if(runq.empty()) {
+      // current thread must be the last thread and it is existing
+      assert(at_thread_end && waitq.empty()
              && "all threads wait; deadlock!");
       return;
     }
   }
+
   next_tid = runq.front();
   assert(next_tid>=0 && next_tid < Scheduler::nthread);
   dprintf("RRScheduler: next is %d\n", next_tid);
@@ -490,7 +494,7 @@ int RRScheduler::wait(void *chan, unsigned nturn)
   waits[tid].chan = chan;
   waits[tid].timeout = nturn;
   waitq.push_back(tid);
-  dprintf("RRScheduler: %d waits on (%p, %d)\n", tid, chan, nturn);
+  dprintf("RRScheduler: %d waits on (%p, %u)\n", tid, chan, nturn);
 
   next();
 
@@ -529,6 +533,9 @@ unsigned RRScheduler::incTurnCount(void)
 {
   unsigned ret = turnCount++;
 
+  fireTimeouts();
+
+#if 0
   list<int>::iterator prv, cur;
 
   for(cur=waitq.begin(); cur!=waitq.end();) {
@@ -544,6 +551,7 @@ unsigned RRScheduler::incTurnCount(void)
       runq.push_back(tid);
     }
   }
+#endif
 
   return ret;
 }

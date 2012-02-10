@@ -103,7 +103,11 @@ struct RRScheduler: public Scheduler {
 
 protected:
 
-  int fireTimers();
+  /// timeout threads on @waitq
+  int fireTimeouts();
+  /// return the next timeout turn number
+  unsigned nextTimeout();
+  /// pop the @runq and wakes up the thread at the front of @runq
   void next(bool at_thread_end=false);
 
   /// for debugging
