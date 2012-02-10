@@ -25,14 +25,14 @@ void Stat::printStat(const char *tag) {
 }
 
 const char *Stat::printInstr(const llvm::Instruction *instr) {
-  long addr = (long)instr;
-  if (HM_IN(addr, buf)) {
-    return buf[addr]->str().c_str();
+  errs() << "Stat::printInstr: " << (void *)(instr) << "\n";
+  if (DM_IN(instr, buf)) {
+    return buf[instr]->str().c_str();
   } else {
     std::string *str = new std::string;
     llvm::raw_string_ostream *newStream = new llvm::raw_string_ostream(*str);
     instr->print(*newStream);
-    buf[addr] = newStream;
+    buf[instr] = newStream;
     newStream->flush();
     return str->c_str();
   }
@@ -43,15 +43,17 @@ const char *Stat::printValue(const llvm::Value *v) {
 }
 
 void Stat::printDynInstr(DynInstr *dynInstr, const char *tag) {
-  //fprintf(stderr, "Stat::printDynInstr %d\n", DBG);
+  fprintf(stderr, "Stat::printDynInstr %p, tid %u\n", (void *)dynInstr, 
+    (unsigned)dynInstr->getTid());
   if (DBG) {
     errs() << "\n"
       << "DynInstr {" << tag
       << "} IDX: " << dynInstr->getIndex()
       << ": TID: " << (int)dynInstr->getTid()
       << ": INSTRID: " << dynInstr->getOrigInstrId()
-      << ": TAKEN: " << dynInstr->takenReason()
-      << ": INSTR: " << printInstr(idMgr->getOrigInstr(dynInstr))
+      << ": TAKEN: " << dynInstr->takenReason();
+    errs()
+      << ": INSTR: " << *(idMgr->getOrigInstr(dynInstr))
       << "\n";
   }
 }

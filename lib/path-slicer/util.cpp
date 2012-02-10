@@ -1,4 +1,5 @@
 #include "llvm/Target/TargetData.h"
+#include "llvm/LLVMContext.h"
 using namespace llvm;
 
 #include "util.h"
@@ -82,6 +83,40 @@ bool Util::isStore(const Instruction *instr) {
 
 bool Util::isMem(const Instruction *instr) {
   return isLoad(instr) || isStore(instr);
+}
+
+bool Util::hasDestOprd(const Instruction *instr) {
+      /*  LLVM instructions that do not have dest operands.
+      http://llvm.org/docs/LangRef.html#instref
+        ret;
+        br;
+        switch;
+        indirectbr;
+        unwind;
+        unreachable;
+        store;
+      */
+      assert(isa<Instruction>(instr));
+      if (instr->getOpcode() == Instruction::Store ||
+        instr->getOpcode() == Instruction::Ret ||
+        instr->getOpcode() == Instruction::Br ||
+        instr->getOpcode() == Instruction::Switch ||
+        instr->getOpcode() == Instruction::IndirectBr ||
+        instr->getOpcode() == Instruction::Unwind ||
+        instr->getOpcode() == Instruction::Unreachable
+        )
+        return false;
+      if (instr->getOpcode() == Instruction::Call || instr->getOpcode() == Instruction::Invoke) {
+        const Type *resultType = instr->getType();
+        if (resultType == Type::getVoidTy(getGlobalContext()))
+          return false;
+      }
+      return true;
+    }
+
+Value *Util::getDestOprd(llvm::Instruction *instr) {
+  assert(hasDestOprd(instr));
+  return dyn_cast<Value>(instr);
 }
 
 bool Util::isThreadCreate(DynCallInstr *call) {

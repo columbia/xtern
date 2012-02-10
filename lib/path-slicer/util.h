@@ -32,6 +32,8 @@ namespace tern {
     static bool isLoad(const llvm::Instruction *instr);
     static bool isStore(const llvm::Instruction *instr);
     static bool isMem(const llvm::Instruction *instr);
+    static bool hasDestOprd(const llvm::Instruction *instr);
+    static llvm::Value *getDestOprd(llvm::Instruction *instr);
 
     /* The only place to determine whether a dynamic call instruction is creating a child thread. */
     static bool isThreadCreate(DynCallInstr *call);

@@ -214,7 +214,7 @@ void PathSlicer::enforceRacyEdges() {
   // TBD: enforce all racy edges, and split new regions.
 }
 
-void PathSlicer::runPathSlicer(void *pathId, set<BranchInst *> &brInstrs) {
+void PathSlicer::runPathSlicer(void *pathId, set<BranchInst *> &brInstrs) {  
   // Get trace of current path and do some pre-processing.
   assert(DM_IN(pathId, allPathTraces));
   DynInstrVector *trace = allPathTraces[pathId];
@@ -244,7 +244,7 @@ void PathSlicer::runPathSlicer(void *pathId, set<BranchInst *> &brInstrs) {
     /* (3) Init slicing sub modules. This function will also clean live set and 
       slice set in the intra-thread slicer. */
     intraSlicer.init((ExecutionState *)pathId, &oprdSumm, &funcSumm,
-      &idMgr, trace, startIndex);
+      &idMgr, &cfgMgr, trace, startIndex);
 
     // (4) Take target instruction, and add dyn oprds of the instruction, depending on slicing goals.
     intraSlicer.takeStartTarget(trace->at(startIndex));

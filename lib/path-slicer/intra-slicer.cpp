@@ -44,7 +44,7 @@ void IntraSlicer::detectInputDepRaces(uchar tid) {
 }
 
 bool IntraSlicer::empty() {
-  return curIndex != SIZE_T_INVALID;
+  return curIndex == SIZE_T_INVALID;
 }
 
 DynInstr *IntraSlicer::delTraceTail(uchar tid) {
@@ -58,17 +58,18 @@ DynInstr *IntraSlicer::delTraceTail(uchar tid) {
     } else
       curIndex--;
   }
-  if (!dynInstr)
+  if (dynInstr)
     stat->printDynInstr(dynInstr, __func__);
   return dynInstr;
 }
 
 void IntraSlicer::init(klee::ExecutionState *state, OprdSumm *oprdSumm, FuncSumm *funcSumm,
-      InstrIdMgr *idMgr, const DynInstrVector *trace, size_t startIndex) {
+      InstrIdMgr *idMgr, CfgMgr *cfgMgr, const DynInstrVector *trace, size_t startIndex) {
   this->state = state;
   this->oprdSumm = oprdSumm;
   this->funcSumm = funcSumm;
   this->idMgr = idMgr;
+  this->cfgMgr = cfgMgr;
   this->trace = trace;
   curIndex = startIndex;
   live.clear();
@@ -83,21 +84,26 @@ void IntraSlicer::takeNonMem(DynInstr *dynInstr, uchar reason) {
 }
 
 void IntraSlicer::delRegOverWritten(DynInstr *dynInstr) {
-  DynOprd destOprd(dynInstr, -1);
-  live.delReg(&destOprd);
+  Instruction *instr = idMgr->getOrigInstr(dynInstr);
+  if (Util::hasDestOprd(instr)) {
+    DynOprd destOprd(dynInstr, Util::getDestOprd(instr), -1);
+    live.delReg(&destOprd);
+  }
 }
 
 bool IntraSlicer::regOverWritten(DynInstr *dynInstr) {
-  DynOprd destOprd(dynInstr, -1);
-  return live.regIn(&destOprd);
+  Instruction *instr = idMgr->getOrigInstr(dynInstr);
+  if (Util::hasDestOprd(instr)) {
+    DynOprd destOprd(dynInstr, Util::getDestOprd(instr), -1);
+    return live.regIn(&destOprd);
+  }
+  return false;
 }
 
-DynInstr *IntraSlicer::getCallInstrWithRet(DynInstr *retDynInstr) {
-  return NULL;
-}
-
-bool IntraSlicer::retRegOverWritten(DynInstr *dynInstr) {
-  DynInstr *callDynInstr = getCallInstrWithRet(dynInstr);
+bool IntraSlicer::retRegOverWritten(DynRetInstr *dynRetInstr) {
+  DynInstr *callDynInstr = (DynInstr *)(dynRetInstr->getDynCallInstr());
+  if (!callDynInstr)  // If this is a return instruction of main() or thread routine, return false.
+    return false;
   return regOverWritten(callDynInstr);
 }
 
@@ -116,16 +122,21 @@ bool IntraSlicer::writtenBetween(DynBrInstr *dynBrInstr, DynInstr *dynPostInstr)
   return (bddBetween & bddOfLive) != bddfalse;
 }
 
-bool IntraSlicer::mayWriteFunc(DynRetInstr *dynRetInstr, Function *func) {
+bool IntraSlicer::mayWriteFunc(DynRetInstr *dynRetInstr) {
   DynCallInstr *dynCallInstr = dynRetInstr->getDynCallInstr();
+  if (!dynCallInstr)
+    return false;
   bdd bddOfCall = bddfalse;
   oprdSumm->getStoreSummInFunc(dynCallInstr, bddOfCall);
   const bdd bddOfLive = live.getAllLoadMem();
   return (bddOfCall & bddOfLive) != bddfalse;
 }
 
-bool IntraSlicer::mayCallEvent(DynInstr *dynInstr, Function *func) {
-  return funcSumm->mayCallEvent(dynInstr);
+bool IntraSlicer::mayCallEvent(DynRetInstr *dynRetInstr) {
+  DynCallInstr *dynCallInstr = dynRetInstr->getDynCallInstr();
+  if (!dynCallInstr)
+    return false;
+  return funcSumm->mayCallEvent(dynCallInstr);
 }
 
 void IntraSlicer::handlePHI(DynInstr *dynInstr) {
@@ -133,7 +144,8 @@ void IntraSlicer::handlePHI(DynInstr *dynInstr) {
   if (regOverWritten(phiInstr)) {
     delRegOverWritten(phiInstr);
     uchar index = phiInstr->getIncomingIndex();
-    DynOprd oprd(phiInstr, index);
+    PHINode *phiNode = dyn_cast<PHINode>(idMgr->getOrigInstr(dynInstr));
+    DynOprd oprd(phiInstr, phiNode->getIncomingValue(index), index);
     if (oprd.isConstant()) {
       live.addReg(&oprd);
     } else {
@@ -159,15 +171,13 @@ void IntraSlicer::handleBranch(DynInstr *dynInstr) {
 
 void IntraSlicer::handleRet(DynInstr *dynInstr) {
   DynRetInstr *retInstr = (DynRetInstr*)dynInstr;
-  Instruction *instr = idMgr->getOrigInstr(retInstr);
-  Function *calledFunc = instr->getParent()->getParent();
   if (retRegOverWritten(retInstr)) {
     delRegOverWritten(retInstr);
     live.addUsedRegs(retInstr);
     slice.add(retInstr, INTRA_RET_REG_OW);
   } else {
-    bool reason1 = mayCallEvent(retInstr, calledFunc);
-    bool reason2 = mayWriteFunc(retInstr, calledFunc);
+    bool reason1 = mayCallEvent(retInstr);
+    bool reason2 = mayWriteFunc(retInstr);
     if (reason1 && reason2)
       slice.add(retInstr, INTRA_RET_BOTH);
     else if (reason1 && !reason2)
@@ -202,7 +212,7 @@ void IntraSlicer::handleMem(DynInstr *dynInstr) {
     if (reason1 || reason2) {
       if (reason2)
         delRegOverWritten(loadInstr);
-      DynOprd loadPtrOprd(loadInstr, 0);
+      DynOprd loadPtrOprd(loadInstr, instr->getOperand(0), 0);
       live.addReg(&loadPtrOprd);
       live.addLoadMem(loadInstr);
       if (reason1 /* no matter whether reason2 is true */)
@@ -212,8 +222,8 @@ void IntraSlicer::handleMem(DynInstr *dynInstr) {
     }
   } else {
     DynMemInstr *storeInstr = (DynMemInstr*)dynInstr;
-    DynOprd storeValue(storeInstr, 0);
-    DynOprd storePtrOprd(storeInstr, 1);
+    DynOprd storeValue(storeInstr, instr->getOperand(0), 0);
+    DynOprd storePtrOprd(storeInstr, instr->getOperand(1), 1);
     if (storeInstr->isTarget()) {
       live.addReg(&storePtrOprd);
       slice.add(storeInstr, INTER_STORE_TGT);
@@ -222,7 +232,8 @@ void IntraSlicer::handleMem(DynInstr *dynInstr) {
     DenseSet<DynInstr *>::iterator itr(loadInstrs.begin());
     for (; itr != loadInstrs.end(); ++itr) {
       DynMemInstr *loadInstr = (DynMemInstr*)(*itr);
-      DynOprd loadPtrOprd(loadInstr, 0);
+      Instruction *staticLoadInstr = idMgr->getOrigInstr((DynInstr *)loadInstr);
+      DynOprd loadPtrOprd(loadInstr, staticLoadInstr->getOperand(0), 0);
       if (mustAlias(&loadPtrOprd, &storePtrOprd)) {
         if (loadInstr->isAddrSymbolic() || storeInstr->isAddrSymbolic()) {
           addMemAddrEqConstr(loadInstr, storeInstr);
@@ -289,6 +300,7 @@ void IntraSlicer::addMemAddrEqConstr(DynMemInstr *loadInstr,
 
 void IntraSlicer::takeStartTarget(DynInstr *dynInstr) {
   slice.add(dynInstr, START_TARGET);
+  curIndex = dynInstr->getIndex()-1;
 }
 
 void IntraSlicer::addDynOprd(DynOprd *dynOprd) {

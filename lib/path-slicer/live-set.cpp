@@ -111,7 +111,8 @@ const bdd LiveSet::getAllLoadMem() {
   DenseSet<DynInstr *>::iterator itr(loadInstrs.begin());
   for (; itr != loadInstrs.end(); ++itr) {
     DynInstr *loadInstr = *itr;
-    DynOprd loadPtrOprd(loadInstr, 0);
+    Instruction *staticLoadInstr = idMgr->getOrigInstr(loadInstr);
+    DynOprd loadPtrOprd(loadInstr, staticLoadInstr->getOperand(0), 0);
     retBDD |= aliasMgr->getPointTee(&loadPtrOprd);
   }
 

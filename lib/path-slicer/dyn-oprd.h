@@ -14,6 +14,8 @@ namespace tern {
     /* Points back to the dynamic instruction that owns this dynamic operand. */
     DynInstr *dynInstr;
 
+    llvm::Value *staticValue;
+
     /* Start from -1. */
     int oprdIndex; 
 
@@ -21,11 +23,11 @@ namespace tern {
 
   public:
     DynOprd();
-    DynOprd(DynInstr *dynInstr, int oprdIndex);
+    DynOprd(DynInstr *dynInstr, llvm::Value *staticValue, int oprdIndex);
     ~DynOprd();
     int getIndex();
     DynInstr *getDynInstr();
-    const llvm::Value *getStaticValue();
+    llvm::Value *getStaticValue();
     bool isConstant();
   };
 }

@@ -55,12 +55,11 @@ namespace tern {
     void takeNonMem(DynInstr *dynInstr, uchar reason = INTRA_NON_MEM);
     void delRegOverWritten(DynInstr *dynInstr);
     bool regOverWritten(DynInstr *dynInstr);
-    bool retRegOverWritten(DynInstr *dynInstr);
+    bool retRegOverWritten(DynRetInstr *dynRetInstr);
     bool eventBetween(DynBrInstr *dynBrInstr, DynInstr *dynPostInstr);
     bool writtenBetween(DynBrInstr *dynBrInstr, DynInstr *dynPostInstr);
-    bool mayWriteFunc(DynRetInstr *dynRetInstr, llvm::Function *func);
-    bool mayCallEvent(DynInstr *dynInstr, llvm::Function *func);
-    DynInstr *getCallInstrWithRet(DynInstr *retDynInstr);
+    bool mayWriteFunc(DynRetInstr *dynRetInstr);
+    bool mayCallEvent(DynRetInstr *dynRetInstr);
 
     /* Find previous dynamic instruction in the trace with the same thread id. */
     DynInstr *prevDynInstr(DynInstr *dynInstr);
@@ -74,7 +73,7 @@ namespace tern {
     IntraSlicer();
     ~IntraSlicer();
     void init(klee::ExecutionState *state, OprdSumm *oprdSumm, FuncSumm *funcSumm,
-      InstrIdMgr *idMgr, const DynInstrVector *trace, size_t startIndex);
+      InstrIdMgr *idMgr, CfgMgr *cfgMgr, const DynInstrVector *trace, size_t startIndex);
 
     /* The function to run the intra-thread slicing. */
     void detectInputDepRaces(uchar tid);

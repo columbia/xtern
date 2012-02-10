@@ -5,8 +5,9 @@ DynOprd::DynOprd() {
 
 }
 
-DynOprd::DynOprd(DynInstr *dynInstr, int oprdIndex) {
+DynOprd::DynOprd(DynInstr *dynInstr, Value *staticValue, int oprdIndex) {
   this->dynInstr = dynInstr;
+  this->staticValue = staticValue;
   this->oprdIndex = oprdIndex;
 }
 
@@ -18,9 +19,8 @@ DynInstr *DynOprd::getDynInstr() {
   return dynInstr;
 }
 
-const llvm::Value *DynOprd::getStaticValue() {
-  // TBD.
-  return NULL;
+llvm::Value *DynOprd::getStaticValue() {
+  return staticValue;
 }
 
 int DynOprd::getIndex() {
@@ -28,7 +28,6 @@ int DynOprd::getIndex() {
 }
 
 bool DynOprd::isConstant() {
-  const Value *v = getStaticValue();
-  return isa<Constant>(v);
+  return isa<Constant>(getStaticValue());
 }
 

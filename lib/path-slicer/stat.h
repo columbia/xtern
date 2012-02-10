@@ -2,7 +2,6 @@
 #define __TERN_PATH_SLICER_STAT_H
 
 #include <string>
-#include <ext/hash_map>
 
 #include "llvm/Instruction.h"
 #include "llvm/ADT/DenseSet.h"
@@ -18,7 +17,7 @@ namespace tern {
   private:
     InstrIdMgr *idMgr;
     CallStackMgr *ctxMgr;
-    HMAP<long, llvm::raw_string_ostream * > buf;
+    llvm::DenseMap<const llvm::Instruction *, llvm::raw_string_ostream * > buf;
 
   protected:
 
