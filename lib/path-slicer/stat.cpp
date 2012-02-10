@@ -51,9 +51,10 @@ void Stat::printDynInstr(DynInstr *dynInstr, const char *tag) {
       << "} IDX: " << dynInstr->getIndex()
       << ": TID: " << (int)dynInstr->getTid()
       << ": INSTRID: " << dynInstr->getOrigInstrId()
-      << ": TAKEN: " << dynInstr->takenReason();
+      << ": TAKEN: " << dynInstr->takenReason()
+      /*;
     errs()
-      << ": INSTR: " << *(idMgr->getOrigInstr(dynInstr))
+      << ": INSTR: " << *(idMgr->getOrigInstr(dynInstr))*/
       << "\n";
   }
 }

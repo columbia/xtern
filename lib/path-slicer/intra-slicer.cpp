@@ -40,6 +40,7 @@ void IntraSlicer::detectInputDepRaces(uchar tid) {
     } else { /* Handle all the other non-memory instructions. */
       handleNonMem(cur);
     }
+    stat->printDynInstr(cur, __func__);
   }
 }
 
@@ -58,8 +59,6 @@ DynInstr *IntraSlicer::delTraceTail(uchar tid) {
     } else
       curIndex--;
   }
-  if (dynInstr)
-    stat->printDynInstr(dynInstr, __func__);
   return dynInstr;
 }
 
