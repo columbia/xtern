@@ -101,7 +101,9 @@ struct RRScheduler: public Scheduler {
   RRScheduler();
   ~RRScheduler();
 
+  void check_zombie();
 protected:
+
 
   int fireTimers();
   void next(bool at_thread_end=false);
@@ -115,6 +117,11 @@ protected:
   wait_t waits[MaxThreads];
 
   pthread_mutex_t begin_lock;
+
+  //  for monitor
+  pthread_t monitor_th;
+  int timer;
+  int timemark[MaxThreads];
 };
 
 
