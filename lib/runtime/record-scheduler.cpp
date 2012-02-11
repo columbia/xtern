@@ -674,27 +674,7 @@ void RRScheduler::signal(void *chan, bool all)
 unsigned RRScheduler::incTurnCount(void)
 {
   unsigned ret = turnCount++;
-
   fireTimeouts();
-
-#if 0
-  list<int>::iterator prv, cur;
-
-  for(cur=waitq.begin(); cur!=waitq.end();) {
-    prv = cur ++;
-
-    int tid = *prv;
-    assert(tid >=0 && tid < Scheduler::nthread);
-    if(waits[tid].timeout < turnCount) {
-      dprintf("RRScheduler: %d timed out (%p, %u)\n",
-              tid, waits[tid].chan, waits[tid].timeout);
-      waits[tid].reset(ETIMEDOUT);
-      waitq.erase(prv);
-      runq.push_back(tid);
-    }
-  }
-#endif
-
   return ret;
 }
 
