@@ -7,6 +7,7 @@
 #include <tr1/unordered_map>
 #include "tern/runtime/runtime.h"
 #include "tern/runtime/record-scheduler.h"
+#include <ctime>
 
 namespace tern {
 
@@ -105,6 +106,9 @@ protected:
   int relTimeToTurn(const struct timespec *reltime);
 
   void pthreadMutexLockHelper(pthread_mutex_t *mutex);
+  
+  /// evaluate the time difference between start and end
+  timespec time_diff(timespec &start, timespec &end);
   
   /// for each pthread barrier, track the count of the number and number
   /// of threads arrived at the barrier
