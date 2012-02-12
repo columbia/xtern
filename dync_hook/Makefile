@@ -1,6 +1,7 @@
 all: xternruntime interpose.so 
 
-INC_DIRS=-I$(XTERN_ROOT)/include/
+# the source code path(XTERN_ROOT) should be seperated from install path(TERN_ROOT)
+INC_DIRS=-I$(TERN_ROOT)/include/ -I$(XTERN_ROOT)/include/
 STD_LIBS=-lsupc++ -lpthread -lstdc++
 FLAG=`date +%F\#%T`
 #TERN_LIBS=-L$(XTERN_ROOT)/obj/Debug/lib/  -lanalysis -linstr -lruntime
@@ -25,6 +26,9 @@ interpose.so: template.cpp spec_hooks.cpp hook.cpp
 code_gen: code_gen.cpp
 	g++ $^ $(CXXFLAGS) -o code_gen
 
+# func_template.cpp and void_func_template.cpp are template files;
+# hook_func.def is the definition of hooked function
+# code_gen loops over hook_func.func generates hook_func_def.h and tempalte.cpp
 template.cpp: code_gen func_template.cpp void_func_template.cpp hook_func.def
 	./code_gen < hook_func.def
 
