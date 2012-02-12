@@ -70,6 +70,8 @@ void initTakenReasons() {
 
   takenReasons[INTER_BR_BR] = "INTER_BR_BR";
 
+  takenReasons[INTRA_ALLOCA] = "INTRA_ALLOCA";
+
   takenReasons[INTRA_PHI] = "INTRA_PHI";
   takenReasons[INTRA_PHI_BR_CTRL_DEP] = "INTRA_PHI_BR_CTRL_DEP";
 
@@ -244,7 +246,7 @@ void PathSlicer::runPathSlicer(void *pathId, set<BranchInst *> &brInstrs) {
     /* (3) Init slicing sub modules. This function will also clean live set and 
       slice set in the intra-thread slicer. */
     intraSlicer.init((ExecutionState *)pathId, &oprdSumm, &funcSumm,
-      &idMgr, &cfgMgr, trace, startIndex);
+      &aliasMgr, &idMgr, &cfgMgr, &stat, trace, startIndex);
 
     // (4) Take target instruction, and add dyn oprds of the instruction, depending on slicing goals.
     intraSlicer.takeStartTarget(trace->at(startIndex));
@@ -263,7 +265,8 @@ void PathSlicer::runPathSlicer(void *pathId, set<BranchInst *> &brInstrs) {
 }
 
 void PathSlicer::calStat() {
-  
+  interSlicer.calStat();
+  intraSlicer.calStat();
 }
 
 void PathSlicer::initKModule(KModule *kmodule) {

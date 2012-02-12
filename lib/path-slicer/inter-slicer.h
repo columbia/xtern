@@ -42,6 +42,7 @@ namespace tern {
     InterSlicer();
     ~InterSlicer();
     void detectInputDepRaces(InstrRegions *instrRegions);
+    void calStat();
   };
 }
 

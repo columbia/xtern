@@ -31,9 +31,12 @@ extern const char *takenReasons[NUM_TAKEN_FLAGS];
 
 #define INTRA_PHASE_BASE 99  /* Base of intra-thread phase. */
 /* Reasons of taken by handling intra-thread phase. */
+/* Reasons of taken by handling alloca instructions. */
+#define INTRA_ALLOCA 100
+
 /* Reasons of taken by handling PHI instructions. */
-#define INTRA_PHI 100
-#define INTRA_PHI_BR_CTRL_DEP 101
+#define INTRA_PHI 101
+#define INTRA_PHI_BR_CTRL_DEP 102
 // TBD
 
 /* Reasons of taken by handling branch instructions. */

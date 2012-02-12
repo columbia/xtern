@@ -33,10 +33,10 @@ namespace tern {
     Stat();
     ~Stat();
     void init(InstrIdMgr *idMgr, CallStackMgr *ctxMgr);
-    void printStat(const char *tag = NULL);
+    void printStat(const char *tag);
     const char *printInstr(const llvm::Instruction *instr);    
     const char *printValue(const llvm::Value *v);
-    void printDynInstr(DynInstr *dynInstr, const char *tag = NULL);
+    void printDynInstr(DynInstr *dynInstr, const char *tag);
   };
 }
 

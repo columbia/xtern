@@ -18,3 +18,7 @@ void InterSlicer::detectInputDepRaces(InstrRegions *instrRegions) {
   // TBD.
 }
 
+void InterSlicer::calStat() {
+  // TBD: print dynamic intrunctions taken as slicing targets.
+}
+

@@ -58,31 +58,9 @@ int InstrIdMgr::getOrigInstrId(llvm::Instruction *instr) {
   return (int)origIda->getInstructionID(instr);
 }
 
-/*
-Value *InstrIdMgr::getNonCallStaticValue(DynOprd *dynOprd) {
-  Value *retV = NULL;
-  Instruction *instr = idMgr->getOrigInstr(dynOprd->getDynInstr());
-  assert(!Util::isCall(instr));
-  int opIndex = dynOprd->getIndex();
-  if (opIndex == -1) {  // If it is a destination operand.
-    assert(Util::hasDestOprd(instr));
-    return Util::getDestOprd(instr);
-  } else {
-    for (unsigned i = 0; i < instr->getNumOperands(); i++) {
-      if ((int)i == opIndex)
-        return instr->getOperand(i);
-    }
-  }
-  
-  // Dead code.
-  assert(false);
-  return NULL;
-}
-*/
-
 Instruction *InstrIdMgr::getOrigInstrCtx(int instrId) {
-  fprintf(stderr, "InstrIdMgr::getOrigInstrCtx instrId %d, %p\n",
-    instrId, (void *)(origIda->getInstruction(instrId)));
+  //fprintf(stderr, "InstrIdMgr::getOrigInstrCtx instrId %d, %p\n",
+    //instrId, (void *)(origIda->getInstruction(instrId)));
   return origIda->getInstruction(instrId);
 }
 

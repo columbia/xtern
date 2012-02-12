@@ -33,18 +33,17 @@ void AliasMgr::initModules(Module *origModule, Module *mxModule,
     (void *)mxModule, (void *)simModule);
   // Init the three AAOLs.
   assert(origModule);
-  initAAOL(&origAaol, origModule);
+  origAaol = initAAOL(origModule);
   if (mxModule)
-    initAAOL(&mxAaol, mxModule);
+    mxAaol = initAAOL(mxModule);
   if (simModule)
-    initAAOL(&simAaol, simModule);
-  fprintf(stderr, "AliasMgr::initModules end\n");
+    simAaol = initAAOL(simModule);
   
   // Init adv alias.
   // TBD.
 }
 
-void AliasMgr::initAAOL(AAOLClient **aaol, llvm::Module *module) {
+AAOLClient *AliasMgr::initAAOL(llvm::Module *module) {
   fprintf(stderr, "AliasMgr::initAAOL begin\n");
   std::string llvmRoot(getenv("LLVM_ROOT"));
   assert(llvmRoot != "");
@@ -54,12 +53,13 @@ void AliasMgr::initAAOL(AAOLClient **aaol, llvm::Module *module) {
 
   std::map<Instruction *, int> instrMap;
   genInstrMap(*module, instrMap);
-  (*aaol) = new AAOLClient(aaolLib.c_str(), idmLib.c_str(), libPath.c_str(),
+  AAOLClient *aaol = new AAOLClient(aaolLib.c_str(), idmLib.c_str(), libPath.c_str(),
     "-bc2bdd-aa", *module, instrMap);
-  if(!(*aaol)->begin())
+  if(!aaol->begin())
     exit(1);
-  (*aaol)->setDebugLevel(get_option(tern_path_slicer, aaol_dbg_level));
+  aaol->setDebugLevel(get_option(tern_path_slicer, aaol_dbg_level));
   fprintf(stderr, "AliasMgr::initAAOL end\n");
+  return aaol;
 }
 
 void AliasMgr::genInstrMap(Module &module,
@@ -114,9 +114,14 @@ bool AliasMgr::mayAlias(DynOprd *dynOprd1, DynOprd *dynOprd2) {
     return result;
 
   // Query bdd.
-  if (CTX_SENSITIVE)
+  if (CTX_SENSITIVE) {
+    fprintf(stderr, "alias query <%p (" SZ ") %d %d>, <%p (" SZ ") %d %d>\n",
+      (void *)ctx1, ctx1->size(), instrId1, opIndex1,
+      (void *)ctx2, ctx2->size(), instrId2, opIndex2);
+    for (size_t i = 0; i < ctx1->size(); i++)
+      fprintf(stderr, "CTX [" SZ "]: %d\n", i, ctx1->at(i));
     result = origAaol->aliasQuery(*ctx1, instrId1, opIndex1, *ctx2, instrId2, opIndex2);
-  else
+  } else
     result = origAaol->aliasQuery(instrId1, opIndex1, instrId2, opIndex2);
 
   // Update cache.

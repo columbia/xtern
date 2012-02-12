@@ -24,7 +24,8 @@ namespace tern {
     static bool isLoad(DynInstr *dynInstr);
     static bool isStore(DynInstr *dynInstr);
     static bool isMem(DynInstr *dynInstr);*/
-    
+
+    static bool isAlloca(const llvm::Instruction *instr);
     static bool isPHI(const llvm::Instruction *instr);
     static bool isBr(const llvm::Instruction *instr);
     static bool isRet(const llvm::Instruction *instr);
@@ -34,6 +35,11 @@ namespace tern {
     static bool isMem(const llvm::Instruction *instr);
     static bool hasDestOprd(const llvm::Instruction *instr);
     static llvm::Value *getDestOprd(llvm::Instruction *instr);
+
+    /* Identify whether a Value* is constant or not. Filter out basicblocks (basic blocks can be operands
+    of branch instructions, but basic blocks are not constant in LLVM, weird...). */
+    static bool isConstant(const llvm::Value *v);
+    static bool isConstant(DynOprd *dynOprd);
 
     /* The only place to determine whether a dynamic call instruction is creating a child thread. */
     static bool isThreadCreate(DynCallInstr *call);

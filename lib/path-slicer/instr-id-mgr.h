@@ -83,10 +83,9 @@ namespace tern {
     void initStat(Stat *stat);
     void initModules(llvm::Module *origModule, llvm::Module *mxModule, llvm::Module *simModule,
       const char *lmTracePath);
+    
     /* Load the landmark trace (not full trace) from disk, this is important to setup the instr id mapping. */
     void loadBinLandmarkTrace(const char *fullPath);
-
-    //llvm::Value *getNonCallStaticValue(DynOprd *dynOprd);
 
     llvm::Instruction *getOrigInstr(DynInstr *dynInstr);
 

@@ -27,8 +27,8 @@ void LiveSet::clear() {
 }
 
 void LiveSet::addReg(CallCtx *ctx, const Value *v) {
-  if (!isa<Constant>(v)) { // Discard it if it is a LLVM Constant.
-    errs() << "LiveSet::addReg: " << *v << "\n";
+  if (!Util::isConstant(v)) { // Discard it if it is a LLVM Constant.
+    errs() << "LiveSet::addReg <" << (void *)v << ">: " << *v << "\n";
     CtxVPair p = std::make_pair(ctx, v);
     ASSERT(!DS_IN(p, virtRegs));
     virtRegs.insert(p);
@@ -36,11 +36,21 @@ void LiveSet::addReg(CallCtx *ctx, const Value *v) {
 }
 
 void LiveSet::addReg(DynOprd *dynOprd) {
-  if (!dynOprd->isConstant()) { // Discard it if it is a LLVM Constant.
-    CtxVPair p = std::make_pair(
-      dynOprd->getDynInstr()->getCallingCtx(), 
+  if (!Util::isConstant(dynOprd)) { // Discard it if it is a LLVM Constant.
+    CtxVPair p = std::make_pair(dynOprd->getDynInstr()->getCallingCtx(), 
       dynOprd->getStaticValue());
-    ASSERT(!DS_IN(p, virtRegs));
+    /*if (DS_IN(p, virtRegs)) {
+      errs() << "LiveSet::addReg assert failure<" << (void *)(dynOprd->getStaticValue())
+      << ">: " << *(dynOprd->getStaticValue()) << "\n";
+      CtxVDenseSet::iterator itr(virtRegs.begin());
+      for (; itr != virtRegs.end(); ++itr) {
+        CtxVPair p = *itr;
+        fprintf(stderr, "CtxV in virtRegs: <%p> <%p>\n", (void *)p.first, (void *)p.second);
+      }
+      assert(false);
+    }*/
+    errs() << "LiveSet::addReg OK <" << (void *)(dynOprd->getStaticValue())
+      << ">: " << *(dynOprd->getStaticValue()) << "\n";
     virtRegs.insert(p);
   }
 }

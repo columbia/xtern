@@ -27,7 +27,9 @@ void IntraSlicer::detectInputDepRaces(uchar tid) {
     if (!cur)
       return;
     Instruction *instr = idMgr->getOrigInstr(cur);
-    if (Util::isPHI(instr)) {
+    if (Util::isAlloca(instr)) {
+      handleAlloca(cur);
+    } else if (Util::isPHI(instr)) {
       handlePHI(cur);
     } else if (Util::isBr(instr)) {
       handleBranch(cur);
@@ -59,16 +61,21 @@ DynInstr *IntraSlicer::delTraceTail(uchar tid) {
     } else
       curIndex--;
   }
+  if (dynInstr)
+    stat->printDynInstr(dynInstr, __func__);
   return dynInstr;
 }
 
-void IntraSlicer::init(klee::ExecutionState *state, OprdSumm *oprdSumm, FuncSumm *funcSumm,
-      InstrIdMgr *idMgr, CfgMgr *cfgMgr, const DynInstrVector *trace, size_t startIndex) {
+void IntraSlicer::init(ExecutionState *state, OprdSumm *oprdSumm, FuncSumm *funcSumm,
+      AliasMgr *aliasMgr, InstrIdMgr *idMgr, CfgMgr *cfgMgr, Stat *stat,
+      const DynInstrVector *trace, size_t startIndex) {
   this->state = state;
   this->oprdSumm = oprdSumm;
   this->funcSumm = funcSumm;
+  this->aliasMgr = aliasMgr;
   this->idMgr = idMgr;
   this->cfgMgr = cfgMgr;
+  this->stat = stat;
   this->trace = trace;
   curIndex = startIndex;
   live.clear();
@@ -138,6 +145,11 @@ bool IntraSlicer::mayCallEvent(DynRetInstr *dynRetInstr) {
   return funcSumm->mayCallEvent(dynCallInstr);
 }
 
+void IntraSlicer::handleAlloca(DynInstr *dynInstr) {
+  if (regOverWritten(dynInstr))
+    slice.add(dynInstr, INTRA_ALLOCA);
+}
+
 void IntraSlicer::handlePHI(DynInstr *dynInstr) {
   DynPHIInstr *phiInstr = (DynPHIInstr*)dynInstr;
   if (regOverWritten(phiInstr)) {
@@ -145,7 +157,7 @@ void IntraSlicer::handlePHI(DynInstr *dynInstr) {
     uchar index = phiInstr->getIncomingIndex();
     PHINode *phiNode = dyn_cast<PHINode>(idMgr->getOrigInstr(dynInstr));
     DynOprd oprd(phiInstr, phiNode->getIncomingValue(index), index);
-    if (oprd.isConstant()) {
+    if (!Util::isConstant(&oprd)) {
       live.addReg(&oprd);
     } else {
       DynInstr *prevInstr = prevDynInstr(phiInstr);
@@ -257,7 +269,7 @@ void IntraSlicer::handleMem(DynInstr *dynInstr) {
 bool IntraSlicer::mustAlias(DynOprd *oprd1, DynOprd *oprd2) {
   const Value *v1 = oprd1->getStaticValue();
   const Value *v2 = oprd2->getStaticValue();
-  return isa<Constant>(v1) && isa<Constant>(v2) && v1 == v2;
+  return Util::isConstant(v1) && Util::isConstant(v2) && v1 == v2;
 }
 
 DynInstr *IntraSlicer::prevDynInstr(DynInstr *dynInstr) {
@@ -306,4 +318,11 @@ void IntraSlicer::addDynOprd(DynOprd *dynOprd) {
   // TBD.
 }
 
+void IntraSlicer::calStat() {
+  DynInstrItr itr;
+  for (itr = slice.begin(); itr != slice.end(); itr++) {
+    DynInstr *dynInstr = *itr;
+    stat->printDynInstr(dynInstr, "IntraSlicer::calStat");
+  }
+}
 

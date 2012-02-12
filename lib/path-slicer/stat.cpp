@@ -25,7 +25,7 @@ void Stat::printStat(const char *tag) {
 }
 
 const char *Stat::printInstr(const llvm::Instruction *instr) {
-  errs() << "Stat::printInstr: " << (void *)(instr) << "\n";
+  errs() << "Stat::printInstr: " << *(instr) << "\n";
   if (DM_IN(instr, buf)) {
     return buf[instr]->str().c_str();
   } else {
@@ -43,8 +43,8 @@ const char *Stat::printValue(const llvm::Value *v) {
 }
 
 void Stat::printDynInstr(DynInstr *dynInstr, const char *tag) {
-  fprintf(stderr, "Stat::printDynInstr %p, tid %u\n", (void *)dynInstr, 
-    (unsigned)dynInstr->getTid());
+  //fprintf(stderr, "Stat::printDynInstr %p, tid %u\n", (void *)dynInstr, 
+    //(unsigned)dynInstr->getTid());
   if (DBG) {
     errs() << "\n"
       << "DynInstr {" << tag
@@ -52,9 +52,7 @@ void Stat::printDynInstr(DynInstr *dynInstr, const char *tag) {
       << ": TID: " << (int)dynInstr->getTid()
       << ": INSTRID: " << dynInstr->getOrigInstrId()
       << ": TAKEN: " << dynInstr->takenReason()
-      /*;
-    errs()
-      << ": INSTR: " << *(idMgr->getOrigInstr(dynInstr))*/
+      << ": INSTR: " << *(idMgr->getOrigInstr(dynInstr))
       << "\n";
   }
 }

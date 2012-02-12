@@ -43,6 +43,7 @@ namespace tern {
     bool postDominate(DynInstr *dynPostInstr, DynInstr *dynPrevInstr);
     DynInstrItr current();
     DynInstr *delFromTrace();
+    void handleAlloca(DynInstr *dynInstr);
     void handlePHI(DynInstr *dynInstr);
     void handleBranch(DynInstr *dynInstr);
     void handleRet(DynInstr *dynInstr);
@@ -73,7 +74,8 @@ namespace tern {
     IntraSlicer();
     ~IntraSlicer();
     void init(klee::ExecutionState *state, OprdSumm *oprdSumm, FuncSumm *funcSumm,
-      InstrIdMgr *idMgr, CfgMgr *cfgMgr, const DynInstrVector *trace, size_t startIndex);
+      AliasMgr *aliasMgr, InstrIdMgr *idMgr, CfgMgr *cfgMgr, Stat *stat,
+      const DynInstrVector *trace, size_t startIndex);
 
     /* The function to run the intra-thread slicing. */
     void detectInputDepRaces(uchar tid);
@@ -84,6 +86,8 @@ namespace tern {
     /* This function could be called by the path-slicer to setup init dyn oprds to live set,
     depending on different slicing goals (reachability only, or reachability + values of used oprds). */
     void addDynOprd(DynOprd *dynOprd);
+
+    void calStat();
   };
 }
 

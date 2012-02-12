@@ -57,6 +57,10 @@ bool Util::isMem(DynInstr *dynInstr) {
 }
 */
 
+bool Util::isAlloca(const Instruction *instr) {
+  return instr->getOpcode() == Instruction::Alloca;
+}
+
 bool Util::isPHI(const Instruction *instr) {
   return instr->getOpcode() == Instruction::PHI;
 }
@@ -117,6 +121,18 @@ bool Util::hasDestOprd(const Instruction *instr) {
 Value *Util::getDestOprd(llvm::Instruction *instr) {
   assert(hasDestOprd(instr));
   return dyn_cast<Value>(instr);
+}
+
+bool Util::isConstant(const llvm::Value *v) {
+  if (isa<BasicBlock>(v)) // Filter out basic blocks, which are not "Constant" in LLVM.
+    return true;
+  else
+    return isa<Constant>(v);
+}
+
+bool Util::isConstant(DynOprd *dynOprd) {
+  const Value *v = dynOprd->getStaticValue();
+  return isConstant(v);
 }
 
 bool Util::isThreadCreate(DynCallInstr *call) {

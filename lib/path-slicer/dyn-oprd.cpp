@@ -27,7 +27,3 @@ int DynOprd::getIndex() {
   return oprdIndex;
 }
 
-bool DynOprd::isConstant() {
-  return isa<Constant>(getStaticValue());
-}
-
