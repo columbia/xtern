@@ -15,7 +15,8 @@ struct InitInstr: public llvm::ModulePass {
   virtual void getAnalysisUsage(llvm::AnalysisUsage &AU) const;
 
   void addBeginEndAsCtorDtor(llvm::Module &M);
-  void addBeginEndInMain(llvm::Module &M, llvm::Function *mainfunc);
+  void addBeginEndInMain(llvm::Module &M, llvm::Function *mainfunc,
+                         bool add_end=true);
   void addSymbolicArgv(llvm::Module &M, llvm::Function *mainfunc);
   void addSymbolic(llvm::Module &M);
   void addCtorOrDtor(llvm::Module *M, llvm::Function *F, bool isCtor);

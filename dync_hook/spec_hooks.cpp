@@ -90,10 +90,10 @@ extern "C" int __libc_start_main(
   // is only called for statically linked libc, whereas rtld_fini_func is
   // called regardless
   saved_fini_func = (fini_type)rtld_fini_func;
-
   ret = orig_func((void*)my_main, argc, (char**)(&args),
                   (fnptr_type)tern_init_func, (fnptr_type)fini_func,
-                  (fnptr_type)tern_fini_func, stack_end);
+                  rtld_fini_func, stack_end);
+                  //(fnptr_type)tern_fini_func, stack_end);
   return ret;
 #endif
   ret = orig_func(func_ptr, argc, argv, init_func, fini_func,
