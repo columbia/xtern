@@ -599,6 +599,7 @@ void RRScheduler::getTurn()
 void RRScheduler::putTurn(bool at_thread_end)
 {
   int tid = self();
+  assert(tid>=0 && tid < Scheduler::nthread);
   assert(tid == runq.front());
 
   timemark[tid] = timer;  //  return to user space at "timer"
@@ -620,6 +621,7 @@ void RRScheduler::putTurn(bool at_thread_end)
 int RRScheduler::wait(void *chan, unsigned nturn)
 {
   int tid = self();
+  assert(tid>=0 && tid < Scheduler::nthread);
   assert(tid == runq.front());
   waits[tid].chan = chan;
   waits[tid].timeout = nturn;
@@ -696,6 +698,7 @@ RRScheduler::RRScheduler()
   assert(self() == MainThreadTid && "tid hasn't been initialized!");
   runq.push_back(self());
   sem_post(&waits[MainThreadTid].sem);
+
   if (options::RR_skip_zombie)
   {
     timer = 0;
