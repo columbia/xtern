@@ -162,15 +162,8 @@ cmds = '''
 // RUN: env TERN_OPTIONS=runtime_type=FCFS ./%t2 | FileCheck %s
 // test RR scheduler
 // : rm -rf %t2.outdir
-// RUN: env TERN_OPTIONS=runtime_type=RR:log_type=test:output_dir=%t2.outdir ./%t2  | FileCheck %s
-// RUN: env TERN_OPTIONS=runtime_type=RR:log_type=test:output_dir=%t2.outdir ./%t2  ScheduleCheck
-// : sort -k 2 -n %t2.outdir/*.txt | FileCheck %s -check-prefix=RR
-// : %projbindir/logprint -bc %t2-analysis.bc out/tid-0.bin -r -v > /dev/null
-// : %projbindir/logprint -bc %t2-analysis.bc out/tid-1.bin -r -v > /dev/null
-
-// stress
-// RUN: ./%t2 && ./%t2 && ./%t2  && ./%t2  && ./%t2  && ./%t2  && ./%t2
-
+// RUN: env TERN_OPTIONS=runtime_type=RR:RR_skip_zombie=0:log_type=test:output_dir=%t2.outdir ./%t2  | FileCheck %s
+// RUN: env TERN_OPTIONS=runtime_type=RR:RR_skip_zombie=0:log_type=test:output_dir=%t2.outdir ./%t2  ScheduleCheck
 
 // test the LLVM .bc modules
 // RUN: llvm-ld -o %t3 %t2-record.bc %ternbcruntime
@@ -181,14 +174,8 @@ cmds = '''
 // RUN: env TERN_OPTIONS=runtime_type=FCFS ./%t3 | FileCheck %s
 // test RR scheduler
 // : rm -rf %t3.outdir
-// RUN: env TERN_OPTIONS=runtime_type=RR:log_type=test:output_dir=%t3.outdir ./%t3  | FileCheck %s
-// RUN: env TERN_OPTIONS=runtime_type=RR:log_type=test:output_dir=%t3.outdir ./%t3  ScheduleCheck
-// : sort -k 2 -n %t3.outdir/*.txt | FileCheck %s -check-prefix=RR
-// : %projbindir/logprint -bc %t2-analysis.bc out/tid-0.bin -r -v > /dev/null
-// : %projbindir/logprint -bc %t2-analysis.bc out/tid-1.bin -r -v > /dev/null
-
-// stress
-// RUN: ./%t3 && ./%t3 && ./%t3  && ./%t3  && ./%t3  && ./%t3  && ./%t3
+// RUN: env TERN_OPTIONS=runtime_type=RR:RR_skip_zombie=0:log_type=test:output_dir=%t3.outdir ./%t3  | FileCheck %s
+// RUN: env TERN_OPTIONS=runtime_type=RR:RR_skip_zombie=0:log_type=test:output_dir=%t3.outdir ./%t3  ScheduleCheck
 '''
 for cmd in cmds.splitlines():
     run(cmd, args)
