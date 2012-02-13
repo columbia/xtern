@@ -21,7 +21,7 @@ using namespace tern;
 #  define dprintf(fmt...) fprintf(stderr, fmt); fflush(stderr);
 #else
 #  define SELFCHECK
-#  define dprintf(fmt...)
+#  define dprintf(fmt...) ;
 #endif
 
 #if 1
@@ -101,7 +101,10 @@ void RRSchedulerCV::detect_blocking_threads(void)
       find_live = true; //   this thread is either live or unknown.
   }
 
-  if (!find_live) dprintf( "WARNING: all threads are blocked!!\n");
+  if (!find_live) 
+  {
+    dprintf( "WARNING: all threads are blocked!!\n");
+  }
   dprintf( "checking blocking threads: continue on thread %d\n", runq.front());
   sem_post(&waits[runq.front()].sem);
 
