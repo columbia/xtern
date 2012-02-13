@@ -9,6 +9,7 @@
 #include <stdlib.h>
 #include <stdarg.h>
 #include <string.h>
+#include <time.h>
 #include <pthread.h>
 #include <iostream>
 #include <iomanip>
@@ -46,6 +47,11 @@ void TxtLogger::logSync(unsigned insid, unsigned short sync,
           << ' ' << turn
           << ' ' << tid
           << hex << " 0x" << va_arg(args, uint64_t) << dec;
+      /// output the measured time interval
+      timespec measured_time = va_arg(args, timespec);
+      ouf << " " << dec << measured_time.tv_sec << ":"
+          << setfill('0') << setw(9) << measured_time.tv_nsec;
+ 
       va_end(args);
       ouf << "\n";
       ouf.flush();
@@ -117,6 +123,11 @@ void TxtLogger::logSync(unsigned insid, unsigned short sync,
   default:
     assert(0 && "sync not handled");
   }
+  /// output the measured time interval
+  timespec measured_time = va_arg(args, timespec);
+  ouf << " " << dec << measured_time.tv_sec << ":"
+          << setfill('0') << setw(9) << measured_time.tv_nsec;
+
   va_end(args);
   ouf << "\n";
   ouf.flush();
