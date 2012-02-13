@@ -30,8 +30,10 @@ parser.add_argument('-l', dest='additional_libs', default='',
 args = parser.parse_known_args();
 program = args[0].program
 tern_obj_path = args[0].tern_obj_path
-additional_libs = ' '.join(map(lambda s: '-l%s' % s,
-                               args[0].additional_libs.split(',')))
+additional_libs = ''
+for s in args[0].additional_libs.split(','):
+    if s != '':
+        additional_libs += ' ' + ('-l%s' % s)
 
 program_without_ext = ''
 if program.endswith('.ll') or program.endswith('.bc'):
@@ -43,7 +45,7 @@ replay   = '%s-replay'   % program_without_ext
 tern_symbolic = '/tmp/tern_symbolic.c'
 
 commands = [
-    '%s/bin/tern-instr -S -with-uclibc %s -o %s' \
+    '%s/bin/tern-instr -S %s -o %s' \
         % (tern_obj_path, program, program_without_ext),
     'llc -o %s.s %s.ll' % (record, record),
     'g++ -o %s %s.s %s -L%s/lib -lruntime -lcommon -lpthread -lcrypt %s' \
