@@ -101,7 +101,7 @@ struct RRScheduler: public Scheduler {
   RRScheduler();
   ~RRScheduler();
 
-  void check_zombie();
+  void detect_blocking_threads();
 protected:
 
 
@@ -214,7 +214,7 @@ struct RRSchedulerCV: public Scheduler {
   RRSchedulerCV(pthread_t main_th);
   ~RRSchedulerCV();
 
-  void check_zombie();
+  void detect_blocking_threads();
 
 protected:
 

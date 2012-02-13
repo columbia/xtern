@@ -87,14 +87,18 @@ template <typename _S>
 int RecorderRT<_S>::absTimeToTurn(const struct timespec *abstime)
 {
   // TODO: convert physical time to logical time (number of turns)
-  return _S::getTurnCount() + 10;
+  //return _S::getTurnCount() + 10;
+  //return _S::getTurnCount() + 3 * _S::nthread + 10; //rand() % 10;
+  return _S::getTurnCount() + 3; //rand() % 10;
 }
 
 template <typename _S>
 int RecorderRT<_S>::relTimeToTurn(const struct timespec *reltime)
 {
   // TODO: convert physical time to logical time (number of turns)
-  return 10;
+  //return 10;
+  //return 3 * _S::nthread + 10; //rand() % 10;
+  return 3;
 }
 
 template <typename _S>
