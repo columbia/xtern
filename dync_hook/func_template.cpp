@@ -46,13 +46,11 @@ extern "C" FUNC_RET_TYPE FUNC_NAME(ARGS_WITH_NAME){
     fflush(stdout);
 #endif
     return ret;
-  }
+  } 
 #else
 #ifdef PRINT_DEBUG
-  else {
-	  fprintf(stdout, "%04d: FUNC_NAME is called.\n", (int) pthread_self());
-    fflush(stdout);
-  }
+	fprintf(stdout, "%04d: FUNC_NAME is called.\n", (int) pthread_self());
+  fflush(stdout);
 #endif
 #endif
   ret = orig_func(ARGS_ONLY_NAME);
