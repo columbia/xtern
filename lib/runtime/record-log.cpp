@@ -29,6 +29,16 @@ namespace tern {
 __thread Logger* Logger::the = NULL;
 Logger::func_map Logger::funcs;
 
+void TxtLogger::print_header()
+{
+  ouf << "op"
+    << ' ' << "insid"
+    << ' ' << "turn"
+    << ' ' << "tid"
+    << ' ' << "args"
+    << endl;
+}
+
 void TxtLogger::logSync(unsigned insid, unsigned short sync,
                         unsigned turn, bool after, ...) {
   assert(sync >= syncfunc::first_sync && sync < syncfunc::num_syncs
@@ -129,6 +139,7 @@ TxtLogger::TxtLogger(int thid) {
   tid = thid;
   ouf.open(logFile, ios::out|ios::trunc);
   assert(ouf && "can't open log file for write!");
+  print_header();
 }
 
 TxtLogger::~TxtLogger()

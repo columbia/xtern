@@ -69,6 +69,8 @@ struct TxtLogger: public Logger {
   virtual ~TxtLogger();
 
 protected:
+  void print_header();
+
   int tid;
   std::fstream ouf;
 };

@@ -27,6 +27,16 @@ bool txt_log_reader::open(const char *filename)
   if (fin) 
     close();
   fin = fopen(filename, "r");
+  
+  if (!fgets(buffer, buffer_size, fin))
+    return false;
+
+  istringstream is(buffer);
+  string st;
+  labels.clear();
+  while (is >> st)
+    labels.push_back(st);
+
   if (fin)
     next();
   return fin;
@@ -69,13 +79,27 @@ void txt_log_reader::next()
   string op_name;
   cur_rec.args.clear();
 
-  is >> op_name;
-  is >> hex >> cur_rec.insid >> dec;
-  is >> cur_rec.turn;
+  for (vector<string>::iterator it = labels.begin(); it != labels.end(); ++it)
+  {
+    if (*it == "args")
+    {
+      string st;
+      while (is >> st) cur_rec.args.push_back(st); 
+      break;
+    }
 
-  string st;
-  while (is >> st) cur_rec.args.push_back(st); 
-  cur_rec.op = getNameIDFromEvent(op_name);
+    string st;
+
+    if (*it == "op")
+    {
+      is >> op_name;
+      cur_rec.op = getNameIDFromEvent(op_name);
+    } else
+    if (*it == "insid") is >> hex >> cur_rec.insid >> dec; else 
+    if (*it == "turn") is >> cur_rec.turn; else
+    if (*it == "tid") is >> cur_rec.tid; else
+    if (true) is >> st; //  bypass this arg
+  }
 }
 
 bool txt_log_reader::valid()

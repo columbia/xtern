@@ -16,6 +16,7 @@ struct record_t
   unsigned insid;
   unsigned op;
   unsigned turn; 
+  unsigned tid;
   std::vector<std::string> args;
 };
 
@@ -60,6 +61,7 @@ protected:
   FILE *fin;
   static const int buffer_size = 1024;
   char buffer[buffer_size];
+  std::vector<std::string> labels;
   record_t cur_rec;
 };
 
