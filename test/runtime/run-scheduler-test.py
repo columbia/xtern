@@ -157,7 +157,7 @@ cmds = '''
 
 // test the x86 .a libraries
 // RUN: llc -o %t2.s %t2-record.bc
-// RUN: %gxx -o %t2 %t2.s %ternruntime -lpthread
+// RUN: %gxx -o %t2 %t2.s %ternruntime -lpthread -lrt
 // test FCFS scheduler
 // RUN: env TERN_OPTIONS=runtime_type=FCFS ./%t2 | FileCheck %s
 // test RR scheduler
@@ -169,7 +169,7 @@ cmds = '''
 // XXX: llvm-ld -o %t3 %t2-record.bc %ternbcruntime
 // XXX: llvm-dis -f %t3.bc
 // XXX: llc -o %t3.s %t3.bc
-// XXX: %gxx -o %t3 %t3.s -lpthread
+// XXX: %gxx -o %t3 %t3.s -lpthread -lrt
 // test FCFS scheduler
 // XXX: env TERN_OPTIONS=runtime_type=FCFS ./%t3 | FileCheck %s
 // test RR scheduler

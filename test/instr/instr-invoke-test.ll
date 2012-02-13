@@ -1,6 +1,6 @@
 ; RUN: %projbindir/tern-instr < %s -S -o %t1
 ; RUN: llc -o %t1.s %t1-record.ll
-; RUN: %gxx -o %t1 %t1.s %ternruntime -lpthread
+; RUN: %gxx -o %t1 %t1.s %ternruntime -lpthread -lrt
 ; RUN: ./%t1
 ; : %projbindir/logprint -bc %t1-analysis.ll tern-log-tid-0 -r -v > /dev/null
 

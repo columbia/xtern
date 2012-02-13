@@ -3,7 +3,7 @@
 // RUN: %llvmgcc %s -c -o %t1.ll -S
 // RUN: %projbindir/tern-instr < %t1.ll -o %t2
 // RUN: llc -o %t2.s %t2-record.bc
-// RUN: %gxx -o %t2 %t2.s %ternruntime -lpthread
+// RUN: %gxx -o %t2 %t2.s %ternruntime -lpthread -lrt
 // RUN: env TERN_OPTIONS=log_type=bin:output_dir=%t2.outdir ./%t2
 // RUN: %projbindir/logprint -bc %t2-analysis.bc %t2.outdir/tid-0.bin -r -v > /dev/null
 

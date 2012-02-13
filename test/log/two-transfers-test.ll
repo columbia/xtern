@@ -2,7 +2,7 @@
 ; XFAIL: *
 ; RUN: %projbindir/tern-instr < %s -S -o %t1
 ; RUN: llc -o %t1.s %t1-record.ll
-; RUN: g++ -o %t1 %t1.s %ternruntime -lpthread
+; RUN: g++ -o %t1 %t1.s %ternruntime -lpthread -lrt
 ; RUN: rm -rf %t1.outdir
 ; RUN: env TERN_OPTIONS=log_type=bin:output_dir=%t1.outdir ./%t1
 ; RUN: %projbindir/logprint -bc %t1-analysis.ll %t1.outdir/tid-0.bin -r -v | FileCheck %s.out
