@@ -21,7 +21,10 @@ struct Logger {
   virtual void logRet(uint8_t flags, unsigned insid,
                       short narg, void* func, uint64_t data) {}
   virtual void logSync(unsigned insid, unsigned short sync,
-                       unsigned turn, bool after = true, ...) {}
+                       unsigned turn, 
+                       timespec time1, 
+                       timespec time2, 
+                       bool after = true, ...) {}
   virtual ~Logger() {}
   static __thread Logger* the; /// pointer to per-thread logger
 
@@ -64,7 +67,10 @@ struct Logger {
 
 struct TxtLogger: public Logger {
   virtual void logSync(unsigned insid, unsigned short sync,
-                       unsigned turn, bool after = true, ...);
+                       unsigned turn,
+                       timespec time1, 
+                       timespec time2, 
+                       bool after = true, ...);
   TxtLogger(int tid);
   virtual ~TxtLogger();
 
@@ -82,7 +88,10 @@ struct BinLogger: public Logger {
   virtual void logRet(uint8_t flags, unsigned insid,
                       short narg, void* func, uint64_t data);
   virtual void logSync(unsigned insid, unsigned short sync,
-                       unsigned turn, bool after = true, ...);
+                       unsigned turn, 
+                       timespec time1, 
+                       timespec time2, 
+                       bool after = true, ...);
   virtual ~BinLogger();
   BinLogger(int tid);
 
@@ -106,7 +115,10 @@ protected:
 /// are fine because our testing script canonicalizes them
 struct TestLogger: public Logger {
   virtual void logSync(unsigned insid, unsigned short sync,
-                       unsigned turn, bool after = true, ...);
+                       unsigned turn, 
+                       timespec time1, 
+                       timespec time2, 
+                       bool after = true, ...);
   TestLogger(int tid);
   virtual ~TestLogger();
 

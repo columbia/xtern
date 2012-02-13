@@ -78,10 +78,10 @@ void *get_eip()
   return tracePtrs[2];  //  this is ret_eip of my caller
 }
 
-//#define HOOK_MUTEX_COND
+#define HOOK_MUTEX_COND
 #define HOOK_BARRIER
 #define HOOK_SEMAPHORE
-//#define HOOK_BLOCKING_FUNCS
+#define HOOK_BLOCKING_FUNCS
 
 #ifndef HOOK_MUTEX_COND
 #define __SPEC_HOOK_pthread_mutex_init
