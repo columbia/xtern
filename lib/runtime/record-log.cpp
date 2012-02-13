@@ -9,6 +9,7 @@
 #include <stdlib.h>
 #include <stdarg.h>
 #include <string.h>
+#include <time.h>
 #include <pthread.h>
 #include <iostream>
 #include <iomanip>
@@ -40,7 +41,10 @@ void TxtLogger::print_header()
 }
 
 void TxtLogger::logSync(unsigned insid, unsigned short sync,
-                        unsigned turn, bool after, ...) {
+                        unsigned turn, 
+                        timespec time1, 
+                        timespec time2, 
+                        bool after, ...) {
   assert(sync >= syncfunc::first_sync && sync < syncfunc::num_syncs
     && "trying to log unknown synchronization operation!");
 
@@ -54,6 +58,10 @@ void TxtLogger::logSync(unsigned insid, unsigned short sync,
       ouf << syncfunc::getName(sync)
           << " 0x" << hex << insid << dec
           << ' ' << turn
+          << " " << dec << time1.tv_sec << ":"
+          << setfill('0') << setw(9) << time1.tv_nsec
+          << " " << dec << time2.tv_sec << ":"
+          << setfill('0') << setw(9) << time2.tv_nsec
           << ' ' << tid
           << hex << " 0x" << va_arg(args, uint64_t) << dec;
       va_end(args);
@@ -70,6 +78,10 @@ void TxtLogger::logSync(unsigned insid, unsigned short sync,
   ouf << syncfunc::getName(sync) << suffix
       << " 0x" << hex << setfill('0') << setw(8) << insid << dec
       << ' ' << turn
+      << " " << dec << time1.tv_sec << ":"
+      << setfill('0') << setw(9) << time1.tv_nsec
+      << " " << dec << time2.tv_sec << ":"
+      << setfill('0') << setw(9) << time2.tv_nsec
       << ' ' << tid;
 
   va_list args;
@@ -127,6 +139,7 @@ void TxtLogger::logSync(unsigned insid, unsigned short sync,
   default:
     assert(0 && "sync not handled");
   }
+
   va_end(args);
   ouf << "\n";
   ouf.flush();
@@ -278,7 +291,10 @@ void BinLogger::logRet(uint8_t flags, unsigned insid,
 
 // TODO: record ret->timedout
 void BinLogger::logSync(unsigned insid, unsigned short sync,
-                     unsigned turn, bool after, ...) {
+                     unsigned turn, 
+                     timespec time1, 
+                     timespec time2, 
+                     bool after, ...) {
   checkAndGrowLogSize();
   assert(sync >= syncfunc::first_sync && sync < syncfunc::num_syncs
     && "trying to log unknown synchronization operation!");
@@ -348,7 +364,10 @@ void BinLogger::mapLogTrunk(void) {
 
 
 void TestLogger::logSync(unsigned insid, unsigned short sync,
-                        unsigned turn, bool after, ...) {
+                        unsigned turn, 
+                       timespec time1, 
+                       timespec time2, 
+                        bool after, ...) {
   assert(sync >= syncfunc::first_sync && sync < syncfunc::num_syncs
     && "trying to log unknown synchronization operation!");
 

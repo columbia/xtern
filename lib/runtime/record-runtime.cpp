@@ -53,10 +53,37 @@
 #  define dprintf(fmt...)
 #endif
 
+//#define __TIME_MEASURE 1
+
 using namespace std;
 
 namespace tern {
 
+static __thread timespec my_time;
+
+//timespec time_diff(timespec &start, timespec &end)
+timespec time_diff(timespec start, timespec &end)
+{
+  timespec tmp;
+  if ((end.tv_nsec-start.tv_nsec) < 0) {
+    tmp.tv_sec = end.tv_sec - start.tv_sec - 1;
+    tmp.tv_nsec = 1000000000 - start.tv_nsec + end.tv_nsec;
+  } else {
+    tmp.tv_sec = end.tv_sec - start.tv_sec;
+    tmp.tv_nsec = end.tv_nsec - start.tv_nsec;
+  }
+  return tmp;
+}
+
+timespec update_time()
+{
+  timespec start_time;
+  clock_gettime(CLOCK_MONOTONIC_RAW , &start_time);
+  timespec ret = time_diff(my_time, start_time);
+  my_time = start_time; 
+  return ret;
+}
+  
 void InstallRuntime() {
   if (options::runtime_type == "RRuntime")
     Runtime::the = new RRuntime();
@@ -123,10 +150,18 @@ void RecorderRT<_S>::threadBegin(void) {
   }
   assert(_S::self() != _S::InvalidTid);
 
-  _S::getTurn();
+  timespec start_time, end_time;
+  clock_gettime(CLOCK_MONOTONIC_RAW , &start_time);
+  
+  timespec time1 = update_time();
+	_S::getTurn();
   nturn = _S::incTurnCount();
+  
+  clock_gettime(CLOCK_MONOTONIC_RAW , &end_time);
+  
   Logger::threadBegin(_S::self());
-  Logger::the->logSync(INVALID_INSID, syncfunc::tern_thread_begin, nturn, true, (uint64_t)th);
+  timespec time2 = update_time();
+	Logger::the->logSync(INVALID_INSID, syncfunc::tern_thread_begin, nturn, time1, time2, true, (uint64_t)th);
   _S::putTurn();
 
 }
@@ -136,9 +171,17 @@ void RecorderRT<_S>::threadEnd(unsigned insid) {
   unsigned nturn;
   pthread_t th = pthread_self();
 
-  _S::getTurn();
+  timespec start_time, end_time;
+  clock_gettime(CLOCK_MONOTONIC_RAW , &start_time);
+  
+  timespec time1 = update_time();
+	_S::getTurn();
   nturn = _S::incTurnCount();
-  Logger::the->logSync(insid, syncfunc::tern_thread_end, nturn, true, (uint64_t)th);
+   
+  clock_gettime(CLOCK_MONOTONIC_RAW , &end_time);
+ 
+  timespec time2 = update_time();
+	Logger::the->logSync(insid, syncfunc::tern_thread_end, nturn, time1, time2, true, (uint64_t)th);
   Logger::threadEnd();
 /*
   _S::threadEnd(pthread_self());
@@ -217,7 +260,11 @@ int RecorderRT<_S>::pthreadCreate(unsigned ins, pthread_t *thread,
   int ret;
   unsigned nturn;
 
-  _S::getTurn();
+  timespec start_time, end_time;
+  clock_gettime(CLOCK_MONOTONIC_RAW , &start_time);
+  
+  timespec time1 = update_time();
+	_S::getTurn();
 
   ret = __tern_pthread_create(thread, attr, thread_func, arg);
   assert(!ret && "failed sync calls are not yet supported!");
@@ -226,8 +273,11 @@ int RecorderRT<_S>::pthreadCreate(unsigned ins, pthread_t *thread,
   sem_post(&thread_begin_sem);
   nturn = _S::incTurnCount();
   sem_wait(&thread_begin_done_sem);
-
-  Logger::the->logSync(ins, syncfunc::pthread_create, nturn, true, (uint64_t)*thread, (uint64_t) ret);
+  
+  clock_gettime(CLOCK_MONOTONIC_RAW , &end_time);
+ 
+  timespec time2 = update_time();
+	Logger::the->logSync(ins, syncfunc::pthread_create, nturn, time1, time2, true, (uint64_t)*thread, (uint64_t) ret);
   _S::putTurn();
 
   return ret;
@@ -238,7 +288,11 @@ int RecorderRT<_S>::pthreadJoin(unsigned ins, pthread_t th, void **rv) {
   int ret;
   unsigned nturn;
 
-  _S::getTurn();
+  timespec start_time, end_time;
+  clock_gettime(CLOCK_MONOTONIC_RAW , &start_time);
+  
+  timespec time1 = update_time();
+	_S::getTurn();
   // NOTE: can actually use if(!_S::zombie(th)) for DMT schedulers because
   // their wait() won't return until some thread signal().
   while(!_S::zombie(th))
@@ -246,7 +300,11 @@ int RecorderRT<_S>::pthreadJoin(unsigned ins, pthread_t th, void **rv) {
   nturn = _S::incTurnCount();
   ret = pthread_join(th, rv);
   assert(!ret && "failed sync calls are not yet supported!");
-  Logger::the->logSync(ins, syncfunc::pthread_join, nturn, true, (uint64_t)th);
+    
+  clock_gettime(CLOCK_MONOTONIC_RAW , &end_time);
+  
+  timespec time2 = update_time();
+	Logger::the->logSync(ins, syncfunc::pthread_join, nturn, time1, time2, true, (uint64_t)th);
   _S::join(th);
   _S::putTurn();
 
@@ -266,7 +324,8 @@ int RecorderRT<_S>::pthreadMutexLockHelper(pthread_mutex_t *mu) {
     }
     else
       return true;
-    _S::getTurn();
+    timespec time1 = update_time();
+	_S::getTurn();
   }
   return false;
   //assert(!ret && "failed sync calls are not yet supported!");
@@ -277,14 +336,22 @@ int RecorderRT<_S>::pthreadMutexLock(unsigned ins, pthread_mutex_t *mu) {
   int ret;
   unsigned nturn;
 
-  _S::getTurn();
+  timespec start_time, end_time;
+  clock_gettime(CLOCK_MONOTONIC_RAW , &start_time);
+  
+  timespec time1 = update_time();
+	_S::getTurn();
   // we need to use a while loop here
   while((ret=pthread_mutex_trylock(mu))) {
     assert(ret==EBUSY && "failed sync calls are not yet supported!");
     wait(mu);
   }
   nturn = _S::incTurnCount();
-  Logger::the->logSync(ins, syncfunc::pthread_mutex_lock, nturn, true, (uint64_t)mu);
+   
+  clock_gettime(CLOCK_MONOTONIC_RAW , &end_time);
+ 
+  timespec time2 = update_time();
+	Logger::the->logSync(ins, syncfunc::pthread_mutex_lock, nturn, time1, time2, true, (uint64_t)mu);
   _S::putTurn();
 
   return 0;
@@ -298,12 +365,20 @@ int RecorderRT<_S>::pthreadMutexTryLock(unsigned ins, pthread_mutex_t *mu) {
   int ret;
   unsigned nturn;
 
-  _S::getTurn();
+  timespec start_time, end_time;
+  clock_gettime(CLOCK_MONOTONIC_RAW , &start_time);
+  
+  timespec time1 = update_time();
+	_S::getTurn();
   ret = pthread_mutex_trylock(mu);
   assert((!ret || ret==EBUSY)
          && "failed sync calls are not yet supported!");
   nturn = _S::incTurnCount();
-  Logger::the->logSync(ins, syncfunc::pthread_mutex_trylock, nturn, true, (uint64_t)mu, (uint64_t) ret);
+    
+  clock_gettime(CLOCK_MONOTONIC_RAW , &end_time);
+ 
+  timespec time2 = update_time();
+	Logger::the->logSync(ins, syncfunc::pthread_mutex_trylock, nturn, time1, time2, true, (uint64_t)mu, (uint64_t) ret);
   _S::putTurn();
 
   return ret;
@@ -317,7 +392,8 @@ int RecorderRT<_S>::pthreadMutexTimedLock(unsigned ins, pthread_mutex_t *mu,
   int ret;
   int times = 5;
 
-  _S::getTurn();
+  timespec time1 = update_time();
+	_S::getTurn();
   
   while(times--) {
     ret = pthread_mutex_trylock(mu);
@@ -328,7 +404,8 @@ int RecorderRT<_S>::pthreadMutexTimedLock(unsigned ins, pthread_mutex_t *mu,
     } else
     {
       _S::putTurn();
-      _S::getTurn();
+      timespec time1 = update_time();
+	_S::getTurn();
     }
   }
 
@@ -337,7 +414,8 @@ int RecorderRT<_S>::pthreadMutexTimedLock(unsigned ins, pthread_mutex_t *mu,
     ret = 0;
   else
     ret = ETIMEDOUT;
-  Logger::the->logSync(ins, syncfunc::pthread_mutex_timedlock, nturn, true, (uint64_t)mu, (uint64_t) ret);
+  timespec time2 = update_time();
+	Logger::the->logSync(ins, syncfunc::pthread_mutex_timedlock, nturn, time1, time2, true, (uint64_t)mu, (uint64_t) ret);
   _S::putTurn();
 */
   int ret;
@@ -346,7 +424,11 @@ int RecorderRT<_S>::pthreadMutexTimedLock(unsigned ins, pthread_mutex_t *mu,
   if(abstime == NULL)
     return pthreadMutexLock(ins, mu);
 
-  _S::getTurn();
+  timespec start_time, end_time;
+  clock_gettime(CLOCK_MONOTONIC_RAW , &start_time);
+  
+  timespec time1 = update_time();
+	_S::getTurn();
   unsigned timeout = absTimeToTurn(abstime);
   while((ret=pthread_mutex_trylock(mu))) {
     assert(ret==EBUSY && "failed sync calls are not yet supported!");
@@ -355,9 +437,13 @@ int RecorderRT<_S>::pthreadMutexTimedLock(unsigned ins, pthread_mutex_t *mu,
       break;
   }
   nturn = _S::incTurnCount();
+  
+  clock_gettime(CLOCK_MONOTONIC_RAW , &end_time);
+ 
+  timespec time2 = update_time();
+	Logger::the->logSync(ins, syncfunc::pthread_mutex_timedlock, nturn, time1, time2, true, (uint64_t)mu, (uint64_t)ret);
   _S::putTurn();
-
-  Logger::the->logSync(ins, syncfunc::pthread_mutex_timedlock, nturn, true, (uint64_t)mu, (uint64_t)ret);
+  
   return ret;
 }
 
@@ -366,14 +452,21 @@ int RecorderRT<_S>::pthreadMutexUnlock(unsigned ins, pthread_mutex_t *mu){
   int ret;
   unsigned nturn;
 
-  _S::getTurn();
+  timespec start_time, end_time;
+  clock_gettime(CLOCK_MONOTONIC_RAW , &start_time);
+  timespec time1 = update_time();
+	_S::getTurn();
 
   ret = pthread_mutex_unlock(mu);
   assert(!ret && "failed sync calls are not yet supported!");
   signal(mu);
-
+  
   nturn = _S::incTurnCount();
-  Logger::the->logSync(ins, syncfunc::pthread_mutex_unlock, nturn, true, (uint64_t)mu);
+     
+  clock_gettime(CLOCK_MONOTONIC_RAW , &end_time);
+ 
+  timespec time2 = update_time();
+	Logger::the->logSync(ins, syncfunc::pthread_mutex_unlock, nturn, time1, time2, true, (uint64_t)mu);
   _S::putTurn();
 
   return 0;
@@ -385,7 +478,11 @@ int RecorderRT<_S>::pthreadBarrierInit(unsigned ins, pthread_barrier_t *barrier,
   int ret;
   unsigned nturn;
 
-  _S::getTurn();
+  timespec start_time, end_time;
+  clock_gettime(CLOCK_MONOTONIC_RAW , &start_time);
+  
+  timespec time1 = update_time();
+	_S::getTurn();
   ret = pthread_barrier_init(barrier, NULL, count);
   assert(!ret && "failed sync calls are not yet supported!");
   assert(barriers.find(barrier) == barriers.end()
@@ -394,9 +491,12 @@ int RecorderRT<_S>::pthreadBarrierInit(unsigned ins, pthread_barrier_t *barrier,
   barriers[barrier].narrived = 0;
 
   nturn = _S::incTurnCount();
-  Logger::the->logSync(ins, syncfunc::pthread_barrier_init, nturn, true, (uint64_t)barrier, (uint64_t) count);
+    
+  clock_gettime(CLOCK_MONOTONIC_RAW , &end_time);
+ 
+  timespec time2 = update_time();
+	Logger::the->logSync(ins, syncfunc::pthread_barrier_init, nturn, time1, time2, true, (uint64_t)barrier, (uint64_t) count);
   _S::putTurn();
-
 
   return ret;
 }
@@ -435,9 +535,17 @@ int RecorderRT<_S>::pthreadBarrierWait(unsigned ins,
   /// these two signal() ops can be nondeterministic, causing threads to be
   /// added to the activeq in different orders
   ///
-  _S::getTurn();
+  timespec start_time, end_time;
+  clock_gettime(CLOCK_MONOTONIC_RAW , &start_time);
+  
+  timespec time1 = update_time();
+	_S::getTurn();
   nturn1 = _S::incTurnCount();
-  Logger::the->logSync(ins, syncfunc::pthread_barrier_wait, nturn1, /* before */ false, (uint64_t)barrier);
+     
+  clock_gettime(CLOCK_MONOTONIC_RAW , &end_time);
+ 
+  timespec time2 = update_time();
+	Logger::the->logSync(ins, syncfunc::pthread_barrier_wait, nturn1, time1, time2, /* before */ false, (uint64_t)barrier);
   barrier_map::iterator bi = barriers.find(barrier);
   assert(bi!=barriers.end() && "barrier is not initialized!");
   barrier_t &b = bi->second;
@@ -450,8 +558,8 @@ int RecorderRT<_S>::pthreadBarrierWait(unsigned ins,
     // according to the man page of pthread_barrier_wait, one of the
     // waiters should return PTHREAD_BARRIER_SERIAL_THREAD, instead of 0
     ret = PTHREAD_BARRIER_SERIAL_THREAD;
-    _S::putTurn();
-    _S::getTurn();
+    _S::putTurn();    
+  	_S::getTurn();
   } else {
     ret = 0;
     _S::wait(barrier);
@@ -464,11 +572,16 @@ int RecorderRT<_S>::pthreadBarrierWait(unsigned ins,
   assert((!ret || ret==PTHREAD_BARRIER_SERIAL_THREAD)
          && "failed sync calls are not yet supported!");
 
-  _S::getTurn();
+  timespec time1 = update_time();
+	_S::getTurn();
   _S::signal(barrier);
 */
   nturn2 = _S::incTurnCount();
-  Logger::the->logSync(ins, syncfunc::pthread_barrier_wait, nturn2, /* after */ true, (uint64_t)barrier);
+    
+  clock_gettime(CLOCK_MONOTONIC_RAW , &end_time);
+ 
+  timespec time3 = update_time();
+	Logger::the->logSync(ins, syncfunc::pthread_barrier_wait, nturn2, time1, time3, /* after */ true, (uint64_t)barrier);
   _S::putTurn();
 
   return ret;
@@ -481,7 +594,12 @@ int RecorderRT<_S>::pthreadBarrierDestroy(unsigned ins,
                                           pthread_barrier_t *barrier) {
   int ret;
   unsigned nturn;
-  _S::getTurn();
+  
+  timespec start_time, end_time;
+  clock_gettime(CLOCK_MONOTONIC_RAW , &start_time);
+  
+  timespec time1 = update_time();
+	_S::getTurn();
   ret = pthread_barrier_destroy(barrier);
 /*
   assert(!ret && "failed sync calls are not yet supported!");
@@ -490,7 +608,8 @@ int RecorderRT<_S>::pthreadBarrierDestroy(unsigned ins,
   barriers.erase(bi);
 
   nturn = _S::incTurnCount();
-  Logger::the->logSync(ins, syncfunc::pthread_barrier_destroy, nturn, true, (uint64_t)barrier);
+  timespec time2 = update_time();
+	Logger::the->logSync(ins, syncfunc::pthread_barrier_destroy, nturn, time1, time2, true, (uint64_t)barrier);
   _S::putTurn();
 */
 
@@ -502,11 +621,17 @@ int RecorderRT<_S>::pthreadBarrierDestroy(unsigned ins,
     barriers.erase(bi);
     nturn = _S::incTurnCount();
   }
-  _S::putTurn();
-
+  
+  clock_gettime(CLOCK_MONOTONIC_RAW , &end_time);
+ 
   if(!ret)
-    Logger::the->logSync(ins, syncfunc::pthread_barrier_destroy, nturn, true, (uint64_t)barrier);
+  {
+    timespec time2 = update_time();
+  	Logger::the->logSync(ins, syncfunc::pthread_barrier_destroy, nturn, time1, time2, true, (uint64_t)barrier);
+  }
 
+   _S::putTurn();
+   
   return ret;
 }
 
@@ -736,7 +861,12 @@ template <typename _S>
 int RecorderRT<_S>::pthreadCondWait(unsigned ins,
                                     pthread_cond_t *cv, pthread_mutex_t *mu){
   unsigned nturn1, nturn2, ret;
-  _S::getTurn();
+  
+  timespec start_time, end_time;
+  clock_gettime(CLOCK_MONOTONIC_RAW , &start_time);
+  
+  timespec time1 = update_time();
+	_S::getTurn();
   pthread_mutex_unlock(mu);
   _S::signal(mu);
 /*
@@ -748,14 +878,22 @@ int RecorderRT<_S>::pthreadCondWait(unsigned ins,
   pthreadMutexLockHelper(mu);
 */
   nturn1 = _S::incTurnCount();
-  Logger::the->logSync(ins, syncfunc::pthread_cond_wait, nturn1, /* before */ false, (uint64_t)cv, (uint64_t)mu);
+    
+  clock_gettime(CLOCK_MONOTONIC_RAW , &end_time);
+ 
+  timespec time2 = update_time();
+	Logger::the->logSync(ins, syncfunc::pthread_cond_wait, nturn1, time1, time2, /* before */ false, (uint64_t)cv, (uint64_t)mu);
   _S::wait(cv);
   while((ret=pthread_mutex_trylock(mu))) {
     assert(ret==EBUSY && "failed sync calls are not yet supported!");
     wait(mu);
   }
   nturn2 = _S::incTurnCount();
-  Logger::the->logSync(ins, syncfunc::pthread_cond_wait, nturn2, /* after */ true, (uint64_t)cv, (uint64_t)mu);
+    
+  clock_gettime(CLOCK_MONOTONIC_RAW , &end_time);
+ 
+  timespec time3 = update_time();
+	Logger::the->logSync(ins, syncfunc::pthread_cond_wait, nturn2, time1, time3, /* after */ true, (uint64_t)cv, (uint64_t)mu);
   _S::putTurn();
 
   return 0;
@@ -773,12 +911,20 @@ int RecorderRT<_S>::pthreadCondTimedWait(unsigned ins,
 
   dprintf("abstime = %p\n", (void*)abstime);
 
-  _S::getTurn();
+  timespec start_time, end_time;
+  clock_gettime(CLOCK_MONOTONIC_RAW , &start_time);
+  
+  timespec time1 = update_time();
+	_S::getTurn();
   unsigned timeout = absTimeToTurn(abstime);
   pthread_mutex_unlock(mu);
   nturn1 = _S::incTurnCount();
   _S::signal(mu);
-  Logger::the->logSync(ins, syncfunc::pthread_cond_timedwait, nturn1, /* before */ false, (uint64_t)cv, (uint64_t)mu, (uint64_t) 0);
+    
+  clock_gettime(CLOCK_MONOTONIC_RAW , &end_time);
+ 
+  timespec time2 = update_time();
+	Logger::the->logSync(ins, syncfunc::pthread_cond_timedwait, nturn1, time1, time2, /* before */ false, (uint64_t)cv, (uint64_t)mu, (uint64_t) 0);
 /*
   _S::waitFirstHalf(cv);
 
@@ -812,7 +958,11 @@ int RecorderRT<_S>::pthreadCondTimedWait(unsigned ins,
     _S::wait(mu);
   }
   nturn2 = _S::incTurnCount();
-  Logger::the->logSync(ins, syncfunc::pthread_cond_timedwait, nturn2, /* after */ true, (uint64_t)cv, (uint64_t)mu, (uint64_t) saved_ret);
+    
+  clock_gettime(CLOCK_MONOTONIC_RAW , &end_time);
+ 
+  timespec time3 = update_time();
+	Logger::the->logSync(ins, syncfunc::pthread_cond_timedwait, nturn2, time1, time3, /* after */ true, (uint64_t)cv, (uint64_t)mu, (uint64_t) saved_ret);
   _S::putTurn();
 
   return saved_ret;
@@ -822,11 +972,20 @@ template <typename _S>
 int RecorderRT<_S>::pthreadCondSignal(unsigned ins, pthread_cond_t *cv){
 
   int nturn;
-  _S::getTurn();
+  
+  timespec start_time, end_time;
+  clock_gettime(CLOCK_MONOTONIC_RAW , &start_time);
+  
+  timespec time1 = update_time();
+	_S::getTurn();
   dprintf("RecorderRT: %d: cond_signal(%p)\n", _S::self(), (void*)cv);
   _S::signal(cv);
   nturn = _S::incTurnCount();
-  Logger::the->logSync(ins, syncfunc::pthread_cond_signal, nturn, true, (uint64_t)cv);
+    
+  clock_gettime(CLOCK_MONOTONIC_RAW , &end_time);
+ 
+  timespec time2 = update_time();
+	Logger::the->logSync(ins, syncfunc::pthread_cond_signal, nturn, time1, time2, true, (uint64_t)cv);
   _S::putTurn();
 
   return 0;
@@ -835,9 +994,18 @@ int RecorderRT<_S>::pthreadCondSignal(unsigned ins, pthread_cond_t *cv){
 template <typename _S>
 int RecorderRT<_S>::pthreadCondBroadcast(unsigned ins, pthread_cond_t*cv){
   int nturn;
-  _S::getTurn();
+  
+  timespec start_time, end_time;
+  clock_gettime(CLOCK_MONOTONIC_RAW , &start_time);
+  
+  timespec time1 = update_time();
+	_S::getTurn();
   nturn = _S::incTurnCount();
-  Logger::the->logSync(ins, syncfunc::pthread_cond_broadcast, nturn, true, (uint64_t)cv);
+    
+  clock_gettime(CLOCK_MONOTONIC_RAW , &end_time);
+ 
+  timespec time2 = update_time();
+	Logger::the->logSync(ins, syncfunc::pthread_cond_broadcast, nturn, time1, time2, true, (uint64_t)cv);
   _S::signal(cv, /*all=*/true);
   _S::putTurn();
 
@@ -848,7 +1016,11 @@ template <typename _S>
 int RecorderRT<_S>::semWait(unsigned ins, sem_t *sem) {
   int ret, nturn;
 
-  _S::getTurn();
+  timespec start_time, end_time;
+  clock_gettime(CLOCK_MONOTONIC_RAW , &start_time);
+  
+  timespec time1 = update_time();
+	_S::getTurn();
   while((ret=sem_trywait(sem)) != 0) {
     // WTH? pthread_mutex_trylock returns EBUSY if lock is held, yet
     // sem_trywait returns -1 and sets errno to EAGAIN if semaphore is not
@@ -857,7 +1029,11 @@ int RecorderRT<_S>::semWait(unsigned ins, sem_t *sem) {
     wait(sem);
   }
   nturn = _S::incTurnCount();
-  Logger::the->logSync(ins, syncfunc::sem_wait, nturn, true, (uint64_t)sem);
+    
+  clock_gettime(CLOCK_MONOTONIC_RAW , &end_time);
+ 
+  timespec time2 = update_time();
+	Logger::the->logSync(ins, syncfunc::sem_wait, nturn, time1, time2, true, (uint64_t)sem);
   _S::putTurn();
 
   return 0;
@@ -868,12 +1044,20 @@ int RecorderRT<_S>::semTryWait(unsigned ins, sem_t *sem) {
   int ret;
   unsigned nturn;
 
-  _S::getTurn();
+  timespec start_time, end_time;
+  clock_gettime(CLOCK_MONOTONIC_RAW , &start_time);
+  
+  timespec time1 = update_time();
+	_S::getTurn();
   ret = sem_trywait(sem);
   if(ret != 0)
     assert(errno==EAGAIN && "failed sync calls are not yet supported!");
   nturn = _S::incTurnCount();
-  Logger::the->logSync(ins, syncfunc::sem_trywait, nturn, true, (uint64_t)sem, (uint64_t) ret);
+    
+  clock_gettime(CLOCK_MONOTONIC_RAW , &end_time);
+ 
+  timespec time2 = update_time();
+	Logger::the->logSync(ins, syncfunc::sem_trywait, nturn, time1, time2, true, (uint64_t)sem, (uint64_t) ret);
   _S::putTurn();
   return ret;
 }
@@ -887,7 +1071,11 @@ int RecorderRT<_S>::semTimedWait(unsigned ins, sem_t *sem,
   if(abstime == NULL)
     return semWait(ins, sem);
 
-  _S::getTurn();
+  timespec start_time, end_time;
+  clock_gettime(CLOCK_MONOTONIC_RAW , &start_time);
+  
+  timespec time1 = update_time();
+	_S::getTurn();
   unsigned timeout = absTimeToTurn(abstime);
   while((ret=sem_trywait(sem))) {
     assert(errno==EAGAIN && "failed sync calls are not yet supported!");
@@ -899,9 +1087,13 @@ int RecorderRT<_S>::semTimedWait(unsigned ins, sem_t *sem,
     }
   }
   nturn = _S::incTurnCount();
+  
+  clock_gettime(CLOCK_MONOTONIC_RAW , &end_time);
+  
+  timespec time2 = update_time();
+	Logger::the->logSync(ins, syncfunc::sem_timedwait, nturn, time1, time2, true, (uint64_t)sem, (uint64_t)ret);
   _S::putTurn();
 
-  Logger::the->logSync(ins, syncfunc::sem_timedwait, nturn, true, (uint64_t)sem, (uint64_t)ret);
   errno = saved_err;
   return ret;
 }
@@ -911,14 +1103,22 @@ int RecorderRT<_S>::semPost(unsigned ins, sem_t *sem){
   int ret;
   unsigned nturn;
 
-  _S::getTurn();
+  timespec start_time, end_time;
+  clock_gettime(CLOCK_MONOTONIC_RAW , &start_time);
+  
+  timespec time1 = update_time();
+	_S::getTurn();
 
   ret = sem_post(sem);
   assert(!ret && "failed sync calls are not yet supported!");
   signal(sem);
 
   nturn = _S::incTurnCount();
-  Logger::the->logSync(ins, syncfunc::sem_post, nturn, true, (uint64_t)sem);
+    
+  clock_gettime(CLOCK_MONOTONIC_RAW , &end_time);
+ 
+  timespec time2 = update_time();
+	Logger::the->logSync(ins, syncfunc::sem_post, nturn, time1, time2, true, (uint64_t)sem);
   _S::putTurn();
 
   return 0;
@@ -931,9 +1131,17 @@ void RecorderRT<_S>::symbolic(unsigned insid, void *addr,
                               int nbyte, const char *name){
   unsigned nturn;
 
-  _S::getTurn();
+  timespec start_time, end_time;
+  clock_gettime(CLOCK_MONOTONIC_RAW , &start_time);
+  
+  timespec time1 = update_time();
+	_S::getTurn();
   nturn = _S::incTurnCount();
-  Logger::the->logSync(insid, syncfunc::tern_symbolic, nturn, (uint64_t)addr, (uint64_t)nbyte);
+    
+  clock_gettime(CLOCK_MONOTONIC_RAW , &end_time);
+ 
+  timespec time2 = update_time();
+	Logger::the->logSync(insid, syncfunc::tern_symbolic, nturn, time1, time2, (uint64_t)addr, (uint64_t)nbyte);
   _S::putTurn();
 
 }
@@ -952,7 +1160,8 @@ void RecorderRT<RecordSerializer>::wait(void *chan) {
   typedef RecordSerializer _S;
   _S::putTurn();
   sched_yield();
-  _S::getTurn();
+  timespec time1 = update_time();
+	_S::getTurn();
 }
 
 template <>
@@ -968,12 +1177,17 @@ int RecorderRT<RecordSerializer>::pthreadMutexTimedLock(unsigned ins, pthread_mu
   if(abstime == NULL)
     return pthreadMutexLock(ins, mu);
 
-  _S::getTurn();
+  timespec start_time, end_time;
+  clock_gettime(CLOCK_MONOTONIC_RAW , &start_time);
+  
+  timespec time1 = update_time();
+	_S::getTurn();
   while((ret=pthread_mutex_trylock(mu))) {
     assert(ret==EBUSY && "failed sync calls are not yet supported!");
     _S::putTurn();
     sched_yield();
-    _S::getTurn();
+    timespec time1 = update_time();
+	_S::getTurn();
 
     struct timespec curtime;
     struct timeval curtimetv;
@@ -988,9 +1202,13 @@ int RecorderRT<RecordSerializer>::pthreadMutexTimedLock(unsigned ins, pthread_mu
     }
   }
   nturn = _S::incTurnCount();
+    
+  clock_gettime(CLOCK_MONOTONIC_RAW , &end_time);
+ 
+  timespec time2 = update_time();
+	Logger::the->logSync(ins, syncfunc::pthread_mutex_timedlock, nturn, time1, time2, true, (uint64_t)mu, (uint64_t)ret);
   _S::putTurn();
 
-  Logger::the->logSync(ins, syncfunc::pthread_mutex_timedlock, nturn, true, (uint64_t)mu, (uint64_t)ret);
   return ret;
 }
 
@@ -1003,13 +1221,18 @@ int RecorderRT<RecordSerializer>::semTimedWait(unsigned ins, sem_t *sem,
 
   if(abstime == NULL)
     return semWait(ins, sem);
-
-  _S::getTurn();
+  
+  timespec start_time, end_time;
+  clock_gettime(CLOCK_MONOTONIC_RAW , &start_time);
+  
+  timespec time1 = update_time();
+	_S::getTurn();
   while((ret=sem_trywait(sem))) {
     assert(errno==EAGAIN && "failed sync calls are not yet supported!");
     _S::putTurn();
     sched_yield();
-    _S::getTurn();
+    timespec time1 = update_time();
+	_S::getTurn();
 
     struct timespec curtime;
     struct timeval curtimetv;
@@ -1025,8 +1248,12 @@ int RecorderRT<RecordSerializer>::semTimedWait(unsigned ins, sem_t *sem,
     }
   }
   nturn = _S::incTurnCount();
+      
+  clock_gettime(CLOCK_MONOTONIC_RAW , &end_time);
+  
+  timespec time2 = update_time();
+	Logger::the->logSync(ins, syncfunc::sem_timedwait, nturn, time1, time2, true, (uint64_t)sem, (uint64_t)ret);
   _S::putTurn();
-  Logger::the->logSync(ins, syncfunc::sem_timedwait, nturn, true, (uint64_t)sem, (uint64_t)ret);
   errno = saved_err;
   return ret;
 }
@@ -1042,20 +1269,29 @@ int RecorderRT<RecordSerializer>::pthreadBarrierWait(unsigned ins,
   typedef RecordSerializer _S;
   int ret, nturn1, nturn2;
 
-  _S::getTurn();
+  timespec start_time, end_time1, end_time2;
+  clock_gettime(CLOCK_MONOTONIC_RAW , &start_time);
+  
+  timespec time1 = update_time();
+	_S::getTurn();
   nturn1 = _S::incTurnCount();
+  clock_gettime(CLOCK_MONOTONIC_RAW , &end_time1);
   _S::putTurn();
 
   ret = pthread_barrier_wait(barrier);
   assert((!ret || ret==PTHREAD_BARRIER_SERIAL_THREAD)
          && "failed sync calls are not yet supported!");
 
-  _S::getTurn();
+  //timespec time1 = update_time();
+	_S::getTurn();
   nturn2 = _S::incTurnCount();
+  clock_gettime(CLOCK_MONOTONIC_RAW , &end_time2);
   _S::putTurn();
 
-  Logger::the->logSync(ins, syncfunc::pthread_barrier_wait, nturn1, /* before */ false, (uint64_t)barrier, (uint64_t)ret);
-  Logger::the->logSync(ins, syncfunc::pthread_barrier_wait, nturn2, /* after */ true, (uint64_t)barrier, (uint64_t)ret);
+  timespec time2 = update_time();
+	Logger::the->logSync(ins, syncfunc::pthread_barrier_wait, nturn1, time1, time2, /* before */ false, (uint64_t)barrier, (uint64_t)ret, time_diff(start_time, end_time1));
+  timespec time3 = update_time();
+	Logger::the->logSync(ins, syncfunc::pthread_barrier_wait, nturn2, time1, time3, /* after */ true, (uint64_t)barrier, (uint64_t)ret, time_diff(start_time, end_time2));
   return ret;
 }
 
@@ -1090,23 +1326,33 @@ int RecorderRT<RecordSerializer>::pthreadCondWait(unsigned ins,
                 pthread_cond_t *cv, pthread_mutex_t *mu){
   int ret, nturn1, nturn2;
 
-  RecordSerializer::getTurn();
+  timespec start_time, end_time;
+  clock_gettime(CLOCK_MONOTONIC_RAW , &start_time);
+  
+  timespec time1 = update_time();
+	RecordSerializer::getTurn();
   pthread_mutex_unlock(mu);
 /*
   // codes before sem branch
 
   nturn1 = FCFSScheduler::incTurnCount();
-  Logger::the->logSync(ins, syncfunc::pthread_cond_wait, nturn1, false, (uint64_t)cv, (uint64_t)mu);
+  timespec time2 = update_time();
+	Logger::the->logSync(ins, syncfunc::pthread_cond_wait, nturn1, time1, time2, false, (uint64_t)cv, (uint64_t)mu);
   pthread_cond_wait(cv, FCFSScheduler::getLock());
 
   pthreadMutexLockHelper(mu);
   nturn2 = FCFSScheduler::incTurnCount();
 
-  Logger::the->logSync(ins, syncfunc::pthread_cond_wait, nturn2, true, (uint64_t)cv, (uint64_t)mu);
+  timespec time2 = update_time();
+	Logger::the->logSync(ins, syncfunc::pthread_cond_wait, nturn2, time1, time3, true, (uint64_t)cv, (uint64_t)mu);
   FCFSScheduler::putTurn();
 */
   nturn1 = RecordSerializer::incTurnCount();
-  Logger::the->logSync(ins, syncfunc::pthread_cond_wait, nturn1, false, (uint64_t)cv, (uint64_t)mu);
+      
+  clock_gettime(CLOCK_MONOTONIC_RAW , &end_time);
+ 
+  timespec time2 = update_time();
+	Logger::the->logSync(ins, syncfunc::pthread_cond_wait, nturn1, time1, time2, false, (uint64_t)cv, (uint64_t)mu);
   pthread_cond_wait(cv, RecordSerializer::getLock());
 
   while((ret=pthread_mutex_trylock(mu))) {
@@ -1114,7 +1360,11 @@ int RecorderRT<RecordSerializer>::pthreadCondWait(unsigned ins,
     wait(mu);
   }
   nturn2 = RecordSerializer::incTurnCount();
-  Logger::the->logSync(ins, syncfunc::pthread_cond_wait, nturn2, true, (uint64_t)cv, (uint64_t)mu);
+      
+  clock_gettime(CLOCK_MONOTONIC_RAW , &end_time);
+
+  timespec time3 = update_time();
+	Logger::the->logSync(ins, syncfunc::pthread_cond_wait, nturn2, time1, time3, true, (uint64_t)cv, (uint64_t)mu);
   RecordSerializer::putTurn();
 
   return 0;
@@ -1126,12 +1376,18 @@ int RecorderRT<RecordSerializer>::pthreadCondTimedWait(unsigned ins,
   typedef RecordSerializer _S;
 
   unsigned nturn1, nturn2;
-  _S::getTurn();
+  
+  timespec start_time, end_time;
+  clock_gettime(CLOCK_MONOTONIC_RAW , &start_time);
+  
+  timespec time1 = update_time();
+	_S::getTurn();
   pthread_mutex_unlock(mu);
 /*
   //  codes before sem branch
   nturn1 = FCFSScheduler::incTurnCount();
-  Logger::the->logSync(ins, syncfunc::pthread_cond_timedwait, nturn1, false, (uint64_t)cv, (uint64_t)mu);
+  timespec time2 = update_time();
+	Logger::the->logSync(ins, syncfunc::pthread_cond_timedwait, nturn1, time1, time2, false, (uint64_t)cv, (uint64_t)mu);
 
   int m_ret = ETIMEDOUT, retry = 0;
   while (m_ret && retry++ < 1)
@@ -1155,13 +1411,18 @@ int RecorderRT<RecordSerializer>::pthreadCondTimedWait(unsigned ins,
 
   pthreadMutexLockHelper(mu);
   nturn2 = FCFSScheduler::incTurnCount();
-  Logger::the->logSync(ins, syncfunc::pthread_cond_timedwait, nturn2, true, (uint64_t)cv, (uint64_t)mu, (uint64_t) ret==ETIMEDOUT);
+  timespec time2 = update_time();
+	Logger::the->logSync(ins, syncfunc::pthread_cond_timedwait, nturn2, time1, time3, true, (uint64_t)cv, (uint64_t)mu, (uint64_t) ret==ETIMEDOUT);
   FCFSScheduler::putTurn();
 
   return ret;
 */
   nturn1 = _S::incTurnCount();
-  Logger::the->logSync(ins, syncfunc::pthread_cond_timedwait, nturn1, false, (uint64_t)cv, (uint64_t)mu);
+      
+  clock_gettime(CLOCK_MONOTONIC_RAW , &end_time);
+ 
+  timespec time2 = update_time();
+	Logger::the->logSync(ins, syncfunc::pthread_cond_timedwait, nturn1, time1, time2, false, (uint64_t)cv, (uint64_t)mu);
 
   int ret = pthread_cond_timedwait(cv, _S::getLock(), abstime);
   if(ret == ETIMEDOUT) {
@@ -1169,7 +1430,11 @@ int RecorderRT<RecordSerializer>::pthreadCondTimedWait(unsigned ins,
   }
   assert((ret==0||ret==ETIMEDOUT) && "failed sync calls are not yet supported!");
   nturn2 = _S::incTurnCount();
-  Logger::the->logSync(ins, syncfunc::pthread_cond_timedwait, nturn2, true, (uint64_t)cv, (uint64_t)mu, (uint64_t) ret);
+      
+  clock_gettime(CLOCK_MONOTONIC_RAW , &end_time);
+ 
+  timespec time3 = update_time();
+	Logger::the->logSync(ins, syncfunc::pthread_cond_timedwait, nturn2, time1, time3, true, (uint64_t)cv, (uint64_t)mu, (uint64_t) ret);
   _S::putTurn();
 
   return ret;
@@ -1179,12 +1444,20 @@ template <>
 int RecorderRT<RecordSerializer>::pthreadCondSignal(unsigned ins,
                                                  pthread_cond_t *cv){
   typedef RecordSerializer _S;
-
   unsigned nturn;
-  _S::getTurn();
+  
+  timespec start_time, end_time;
+  clock_gettime(CLOCK_MONOTONIC_RAW , &start_time);
+  
+  timespec time1 = update_time();
+	_S::getTurn();
   pthread_cond_signal(cv);
   nturn = _S::incTurnCount();
-  Logger::the->logSync(ins, syncfunc::pthread_cond_signal, nturn, true, (uint64_t)cv);
+      
+  clock_gettime(CLOCK_MONOTONIC_RAW , &end_time);
+ 
+  timespec time2 = update_time();
+	Logger::the->logSync(ins, syncfunc::pthread_cond_signal, nturn, time1, time2, true, (uint64_t)cv);
   _S::putTurn();
 
   return 0;
@@ -1194,12 +1467,20 @@ template <>
 int RecorderRT<RecordSerializer>::pthreadCondBroadcast(unsigned ins,
                                                     pthread_cond_t*cv){
   typedef RecordSerializer _S;
-
   unsigned nturn;
-  _S::getTurn();
+  
+  timespec start_time, end_time;
+  clock_gettime(CLOCK_MONOTONIC_RAW , &start_time);
+  
+  timespec time1 = update_time();
+	_S::getTurn();
   pthread_cond_broadcast(cv);
   nturn = _S::incTurnCount();
-  Logger::the->logSync(ins, syncfunc::pthread_cond_broadcast, nturn, true, (uint64_t)cv);
+      
+  clock_gettime(CLOCK_MONOTONIC_RAW , &end_time);
+ 
+  timespec time2 = update_time();
+	Logger::the->logSync(ins, syncfunc::pthread_cond_broadcast, nturn, time1, time2, true, (uint64_t)cv);
   _S::putTurn();
 
   return 0;
@@ -1403,7 +1684,8 @@ template <typename _S>
 unsigned int RecorderRT<_S>::sleep(unsigned ins, unsigned int seconds)
 {
   struct timespec ts = {seconds, 0};
-  _S::getTurn();
+  timespec time1 = update_time();
+	_S::getTurn();
   // must call _S::getTurnCount with turn held
   unsigned timeout = _S::getTurnCount() + relTimeToTurn(&ts);
   _S::wait(NULL, timeout);
@@ -1417,7 +1699,8 @@ template <typename _S>
 int RecorderRT<_S>::usleep(unsigned ins, useconds_t usec)
 {
   struct timespec ts = {0, 1000*usec};
-  _S::getTurn();
+  timespec time1 = update_time();
+	_S::getTurn();
   // must call _S::getTurnCount with turn held
   unsigned timeout = _S::getTurnCount() + relTimeToTurn(&ts);
   _S::wait(NULL, timeout);
@@ -1432,7 +1715,8 @@ int RecorderRT<_S>::nanosleep(unsigned ins,
                               const struct timespec *req,
                               struct timespec *rem)
 {
-  _S::getTurn();
+  timespec time1 = update_time();
+	_S::getTurn();
   // must call _S::getTurnCount with turn held
   unsigned timeout = _S::getTurnCount() + relTimeToTurn(req);
   _S::wait(NULL, timeout);

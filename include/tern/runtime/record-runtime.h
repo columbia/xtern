@@ -7,6 +7,7 @@
 #include <tr1/unordered_map>
 #include "tern/runtime/runtime.h"
 #include "tern/runtime/record-scheduler.h"
+#include <time.h>
 
 namespace tern {
 
