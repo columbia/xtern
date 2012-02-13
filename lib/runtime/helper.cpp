@@ -60,7 +60,11 @@ void __tern_prog_begin(void) {
   options::print_options("dump.options");
 
   tern::InstallRuntime();
-  // atexit(__tern_prog_end);
+
+  // FIXME: the version of uclibc in klee doesn't seem to pick up the
+  // functions registered with atexit()
+  atexit(__tern_prog_end);
+
   tern_prog_begin();
   tern_thread_begin(); // main thread begins
 }
@@ -68,6 +72,9 @@ void __tern_prog_begin(void) {
 void __tern_prog_end (void) {
   tern_thread_end(-1); // main thread ends
   tern_prog_end();
+
+  delete tern::Runtime::the;
+  tern::Runtime::the = NULL;
 }
 
 void __tern_symbolic(unsigned insid, void *addr,

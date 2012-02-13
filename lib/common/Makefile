@@ -6,7 +6,7 @@ LIBRARYNAME := common
 BUILD_ARCHIVE := 1
 
 # bc module
-MODULE_NAME := $(LIBRARYNAME)
+# MODULE_NAME := $(LIBRARYNAME)
 
 include $(LEVEL)/Makefile.common
 

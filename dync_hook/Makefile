@@ -1,7 +1,6 @@
 all: xternruntime interpose.so 
 
-# the source code path(XTERN_ROOT) should be seperated from install path(TERN_ROOT)
-INC_DIRS=-I$(TERN_ROOT)/include/ -I$(XTERN_ROOT)/include/
+INC_DIRS=-I$(XTERN_ROOT)/include/
 STD_LIBS=-lsupc++ -lpthread -lstdc++
 FLAG=`date +%F\#%T`
 #TERN_LIBS=-L$(XTERN_ROOT)/obj/Debug/lib/  -lanalysis -linstr -lruntime
@@ -26,9 +25,6 @@ interpose.so: template.cpp spec_hooks.cpp hook.cpp
 code_gen: code_gen.cpp
 	g++ $^ $(CXXFLAGS) -o code_gen
 
-# func_template.cpp and void_func_template.cpp are template files;
-# hook_func.def is the definition of hooked function
-# code_gen loops over hook_func.func generates hook_func_def.h and tempalte.cpp
 template.cpp: code_gen func_template.cpp void_func_template.cpp hook_func.def
 	./code_gen < hook_func.def
 
@@ -84,27 +80,27 @@ run_yfs: prepare_yfs
 	cp tests/yfs/yfs_client .
 	cp tests/yfs/rand_tester .
 	rm -rf out
-	$(PREFIX) ./lock_server $(PORT_BASE) $(PORT_BASE) > lock_server1.log 2>&1 &
-	#./lock_server $(PORT_BASE) $(PORT_BASE) > lock_server1.log 2>&1 &
-	sleep 60
-	$(PREFIX) ./lock_server $(PORT_BASE) $(shell expr $(PORT_BASE) + 10) > lock_server2.log 2>&1 &
-	#./lock_server $(PORT_BASE) $(shell expr $(PORT_BASE) + 10) > lock_server2.log 2>&1 &
-	sleep 60
-	$(PREFIX) ./lock_server $(PORT_BASE) $(shell expr $(PORT_BASE) + 20) > lock_server3.log 2>&1 &
-	#./lock_server $(PORT_BASE) $(shell expr $(PORT_BASE) + 20) > lock_server3.log 2>&1 &
-	sleep 60
-	$(PREFIX) ./extent_server $(EXTENT_PORT) > extent_server.log 2>&1  &
-	#./extent_server $(EXTENT_PORT) > extent_server.log 2>&1  &
-	sleep 60
+	#$(PREFIX) ./lock_server $(PORT_BASE) $(PORT_BASE) > lock_server1.log 2>&1 &
+	./lock_server $(PORT_BASE) $(PORT_BASE) > lock_server1.log 2>&1 &
+	sleep 1
+	#$(PREFIX) ./lock_server $(PORT_BASE) $(shell expr $(PORT_BASE) + 10) > lock_server2.log 2>&1 &
+	./lock_server $(PORT_BASE) $(shell expr $(PORT_BASE) + 10) > lock_server2.log 2>&1 &
+	sleep 1
+	#$(PREFIX) ./lock_server $(PORT_BASE) $(shell expr $(PORT_BASE) + 20) > lock_server3.log 2>&1 &
+	./lock_server $(PORT_BASE) $(shell expr $(PORT_BASE) + 20) > lock_server3.log 2>&1 &
+	sleep 1
+	#$(PREFIX) ./extent_server $(EXTENT_PORT) > extent_server.log 2>&1  &
+	./extent_server $(EXTENT_PORT) > extent_server.log 2>&1  &
+	sleep 1
 	mkdir -p yfs1
 	$(PREFIX) ./yfs_client yfs1 $(EXTENT_PORT) $(LOCK_PORT) > yfs_client1.log 2>&1  &
 	#./yfs_client yfs1 $(EXTENT_PORT) $(LOCK_PORT) > yfs_client1.log 2>&1  &
-	sleep 200
+	sleep 20
 	mount > tmp1
 	mkdir -p yfs2
 	$(PREFIX) ./yfs_client yfs2 $(EXTENT_PORT) $(LOCK_PORT) > yfs_client2.log 2>&1  &
 	#./yfs_client yfs2 $(EXTENT_PORT) $(LOCK_PORT) > yfs_client2.log 2>&1  &
-	sleep 200
+	sleep 20
 	#./rand_tester yfs1 yfs2 &
 	#./rand_tester yfs1  &
 	sleep 10

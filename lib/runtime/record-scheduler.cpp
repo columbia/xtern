@@ -509,7 +509,7 @@ void SeededRRScheduler::setSeed(unsigned seed)
   rand.srand(seed);
 }
 
-void SeededRRScheduler::choose(void)
+void SeededRRScheduler::reorderRunq(void)
 {
   // find next thread using @rand.  complexity is O(runq.size()), but
   // shouldn't matter much anyway as the number of threads is small
@@ -523,24 +523,22 @@ void SeededRRScheduler::choose(void)
 
 //@before with turn
 //@after with turn
-int RRScheduler::fireTimers()
+unsigned RRScheduler::nextTimeout()
 {
-  unsigned min_timeout = FOREVER;
+  unsigned next_timeout = FOREVER;
   list<int>::iterator i;
   for(i=waitq.begin(); i!=waitq.end(); ++i) {
     int t = *i;
-    if(waits[t].timeout < min_timeout)
-      min_timeout = waits[t].timeout;
+    if(waits[t].timeout < next_timeout)
+      next_timeout = waits[t].timeout;
   }
+  return next_timeout;
+}
 
-  if(min_timeout == FOREVER)
-    return 0;
-
-  // fast-forward turn
-  dprintf("RRScheduler: fast-forward turn from %u to %u\n",
-          turnCount, min_timeout+1);
-  turnCount = min_timeout + 1;
-
+//@before with turn
+//@after with turn
+int RRScheduler::fireTimeouts()
+{
   int timedout = 0;
   list<int>::iterator prv, cur;
   // use delete-safe way of iterating the list
@@ -571,15 +569,25 @@ void RRScheduler::next(bool at_thread_end)
   if(runq.empty()) {
     // if there are any timed-waiting threads, we can fast forward the
     // turn to wake up these threads
-    int fired = fireTimers();
-    // if cannot find any timed waiter, this must be the last thread and
-    // it is existing
-    if(fired == 0) {
-      assert(at_thread_end && (runq.size()+waitq.size()) == 0
+    unsigned next_timeout = nextTimeout();
+    if(next_timeout != FOREVER) {
+      // fast-forward turn
+      dprintf("RRScheduler: fast-forward turn from %u to %u\n",
+              turnCount, next_timeout+1);
+      turnCount = next_timeout + 1;
+      fireTimeouts();
+    }
+
+    if(runq.empty()) {
+      // current thread must be the last thread and it is existing
+      assert(at_thread_end && waitq.empty()
              && "all threads wait; deadlock!");
       return;
     }
   }
+
+  reorderRunq();
+
   next_tid = runq.front();
   assert(next_tid>=0 && next_tid < Scheduler::nthread);
   dprintf("RRScheduler: next is %d\n", next_tid);
@@ -604,6 +612,7 @@ void RRScheduler::getTurn()
 void RRScheduler::putTurn(bool at_thread_end)
 {
   int tid = self();
+  assert(tid>=0 && tid < Scheduler::nthread);
   assert(tid == runq.front());
 
   timemark[tid] = timer;  //  return to user space at "timer"
@@ -625,11 +634,12 @@ void RRScheduler::putTurn(bool at_thread_end)
 int RRScheduler::wait(void *chan, unsigned nturn)
 {
   int tid = self();
+  assert(tid>=0 && tid < Scheduler::nthread);
   assert(tid == runq.front());
   waits[tid].chan = chan;
   waits[tid].timeout = nturn;
   waitq.push_back(tid);
-  dprintf("RRScheduler: %d waits on (%p, %d)\n", tid, chan, nturn);
+  dprintf("RRScheduler: %d waits on (%p, %u)\n", tid, chan, nturn);
 
   next();
 
@@ -673,23 +683,7 @@ void RRScheduler::signal(void *chan, bool all)
 unsigned RRScheduler::incTurnCount(void)
 {
   unsigned ret = turnCount++;
-
-  list<int>::iterator prv, cur;
-
-  for(cur=waitq.begin(); cur!=waitq.end();) {
-    prv = cur ++;
-
-    int tid = *prv;
-    assert(tid >=0 && tid < Scheduler::nthread);
-    if(waits[tid].timeout < turnCount) {
-      dprintf("RRScheduler: %d timed out (%p, %u)\n",
-              tid, waits[tid].chan, waits[tid].timeout);
-      waits[tid].reset(ETIMEDOUT);
-      waitq.erase(prv);
-      runq.push_back(tid);
-    }
-  }
-
+  fireTimeouts();
   return ret;
 }
 
@@ -703,6 +697,7 @@ RRScheduler::RRScheduler()
   assert(self() == MainThreadTid && "tid hasn't been initialized!");
   runq.push_back(self());
   sem_post(&waits[MainThreadTid].sem);
+
   if (options::RR_skip_zombie)
   {
     timer = 0;

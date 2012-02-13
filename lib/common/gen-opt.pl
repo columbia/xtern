@@ -121,7 +121,6 @@ bool read_options(const char *f);
 bool read_env_options();
 void print_options(void);
 void print_options(const char *f);
-std::string get_absolute_path(std::string &);
 
 }
 
@@ -143,12 +142,7 @@ sub emit_cppfile($$)
              map {
                  my $type = opt_type ($optref->{$_});
                  my $res = "  if (key == \"$_\")\n";
-		 # to make this work, need to enable rtti in llvm-2.7
-		 if($_ eq  "output_dir") {
-		 # to make this work, need to enable rtti in llvm-2.7
-                 #    $res .= "    { options::${_} = boost::filesystem3::complete(val);; return 1; }";
-                     $res .= "    { options::${_} = get_absolute_path(val); return 1; }";
-		 } elsif($type eq "std::string") {
+                 if($type eq "std::string") {
                      $res .= "    { options::${_} = val; return 1; }";
                  } elsif ($type eq "float") {
                      $res .= "    { options::${_} = (float)atof(val.c_str()); return 1; }";
@@ -187,7 +181,6 @@ $note
 #include <cstring>
 #include <algorithm>
 #include <assert.h>
-//#include <boost/filesystem.hpp>
 
 #include "tern/options.h"
 
@@ -196,8 +189,6 @@ using namespace std;
 namespace options {
 
 $opt_def
-
-const int path_length = 1024;
 
 static int read_option_inter (string &key, string &val);
 static void print_options_to_stream (ostream &o);
@@ -311,21 +302,6 @@ static int read_option_inter (string &key, string &val)
 {
 $read_option_body
   return 0;
-}
-
-// not work...
-std::string get_absolute_path(std::string &val)
-{
-  std::string path;
-  if (val[0] != '/') {
-    char pwd_p[path_length];
-    char *ret = getcwd(pwd_p, path_length);
-    assert(ret != NULL && "resolve output path for logfile error");
-    path = std::string(pwd_p) + '/' +  val;
-  } else {
-    path = val;
-  }
-  return path;
 }
 
 }
