@@ -3,11 +3,11 @@
 #define __TERN_COMMON_RUNTIME_SCHED_H
 
 #include <assert.h>
+#include <limits.h>
+#include <stdio.h>
 #include <list>
 #include <tr1/unordered_map>
 #include <tr1/unordered_set>
-#include <stdio.h>
-#include "limits.h"
 
 namespace tern {
 
