@@ -8,7 +8,7 @@ DynInstr::DynInstr() {
   //region = NULL;
   index = SIZE_T_INVALID;
   callingCtx = NULL;
-  simCallingCtx = NULL;
+  //simCallingCtx = NULL;
   instrId = -1;
   tid = -1;
   takenFlag = NOT_TAKEN;
@@ -42,13 +42,13 @@ CallCtx *DynInstr::getCallingCtx() {
   return callingCtx;
 }
 
-void DynInstr::setSimCallingCtx(std::vector<int> *ctx) {
+/*void DynInstr::setSimCallingCtx(std::vector<int> *ctx) {
   this->simCallingCtx = ctx;
 }
 
 CallCtx *DynInstr::getSimCallingCtx() {
   return simCallingCtx;
-}
+}*/
 
 void DynInstr::setOrigInstrId(int instrId) {
   this->instrId = instrId;
@@ -75,7 +75,7 @@ bool DynInstr::isTarget() {
 }
 
 DynPHIInstr::DynPHIInstr() {
-  index = U_NEG1;
+  incomingIndex = (uchar)-1;
 }
 
 DynPHIInstr::~DynPHIInstr() {
@@ -91,11 +91,23 @@ uchar DynPHIInstr::getIncomingIndex() {
 }
 
 DynBrInstr::DynBrInstr() {
-
+  // Do not need to init condition here.
 }
 
 DynBrInstr::~DynBrInstr() {
 
+}
+
+bool DynBrInstr::isSymbolicBr() {
+  return !isa<klee::ConstantExpr>(condition);
+}
+
+void DynBrInstr::setBrCondition(klee::ref<klee::Expr> condition) {
+  this->condition = condition;
+}
+
+klee::ref<klee::Expr> DynBrInstr::getBrCondition() {
+  return condition;
 }
 
 DynRetInstr::DynRetInstr() {

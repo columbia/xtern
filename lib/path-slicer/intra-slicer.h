@@ -43,7 +43,6 @@ namespace tern {
     bool postDominate(DynInstr *dynPostInstr, DynInstr *dynPrevInstr);
     DynInstrItr current();
     DynInstr *delFromTrace();
-    void handleAlloca(DynInstr *dynInstr);
     void handlePHI(DynInstr *dynInstr);
     void handleBranch(DynInstr *dynInstr);
     void handleRet(DynInstr *dynInstr);

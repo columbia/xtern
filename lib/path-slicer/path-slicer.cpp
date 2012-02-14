@@ -266,6 +266,7 @@ void PathSlicer::runPathSlicer(void *pathId, set<BranchInst *> &brInstrs) {
 
 void PathSlicer::calStat() {
   interSlicer.calStat();
+  errs() << BAN;
   intraSlicer.calStat();
 }
 
@@ -280,5 +281,13 @@ void PathSlicer::record(void *pathId, void *instr, void *state, void *f) {
   if (!DM_IN(pathId, allPathTraces))
     allPathTraces[pathId] = new DynInstrVector;
   traceUtil->record(allPathTraces[pathId], instr, state, f);
+}
+
+void PathSlicer::copyTrace(void *newPathId, void *curPathId) {
+  assert (!DM_IN(newPathId, allPathTraces));
+  allPathTraces[newPathId] = new DynInstrVector;
+  DynInstrVector *newTrace = allPathTraces[newPathId];
+  DynInstrVector *curTrace = allPathTraces[curPathId];
+  newTrace->insert(newTrace->begin(), curTrace->begin(), curTrace->end());
 }
 

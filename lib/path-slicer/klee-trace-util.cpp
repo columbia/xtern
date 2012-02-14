@@ -80,12 +80,14 @@ void KleeTraceUtil::recordPHI(DynInstrVector *trace, klee::KInstruction *kInstr,
 
 void KleeTraceUtil::recordBr(DynInstrVector *trace, klee::KInstruction *kInstr,
   ThreadState *state) {
-  /*errs() << "KleeTraceUtil::recordBr: " << idAssigner->getInstructionID(kInstr->inst)
-    << ": " << *(kInstr->inst) << "\n";*/
+  //rs() << "KleeTraceUtil::recordBr: " << ": " << *(kInstr->inst) << "\n";
+  Instruction *instr = kInstr->inst;
   DynBrInstr *br = new DynBrInstr;
   br->setIndex(trace->size());
   br->setTid((uchar)state->id);
-  br->setOrigInstrId(idMgr->getOrigInstrId(kInstr->inst));
+  br->setOrigInstrId(idMgr->getOrigInstrId(instr));
+  if (!Util::isUniCondBr(instr))
+    br->setBrCondition(eval(kInstr, 0, *state).value);  // The condition can be either symbolic or concrete. 
   trace->push_back(br);
 }
 
@@ -172,14 +174,16 @@ void KleeTraceUtil::preProcess(DynInstrVector *trace) {
     if (Util::isPHI(instr)) {
       DynInstr *prevInstr = NULL;
       for (int j = i - 1; j >= 0; j--) {
-        prevInstr = trace->at(i);
-        if (prevInstr->getTid() == dynInstr->getTid())
+        prevInstr = trace->at(j);
+        if (Util::isBr(idMgr->getOrigInstr(prevInstr)) &&
+          prevInstr->getTid() == dynInstr->getTid())
           break;
       }
       assert(prevInstr);
       BasicBlock *bb = Util::getBasicBlock(idMgr->getOrigInstr(prevInstr));
       PHINode *phi = dyn_cast<PHINode>(instr);
       int idx = phi->getBasicBlockIndex(bb);
+      assert(idx != -1);
       ((DynPHIInstr *)dynInstr)->setIncomingIndex((uchar)idx);
     }
     
@@ -212,17 +216,27 @@ void KleeTraceUtil::preProcess(DynInstrVector *trace) {
       instr->getOpcodeName());
     ctxMgr->printCallStack(dynInstr);
     fprintf(stderr, "\n\n");*/
-    stat->printDynInstr(dynInstr, __func__);
+    //stat->printDynInstr(dynInstr, __func__);
   }
 }
 
+/* NOTE: directly freeing the dynamic instructions is incorrect, since some 
+instructions are shared by multiple states. Can use ref cnt mechanism to solve 
+this problem later. */
 void KleeTraceUtil::postProcess(DynInstrVector *trace) {
-  for (size_t i = 0; i < trace->size(); i++) {
+  /*for (size_t i = 0; i < trace->size(); i++) {
     DynInstr *dynInstr = trace->at(i);
     stat->printDynInstr(dynInstr, __func__);
     delete dynInstr;
   }
-  trace->clear();
+  trace->clear();*/
+
+  /* After slicing on current path, must reset all the taken flags for instructions,
+  otherwise further slicing on other paths would have logical corruptions. */
+  for (size_t i = 0; i < trace->size(); i++) {
+    DynInstr *dynInstr = trace->at(i);
+    dynInstr->setTaken(NOT_TAKEN);
+  }
 }
 
 

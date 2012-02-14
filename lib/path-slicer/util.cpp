@@ -57,16 +57,18 @@ bool Util::isMem(DynInstr *dynInstr) {
 }
 */
 
-bool Util::isAlloca(const Instruction *instr) {
-  return instr->getOpcode() == Instruction::Alloca;
-}
-
 bool Util::isPHI(const Instruction *instr) {
   return instr->getOpcode() == Instruction::PHI;
 }
 
 bool Util::isBr(const Instruction *instr) {
   return instr->getOpcode() == Instruction::Br;
+}
+
+bool Util::isUniCondBr(const Instruction *instr) {
+  assert(isBr(instr));
+  const BranchInst *bi = cast<BranchInst>(instr);
+  return bi->isUnconditional();
 }
 
 bool Util::isRet(const Instruction *instr) {

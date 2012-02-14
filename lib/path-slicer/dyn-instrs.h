@@ -40,7 +40,7 @@ namespace tern {
     /* This is only valid in simplified slicing mode. 
       For each dynamic instruction, there should be only one callstack in simplified bc, right?
       TODO: MUST THINK OF A NICE WAY TO ELIMINATE THIS MEMORY TOO. */
-    CallCtx *simCallingCtx;
+    //CallCtx *simCallingCtx;
 
     /* The static instruction id from orig bc module. */
     int instrId;
@@ -74,10 +74,10 @@ namespace tern {
     CallCtx *getCallingCtx();
 
     /* TBD */
-    void setSimCallingCtx(std::vector<int> *ctx);
+    //void setSimCallingCtx(std::vector<int> *ctx);
 
     /* TBD */
-    CallCtx *getSimCallingCtx();
+    //CallCtx *getSimCallingCtx();
 
     /* TBD */
     void setOrigInstrId(int instrId);
@@ -113,13 +113,19 @@ namespace tern {
 
   class DynBrInstr: public DynInstr {
   private:
+    /* These flag only makes sense when the branch is not uni-conditional. */
+    klee::ref<klee::Expr> condition;
 
   protected:
 
   public:
     DynBrInstr();
     ~DynBrInstr();
-    
+
+    /* These functions only make sense when the branch is not uni-conditional. */
+    bool isSymbolicBr();
+    void setBrCondition(klee::ref<klee::Expr> condition);
+    klee::ref<klee::Expr> getBrCondition();
   };
 
   class DynCallInstr: public DynInstr {

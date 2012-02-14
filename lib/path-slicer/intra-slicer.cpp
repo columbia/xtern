@@ -19,17 +19,17 @@ IntraSlicer::~IntraSlicer() {}
 
 /* Core function for intra-thread slicer. */
 void IntraSlicer::detectInputDepRaces(uchar tid) {
-  fprintf(stderr, "IntraSlicer::detectInputDepRaces tid %u, start index " SZ "\n", tid, curIndex);
+  fprintf(stderr, "%sIntraSlicer::detectInputDepRaces tid %u, start index " SZ "\n",
+    BAN, tid, curIndex);
   DynInstr *cur = NULL;
-  
   while (!empty()) {
     cur = delTraceTail(tid);
+
     if (!cur)
       return;
+  
     Instruction *instr = idMgr->getOrigInstr(cur);
-    if (Util::isAlloca(instr)) {
-      handleAlloca(cur);
-    } else if (Util::isPHI(instr)) {
+    if (Util::isPHI(instr)) {
       handlePHI(cur);
     } else if (Util::isBr(instr)) {
       handleBranch(cur);
@@ -42,7 +42,8 @@ void IntraSlicer::detectInputDepRaces(uchar tid) {
     } else { /* Handle all the other non-memory instructions. */
       handleNonMem(cur);
     }
-    stat->printDynInstr(cur, __func__);
+
+    //stat->printDynInstr(cur, __func__);
   }
 }
 
@@ -61,8 +62,8 @@ DynInstr *IntraSlicer::delTraceTail(uchar tid) {
     } else
       curIndex--;
   }
-  if (dynInstr)
-    stat->printDynInstr(dynInstr, __func__);
+  //if (dynInstr)
+  //  stat->printDynInstr(dynInstr, __func__);
   return dynInstr;
 }
 
@@ -143,11 +144,6 @@ bool IntraSlicer::mayCallEvent(DynRetInstr *dynRetInstr) {
   if (!dynCallInstr)
     return false;
   return funcSumm->mayCallEvent(dynCallInstr);
-}
-
-void IntraSlicer::handleAlloca(DynInstr *dynInstr) {
-  if (regOverWritten(dynInstr))
-    slice.add(dynInstr, INTRA_ALLOCA);
 }
 
 void IntraSlicer::handlePHI(DynInstr *dynInstr) {
@@ -269,7 +265,11 @@ void IntraSlicer::handleMem(DynInstr *dynInstr) {
 bool IntraSlicer::mustAlias(DynOprd *oprd1, DynOprd *oprd2) {
   const Value *v1 = oprd1->getStaticValue();
   const Value *v2 = oprd2->getStaticValue();
-  return Util::isConstant(v1) && Util::isConstant(v2) && v1 == v2;
+  if (v1 == v2) {
+    if (Util::isConstant(v1) || isa<AllocaInst>(v1))
+      return true;
+  }
+  return false;
 }
 
 DynInstr *IntraSlicer::prevDynInstr(DynInstr *dynInstr) {
@@ -287,8 +287,20 @@ DynInstr *IntraSlicer::prevDynInstr(DynInstr *dynInstr) {
 }
 
 bool IntraSlicer::postDominate(DynInstr *dynPostInstr, DynInstr *dynPrevInstr) {
-  return cfgMgr->postDominate(idMgr->getOrigInstr(dynPrevInstr),
-    idMgr->getOrigInstr(dynPostInstr));
+  Instruction *prevInstr = idMgr->getOrigInstr(dynPrevInstr);
+  Instruction *postInstr = idMgr->getOrigInstr(dynPostInstr);
+  bool result = cfgMgr->postDominate(prevInstr, postInstr);
+
+  // DEBUG. This assertion does not hold, because we can have loops.
+  if (Util::getBasicBlock(prevInstr) == Util::getBasicBlock(postInstr)) {
+    stat->printDynInstr(dynPrevInstr, "IntraSlicer::postDominate");
+    stat->printDynInstr(dynPostInstr, "IntraSlicer::postDominate");
+    calStat();
+    fprintf(stderr, "IntraSlicer::postDominate result %d\n", result);
+    //assert(false);  
+  }
+
+  return result;
 }
 
 void IntraSlicer::removeRange(DynRetInstr *dynRetInstr) {
@@ -297,7 +309,12 @@ void IntraSlicer::removeRange(DynRetInstr *dynRetInstr) {
   if (call)
     callIndex = call->getIndex();
   while (curIndex != callIndex) {
-    assert(!trace->at(curIndex)->isTaken());
+    // DEBUG.
+    if (trace->at(curIndex)->isTaken()) {
+      stat->printDynInstr(dynRetInstr, "IntraSlicer::removeRange");
+      calStat();
+      assert(false);
+    }
     curIndex--;
   }
   assert(!trace->at(curIndex)->isTaken());
@@ -319,10 +336,50 @@ void IntraSlicer::addDynOprd(DynOprd *dynOprd) {
 }
 
 void IntraSlicer::calStat() {
-  DynInstrItr itr;
-  for (itr = slice.begin(); itr != slice.end(); itr++) {
-    DynInstr *dynInstr = *itr;
-    stat->printDynInstr(dynInstr, "IntraSlicer::calStat");
+  size_t numExedInstrs = trace->size();
+  size_t numTakenInstrs = slice.size();
+  size_t numExedBrs = 0;
+  size_t numExedSymBrs = 0;
+  size_t numTakenBrs = 0;
+  size_t numTakenSymBrs = 0;
+  
+  for (size_t i = 0; i < trace->size(); i++) {
+    DynInstr *dynInstr = trace->at(i);
+    Instruction *instr = idMgr->getOrigInstr(dynInstr);
+
+    // Handle branches.
+    if (Util::isBr(instr)) {
+      numExedBrs++;
+      if (!Util::isUniCondBr(instr)) {
+        DynBrInstr *br = (DynBrInstr *)dynInstr;
+        if (br->isSymbolicBr())
+          numExedSymBrs++;
+      }
+    }
+    
+    if (dynInstr->isTaken()) {
+      // Handle branches.
+      if (Util::isBr(instr)) {
+        numTakenBrs++;
+        if (!Util::isUniCondBr(instr)) {
+          DynBrInstr *br = (DynBrInstr *)dynInstr;
+          if (br->isSymbolicBr())
+            numTakenSymBrs++;
+        }
+      }
+      
+      stat->printDynInstr(dynInstr, "IntraSlicer::calStat TAKEN");
+    }
   }
+
+  errs() << "\n\nIntraSlicer::calStat STATISTICS"
+    << ": numExedInstrs: " << numExedInstrs
+    << ";  numTakenInstrs: " << numTakenInstrs
+    << ";  numExedBrs: " << numExedBrs
+    << ";  numTakenBrs: " << numTakenBrs
+    << ";  numExedSymBrs: " << numExedSymBrs
+    << ";  numTakenSymBrs: " << numTakenSymBrs
+    << ".\n\n\n";
+    
 }
 

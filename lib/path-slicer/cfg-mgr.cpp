@@ -29,8 +29,8 @@ bool CfgMgr::runOnModule(Module &M) {
 }
 
 bool CfgMgr::postDominate(Instruction *prevInstr, Instruction *postInstr) {
-  errs() << "CfgMgr::postDominate PREV: " << *(prevInstr) << "\n";
-  errs() << "CfgMgr::postDominate POST: " << *(postInstr) << "\n";
+  SERRS << "CfgMgr::postDominate PREV: " << *(prevInstr) << "\n";
+  SERRS << "CfgMgr::postDominate POST: " << *(postInstr) << "\n";
   
   bool result = false;
   
@@ -41,8 +41,7 @@ bool CfgMgr::postDominate(Instruction *prevInstr, Instruction *postInstr) {
   // Query PostDominatorTree.
   Function *f = Util::getFunction(postInstr);
   assert(f == Util::getFunction(prevInstr));
-  assert(Util::getBasicBlock(prevInstr) != Util::getBasicBlock(postInstr));
-  fprintf(stderr, "CfgMgr::postDominate %s, this %p\n", f->getNameStr().c_str(), (void *)f);
+  
   PostDominatorTree &PDT = getAnalysis<PostDominatorTree>(*f);
   BasicBlock *prevBB = Util::getBasicBlock(prevInstr);
   BasicBlock *postBB = Util::getBasicBlock(postInstr);
