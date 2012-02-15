@@ -28,6 +28,12 @@ void __attribute((weak)) InstallRuntime() {
 extern "C" {
 #endif
 
+void *idle_thread(void *)
+{
+  while (true)
+    sleep(1);
+}
+
 static bool prog_began = false; // sanity
 void tern_prog_begin() {
   assert(!prog_began && "tern_prog_begin() already called!");
@@ -47,9 +53,21 @@ void tern_symbolic_real(unsigned insid, void *addr,
   Runtime::the->symbolic(insid, addr, nbytes, name);
 }
 
+int first_thread = true;
+
 void tern_thread_begin(void) {
   // thread begins in Sys space
   Runtime::the->threadBegin();
+
+  if (first_thread)
+  {
+    Space::exitSys();
+    pthread_t pt;
+    pthread_create(&pt, NULL, idle_thread, NULL);
+    Space::enterSys();
+    first_thread = false;
+  }
+
   Space::exitSys();
 }
 

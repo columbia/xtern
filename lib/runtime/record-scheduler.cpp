@@ -432,13 +432,10 @@ void RRSchedulerCV::block()
   fflush(log);
 
   //  like putTurn
-  pthread_mutex_lock(&lock);
   // I'm blocked! Don't push me into the queue!
   //runq.push_back(self());
   next();
   SELFCHECK;
-
-  pthread_mutex_unlock(&lock);
 }
 
 void RRSchedulerCV::wakeup()
@@ -607,6 +604,46 @@ void RRScheduler::getTurn()
   timemark[tid] = -1;  //  back to system space
   sem_wait(&waits[tid].sem);
   dprintf("RRScheduler: %d gets turn\n", self());
+  SELFCHECK;
+}
+
+void RRScheduler::block()
+{
+  getTurn();
+  int tid = self();
+  assert(tid>=0 && tid < Scheduler::nthread);
+  assert(tid == runq.front());
+  next();
+  SELFCHECK;
+}
+
+void RRScheduler::wakeup()
+{
+   int tid = -1;
+  while (tid < 0)
+  {
+#if 0
+  //  the first solution is to check the list front, which is not thread safe,
+  //  but is efficient.
+  if (runq.size() && !sem_trywait(&waits[runq.front()].sem))
+    tid = runq.front();
+#else
+  //  the second solution is to check all semaphore and grab the global token 
+  //  if possible.
+  int nt = nthread;
+  for (int i = 0; i < nt; ++i)
+    if (!sem_trywait(&waits[i].sem))
+    {
+      tid = i;
+      break;
+    }
+#endif
+  }
+  
+  runq.push_back(self());
+  timemark[self()] = timer;
+  runq.push_front(self());  //  hack code
+  next();
   SELFCHECK;
 }
 

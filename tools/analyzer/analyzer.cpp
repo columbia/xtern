@@ -8,6 +8,7 @@
 #include <iostream>
 #include <cstdlib>
 #include <algorithm>
+#include <cmath>
 #include "assert.h"
 
 #include <set>
@@ -25,7 +26,6 @@ struct op_t
   int tid;
   string get_string(int idx)
   {
-    ++idx;
     if (idx >= 0 && idx < (int) rec.args.size())
       return rec.args[idx];
     else
@@ -34,7 +34,6 @@ struct op_t
 #define cur_rec rec
   int get_int(int idx)
   {
-    ++idx;
     if (idx >= 0 && idx < (int) cur_rec.args.size())
     {
       unsigned int x;
@@ -47,7 +46,6 @@ struct op_t
 
   int64_t get_int64(int idx)
   {
-    ++idx;
     if (idx >= 0 && idx < (int) cur_rec.args.size())
     {
       uint64_t x;
@@ -59,6 +57,15 @@ struct op_t
   }
 #undef cur_rec
 };
+
+int64_t get_time(string &st)
+{
+  size_t p = st.find_first_of(':'); 
+  if (p == string::npos) return atoi(st.c_str());
+  int64_t sec = atoi(st.substr(0, p - 1).c_str());
+  int64_t nsec = atoi(st.substr(p + 1).c_str());
+  return sec * 1000000000 + nsec;
+}
 
 int getdir (string dir, vector<string> &files)
 {
@@ -554,6 +561,73 @@ void build_sem_hb(vector<op_t> &ops, vector<vector<int> > &hb_arrow)
 #define OUF stderr
 #include "printer.xx"
 #undef OUF
+  struct timerec
+  {
+    int count;
+    int64_t sum_apt;
+    double sum_sqr_apt;
+    int64_t sum_syt;
+    double sum_sqr_syt;
+    int64_t sum_sct;
+    double sum_sqr_sct;
+  };
+
+void analyze_time(vector<op_t> &ops)
+{
+
+  map<unsigned, timerec> res; 
+  for (int i = 0; i < ops.size(); ++i)
+  {
+    op_t &op = ops[i];
+    unsigned insid = op.rec.insid; 
+    int64_t apt = get_time(op.rec.app_time);
+    int64_t syt = get_time(op.rec.syscall_time);
+    int64_t sct = get_time(op.rec.sched_time);
+    if (res.find(insid) == res.end())
+    {
+      timerec &rec = res[insid];
+      rec.count = 0;
+      rec.sum_apt = rec.sum_syt = rec.sum_sct = 0;
+      rec.sum_sqr_apt = rec.sum_sqr_syt = rec.sum_sqr_sct = 0;
+    }
+    timerec &rec = res[insid];
+    rec.count++;
+    rec.sum_apt += apt;
+    rec.sum_syt += syt;
+    rec.sum_sct += sct;
+    rec.sum_sqr_apt += apt * apt;
+    rec.sum_sqr_syt += syt * syt;
+    rec.sum_sqr_sct += sct * sct;
+  }
+  printf("eip        "
+         "count    "
+         "app time  "
+         "app time std     "
+         "sysc time "
+         "sysc time std    "
+         "schd time "
+         "schd time std    "
+         "\n");
+
+  for (map<unsigned, timerec>::iterator it = res.begin(); it != res.end(); ++it)
+  {
+    timerec &rec = it->second;
+    printf("0x%08x", it->first); 
+
+    double avg;
+    printf(" %08x", rec.count);
+    //printf(" %lld", rec.sum_sct);
+#define defprint(x) \
+    printf(" %09lld", rec.sum_##x / rec.count); \
+    avg = rec.sum_##x * double(1.0) / rec.count;\
+    printf(" %016.04lf", sqrt(rec.sum_sqr_##x - 2 * avg * rec.sum_##x + rec.count * avg * avg));
+    defprint(apt);
+    defprint(syt);
+    defprint(sct);
+#undef defprint
+    printf("\n");
+  }
+}
 
 void analyze(vector<op_t> &ops)
 {
@@ -637,6 +711,13 @@ int main(int argc, char *argv[])
       (int) ops.size(), (int) pid_set.size(), log_file_count);
     for (map<int, set<int> >::iterator it = tid_set.begin(); it != tid_set.end(); ++it)
       printf("process %d: detected %d threads\n", it->first, (int) it->second.size());
+
+    for (int i = 1; i < argc; ++i)
+      if (!strcmp(argv[i], "-t"))
+      {
+        analyze_time(ops);
+        return 0;
+      }
 
     analyze(ops);
 

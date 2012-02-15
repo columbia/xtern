@@ -17,6 +17,9 @@ struct record_t
   unsigned op;
   unsigned turn; 
   unsigned tid;
+  std::string app_time; 
+  std::string syscall_time; 
+  std::string sched_time; 
   std::vector<std::string> args;
 };
 

@@ -96,6 +96,9 @@ struct RRScheduler: public Scheduler {
   int  wait(void *chan, unsigned timeout = FOREVER);
   void signal(void *chan, bool all=false);
 
+  void block(); 
+  void wakeup();
+
   unsigned incTurnCount(void);
 
   RRScheduler();

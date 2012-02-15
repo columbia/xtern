@@ -35,6 +35,9 @@ void TxtLogger::print_header()
   ouf << "op"
     << ' ' << "insid"
     << ' ' << "turn"
+    << ' ' << "app_time"
+    << ' ' << "syscall_time"
+    << ' ' << "sched_time"
     << ' ' << "tid"
     << ' ' << "args"
     << endl;
@@ -43,7 +46,7 @@ void TxtLogger::print_header()
 void TxtLogger::logSync(unsigned insid, unsigned short sync,
                         unsigned turn, 
                         timespec time1, 
-                        timespec time2, 
+                        timespec time2, timespec sched_time, 
                         bool after, ...) {
   assert(sync >= syncfunc::first_sync && sync < syncfunc::num_syncs
     && "trying to log unknown synchronization operation!");
@@ -62,6 +65,8 @@ void TxtLogger::logSync(unsigned insid, unsigned short sync,
           << setfill('0') << setw(9) << time1.tv_nsec
           << " " << dec << time2.tv_sec << ":"
           << setfill('0') << setw(9) << time2.tv_nsec
+          << " " << dec << sched_time.tv_sec << ":"
+          << setfill('0') << setw(9) << sched_time.tv_nsec
           << ' ' << tid
           << hex << " 0x" << va_arg(args, uint64_t) << dec;
       va_end(args);
@@ -82,6 +87,8 @@ void TxtLogger::logSync(unsigned insid, unsigned short sync,
       << setfill('0') << setw(9) << time1.tv_nsec
       << " " << dec << time2.tv_sec << ":"
       << setfill('0') << setw(9) << time2.tv_nsec
+      << " " << dec << sched_time.tv_sec << ":"
+      << setfill('0') << setw(9) << sched_time.tv_nsec
       << ' ' << tid;
 
   va_list args;
@@ -293,7 +300,7 @@ void BinLogger::logRet(uint8_t flags, unsigned insid,
 void BinLogger::logSync(unsigned insid, unsigned short sync,
                      unsigned turn, 
                      timespec time1, 
-                     timespec time2, 
+                     timespec time2, timespec sched_time, 
                      bool after, ...) {
   checkAndGrowLogSize();
   assert(sync >= syncfunc::first_sync && sync < syncfunc::num_syncs
@@ -366,7 +373,7 @@ void BinLogger::mapLogTrunk(void) {
 void TestLogger::logSync(unsigned insid, unsigned short sync,
                         unsigned turn, 
                        timespec time1, 
-                       timespec time2, 
+                       timespec time2, timespec sched_time, 
                         bool after, ...) {
   assert(sync >= syncfunc::first_sync && sync < syncfunc::num_syncs
     && "trying to log unknown synchronization operation!");

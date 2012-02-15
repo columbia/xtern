@@ -98,6 +98,9 @@ void txt_log_reader::next()
     if (*it == "insid") is >> hex >> cur_rec.insid >> dec; else 
     if (*it == "turn") is >> cur_rec.turn; else
     if (*it == "tid") is >> cur_rec.tid; else
+    if (*it == "app_time")      is >> cur_rec.app_time; else
+    if (*it == "syscall_time")  is >> cur_rec.syscall_time; else
+    if (*it == "sched_time")    is >> cur_rec.sched_time; else
     if (true) is >> st; //  bypass this arg
   }
 }
