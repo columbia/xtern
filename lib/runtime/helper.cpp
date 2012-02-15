@@ -55,9 +55,16 @@ int __tern_pthread_create(pthread_t *thread,  const pthread_attr_t *attr,
 }
 
 void __tern_prog_begin(void) {
-  options::read_options("default.options");
+  options::read_options("local.options");
+  options::read_env_options();
+  options::print_options("dump.options");
+
   tern::InstallRuntime();
-  // atexit(__tern_prog_end);
+
+  // FIXME: the version of uclibc in klee doesn't seem to pick up the
+  // functions registered with atexit()
+  atexit(__tern_prog_end);
+
   tern_prog_begin();
   tern_thread_begin(); // main thread begins
 }
@@ -65,6 +72,9 @@ void __tern_prog_begin(void) {
 void __tern_prog_end (void) {
   tern_thread_end(-1); // main thread ends
   tern_prog_end();
+
+  delete tern::Runtime::the;
+  tern::Runtime::the = NULL;
 }
 
 void __tern_symbolic(unsigned insid, void *addr,

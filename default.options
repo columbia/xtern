@@ -1,3 +1,41 @@
+# This configuration file is used to generate options.h and options.cpp.
+# Execute lib/common/get_opt.pl to obtain the options codes like:
+#   get_opt.pl <default.options path> <options.h directory path> <options.cpp path>
+# 
+# In the runtime, a dump.options will be generated to backup options.
+# Also, you can create a local.options file to modify the options value
+# at runtime.
+
+# determine whether DMT system is turned on or not. 
 DMT = 1
-runtime_type = RR
+
+# determine network operations (including blocking functions) are hooked or not. 
 schedule_network  = 1
+
+# the runtime scheduler algorithm, options are:
+# 1.  FCFS    first come first serve
+# 2.  RR      round-robin
+runtime_type = RR
+
+# seed for seeded round-robin scheduler
+scheduler_seed = 0x12345 
+
+# determine the output log format, options are:
+# 1.  bin     binary log of instructions
+# 2.  txt     text log of synchronizations
+log_type = txt      
+
+# default output directory                   
+output_dir = ./out 
+
+# if turned on, RR scheduler will skip thread which is blocked.
+RR_skip_zombie = 1
+
+# define the timeout threshold to skip as zombie thread in RR, in ms
+RR_skip_threshold = 100
+
+# if turned on, dynamic library will obtain eip
+dync_geteip = 1
+
+# if turned on, record-schedule will do sleep, otherwise simple bypass sleep.
+exec_sleep = 1

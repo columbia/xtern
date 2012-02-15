@@ -263,6 +263,13 @@ END_SHORT_DEFINE
 
 START_SHORT_DEFINE
 /lib/x86_64-linux-gnu/libpthread.so.0
+void
+pthread_exit
+(void *retval)
+END_SHORT_DEFINE
+
+START_SHORT_DEFINE
+/lib/x86_64-linux-gnu/libpthread.so.0
 int 
 pthread_cond_signal
 (pthread_cond_t *cond)

@@ -4,6 +4,7 @@
 
 #include <assert.h>
 #include <stdarg.h>
+#include <fstream>
 #include <tr1/unordered_map>
 
 #include "tern/logdefs.h"
@@ -12,37 +13,23 @@ namespace tern {
 
 struct Logger {
   /// per-thread logging functions and data
-  void logInsid(unsigned insid);
-  void logLoad (unsigned insid, char* addr, uint64_t data);
-  void logStore(unsigned insid, char* addr, uint64_t data);
-  void logCall(uint8_t flags, unsigned insid,
-               short narg, void* func, va_list args);
-  void logRet(uint8_t flags, unsigned insid,
-              short narg, void* func, uint64_t data);
-  void logSync(unsigned insid, unsigned short sync,
-               unsigned turn, bool after = true, ...);
-
-  Logger(const char* filename);
-  ~Logger();
-
+  virtual void logInsid(unsigned insid) {}
+  virtual void logLoad (unsigned insid, char* addr, uint64_t data) {}
+  virtual void logStore(unsigned insid, char* addr, uint64_t data) {}
+  virtual void logCall(uint8_t flags, unsigned insid,
+                       short narg, void* func, va_list args) {}
+  virtual void logRet(uint8_t flags, unsigned insid,
+                      short narg, void* func, uint64_t data) {}
+  virtual void logSync(unsigned insid, unsigned short sync,
+                       unsigned turn, 
+                       timespec time1, 
+                       timespec time2, 
+                       bool after = true, ...) {}
+  virtual ~Logger() {}
   static __thread Logger* the; /// pointer to per-thread logger
 
-protected:
-
-  void mapLogTrunk(void);
-  void checkAndGrowLogSize(void) {
-    // TODO: check log buffer size and allocate new space if necessary
-    assert(off + RECORD_SIZE <= TRUNK_SIZE);
-  }
-
-  char*      buf;
-  unsigned   off;
-  int        fd;
-  off_t      foff;
-  char       logFile[64];
-
-  /// code and data shared by all loggers
-public:
+#if 0
+  /// obsolete
   static void markFuncCallLogged(void *func, unsigned funcid, const char* name){
     funcsCallLogged[func] = funcid;
   }
@@ -56,16 +43,93 @@ public:
     return funcsEscape.find(func) != funcsEscape.end();
   }
 
-  typedef std::tr1::unordered_map<void*, unsigned> func_map;
-  static func_map funcsCallLogged;
   static func_map funcsEscape;
+#endif
 
+  /// code and data shared by all loggers
   static void progBegin();
   static void progEnd();
-  static void threadBegin(const char* filename);
+  static void threadBegin(int tid);
   static void threadEnd(void);
 
+  /// map function address at runtime to a unique function ID.  We need
+  /// this mapping so that we can find the llvm::Function* corresponding
+  /// to a callee when analyzing a log
+  static void mapFuncToID(void *func, unsigned funcid, const char* name){
+    funcs[func] = funcid;
+  }
+  static bool funcHasID(void *func) {
+    return funcs.find(func) != funcs.end();
+  }
+  typedef std::tr1::unordered_map<void*, unsigned> func_map;
+  static func_map funcs; /// function address at runtime to ID map
 };
+
+struct TxtLogger: public Logger {
+  virtual void logSync(unsigned insid, unsigned short sync,
+                       unsigned turn,
+                       timespec time1, 
+                       timespec time2, 
+                       bool after = true, ...);
+  TxtLogger(int tid);
+  virtual ~TxtLogger();
+
+protected:
+  void print_header();
+
+  int tid;
+  std::fstream ouf;
+};
+
+struct BinLogger: public Logger {
+  virtual void logInsid(unsigned insid);
+  virtual void logLoad (unsigned insid, char* addr, uint64_t data);
+  virtual void logStore(unsigned insid, char* addr, uint64_t data);
+  virtual void logCall(uint8_t flags, unsigned insid,
+                       short narg, void* func, va_list args);
+  virtual void logRet(uint8_t flags, unsigned insid,
+                      short narg, void* func, uint64_t data);
+  virtual void logSync(unsigned insid, unsigned short sync,
+                       unsigned turn, 
+                       timespec time1, 
+                       timespec time2, 
+                       bool after = true, ...);
+  virtual ~BinLogger();
+  BinLogger(int tid);
+
+protected:
+
+  void mapLogTrunk(void);
+  void checkAndGrowLogSize(void) {
+    // TODO: check log buffer size and allocate new space if necessary
+    assert(off + RECORD_SIZE <= TRUNK_SIZE);
+  }
+
+  char*      buf;
+  unsigned   off;
+  int        fd;
+  off_t      foff;
+};
+
+
+/// logger for testing; prints out a canonicalized log that remains the
+/// same across different deterministic runs.  Note that pointer addresses
+/// are fine because our testing script canonicalizes them
+struct TestLogger: public Logger {
+  virtual void logSync(unsigned insid, unsigned short sync,
+                       unsigned turn, 
+                       timespec time1, 
+                       timespec time2, 
+                       bool after = true, ...);
+  TestLogger(int tid);
+  virtual ~TestLogger();
+
+protected:
+
+  int tid;
+  std::fstream ouf;
+};
+
 
 }
 

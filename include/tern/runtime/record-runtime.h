@@ -7,6 +7,7 @@
 #include <tr1/unordered_map>
 #include "tern/runtime/runtime.h"
 #include "tern/runtime/record-scheduler.h"
+#include <time.h>
 
 namespace tern {
 
@@ -17,7 +18,7 @@ struct barrier_t {
 typedef std::tr1::unordered_map<pthread_barrier_t*, barrier_t> barrier_map;
 
 typedef std::tr1::unordered_map<pthread_t, int> tid_map_t;
-typedef std::tr1::unordered_map<void*, std::list<int> > waiting_tid_t; 
+typedef std::tr1::unordered_map<void*, std::list<int> > waiting_tid_t;
 
 template <typename _Scheduler>
 struct RecorderRT: public Runtime, public _Scheduler {
@@ -83,24 +84,37 @@ struct RecorderRT: public Runtime, public _Scheduler {
   int __select(unsigned ins, int nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds, struct timeval *timeout);  
   int __epoll_wait(unsigned ins, int epfd, struct epoll_event *events, int maxevents, int timeout);
   int __sigwait(unsigned ins, const sigset_t *set, int *sig); 
-  
-  RecorderRT(): _Scheduler(pthread_self()) {
-    int ret = sem_init(&thread_create_sem, 0, 1); // main thread
+
+  // sleep
+  unsigned int sleep(unsigned ins, unsigned int seconds);
+  int usleep(unsigned ins, useconds_t usec);
+  int nanosleep(unsigned ins, const struct timespec *req, struct timespec *rem);
+
+  RecorderRT(): _Scheduler() {
+    int ret;
+    ret = sem_init(&thread_begin_sem, 0, 0);
+    assert(!ret && "can't initialize semaphore!");
+    ret = sem_init(&thread_begin_done_sem, 0, 0);
     assert(!ret && "can't initialize semaphore!");
   }
 
 protected:
 
-  void pthreadMutexLockHelper(pthread_mutex_t *mutex);
+  void wait(void *chan);
+  void signal(void *chan, bool all=false);
+  int absTimeToTurn(const struct timespec *abstime);
+  int relTimeToTurn(const struct timespec *reltime);
 
+  void pthreadMutexLockHelper(pthread_mutex_t *mutex);
+  
   /// for each pthread barrier, track the count of the number and number
   /// of threads arrived at the barrier
   barrier_map barriers;
 
-  //Logger logger;
-  /// need this semaphore to assign tid deterministically; see
-  /// pthreadCreate() and threadBegin()
-  sem_t thread_create_sem;
+  /// need these semaphores to assign tid deterministically; see comments
+  /// for pthreadCreate() and threadBegin()
+  sem_t thread_begin_sem;
+  sem_t thread_begin_done_sem;
 };
 
 struct RRuntime: public Runtime {
@@ -160,7 +174,7 @@ struct RRuntime: public Runtime {
   ssize_t __recvfrom(unsigned ins, int sockfd, void *buf, size_t len, int flags, struct sockaddr *src_addr, socklen_t *addrlen);
   ssize_t __recvmsg(unsigned ins, int sockfd, struct msghdr *msg, int flags);
   int __shutdown(unsigned ins, int sockfd, int how);
-  int __getpeername(unsigned ins, int sockfd, struct sockaddr *addr, socklen_t *addrlen);  
+  int __getpeername(unsigned ins, int sockfd, struct sockaddr *addr, socklen_t *addrlen);
   int __getsockopt(unsigned ins, int sockfd, int level, int optname, void *optval, socklen_t *optlen);
   int __setsockopt(unsigned ins, int sockfd, int level, int optname, const void *optval, socklen_t optlen);
   int __close(unsigned ins, int fd);

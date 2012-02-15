@@ -8,6 +8,7 @@
 #include <vector>
 #include <cstdio>
 #include <stdlib.h>
+#include <cstring>
 #include "tern/options.h"
 
 using namespace std;
@@ -20,9 +21,127 @@ using namespace tern;
 #  define dprintf(fmt...) fprintf(stderr, fmt); fflush(stderr);
 #else
 #  define SELFCHECK
-#  define dprintf(fmt...)
+#  define dprintf(fmt...) ;
 #endif
 
+#if 1
+#define RRSchedulerCV RRScheduler
+static void *monitor(void *arg)
+{
+  RRSchedulerCV * sched = (RRSchedulerCV*) arg;
+  while (true)
+  {
+    usleep(options::RR_skip_threshold * 1000);
+    //dprintf( "checking zombie\n");
+    sched->detect_blocking_threads();
+  }
+  return 0;
+}
+
+void RRSchedulerCV::detect_blocking_threads(void)
+{
+/*
+ *  Each thread will update its timemark whenever getTurn or wakeup from wait,
+ *  so that the value of timemark can be used to determine whether a thread has
+ *  been in zombie state for a while.
+ *
+ *  If a thread is in zombie state, we simply skip its turn for once.
+ */
+
+#ifdef RRSchedulerCV
+  //  we are using RRScheduler
+  //  RRScheduler uses semaphore to pass turns. This algorithm is basically like
+  //  a global token passing algorithm. What we do in the monitor is trying to 
+  //  grab the global token, check liveness and repeat.
+
+  int tid = -1;
+#if 0
+  //  the first solution is to check the list front, which is not thread safe,
+  //  but is efficient.
+  if (runq.size() && !sem_trywait(&waits[runq.front()].sem))
+    tid = runq.front();
+#else
+  //  the second solution is to check all semaphore and grab the global token 
+  //  if possible.
+  int nt = nthread;
+  for (int i = 0; i < nt; ++i)
+    if (!sem_trywait(&waits[i].sem))
+    {
+      tid = i;
+      break;
+    }
+#endif
+
+  dprintf( "checking blocking threads\n");
+  if (tid < 0)
+  {
+    dprintf( "checking blocking threads: first thread %d is enabled, so return\n",
+      runq.size() ? runq.front() : -1);
+    ++timer;
+    return;
+  }
+
+  //  from this point, it should be thread safe, as we've grabbed the global token.
+  assert(runq.size() && runq.front() == tid);
+  int n = runq.size();
+  bool find_live = false;
+  while (runq.size() && n-- && !find_live)
+  {
+    int t = runq.front();
+    if (timemark[t] >= 0 && timemark[t] < timer)
+    {
+      //  this means the thread enters user space before the previous check point. 
+      //  put it another way, the thread didn't come back in the threshold. 
+
+      //  so we skip it.
+      runq.pop_front();
+      runq.push_back(t);
+      dprintf( "checking blocking threads: skip thread %d\n", t);
+    } else
+      find_live = true; //   this thread is either live or unknown.
+  }
+
+  if (!find_live) 
+  {
+    dprintf( "WARNING: all threads are blocked!!\n");
+  }
+  dprintf( "checking blocking threads: continue on thread %d\n", runq.front());
+  sem_post(&waits[runq.front()].sem);
+
+  ++timer;
+
+#else
+  pthread_mutex_lock(&lock);
+  int n = runq.size() ;
+
+  if (n > 0)
+  {
+    ++n;
+    while (n--)
+    {
+      int tid = runq.front();
+      if (timemark[tid] == timer || timemark[tid] == -1)
+        break;
+      runq.pop_front();
+      runq.push_back(tid);
+      dprintf( "we skipped %d\n", tid);
+      SELFCHECK;
+    }
+  }
+  ++timer;
+
+  if(!runq.empty()) {
+    int tid = runq.front();
+    pthread_cond_signal(&waitcv[tid]);
+  }
+  pthread_mutex_unlock(&lock);
+#endif
+
+}
+#undef RRSchedulerCV
+#endif
+
+#if 0
 void RRSchedulerCV::threadEnd(pthread_t self_th) {
   assert(self() == runq.front());
 
@@ -35,6 +154,7 @@ void RRSchedulerCV::threadEnd(pthread_t self_th) {
 
 RRSchedulerCV::~RRSchedulerCV()
 {
+  //if (monitor_th) { pthread_cancel(monitor_th); monitor_th = 0; }
   pthread_cond_destroy(&replaycv);
   pthread_cond_destroy(&tickcv);
   if (log)
@@ -91,6 +211,13 @@ RRSchedulerCV::RRSchedulerCV(pthread_t main_th): Parent(main_th) {
     fclose(fin);
   }
 #endif
+  if (options::RR_skip_zombie)
+  {
+    timer = 0;
+    memset(timemark, 0, sizeof(timemark));
+    pthread_create(&monitor_th, NULL, monitor, this);
+  } else
+    monitor_th = 0;
 }
 
 /// check if current thread is head of runq; otherwise, wait on the cond
@@ -98,6 +225,7 @@ RRSchedulerCV::RRSchedulerCV(pthread_t main_th): Parent(main_th) {
 /// this->lock
 void RRSchedulerCV::getTurnHelper(bool doLock, bool doUnlock) {
   int tid = self();
+  timemark[tid] = -1;
 
   if(doLock)
     pthread_mutex_lock(&lock);
@@ -111,7 +239,7 @@ void RRSchedulerCV::getTurnHelper(bool doLock, bool doUnlock) {
     }
     if (tid != runq.front())
       pthread_cond_wait(&waitcv[tid], &lock);
-    else 
+    else
       break;
   }
 
@@ -132,6 +260,8 @@ void RRSchedulerCV::putTurnHelper(bool doLock, bool doUnlock) {
   runq.push_back(self());
   next();
   SELFCHECK;
+
+  timemark[self()] = timer;
 
   if(doUnlock)
     pthread_mutex_unlock(&lock);
@@ -161,7 +291,7 @@ void RRSchedulerCV::waitFirstHalf(void *chan, bool doLock) {
   if(doLock)
     pthread_mutex_lock(&lock);
 
-  dprintf("RRSchedulerCV: %d: waiting (no CV) on %p\n", self(), chan);
+  dprintf("RRSchedulerCV: %d: waiting (%p)\n", self(), chan);
 
   int tid = self();
   assert(waitvar[tid]==NULL && "thread already waits!");
@@ -200,7 +330,7 @@ void RRSchedulerCV::signalHelper(void *chan, bool all,
   if(doLock)
     pthread_mutex_lock(&lock);
 
-  assert(chan && "can't signal/broadcast  NULL");
+  assert(chan && "can't signal/broadcast NULL");
   assert(!wild || self() == runq.front());
   dprintf("RRSchedulerCV: %d: %s %p\n",
           self(), (all?"broadcast":"signal"), chan);
@@ -335,10 +465,10 @@ void RRSchedulerCV::wakeup()
     if (net_events.begin()->tid != tid)
       pthread_cond_wait(&replaycv, &lock);
     else {
-      if (net_events.begin()->turn < turnCount)
+      if (net_events.begin()->turn < (int)turnCount)
       {
-        int t = net_events.front().turn;
-        int id = net_events.front().tid;
+        // int t = net_events.front().turn;
+        // int id = net_events.front().tid;
         exit(-1);
       }
 
@@ -362,7 +492,7 @@ void RRSchedulerCV::wakeup()
 
   if (runq.size() && tid == runq.front()) // the record part or some replay part
     putTurn();
-  else  
+  else
   {
     runq.push_back(self());
     SELFCHECK;
@@ -375,4 +505,274 @@ void RRSchedulerCV::wakeup()
     pthread_mutex_unlock(&lock);
   }
 }
+#endif
 
+void SeededRRScheduler::setSeed(unsigned seed)
+{
+  rand.srand(seed);
+}
+
+void SeededRRScheduler::reorderRunq(void)
+{
+  if(runq.empty())
+    return;
+
+  // find next thread using @rand.  complexity is O(runq.size()), but
+  // shouldn't matter much anyway as the number of threads is small
+  int i = rand.rand(runq.size()-1);
+  dprintf("SeededRRScheduler: reorder runq so %d is the front (size %d)\n",
+          i, (int)runq.size());
+  list<int>::iterator it = runq.begin();
+  while(i--) ++it;
+  assert(it != runq.end());
+  runq.erase(it);
+  runq.push_front(*it);
+}
+
+//@before with turn
+//@after with turn
+unsigned RRScheduler::nextTimeout()
+{
+  unsigned next_timeout = FOREVER;
+  list<int>::iterator i;
+  for(i=waitq.begin(); i!=waitq.end(); ++i) {
+    int t = *i;
+    if(waits[t].timeout < next_timeout)
+      next_timeout = waits[t].timeout;
+  }
+  return next_timeout;
+}
+
+//@before with turn
+//@after with turn
+int RRScheduler::fireTimeouts()
+{
+  int timedout = 0;
+  list<int>::iterator prv, cur;
+  // use delete-safe way of iterating the list
+  for(cur=waitq.begin(); cur!=waitq.end();) {
+    prv = cur ++;
+
+    int tid = *prv;
+    assert(tid >=0 && tid < Scheduler::nthread);
+    if(waits[tid].timeout < turnCount) {
+      dprintf("RRScheduler: %d timed out (%p, %u)\n",
+              tid, waits[tid].chan, waits[tid].timeout);
+      waits[tid].reset(ETIMEDOUT);
+      waitq.erase(prv);
+      runq.push_back(tid);
+      ++ timedout;
+    }
+  }
+  SELFCHECK;
+  return timedout;
+}
+
+//@before with turn
+//@after with turn
+void RRScheduler::next(bool at_thread_end)
+{
+  int next_tid;
+  runq.pop_front(); // remove self from runq
+  if(runq.empty()) {
+    // if there are any timed-waiting threads, we can fast forward the
+    // turn to wake up these threads
+    unsigned next_timeout = nextTimeout();
+    if(next_timeout != FOREVER) {
+      // fast-forward turn
+      dprintf("RRScheduler: fast-forward turn from %u to %u\n",
+              turnCount, next_timeout+1);
+      turnCount = next_timeout + 1;
+      fireTimeouts();
+    }
+
+    if(runq.empty()) {
+      // current thread must be the last thread and it is existing
+      assert(at_thread_end && waitq.empty()
+             && "all threads wait; deadlock!");
+      return;
+    }
+  }
+
+  reorderRunq();
+
+  next_tid = runq.front();
+  assert(next_tid>=0 && next_tid < Scheduler::nthread);
+  dprintf("RRScheduler: next is %d\n", next_tid);
+  SELFCHECK;
+  sem_post(&waits[next_tid].sem);
+}
+
+//@before without turn
+//@after with turn
+void RRScheduler::getTurn()
+{
+  int tid = self();
+  assert(tid>=0 && tid < Scheduler::nthread);
+  timemark[tid] = -1;  //  back to system space
+  sem_wait(&waits[tid].sem);
+  dprintf("RRScheduler: %d gets turn\n", self());
+  SELFCHECK;
+}
+
+//@before with turn
+//@after without turn
+void RRScheduler::putTurn(bool at_thread_end)
+{
+  int tid = self();
+  assert(tid>=0 && tid < Scheduler::nthread);
+  assert(tid == runq.front());
+
+  timemark[tid] = timer;  //  return to user space at "timer"
+
+  if(at_thread_end) {
+    signal((void*)pthread_self());
+    Parent::zombify(pthread_self());
+    dprintf("RRScheduler: %d ends\n", self());
+  } else {
+    runq.push_back(tid);
+    dprintf("RRScheduler: %d puts turn\n", self());
+  }
+
+  next(at_thread_end);
+}
+
+//@before with turn
+//@after with turn
+int RRScheduler::wait(void *chan, unsigned nturn)
+{
+  int tid = self();
+  assert(tid>=0 && tid < Scheduler::nthread);
+  assert(tid == runq.front());
+  waits[tid].chan = chan;
+  waits[tid].timeout = nturn;
+  waitq.push_back(tid);
+  dprintf("RRScheduler: %d waits on (%p, %u)\n", tid, chan, nturn);
+
+  next();
+
+  timemark[tid] = -1; //  It's always ready to proceed when back to runq.
+
+  getTurn();
+  return waits[tid].status;
+}
+
+//@before with turn
+//@after with turn
+void RRScheduler::signal(void *chan, bool all)
+{
+  list<int>::iterator prv, cur;
+
+  assert(chan && "can't signal/broadcast NULL");
+  assert(self() == runq.front());
+  dprintf("RRScheduler: %d: %s %p\n",
+          self(), (all?"broadcast":"signal"), chan);
+
+  // use delete-safe way of iterating the list in case @all is true
+  for(cur=waitq.begin(); cur!=waitq.end();) {
+    prv = cur ++;
+
+    int tid = *prv;
+    assert(tid >=0 && tid < Scheduler::nthread);
+    if(waits[tid].chan == chan) {
+      dprintf("RRScheduler: %d signals %d(%p)\n", self(), tid, chan);
+      waits[tid].reset();
+      waitq.erase(prv);
+      runq.push_back(tid);
+      if(!all)
+        break;
+    }
+  }
+  SELFCHECK;
+}
+
+//@before with turn
+//@after with turn
+unsigned RRScheduler::incTurnCount(void)
+{
+  unsigned ret = turnCount++;
+  fireTimeouts();
+  return ret;
+}
+
+
+RRScheduler::RRScheduler()
+{
+  for(unsigned i=0; i<MaxThreads; ++i)
+    sem_init(&waits[i].sem, 0, 0);
+
+  // main thread
+  assert(self() == MainThreadTid && "tid hasn't been initialized!");
+  runq.push_back(self());
+  sem_post(&waits[MainThreadTid].sem);
+
+  if (options::RR_skip_zombie)
+  {
+    timer = 0;
+    memset(timemark, 0, sizeof(timemark));
+    pthread_create(&monitor_th, NULL, monitor, this);
+  } else
+    monitor_th = 0;
+
+}
+
+void RRScheduler::selfcheck(void)
+{
+  tr1::unordered_set<int> tids;
+
+  // no duplicate tids on runq
+  for(list<int>::iterator th=runq.begin(); th!=runq.end(); ++th) {
+    if(*th < 0 || *th > Scheduler::nthread) {
+      dump(cerr);
+      assert(0 && "invalid tid on runq!");
+    }
+    if(tids.find(*th) != tids.end()) {
+      dump(cerr);
+      assert(0 && "duplicate tids on runq!");
+    }
+    tids.insert(*th);
+  }
+
+  // no duplicate tids on waitq
+  for(list<int>::iterator th=waitq.begin(); th!=waitq.end(); ++th) {
+    if(*th < 0 || *th > Scheduler::nthread) {
+      dump(cerr);
+      assert(0 && "invalid tid on waitq!");
+    }
+    if(tids.find(*th) != tids.end()) {
+      dump(cerr);
+      assert(0 && "duplicate tids on runq or waitq!");
+    }
+    tids.insert(*th);
+  }
+
+  // TODO: check that tids have all tids
+
+  // threads on runq have NULL chan or non-forever timeout
+  for(list<int>::iterator th=runq.begin(); th!=runq.end(); ++th)
+    if(waits[*th].chan != NULL || waits[*th].timeout != FOREVER) {
+      dump(cerr);
+      assert(0 && "thread on runq but has non-NULL chan "\
+             "or non-zero turns left!");
+    }
+
+  // threads on waitq have non-NULL waitvars or non-zero timeout
+  for(list<int>::iterator th=waitq.begin(); th!=waitq.end(); ++th)
+    if(waits[*th].chan == NULL && waits[*th].timeout == FOREVER) {
+      dump(cerr);
+      assert (0 && "thread on waitq but has NULL chan and 0 turn left!");
+    }
+}
+
+ostream& RRScheduler::dump(ostream& o)
+{
+  o << "nthread " << Scheduler::nthread << ": " << turnCount;
+  o << " [runq ";
+  copy(runq.begin(), runq.end(), ostream_iterator<int>(o, " "));
+  o << "]";
+  o << " [waitq ";
+  for(list<int>::iterator th=waitq.begin(); th!=waitq.end(); ++th)
+    o << *th << "(" << waits[*th].chan << "," << waits[*th].timeout << ") ";
+  o << "]\n";
+  return o;
+}

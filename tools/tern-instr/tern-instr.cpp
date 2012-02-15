@@ -42,6 +42,11 @@ WithUclibc("with-uclibc", cl::desc("Link .bcs with KLEE's uclibc library)"),
 static cl::opt<bool>
 OutputAssembly("S", cl::desc("Write output as LLVM assembly"));
 
+static cl::opt<bool>
+InstrInst("instrument-instructions",
+          cl::desc("Instrument regular instructions such as load/store, "\
+                   "in addition to synchronization operations."));
+
 static bool endsWith(const string& str, const char* suffix) {
   size_t len = str.length();
   size_t suffix_len = strlen(suffix);
@@ -304,9 +309,11 @@ int main(int argc, char **argv) {
   Passes2init.add(new InitInstr);
   if (!ModuleDataLayout.empty())
     Passes2.add(new TargetData(ModuleDataLayout));
-Passes2.add(createVerifierPass());
-  Passes2.add(pass = new LogInstr); pass->setFuncsExportFile(FuncMapFilename);
-Passes2.add(createVerifierPass());
+  if(InstrInst) {
+    pass = new LogInstr;
+    pass->setFuncsExportFile(FuncMapFilename);
+    Passes2.add(pass);
+  }
   Passes2.add(createVerifierPass());
   if (OutputAssembly)
     Passes2.add(createPrintModulePass(RecordOut));

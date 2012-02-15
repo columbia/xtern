@@ -195,9 +195,7 @@ void RRuntime::threadBegin(void) {
   pthread_cond_signal(&thread_create_cv);
   pthread_mutex_unlock(&pthread_mutex);
 
-  char logFile[64];
-  getLogFilename(logFile, sizeof(logFile), tid);
-  Logger::threadBegin(logFile);
+  Logger::threadBegin(tid);
 
   lock();
   operation[tid].op = syncfunc::tern_thread_begin;

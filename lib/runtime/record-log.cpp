@@ -1,6 +1,7 @@
 #include <sys/mman.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <errno.h>
 #include <fcntl.h>
 #include <unistd.h>
 #include <assert.h>
@@ -8,7 +9,10 @@
 #include <stdlib.h>
 #include <stdarg.h>
 #include <string.h>
+#include <time.h>
 #include <pthread.h>
+#include <iostream>
+#include <iomanip>
 #include "tern/runtime/scheduler.h"
 #include "tern/runtime/loghooks.h"
 #include "tern/runtime/record-log.h"
@@ -24,11 +28,139 @@ using namespace std;
 namespace tern {
 
 __thread Logger* Logger::the = NULL;
+Logger::func_map Logger::funcs;
 
-Logger::func_map Logger::funcsCallLogged;
-Logger::func_map Logger::funcsEscape;
+void TxtLogger::print_header()
+{
+  ouf << "op"
+    << ' ' << "insid"
+    << ' ' << "turn"
+    << ' ' << "tid"
+    << ' ' << "args"
+    << endl;
+}
 
-void Logger::logInsid(unsigned insid) {
+void TxtLogger::logSync(unsigned insid, unsigned short sync,
+                        unsigned turn, 
+                        timespec time1, 
+                        timespec time2, 
+                        bool after, ...) {
+  assert(sync >= syncfunc::first_sync && sync < syncfunc::num_syncs
+    && "trying to log unknown synchronization operation!");
+
+  if(!syncfunc::isSync(sync))
+  {
+    if (sync == syncfunc::tern_thread_begin
+      || sync == syncfunc::tern_thread_end)    //  for tests, i need to know the thread_mapping
+    {
+      va_list args;
+      va_start(args, after);
+      ouf << syncfunc::getName(sync)
+          << " 0x" << hex << insid << dec
+          << ' ' << turn
+          << " " << dec << time1.tv_sec << ":"
+          << setfill('0') << setw(9) << time1.tv_nsec
+          << " " << dec << time2.tv_sec << ":"
+          << setfill('0') << setw(9) << time2.tv_nsec
+          << ' ' << tid
+          << hex << " 0x" << va_arg(args, uint64_t) << dec;
+      va_end(args);
+      ouf << "\n";
+      ouf.flush();
+    }
+    return;
+  }
+  // YJF: why ignore prog_begin/end and thread_begin/end?
+  const char *suffix = "";
+  if(NumRecordsForSync(sync) == 2)
+    suffix = (after?"_second":"_first");
+
+  ouf << syncfunc::getName(sync) << suffix
+      << " 0x" << hex << setfill('0') << setw(8) << insid << dec
+      << ' ' << turn
+      << " " << dec << time1.tv_sec << ":"
+      << setfill('0') << setw(9) << time1.tv_nsec
+      << " " << dec << time2.tv_sec << ":"
+      << setfill('0') << setw(9) << time2.tv_nsec
+      << ' ' << tid;
+
+  va_list args;
+  va_start(args, after);
+
+  switch(sync) {
+    // log one sync var (common case)
+  case syncfunc::pthread_mutex_lock:
+  case syncfunc::pthread_mutex_unlock:
+  case syncfunc::pthread_barrier_wait:
+  case syncfunc::pthread_barrier_destroy:
+  case syncfunc::pthread_cond_signal:
+  case syncfunc::pthread_cond_broadcast:
+  case syncfunc::sem_wait:
+  case syncfunc::sem_post:
+  case syncfunc::pthread_join:
+    ouf << hex << " 0x" << va_arg(args, uint64_t) << dec;
+    break;
+
+    // log two sync vars for cond_*wait
+  case syncfunc::pthread_mutex_timedlock:
+  case syncfunc::pthread_cond_wait:
+  case syncfunc::pthread_barrier_init:
+  case syncfunc::pthread_create:
+  case syncfunc::pthread_mutex_trylock:
+  case syncfunc::sem_trywait:
+  case syncfunc::sem_timedwait:
+    {
+      //  notice "<<" operator is expanded from right to left.
+      uint64_t a = va_arg(args, uint64_t);
+      uint64_t b = va_arg(args, uint64_t);
+
+    ouf << hex
+        << " 0x" << a
+        << " 0x" << b
+        << dec;
+    }
+    break;
+    // log three sync vars
+  case syncfunc::pthread_cond_timedwait:
+    {
+      //  notice "<<" operator is explained from right to left.
+      uint64_t a = va_arg(args, uint64_t);
+      uint64_t b = va_arg(args, uint64_t);
+      uint64_t c = va_arg(args, uint64_t);
+
+    ouf << hex
+        << " 0x" << a
+        << " 0x" << b
+        << " 0x" << c
+        << dec;
+    }
+    break;
+
+  default:
+    assert(0 && "sync not handled");
+  }
+
+  va_end(args);
+  ouf << "\n";
+  ouf.flush();
+}
+
+TxtLogger::TxtLogger(int thid) {
+  char logFile[64];
+  getLogFilename(logFile, sizeof(logFile), thid, ".txt");
+
+  tid = thid;
+  ouf.open(logFile, ios::out|ios::trunc);
+  assert(ouf && "can't open log file for write!");
+  print_header();
+}
+
+TxtLogger::~TxtLogger()
+{
+  ouf.close();
+}
+
+void BinLogger::logInsid(unsigned insid) {
   checkAndGrowLogSize();
 
   InsidRec *rec = (InsidRec*)(buf+off);
@@ -38,7 +170,7 @@ void Logger::logInsid(unsigned insid) {
   off += RECORD_SIZE;
 }
 
-void Logger::logLoad(unsigned insid, char* addr, uint64_t data) {
+void BinLogger::logLoad(unsigned insid, char* addr, uint64_t data) {
   checkAndGrowLogSize();
 
   LoadRec *rec = (LoadRec*)(buf+off);
@@ -50,7 +182,7 @@ void Logger::logLoad(unsigned insid, char* addr, uint64_t data) {
   off += RECORD_SIZE;
 }
 
-void Logger::logStore(unsigned insid, char* addr, uint64_t data) {
+void BinLogger::logStore(unsigned insid, char* addr, uint64_t data) {
   checkAndGrowLogSize();
 
   StoreRec *rec = (StoreRec*)(buf+off);
@@ -62,21 +194,23 @@ void Logger::logStore(unsigned insid, char* addr, uint64_t data) {
   off += RECORD_SIZE;
 }
 
-void Logger::logCall(uint8_t flags, unsigned insid,
+void BinLogger::logCall(uint8_t flags, unsigned insid,
                      short narg, void* func, va_list vl) {
   if(flags&CallIndirect) {
+#if 0
     if(!funcEscape(func))
       return;
     flags |= CalleeEscape;
-    // FIXME: LogInstr should set  noreturn attribute for escape functions
+#endif
+    // FIXME: LogInstr should set noreturn attribute for escape functions
+    // actually, should just have a list of external functions that do not
+    // return.  this list should be pretty much fixed
     if(func == (void*)(intptr_t)exit
-       || func == (void*)(intptr_t)pthread_exit) {
+       || func == (void*)(intptr_t)pthread_exit)
       flags |= CallNoReturn;
-    }
   }
 
-  assert(funcCallLogged(func));
-
+  assert(funcHasID(func));
   checkAndGrowLogSize();
 
   short nextra = NumExtraArgsRecords(narg);
@@ -88,7 +222,7 @@ void Logger::logCall(uint8_t flags, unsigned insid,
   call->flags = flags;
   call->seq = seq;
   call->narg = narg;
-  call->funcid = funcsCallLogged[func];
+  call->funcid = funcs[func];
 
   short i, rec_narg;
 
@@ -120,12 +254,14 @@ void Logger::logCall(uint8_t flags, unsigned insid,
   }
 }
 
-void Logger::logRet(uint8_t flags, unsigned insid,
+void BinLogger::logRet(uint8_t flags, unsigned insid,
                     short narg, void* func, uint64_t data){
   if(flags&CallIndirect) {
+#if 0
     if(!funcEscape(func))
       return;
     flags |= CalleeEscape;
+#endif
     // FIXME
     if(func == (void*)(intptr_t)exit
        || func == (void*)(intptr_t)pthread_exit) {
@@ -133,7 +269,7 @@ void Logger::logRet(uint8_t flags, unsigned insid,
     }
   }
 
-  assert(funcCallLogged(func));
+  assert(funcHasID(func));
   assert(!(flags&CallNoReturn)
          && "Logging return from a function that doesn't return!");
 
@@ -147,15 +283,18 @@ void Logger::logRet(uint8_t flags, unsigned insid,
   ret->flags = flags;
   ret->seq = seq;
   ret->narg = narg;
-  ret->funcid = funcsCallLogged[func];
+  ret->funcid = funcs[func];
   ret->data = data;
 
   off += RECORD_SIZE;
 }
 
 // TODO: record ret->timedout
-void Logger::logSync(unsigned insid, unsigned short sync,
-                     unsigned turn, bool after, ...) {
+void BinLogger::logSync(unsigned insid, unsigned short sync,
+                     unsigned turn, 
+                     timespec time1, 
+                     timespec time2, 
+                     bool after, ...) {
   checkAndGrowLogSize();
   assert(sync >= syncfunc::first_sync && sync < syncfunc::num_syncs
     && "trying to log unknown synchronization operation!");
@@ -178,7 +317,10 @@ void Logger::logSync(unsigned insid, unsigned short sync,
   off += RECORD_SIZE;
 }
 
-Logger::Logger(const char* logFile) {
+BinLogger::BinLogger(int tid) {
+  char logFile[64];
+  getLogFilename(logFile, sizeof(logFile), tid, ".bin");
+
   foff = 0;
   fd = open(logFile, O_RDWR|O_CREAT, 0600);
   dprintf("logFile = %s\n", logFile);
@@ -189,7 +331,7 @@ Logger::Logger(const char* logFile) {
   mapLogTrunk();
 }
 
-Logger::~Logger() {
+BinLogger::~BinLogger() {
   if(buf)
     munmap(buf, TRUNK_SIZE);
 
@@ -208,23 +350,119 @@ Logger::~Logger() {
   foff = 0;
 }
 
-void Logger::mapLogTrunk(void) {
+void BinLogger::mapLogTrunk(void) {
   if(buf)
     munmap(buf, TRUNK_SIZE);
 
   buf = (char*)mmap(0, TRUNK_SIZE, PROT_WRITE|PROT_READ,
                      MAP_SHARED, fd, foff);
   assert(buf!=MAP_FAILED && "can't map log file using mmap()!");
-  dprintf("Logger: mmapped %p, size %u\n", buf, TRUNK_SIZE);
+  dprintf("BinLogger: mmapped %p, size %u\n", buf, TRUNK_SIZE);
   off = 0;
   foff += TRUNK_SIZE;
 }
 
-void Logger::threadBegin(const char *filename) {
-  assert(filename);
-  the = new Logger(filename);
+
+void TestLogger::logSync(unsigned insid, unsigned short sync,
+                        unsigned turn, 
+                       timespec time1, 
+                       timespec time2, 
+                        bool after, ...) {
+  assert(sync >= syncfunc::first_sync && sync < syncfunc::num_syncs
+    && "trying to log unknown synchronization operation!");
+
+  const char *suffix = "";
+  if(NumRecordsForSync(sync) == 2)
+    suffix = (after?"_second":"_first");
+
+  ouf << syncfunc::getName(sync) << suffix
+      << ' ' << turn
+      << ' ' << tid;
+
+  va_list args;
+  uint64_t a, b, c;
+
+  va_start(args, after);
+  switch(sync) {
+    // log one arg (common case)
+  case syncfunc::pthread_mutex_lock:
+  case syncfunc::pthread_mutex_unlock:
+  case syncfunc::pthread_barrier_wait:
+  case syncfunc::pthread_barrier_destroy:
+  case syncfunc::pthread_cond_signal:
+  case syncfunc::pthread_cond_broadcast:
+  case syncfunc::sem_wait:
+  case syncfunc::sem_post:
+  case syncfunc::pthread_join:
+  case syncfunc::tern_thread_begin:
+  case syncfunc::tern_thread_end:
+    a = va_arg(args, uint64_t);
+    ouf << hex << " 0x" << a << dec;
+    break;
+
+    // log two args
+  case syncfunc::pthread_cond_wait:
+  case syncfunc::pthread_barrier_init:
+  case syncfunc::pthread_create:
+  case syncfunc::pthread_mutex_trylock:
+  case syncfunc::pthread_mutex_timedlock:
+  case syncfunc::sem_trywait:
+  case syncfunc::sem_timedwait:
+    a = va_arg(args, uint64_t);
+    b = va_arg(args, uint64_t);
+    ouf << hex
+        << " 0x" << a
+        << " 0x" << b
+        << dec;
+    break;
+
+    // log three args
+  case syncfunc::pthread_cond_timedwait:
+    a = va_arg(args, uint64_t);
+    b = va_arg(args, uint64_t);
+    if(after)
+      c = va_arg(args, uint64_t);
+    ouf << hex
+        << " 0x" << a
+        << " 0x" << b;
+    if(after)
+      ouf << " 0x" << c;
+    ouf << dec;
+    break;
+
+  default:
+    assert(0 && "sync not handled");
+  }
+  va_end(args);
+  ouf << "\n";
+}
+
+TestLogger::TestLogger(int thid) {
+  char logFile[64];
+  getLogFilename(logFile, sizeof(logFile), thid, ".txt");
+
+  tid = thid;
+  ouf.open(logFile, ios::out|ios::trunc);
+  assert(ouf && "can't open log file for write!");
+}
+
+TestLogger::~TestLogger()
+{
+  ouf.close();
+}
+
+void Logger::threadBegin(int tid) {
+  if(options::log_type == "txt") {
+    the = new TxtLogger(tid);
+  } else if(options::log_type == "bin") {
+    the = new BinLogger(tid);
+  } else if(options::log_type == "test") {
+    the = new TestLogger(tid);
+  } else
+    assert (0 && "unknown log_type");
+
   assert(the && "can't allocate memory for logger!");
-  dprintf("Logger: new logger = %p\n", (void*)the);
+  dprintf("Logger: new logger for thread %d = %p\n", tid, (void*)the);
 }
 
 void Logger::threadEnd(void) {
@@ -233,25 +471,26 @@ void Logger::threadEnd(void) {
 
 void Logger::progBegin(void) {
   tern_funcs_call_logged();
+  mkdir(options::output_dir.c_str(), 0777);
 }
 
 void Logger::progEnd(void) {
-  // nothing
+  // nothing yet
 }
 
 } // namespace tern
 
 
 void __attribute((weak)) tern_funcs_call_logged(void) {
-  // empty function; will be replaced by loginstr
+  // empty function; will be replaced with a function inserted by instr/log.cpp
 }
 
 void tern_func_call_logged(void* func, unsigned funcid, const char* name) {
-  tern::Logger::markFuncCallLogged(func, funcid, name);
+  tern::Logger::mapFuncToID(func, funcid, name);
 }
 
 void tern_func_escape(void* func, unsigned funcid, const char* name) {
-  tern::Logger::markFuncEscape(func, funcid, name);
+  // tern::Logger::markFuncEscape(func, funcid, name);
 }
 
 void tern_log_insid(unsigned insid) {

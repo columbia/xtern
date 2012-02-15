@@ -19,7 +19,7 @@ using namespace llvm;
 namespace tern {
 
 static cl::opt<bool>
-DontWarnEscapeFunc("dont-warn-escaped-functions",
+WarnEscapedSync("warn-escaped-sync",
                cl::desc("Warn about synchronization functions that escape."));
 
 char SyncInstr::ID = 0;
@@ -102,7 +102,7 @@ void SyncInstr::warnEscapeFuncs(Module &M) {
       unsigned syncid = syncfunc::getNameID(fi->getNameStr().c_str());
       if(syncid != syncfunc::not_sync && !syncfunc::isTern(syncid)) {
         if(funcEscapes(fi))
-          errs()<< "Function " << fi->getName() << " escapes!\n";
+          errs()<< "Sync function " << fi->getName() << " escapes!\n";
       }
     }
   }
@@ -141,7 +141,7 @@ void SyncInstr::replaceFunctionInCall(Module &M, Instruction *I,
   for(CallSite::arg_iterator ai=cs.arg_begin(),ae=cs.arg_end(); ai!=ae; ++ai) {
     assert(*ai);
     Value *v = *ai;
-    //  force casting parameter types, otherwise exception throwed sometimes. 
+    //  force casting parameter types, otherwise exception throwed sometimes.
     if(v->getType()->isPointerTy())
       v = CastInst::CreatePointerCast(v, functype->getParamType(i + 1), "", I);
     ++i;
@@ -178,7 +178,7 @@ bool SyncInstr::runOnModule(Module &M) {
 
   initFuncTypes(M);
 
-  if(!DontWarnEscapeFunc)
+  if(WarnEscapedSync)
     warnEscapeFuncs(M);
 
   // replace calls to sync functions with calls to tern hooks

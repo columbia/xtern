@@ -135,7 +135,6 @@ void LogInstr::markFuncs(Module &M) {
 }
 
 void LogInstr::instrInst(Instruction* I) {
-  return; 
   switch(I->getOpcode()) {
   case Instruction::Load:
     instrLoad(dyn_cast<LoadInst>(I));

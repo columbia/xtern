@@ -90,10 +90,11 @@ void InitInstr::addBeginEndAsCtorDtor(Module &M) {
 ///     main() {
 ///        __tern_prog_begin();
 ///        __user_main_for_tern();
-///        __tern_prog_end();
+///        __tern_prog_end(); // if @add_end is true
 ///
 /// NOTE that we must also instrument exit() to call __tern_prog_end()
-void InitInstr::addBeginEndInMain(llvm::Module &M, llvm::Function *mainfunc) {
+void InitInstr::addBeginEndInMain(llvm::Module &M,llvm::Function *mainfunc,
+                                  bool add_end) {
   const FunctionType *Ty = TypeBuilder<void (void),
     false>::get(getGlobalContext());
   Constant *C = M.getOrInsertFunction("__tern_prog_begin", Ty);
@@ -113,10 +114,12 @@ void InitInstr::addBeginEndInMain(llvm::Module &M, llvm::Function *mainfunc) {
     args.push_back(ai);
   Value *ret = CallInst::Create(userMain, args.begin(), args.end(),
                                 "orig_main", BB);
-  Constant *C2 = M.getOrInsertFunction("__tern_prog_end", Ty);
-  Function *F2 = dyn_cast<Function>(C2);
-  assert(F && "can't insert function!");
-  CallInst::Create(F2, "", BB);
+  if(add_end) {
+    Constant *C2 = M.getOrInsertFunction("__tern_prog_end", Ty);
+    Function *F2 = dyn_cast<Function>(C2);
+    assert(F && "can't insert function!");
+    CallInst::Create(F2, "", BB);
+  }
 
   ReturnInst::Create(getGlobalContext(), ret, BB);
 }
@@ -162,7 +165,29 @@ bool InitInstr::runOnModule(Module &M) {
 
   addSymbolic(M);
 
-  addBeginEndAsCtorDtor(M);
+  // Adding __tern_prog_begin()/end() as a static constructor/destructor
+  // doesn't work well with some versions of g++ as __tern_prog_begin()
+  // may be called before the static constructors in our runtime is
+  // initialized.  Even if we don't use static constructors in our
+  // runtime, it seems that ios_base uses static constructors to
+  // initialize things.
+  //
+  // addBeginEndAsCtorDtor(M);
+
+  // Wrapping application's main method with __tern_prog_begin()/end()
+  // doesn't work well if the application code calls exit()-like
+  // functions.  To solve this problem, we can hook exit(), _exit(), and
+  // _Exit(), which seems messy.
+  //
+  // addBeginEndInMain(M, mainfunc, /*add_end=*/true);
+
+  // Another solution to the exit() problem is that __tern_prog_begin()
+  // registers __tern_prog_end() using atexit().  This doesn't work well
+  // with uclibc because the __tern_prog_end registered with atexit() is
+  // not called by uclibc.  This solution seems the least ugly, and we can
+  // always fix the atexit() problem of uclibc
+  //
+  addBeginEndInMain(M, mainfunc, /*add_end=*/false);
 
   return true;
 }

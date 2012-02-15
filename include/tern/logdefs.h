@@ -6,11 +6,12 @@
 #include <stdint.h>
 #include "stdio.h"
 #include <boost/static_assert.hpp>
-#include "syncfuncs.h"
+#include "tern/syncfuncs.h"
+#include "tern/options.h"
 
 namespace tern {
 
-#define RECORD_SIZE     (32U)  // has to be a define
+#define RECORD_SIZE     (32U)  // has to be a # define, not enum
 #define INSID_BITS      (29U)
 #define REC_TYPE_BITS   (3U)
 
@@ -165,8 +166,10 @@ inline short ExtraArgsRec::numArgsInRec() const {
   return std::min(rec_narg, (short)MAX_EXTRA_ARGS);
 }
 
-static inline int getLogFilename(char *buf, size_t sz, int tid) {
-  return snprintf(buf, sz, "tern-log-tid-%d", tid);
+static inline int getLogFilename(char *buf, size_t sz,
+                                 int tid, const char* ext) {
+  return snprintf(buf, sz, "%s/tid-%d-%d%s",
+                  options::output_dir.c_str(), getpid(), tid, ext);
 }
 
 } // namespace tern

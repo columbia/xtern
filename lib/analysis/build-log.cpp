@@ -771,7 +771,7 @@ void ProgInstLog::create(int nthread) {
   InstLogBuilder builder;
   threadLogs.reserve(nthread);
   for(int i=0; i<nthread; ++i) {
-    getLogFilename(logFile, sizeof(logFile), i);
+    getLogFilename(logFile, sizeof(logFile), i, ".bin");
     threadLogs[i] = builder.create(logFile);
   }
 
