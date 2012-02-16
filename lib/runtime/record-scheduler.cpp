@@ -511,9 +511,14 @@ void SeededRRScheduler::setSeed(unsigned seed)
 
 void SeededRRScheduler::reorderRunq(void)
 {
+  if(runq.empty())
+    return;
+
   // find next thread using @rand.  complexity is O(runq.size()), but
   // shouldn't matter much anyway as the number of threads is small
-  int i = rand.rand(runq.size());
+  int i = rand.rand(runq.size()-1);
+  dprintf("SeededRRScheduler: reorder runq so %d is the front (size %d)\n",
+          i, (int)runq.size());
   list<int>::iterator it = runq.begin();
   while(i--) ++it;
   assert(it != runq.end());

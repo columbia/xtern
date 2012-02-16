@@ -262,7 +262,7 @@ protected:
   pthread_t monitor_th;
   int timemark[MaxThreads];
   int timer;
-  
+
   // TODO: can potentially create a thread-local struct for each thread if
   // it improves performance
   pthread_cond_t  waitcv[MaxThreads];
