@@ -62,8 +62,8 @@ DynInstr *IntraSlicer::delTraceTail(uchar tid) {
     } else
       curIndex--;
   }
-  //if (dynInstr)
-  //  stat->printDynInstr(dynInstr, __func__);
+  if (dynInstr && DBG)
+    stat->printDynInstr(dynInstr, __func__);
   return dynInstr;
 }
 
@@ -124,7 +124,7 @@ bool IntraSlicer::eventBetween(DynBrInstr *dynBrInstr, DynInstr *dynPostInstr) {
 
 bool IntraSlicer::writtenBetween(DynBrInstr *dynBrInstr, DynInstr *dynPostInstr) {
   bdd bddBetween = bddfalse;
-  oprdSumm->getStoreSummBetween((DynInstr *)dynBrInstr, dynPostInstr, bddBetween);
+  oprdSumm->getStoreSummBetween(dynBrInstr, dynPostInstr, bddBetween);
   const bdd bddOfLive = live.getAllLoadMem();
   return (bddBetween & bddOfLive) != bddfalse;
 }
@@ -169,11 +169,14 @@ void IntraSlicer::handleBranch(DynInstr *dynInstr) {
     takeNonMem(brInstr);
   } else {
     DynInstr *head = slice.getHead();
-    if (!postDominate(head, brInstr) || eventBetween(brInstr, head) ||
-      writtenBetween(brInstr, head)) {
+    bool reason1 = (!postDominate(head, brInstr));
+    bool reason2 = eventBetween(brInstr, head);
+    bool reason3 = writtenBetween(brInstr, head);
+    SERRS << "IntraSlicer::handleBranch reason1 " << reason1
+      << ", reason2 " << reason2 << ", reason3 " << reason3 << ".\n";
+    if (reason1 || reason2 || reason3)
       takeNonMem(brInstr);
-    }
-  }
+   }
 }
 
 void IntraSlicer::handleRet(DynInstr *dynInstr) {
@@ -211,11 +214,14 @@ void IntraSlicer::handleNonMem(DynInstr *dynInstr) {
 }
 
 void IntraSlicer::handleMem(DynInstr *dynInstr) {
+  stat->printDynInstr(dynInstr, "IntraSlicer::handleMem");
   Instruction *instr = idMgr->getOrigInstr(dynInstr);
   if (Util::isLoad(instr)) {
     DynMemInstr *loadInstr = (DynMemInstr*)dynInstr;
     bool reason1 = loadInstr->isTarget();
     bool reason2 = regOverWritten(loadInstr);
+    SERRS << "IntraSlicer::handleMem reason1 " 
+      << reason1 << ", reason2 " << reason2 << "\n";
     if (reason1 || reason2) {
       if (reason2)
         delRegOverWritten(loadInstr);
@@ -326,13 +332,13 @@ void IntraSlicer::addMemAddrEqConstr(DynMemInstr *loadInstr,
   // Shall we add the constraint to constraints of current ExecutionState?
 }
 
+/* Even for store instructions, we still need to take the store pointer 
+operand, because it has meaningful effect for this instruction (the stored 
+target memory location). */
 void IntraSlicer::takeStartTarget(DynInstr *dynInstr) {
+  live.addUsedRegs(dynInstr);
   slice.add(dynInstr, START_TARGET);
   curIndex = dynInstr->getIndex()-1;
-}
-
-void IntraSlicer::addDynOprd(DynOprd *dynOprd) {
-  // TBD.
 }
 
 void IntraSlicer::calStat() {
@@ -372,7 +378,8 @@ void IntraSlicer::calStat() {
     }
   }
 
-  errs() << "\n\nIntraSlicer::calStat STATISTICS"
+  errs() << "\n\n" << LLVM_CHECK_TAG
+    << "IntraSlicer::calStat STATISTICS"
     << ": numExedInstrs: " << numExedInstrs
     << ";  numTakenInstrs: " << numTakenInstrs
     << ";  numExedBrs: " << numExedBrs

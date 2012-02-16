@@ -92,6 +92,7 @@ uchar DynPHIInstr::getIncomingIndex() {
 
 DynBrInstr::DynBrInstr() {
   // Do not need to init condition here.
+  successor = NULL;
 }
 
 DynBrInstr::~DynBrInstr() {
@@ -108,6 +109,14 @@ void DynBrInstr::setBrCondition(klee::ref<klee::Expr> condition) {
 
 klee::ref<klee::Expr> DynBrInstr::getBrCondition() {
   return condition;
+}
+
+void DynBrInstr::setSuccessorBB(BasicBlock *successor) {
+  this->successor = successor;
+}
+
+BasicBlock *DynBrInstr::getSuccessorBB() {
+  return successor;
 }
 
 DynRetInstr::DynRetInstr() {

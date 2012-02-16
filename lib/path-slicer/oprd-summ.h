@@ -2,6 +2,7 @@
 #define __TERN_PATH_SLICER_OPRD_SUMMARY_H
 
 #include "llvm/Instruction.h"
+#include "llvm/BasicBlock.h"
 #include "llvm/Analysis/PostDominators.h"
 #include "llvm/Pass.h"
 #include "llvm/ADT/DenseSet.h"
@@ -12,6 +13,8 @@
 #include "cache-util.h"
 #include "stat.h"
 #include "func-summ.h"
+#include "alias-mgr.h"
+#include "instr-id-mgr.h"
 
 namespace tern {
   /* This class is used to collect not-executed alias information.
@@ -27,8 +30,11 @@ namespace tern {
   for return instructions. */
   class OprdSumm: public llvm::ModulePass {
   private:
+    enum OprdType {Load = 1, Store = 2};
     static char ID;
     Stat *stat;
+    AliasMgr *aliasMgr;
+    InstrIdMgr *idMgr;
 
     FuncSumm *funcSumm;
 
@@ -55,7 +61,8 @@ namespace tern {
     /* cache */
     //llvm::DenseMap<std::pair<CallCtx *, const llvm::BasicBlock *>, bdd * > bbLoadBDD;
 
-    DenseSet<const Function *> visited;
+    DenseSet<const llvm::Function *> visited;
+    DenseSet<const llvm::BasicBlock *> visitedBB;
 
   protected:
     void clean();
@@ -74,31 +81,37 @@ namespace tern {
       const llvm::Function *caller, const Instruction *callInstr);
     void addSummTopDown(InstrDenseSet *calleeSet, InstrDenseSet *callerSet);
 
+    /* Functions used during outside query. */
+    void DFSBasicBlock(llvm::BasicBlock *x, llvm::BasicBlock *sink,
+      InstrDenseSet &summ, OprdType oprdType);
+
+    void printSumm(InstrDenseSet &summ);
+
   public:
     OprdSumm();
     ~OprdSumm();
-    void initStat(Stat *stat);
-    void initFuncSumm(FuncSumm *funcSumm);
+    void init(Stat *stat, FuncSumm *funcSumm, AliasMgr *aliasMgr, InstrIdMgr *idMgr);
     virtual void getAnalysisUsage(llvm::AnalysisUsage &AU) const;
     virtual bool runOnModule(llvm::Module &M);
 
     /* Given a prev dynamic instruction and its post dominator (another dynamic instruction),
     calculate all reachable load instructions and their bdd. The load instructions are those in 
-    corespoing module (normal, mx, or sim). */
-    llvm::DenseSet<llvm::Instruction *> *getLoadSummBetween(
-      DynInstr *prevInstr, DynInstr *postInstr, bdd &bddResults);
+    corespoing module (normal, mx, or sim). Used in inter-thread phase. */
+    InstrDenseSet *getLoadSummBetween(DynInstr *prevInstr, 
+      DynInstr *postInstr, bdd &bddResults);
 
     /* Given a prev dynamic instruction and its post dominator (another dynamic instruction),
     calculate all reachable store instructions and their bdd. The store instructions are those in 
-    corespoing module (normal, mx, or sim). */
-    llvm::DenseSet<llvm::Instruction *> *getStoreSummBetween(
-      DynInstr *prevInstr, DynInstr *postInstr, bdd &bddResults);
+    corespoing module (normal, mx, or sim).
+    Currently we go over all successors. But we could only go over the not executed 
+    successor, I think. */
+    InstrDenseSet *getStoreSummBetween(DynBrInstr *prevInstr,
+      DynInstr *postInstr, bdd &bddResults);
 
     /* Given a dynamic call instruction, calculate all reachable store instructions within the
     function and their bdd. The store instructions are those in corespoing module 
     (normal, mx, or sim).*/
-    llvm::DenseSet<llvm::Instruction *> *getStoreSummInFunc(
-      DynCallInstr *callInstr, bdd &bddResults);
+    InstrDenseSet *getStoreSummInFunc(DynCallInstr *callInstr, bdd &bddResults);
   };
 }
 

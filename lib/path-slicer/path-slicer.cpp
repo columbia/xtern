@@ -140,8 +140,7 @@ void PathSlicer::init(llvm::Module &M) {
   funcPM->run(*origModule);
 
   /* Init oprd summary. */
-  oprdSumm.initStat(&stat);
-  oprdSumm.initFuncSumm(&funcSumm);
+  oprdSumm.init(&stat, &funcSumm, &aliasMgr, &idMgr);
   PassManager *oprdPM = new PassManager;
   if (NORMAL_SLICING) {
     Util::addTargetDataToPM(origModule, oprdPM);
@@ -236,7 +235,7 @@ void PathSlicer::runPathSlicer(void *pathId, set<BranchInst *> &brInstrs) {
   // TBD: should have a thread-id loops to traverse all thread ids.
   do {
     // (1) Specify current slicing thread id.
-    uchar tid = 1;
+    uchar tid = 0;
 
     // (2) Init slicing start index (target instruction).
     size_t startIndex = trace->size();

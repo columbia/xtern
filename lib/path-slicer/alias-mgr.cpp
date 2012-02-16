@@ -174,3 +174,39 @@ bdd AliasMgr::getPointTee(DynOprd *dynOprd) {
   }
 }
 
+bdd AliasMgr::getPointTee(DynInstr *ctxOfDynInstr, llvm::Value *v) {
+  BddAliasAnalysis *baa = NULL;
+  
+  if (CTX_SENSITIVE) {
+    vector<User *> usrCtx;
+    CallCtx *intCtx = ctxOfDynInstr->getCallingCtx();
+    assert(intCtx);
+    if (NORMAL_SLICING) {
+      baa = (BddAliasAnalysis *)(origAaol->AAPass);
+      for (size_t i = 0; i < intCtx->size(); i++)
+        usrCtx.push_back(cast<User>(idMgr->getOrigInstrCtx(intCtx->at(i))));
+    } else if (MAX_SLICING) {
+      baa = (BddAliasAnalysis *)(mxAaol->AAPass);
+      for (size_t i = 0; i < intCtx->size(); i++)
+        usrCtx.push_back(cast<User>(idMgr->getMxInstrCtx(intCtx->at(i))));
+    } else {
+      baa = (BddAliasAnalysis *)(simAaol->AAPass);
+      assert(false);  // range slicing: tbd.
+    }
+
+    return baa->getPointeeSet(&usrCtx, v, 0);
+  } else {
+    if (NORMAL_SLICING) {
+      baa = (BddAliasAnalysis *)(origAaol->AAPass);
+    } else if (MAX_SLICING) {
+      baa = (BddAliasAnalysis *)(mxAaol->AAPass);
+    } else {
+      baa = (BddAliasAnalysis *)(simAaol->AAPass);
+      assert(false);  // range slicing: tbd.
+    }
+
+    return baa->getPointeeSet(NULL, v, 0);
+  }
+}
+
+

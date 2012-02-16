@@ -79,12 +79,9 @@ namespace tern {
     /* The function to run the intra-thread slicing. */
     void detectInputDepRaces(uchar tid);
 
-    /* The function to initially take a instruction for path-slicer (for reachability only). */
+    /* The function to initially take a instruction for path-slicer (for reachability and the value of its
+    used operands, do not need to care about its destination operand, even if it exists). */
     void takeStartTarget(DynInstr *dynInstr);
-
-    /* This function could be called by the path-slicer to setup init dyn oprds to live set,
-    depending on different slicing goals (reachability only, or reachability + values of used oprds). */
-    void addDynOprd(DynOprd *dynOprd);
 
     void calStat();
   };

@@ -3,6 +3,7 @@
 using namespace tern;
 char tern::OprdSumm::ID = 0;
 
+#include "common/util.h"
 #include "common/callgraph-fp.h"
 using namespace llvm;
 
@@ -41,28 +42,84 @@ void OprdSumm::clean() {
 }
 
 
-void OprdSumm::initStat(Stat *stat) {
+void OprdSumm::init(Stat *stat, FuncSumm *funcSumm,
+  AliasMgr *aliasMgr, InstrIdMgr *idMgr) {
   this->stat = stat;
-}
-
-void OprdSumm::initFuncSumm(FuncSumm *funcSumm) {
   this->funcSumm = funcSumm;
+  this->aliasMgr = aliasMgr;
+  this->idMgr = idMgr;
 }
 
-llvm::DenseSet<llvm::Instruction *> *OprdSumm::getLoadSummBetween(
+void OprdSumm::printSumm(InstrDenseSet &summ) {
+  InstrDenseSet::iterator itr(summ.begin());
+  for (; itr != summ.end(); ++itr)
+    errs() << stat->printInstr(*itr, "OprdSumm::print");
+}
+
+InstrDenseSet *OprdSumm::getLoadSummBetween(
       DynInstr *prevInstr, DynInstr *postInstr, bdd &bddResults) {
   return NULL;
 }
 
-llvm::DenseSet<llvm::Instruction *> *OprdSumm::getStoreSummBetween(
-      DynInstr *prevInstr, DynInstr *postInstr, bdd &bddResults) {
+InstrDenseSet *OprdSumm::getStoreSummBetween(
+      DynBrInstr *prevBrInstr, DynInstr *postInstr, bdd &bddResults) {
+
+  // Collect static store instructions.
+  visitedBB.clear();
+  InstrDenseSet summ;
+  BasicBlock *x = Util::getBasicBlock(idMgr->getOrigInstr(prevBrInstr));
+  BasicBlock *sink = Util::getBasicBlock(idMgr->getOrigInstr(postInstr));
+  for (succ_iterator it = succ_begin(x); it != succ_end(x); ++it) {
+    BasicBlock *y = *it;
+    if (y == prevBrInstr->getSuccessorBB())   // We can ignore the executed branch.
+      continue;
+    DFSBasicBlock(y, sink, summ, Store);
+  }
+
+  // Get bdd of these store instructions with the calling context.
+  printSumm(summ);
+  bddResults = bddfalse;
+  InstrDenseSet::iterator itr(summ.begin());
+  for (; itr != summ.end(); ++itr) {
+    /* The instructions here are already from either normal or max slicing 
+    module depending on slicing mode, so this is correct. */
+    const Instruction *storeInstr = *itr;
+    bddResults |= aliasMgr->getPointTee(prevBrInstr, storeInstr->getOperand(1));
+  }
   return NULL;
 }
 
-llvm::DenseSet<llvm::Instruction *> *OprdSumm::getStoreSummInFunc(
+InstrDenseSet *OprdSumm::getStoreSummInFunc(
       DynCallInstr *callInstr, bdd &bddResults) {
   return NULL;
 }
+
+void OprdSumm::DFSBasicBlock(BasicBlock *x, BasicBlock *sink,
+  InstrDenseSet &summ, OprdType oprdType) {
+  if (visitedBB.count(x))
+    return;
+  // Stop at the sink -- the post dominator of the branch
+  if (x == sink)
+    return;
+  visitedBB.insert(x);
+
+  // Collect summary based on oprdType.
+  if (oprdType == Load) {
+    InstrDenseSet *loadSet = bbLoadSumm[x];
+    assert(loadSet);
+    summ.insert(loadSet->begin(), loadSet->end());
+  } else {
+    InstrDenseSet *storeSet = bbStoreSumm[x];
+    assert(storeSet);
+    summ.insert(storeSet->begin(), storeSet->end());
+  }
+  
+  for (succ_iterator it = succ_begin(x); it != succ_end(x); ++it) {
+    BasicBlock *y = *it;
+    DFSBasicBlock(y, sink, summ, oprdType);
+  }
+}
+
 
 void OprdSumm::initAllSumm(llvm::Module &M) {
   for (Module::iterator fi = M.begin(); fi != M.end(); ++fi) {

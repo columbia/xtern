@@ -162,8 +162,9 @@ const Cell& KleeTraceUtil::eval(KInstruction *ki, unsigned index,
 void KleeTraceUtil::preProcess(DynInstrVector *trace) {
   // For each path, must clear ctx mgr.
   ctxMgr->clear();
+  size_t traceSize = trace->size();
   
-  for (size_t i = 0; i < trace->size(); i++) {
+  for (size_t i = 0; i < traceSize; i++) {
     DynInstr *dynInstr = trace->at(i);
     Instruction *instr = idMgr->getOrigInstr(dynInstr);
     
@@ -186,8 +187,21 @@ void KleeTraceUtil::preProcess(DynInstrVector *trace) {
       assert(idx != -1);
       ((DynPHIInstr *)dynInstr)->setIncomingIndex((uchar)idx);
     }
+
+    // (3) For each branch instruction, get its successor basic block.
+    if (Util::isBr(instr)) {
+      DynInstr *nextInstr = NULL;
+      for (size_t j = i+1; j < traceSize; j++) {
+        nextInstr = trace->at(j);
+        if (nextInstr->getTid() == dynInstr->getTid())
+          break;
+      }
+      assert(nextInstr);
+      BasicBlock *successor = Util::getBasicBlock(idMgr->getOrigInstr(nextInstr));
+      ((DynBrInstr *)dynInstr)->setSuccessorBB(successor);
+    }
     
-    // (3) For each dynamic ret instruction, setup its dynamic call instruction.
+    // (4) For each dynamic ret instruction, setup its dynamic call instruction.
     if (Util::isRet(instr)) {
       DynRetInstr *ret = (DynRetInstr *)dynInstr;
       DynCallInstr *call = ctxMgr->getCallOfRet(ret);
@@ -197,7 +211,7 @@ void KleeTraceUtil::preProcess(DynInstrVector *trace) {
         ret->setDynCallInstr(call);
     }
     
-    // (4) For each dynamic pthread_create(), setup its child thread id.
+    // (5) For each dynamic pthread_create(), setup its child thread id.
     if (Util::isCall(instr)) {
       DynCallInstr *call = (DynCallInstr *)dynInstr;
       if (Util::isThreadCreate(call))
@@ -206,17 +220,12 @@ void KleeTraceUtil::preProcess(DynInstrVector *trace) {
       a child's tid is the parent's +1. */
     }
 
-    // (5) Update per-tid callstack. This must happen after (3), which calls getCallOfRet().
+    // (6) Update per-tid callstack. This must happen after (3), which calls getCallOfRet().
     if (Util::isCall(instr) || Util::isRet(instr))
       ctxMgr->updateCallStack(dynInstr);
 
-    // Debug print.
-    /*fprintf(stderr, "\n\nINDEX " SZ ", THREAD-ID: %d, INSTR-ID: %d, OP: %s\n",
-      dynInstr->getIndex(), dynInstr->getTid(), dynInstr->getOrigInstrId(),
-      instr->getOpcodeName());
-    ctxMgr->printCallStack(dynInstr);
-    fprintf(stderr, "\n\n");*/
-    //stat->printDynInstr(dynInstr, __func__);
+    if (DBG)
+      stat->printDynInstr(dynInstr, __func__);
   }
 }
 

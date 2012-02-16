@@ -59,6 +59,12 @@ namespace tern {
     /* Get pointee bdd. In max slicing or range analysis mode, it should return the pointee of 
         the max sliced module. */
     bdd getPointTee(DynOprd *dynOprd);
+
+    /* Given the calling context of a dynamic instruction and a static value pointer (not necessary
+    from the given instruction), get the pointee of <ctx, v>. The v must have already been from
+    either normal module or max sliced module, depending on normal or max slicing mode. */
+    bdd getPointTee(DynInstr *ctxOfDynInstr, llvm::Value *v);
+
   };
 }
 

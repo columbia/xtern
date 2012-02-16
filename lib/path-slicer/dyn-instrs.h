@@ -115,6 +115,7 @@ namespace tern {
   private:
     /* These flag only makes sense when the branch is not uni-conditional. */
     klee::ref<klee::Expr> condition;
+    llvm::BasicBlock *successor;
 
   protected:
 
@@ -126,6 +127,8 @@ namespace tern {
     bool isSymbolicBr();
     void setBrCondition(klee::ref<klee::Expr> condition);
     klee::ref<klee::Expr> getBrCondition();
+    void setSuccessorBB(llvm::BasicBlock *successor);
+    llvm::BasicBlock *getSuccessorBB();
   };
 
   class DynCallInstr: public DynInstr {

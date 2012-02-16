@@ -22,11 +22,12 @@
 #define SERRS if(get_option(tern_path_slicer,print_debug_info)==DBG1)errs()
 #define SERRS2 if(get_option(tern_path_slicer,print_debug_info)==DBG2)errs()
 #define DPRINT(args...) if(get_option(tern,slicer_print_debug_info)==1)fprintf(stderr, args)
-#define DBG (get_option(tern_path_slicer,print_debug_info))
+#define DBG (get_option(tern_path_slicer,print_debug_info)!=0)
 
 #define BAN "\n\n\n\n====================================================================================================\n\n\n\n"
 #define EXPR_BEGIN "\n\n----------TERN EXPR BEGIN----------\n";
 #define EXPR_END "\n\n----------TERN EXPR END----------\n";
+#define LLVM_CHECK_TAG "// CHECK: "
 
 #define GETTIME(clock) gettimeofday(&clock,NULL)
 #define ADDTIME(num, clock_st, clock_end) \
