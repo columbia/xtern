@@ -28,10 +28,24 @@ void __attribute((weak)) InstallRuntime() {
 extern "C" {
 #endif
 
+/*
+    This idle thread is created to avoid empty runq.
+    In the implementation with semaphore, there's a global token that must be 
+    held by some threads. In the case that all threads are executing blocking
+    function calls, the global token can be held by nothing. So we create this
+    idle thread to ensure there's at least one thread in the runq to hold the 
+    global token.
+
+    Another solution is to add a flag in schedule showing if it happens that 
+    runq is empty and the global token is held by no one. And recover the global
+    token when some thread comes back to runq from blocking function call. 
+ */
 void *idle_thread(void *)
 {
+  //tern_thread_begin();
   while (true)
-    sleep(1);
+    tern_sleep(0xdeadbeef, 1);
+  //tern_thread_end(-1);
 }
 
 static bool prog_began = false; // sanity
@@ -61,11 +75,11 @@ void tern_thread_begin(void) {
 
   if (first_thread)
   {
+    first_thread = false;
     Space::exitSys();
     pthread_t pt;
-    pthread_create(&pt, NULL, idle_thread, NULL);
+    tern_pthread_create(0xdeadceae, &pt, NULL, idle_thread, NULL);
     Space::enterSys();
-    first_thread = false;
   }
 
   Space::exitSys();
