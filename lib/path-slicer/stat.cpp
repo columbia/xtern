@@ -50,14 +50,13 @@ void Stat::printDynInstr(DynInstr *dynInstr, const char *tag) {
   //fprintf(stderr, "Stat::printDynInstr %p, tid %u\n", (void *)dynInstr, 
     //(unsigned)dynInstr->getTid());
   Instruction *instr = idMgr->getOrigInstr(dynInstr);
-  errs() << "\n" << LLVM_CHECK_TAG
-    << "DynInstr {" << tag
-    << "} IDX: " << dynInstr->getIndex()
+  errs() << tag
+    << ": IDX: " << dynInstr->getIndex()
     << ": TID: " << (int)dynInstr->getTid()
     << ": INSTRID: " << dynInstr->getOrigInstrId()
     << ": TAKEN: " << dynInstr->takenReason()
     << ": INSTR: " << printInstr(instr, "")
-    << "\n";
+    << "\n\n";
 
   // Print the condition if this is a symbolic branch.
   if (Util::isBr(instr) && !Util::isUniCondBr(instr)) {

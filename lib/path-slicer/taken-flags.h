@@ -40,7 +40,10 @@ extern const char *takenReasons[NUM_TAKEN_FLAGS];
 // TBD
 
 /* Reasons of taken by handling branch instructions. */
-#define INTRA_BR 110
+//#define INTRA_BR 110
+#define INTRA_BR_N_POSTDOM 111
+#define INTRA_BR_EVENT_BETWEEN 112
+#define INTRA_BR_WR_BETWEEN 113
 // TBD
 
 /* Reasons of taken by handling return instructions. */

@@ -174,8 +174,12 @@ void IntraSlicer::handleBranch(DynInstr *dynInstr) {
     bool reason3 = writtenBetween(brInstr, head);
     SERRS << "IntraSlicer::handleBranch reason1 " << reason1
       << ", reason2 " << reason2 << ", reason3 " << reason3 << ".\n";
-    if (reason1 || reason2 || reason3)
-      takeNonMem(brInstr);
+    if (reason1)
+      takeNonMem(brInstr, INTRA_BR_N_POSTDOM);
+    else if (reason2)
+      takeNonMem(brInstr, INTRA_BR_EVENT_BETWEEN);
+    else if (reason3)
+      takeNonMem(brInstr, INTRA_BR_WR_BETWEEN);
    }
 }
 
@@ -342,6 +346,8 @@ void IntraSlicer::takeStartTarget(DynInstr *dynInstr) {
 }
 
 void IntraSlicer::calStat() {
+  std::string checkTag = LLVM_CHECK_TAG;
+  checkTag += "IntraSlicer::calStat TAKEN";
   size_t numExedInstrs = trace->size();
   size_t numTakenInstrs = slice.size();
   size_t numExedBrs = 0;
@@ -374,7 +380,7 @@ void IntraSlicer::calStat() {
         }
       }
       
-      stat->printDynInstr(dynInstr, "IntraSlicer::calStat TAKEN");
+      stat->printDynInstr(dynInstr, checkTag.c_str());
     }
   }
 

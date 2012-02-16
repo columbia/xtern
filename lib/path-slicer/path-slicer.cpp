@@ -75,7 +75,9 @@ void initTakenReasons() {
   takenReasons[INTRA_PHI] = "INTRA_PHI";
   takenReasons[INTRA_PHI_BR_CTRL_DEP] = "INTRA_PHI_BR_CTRL_DEP";
 
-  takenReasons[INTRA_BR] = "INTRA_BR";
+  takenReasons[INTRA_BR_N_POSTDOM] = "INTRA_BR_N_POSTDOM";
+  takenReasons[INTRA_BR_EVENT_BETWEEN] = "INTRA_BR_EVENT_BETWEEN";
+  takenReasons[INTRA_BR_WR_BETWEEN] = "INTRA_BR_WR_BETWEEN";
 
   takenReasons[INTRA_RET_REG_OW] = "INTRA_RET_REG_OW";
   takenReasons[INTRA_RET_CALL_EVENT] = "INTRA_RET_CALL_EVENT";
