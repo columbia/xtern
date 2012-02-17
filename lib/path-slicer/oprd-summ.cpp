@@ -50,10 +50,10 @@ void OprdSumm::init(Stat *stat, FuncSumm *funcSumm,
   this->idMgr = idMgr;
 }
 
-void OprdSumm::printSumm(InstrDenseSet &summ) {
+void OprdSumm::printSumm(InstrDenseSet &summ, const char *tag) {
   InstrDenseSet::iterator itr(summ.begin());
   for (; itr != summ.end(); ++itr)
-    errs() << stat->printInstr(*itr, "OprdSumm::print");
+    errs() << stat->printInstr(*itr, tag);
 }
 
 InstrDenseSet *OprdSumm::getLoadSummBetween(
@@ -77,7 +77,7 @@ InstrDenseSet *OprdSumm::getStoreSummBetween(
   }
 
   // Get bdd of these store instructions with the calling context.
-  printSumm(summ);
+  printSumm(summ, "OprdSumm::getStoreSummBetween");
   bddResults = bddfalse;
   InstrDenseSet::iterator itr(summ.begin());
   for (; itr != summ.end(); ++itr) {
@@ -90,7 +90,24 @@ InstrDenseSet *OprdSumm::getStoreSummBetween(
 }
 
 InstrDenseSet *OprdSumm::getStoreSummInFunc(
-      DynCallInstr *callInstr, bdd &bddResults) {
+      DynRetInstr *retInstr, bdd &bddResults) {
+  DynCallInstr *callInstr = retInstr->getDynCallInstr();
+  Function *calledFunc = callInstr->getCalledFunc();
+  assert(calledFunc);
+  visitedBB.clear();
+  InstrDenseSet *summ = funcStoreSumm[calledFunc];
+  assert(summ);
+
+  // Get bdd of these store instructions with the calling context (of the dynamic return instruction).
+  printSumm(*summ, "OprdSumm::getStoreSummInFunc");
+  bddResults = bddfalse;
+  InstrDenseSet::iterator itr(summ->begin());
+  for (; itr != summ->end(); ++itr) {
+    /* The instructions here are already from either normal or max slicing 
+    module depending on slicing mode, so this is correct. */
+    const Instruction *storeInstr = *itr;
+    bddResults |= aliasMgr->getPointTee(retInstr, storeInstr->getOperand(1));
+  }
   return NULL;
 }
 

@@ -130,11 +130,8 @@ bool IntraSlicer::writtenBetween(DynBrInstr *dynBrInstr, DynInstr *dynPostInstr)
 }
 
 bool IntraSlicer::mayWriteFunc(DynRetInstr *dynRetInstr) {
-  DynCallInstr *dynCallInstr = dynRetInstr->getDynCallInstr();
-  if (!dynCallInstr)
-    return false;
   bdd bddOfCall = bddfalse;
-  oprdSumm->getStoreSummInFunc(dynCallInstr, bddOfCall);
+  oprdSumm->getStoreSummInFunc(dynRetInstr, bddOfCall);
   const bdd bddOfLive = live.getAllLoadMem();
   return (bddOfCall & bddOfLive) != bddfalse;
 }
@@ -314,21 +311,11 @@ bool IntraSlicer::postDominate(DynInstr *dynPostInstr, DynInstr *dynPrevInstr) {
 }
 
 void IntraSlicer::removeRange(DynRetInstr *dynRetInstr) {
-  size_t callIndex = 0;
   DynCallInstr *call = dynRetInstr->getDynCallInstr();
-  if (call)
-    callIndex = call->getIndex();
-  while (curIndex != callIndex) {
-    // DEBUG.
-    if (trace->at(curIndex)->isTaken()) {
-      stat->printDynInstr(dynRetInstr, "IntraSlicer::removeRange");
-      calStat();
-      assert(false);
-    }
-    curIndex--;
-  }
-  assert(!trace->at(curIndex)->isTaken());
-  curIndex--;
+  assert(call);
+  /* Directly sets the current slicing index to be the previous one of the call instr. */
+  curIndex = call->getIndex() - 1;
+  assert(!empty()); 
 }
 
 void IntraSlicer::addMemAddrEqConstr(DynMemInstr *loadInstr,

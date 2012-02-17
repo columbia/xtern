@@ -85,7 +85,7 @@ namespace tern {
     void DFSBasicBlock(llvm::BasicBlock *x, llvm::BasicBlock *sink,
       InstrDenseSet &summ, OprdType oprdType);
 
-    void printSumm(InstrDenseSet &summ);
+    void printSumm(InstrDenseSet &summ, const char *tag);
 
   public:
     OprdSumm();
@@ -102,16 +102,14 @@ namespace tern {
 
     /* Given a prev dynamic instruction and its post dominator (another dynamic instruction),
     calculate all reachable store instructions and their bdd. The store instructions are those in 
-    corespoing module (normal, mx, or sim).
-    Currently we go over all successors. But we could only go over the not executed 
-    successor, I think. */
+     corespoing module (normal, mx, or sim). We only go over the not-executed successor. */
     InstrDenseSet *getStoreSummBetween(DynBrInstr *prevInstr,
       DynInstr *postInstr, bdd &bddResults);
 
-    /* Given a dynamic call instruction, calculate all reachable store instructions within the
-    function and their bdd. The store instructions are those in corespoing module 
+    /* Given a dynamic return instruction, calculate all reachable store instructions within the
+    called function and their bdd. The store instructions are those in corespoing module 
     (normal, mx, or sim).*/
-    InstrDenseSet *getStoreSummInFunc(DynCallInstr *callInstr, bdd &bddResults);
+    InstrDenseSet *getStoreSummInFunc(DynRetInstr *retInstr, bdd &bddResults);
   };
 }
 
