@@ -1470,9 +1470,18 @@ int RecorderRT<_S>::__accept(unsigned ins, int sockfd, struct sockaddr *cliaddr,
 template <typename _S>
 int RecorderRT<_S>::__accept4(unsigned ins, int sockfd, struct sockaddr *cliaddr, socklen_t *addrlen, int flags)
 {
+  timespec app_time = update_time();
   _S::block();
+  timespec sched_block_time = update_time();
   int ret = Runtime::__accept4(ins, sockfd, cliaddr, addrlen, flags);
+  timespec syscall_time = update_time();
   _S::wakeup();
+  timespec sched_wakeup_time = update_time();
+  timespec sched_time = {
+    sched_wakeup_time.tv_sec + sched_block_time.tv_sec, 
+    sched_wakeup_time.tv_nsec + sched_block_time.tv_nsec
+    };
+  Logger::the->logSync(ins, syncfunc::accept4, _S::getTurnCount(), app_time, syscall_time, sched_time);
   return ret;
 }
 

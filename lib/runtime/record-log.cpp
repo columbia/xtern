@@ -97,6 +97,7 @@ void TxtLogger::logSync(unsigned insid, unsigned short sync,
   switch(sync) {
     // log nothing, mostly for sched point. 
   case syncfunc::accept:
+  case syncfunc::accept4:
   case syncfunc::connect:
   case syncfunc::recv:
   case syncfunc::recvfrom:
