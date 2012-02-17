@@ -1459,6 +1459,15 @@ int RecorderRT<_S>::__accept(unsigned ins, int sockfd, struct sockaddr *cliaddr,
 }
 
 template <typename _S>
+int RecorderRT<_S>::__accept4(unsigned ins, int sockfd, struct sockaddr *cliaddr, socklen_t *addrlen, int flags)
+{
+  _S::block();
+  int ret = Runtime::__accept4(ins, sockfd, cliaddr, addrlen, flags);
+  _S::wakeup();
+  return ret;
+}
+
+template <typename _S>
 int RecorderRT<_S>::__connect(unsigned ins, int sockfd, const struct sockaddr *serv_addr, socklen_t addrlen)
 {
   _S::block();

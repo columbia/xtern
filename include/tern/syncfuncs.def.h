@@ -43,6 +43,7 @@ DEF(sem_timedwait,          Synchronization, int, sem_t *sem, const struct times
 DEF(socket, Synchronization, int, int domain, int type, int protocol)
 DEF(listen, Synchronization, int, int sockfd, int backlog)
 DEF(accept, Synchronization, int, int sockfd, struct sockaddr *cliaddr, socklen_t *addrlen)
+DEF(accept4, Synchronization, int, int sockfd, struct sockaddr *cliaddr, socklen_t *addrlen, int flags)
 DEF(connect, Synchronization, int, int sockfd, const struct sockaddr *serv_addr, socklen_t addrlen)
 //DEF(gethostbyname, Synchronization, struct hostent*, const char *name)
 //DEF(gethostbyaddr, Synchronization, struct hostent*, const void *addr, int len, int type)

@@ -163,6 +163,18 @@ ENDDEF
 
 STARTDEF
 int
+accept4
+/lib/x86_64-linux-gnu/libc.so.6
+int , struct sockaddr *, socklen_t *, int
+SECTION
+int sockfd, struct sockaddr *addr, socklen_t *addrlen, int flags
+SECTION
+sockfd, addr, addrlen, flags
+SECTION
+ENDDEF
+
+STARTDEF
+int
 listen
 /lib/x86_64-linux-gnu/libc.so.6
 int, int

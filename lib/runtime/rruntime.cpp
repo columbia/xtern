@@ -488,6 +488,14 @@ int RRuntime::__accept(unsigned ins, int sockfd, struct sockaddr *cliaddr, sockl
   return ret;
 }
 
+int RRuntime::__accept4(unsigned ins, int sockfd, struct sockaddr *cliaddr, socklen_t *addrlen, int flags)
+{
+  block();
+  int ret = Runtime::__accept4(ins, sockfd, cliaddr, addrlen, flags);
+  wakeup();
+  return ret;
+}
+
 int RRuntime::__connect(unsigned ins, int sockfd, const struct sockaddr *serv_addr, socklen_t addrlen)
 {
   block();

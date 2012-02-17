@@ -65,6 +65,7 @@ struct RecorderRT: public Runtime, public _Scheduler {
   int __socket(unsigned ins, int domain, int type, int protocol);
   int __listen(unsigned ins, int sockfd, int backlog);
   int __accept(unsigned ins, int sockfd, struct sockaddr *cliaddr, socklen_t *addrlen);
+  int __accept4(unsigned ins, int sockfd, struct sockaddr *cliaddr, socklen_t *addrlen, int flags);
   int __connect(unsigned ins, int sockfd, const struct sockaddr *serv_addr, socklen_t addrlen);
   //struct hostent *__gethostbyname(unsigned ins, const char *name);
   //struct hostent *__gethostbyaddr(unsigned ins, const void *addr, int len, int type);
@@ -164,6 +165,7 @@ struct RRuntime: public Runtime {
   int __socket(unsigned ins, int domain, int type, int protocol);
   int __listen(unsigned ins, int sockfd, int backlog);
   int __accept(unsigned ins, int sockfd, struct sockaddr *cliaddr, socklen_t *addrlen);
+  int __accept4(unsigned ins, int sockfd, struct sockaddr *cliaddr, socklen_t *addrlen, int flags);
   int __connect(unsigned ins, int sockfd, const struct sockaddr *serv_addr, socklen_t addrlen);
   //struct hostent *__gethostbyname(unsigned ins, const char *name);
   //struct hostent *__gethostbyaddr(unsigned ins, const void *addr, int len, int type);

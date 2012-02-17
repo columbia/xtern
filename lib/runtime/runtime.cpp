@@ -297,6 +297,15 @@ int tern_accept(unsigned ins, int sockfd, struct sockaddr *cliaddr, socklen_t *a
   return ret;
 }
 
+int tern_accept4(unsigned ins, int sockfd, struct sockaddr *cliaddr, socklen_t *addrlen, int flags)
+{
+  int ret;
+  Space::enterSys();
+  ret = Runtime::the->__accept4(ins, sockfd, cliaddr, addrlen, flags);
+  Space::exitSys();
+  return ret;
+}
+
 int tern_connect(unsigned ins, int sockfd, const struct sockaddr *serv_addr, socklen_t addrlen)
 {
   int ret;
@@ -582,6 +591,11 @@ int Runtime::__listen(unsigned ins, int sockfd, int backlog)
 int Runtime::__accept(unsigned ins, int sockfd, struct sockaddr *cliaddr, socklen_t *addrlen)
 {
   return accept(sockfd, cliaddr, addrlen);
+}
+
+int Runtime::__accept4(unsigned ins, int sockfd, struct sockaddr *cliaddr, socklen_t *addrlen, int flags)
+{
+  return accept4(sockfd, cliaddr, addrlen, flags);
 }
 
 int Runtime::__connect(unsigned ins, int sockfd, const struct sockaddr *serv_addr, socklen_t addrlen)

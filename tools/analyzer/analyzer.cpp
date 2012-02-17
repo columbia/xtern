@@ -576,7 +576,7 @@ void analyze_time(vector<op_t> &ops)
 {
 
   map<unsigned, timerec> res; 
-  for (int i = 0; i < ops.size(); ++i)
+  for (unsigned int i = 0; i < ops.size(); ++i)
   {
     op_t &op = ops[i];
     unsigned insid = op.rec.insid; 
@@ -620,7 +620,7 @@ void analyze_time(vector<op_t> &ops)
 #define defprint(x) \
     printf(" %09lld", rec.sum_##x / rec.count); \
     avg = rec.sum_##x * double(1.0) / rec.count;\
-    printf(" %016.04lf", sqrt(rec.sum_sqr_##x - 2 * avg * rec.sum_##x + rec.count * avg * avg));
+    printf(" %016.04f", sqrt(rec.sum_sqr_##x - 2 * avg * rec.sum_##x + rec.count * avg * avg));
     defprint(apt);
     defprint(syt);
     defprint(sct);

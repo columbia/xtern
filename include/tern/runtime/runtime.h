@@ -116,6 +116,7 @@ struct Runtime {
   virtual int __socket(unsigned ins, int domain, int type, int protocol);
   virtual int __listen(unsigned ins, int sockfd, int backlog);
   virtual int __accept(unsigned ins, int sockfd, struct sockaddr *cliaddr, socklen_t *addrlen);
+  virtual int __accept4(unsigned ins, int sockfd, struct sockaddr *cliaddr, socklen_t *addrlen, int flags);
   virtual int __connect(unsigned ins, int sockfd, const struct sockaddr *serv_addr, socklen_t addrlen);
   //virtual struct hostent *__gethostbyname(unsigned ins, const char *name);
   //virtual struct hostent *__gethostbyaddr(unsigned ins, const void *addr, int len, int type);
