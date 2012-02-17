@@ -1448,26 +1448,46 @@ int RecorderRT<_S>::__listen(unsigned ins, int sockfd, int backlog)
 template <typename _S>
 int RecorderRT<_S>::__accept(unsigned ins, int sockfd, struct sockaddr *cliaddr, socklen_t *addrlen)
 {
+  timespec app_time = update_time();
   _S::block();
+  timespec sched_block_time = update_time();
   int ret = Runtime::__accept(ins, sockfd, cliaddr, addrlen);
   //output() << "accept_wakeup";
   //output() << ' ' << _S::turnCount;
   //output() << ' ' << (int) _S::self();
   //output() << endl;
+  timespec syscall_time = update_time();
   _S::wakeup();
+  timespec sched_wakeup_time = update_time();
+  timespec sched_time = {
+    sched_wakeup_time.tv_sec + sched_block_time.tv_sec, 
+    sched_wakeup_time.tv_nsec + sched_block_time.tv_nsec
+    };
+  Logger::the->logSync(ins, syncfunc::accept, _S::getTurnCount(), app_time, syscall_time, sched_time);
   return ret;
 }
 
 template <typename _S>
 int RecorderRT<_S>::__connect(unsigned ins, int sockfd, const struct sockaddr *serv_addr, socklen_t addrlen)
 {
+  //_S::block();
+  timespec app_time = update_time();
   _S::block();
+  timespec sched_block_time = update_time();
   int ret = Runtime::__connect(ins, sockfd, serv_addr, addrlen);
   //output() << "connect_wakeup";
   //output() << ' ' << _S::turnCount;
   //output() << ' ' << (int) _S::self();
   //output() << endl;
+  //_S::wakeup();
+  timespec syscall_time = update_time();
   _S::wakeup();
+  timespec sched_wakeup_time = update_time();
+  timespec sched_time = {
+    sched_wakeup_time.tv_sec + sched_block_time.tv_sec, 
+    sched_wakeup_time.tv_nsec + sched_block_time.tv_nsec
+    };
+  Logger::the->logSync(ins, syncfunc::connect, _S::getTurnCount(), app_time, syscall_time, sched_time);
   return ret;
 }
 
@@ -1506,7 +1526,10 @@ ssize_t RecorderRT<_S>::__sendmsg(unsigned ins, int sockfd, const struct msghdr 
 template <typename _S>
 ssize_t RecorderRT<_S>::__recv(unsigned ins, int sockfd, void *buf, size_t len, int flags)
 {
+  //_S::block();
+  timespec app_time = update_time();
   _S::block();
+  timespec sched_block_time = update_time();
 
   ssize_t ret = Runtime::__recv(ins, sockfd, buf, len, flags);
 
@@ -1514,33 +1537,63 @@ ssize_t RecorderRT<_S>::__recv(unsigned ins, int sockfd, void *buf, size_t len, 
   //output() << ' ' << _S::turnCount;
   //output() << ' ' << (int) _S::self();
   //output() << endl;
+  //_S::wakeup();
+  timespec syscall_time = update_time();
   _S::wakeup();
+  timespec sched_wakeup_time = update_time();
+  timespec sched_time = {
+    sched_wakeup_time.tv_sec + sched_block_time.tv_sec, 
+    sched_wakeup_time.tv_nsec + sched_block_time.tv_nsec
+    };
+  Logger::the->logSync(ins, syncfunc::recv, _S::getTurnCount(), app_time, syscall_time, sched_time);
   return ret;
 }
 
 template <typename _S>
 ssize_t RecorderRT<_S>::__recvfrom(unsigned ins, int sockfd, void *buf, size_t len, int flags, struct sockaddr *src_addr, socklen_t *addrlen)
 {
+  //_S::block();
+  timespec app_time = update_time();
   _S::block();
+  timespec sched_block_time = update_time();
   ssize_t ret = Runtime::__recvfrom(ins, sockfd, buf, len, flags, src_addr, addrlen);
   //output() << "recvfrom_wakeup";
   //output() << ' ' << _S::turnCount;
   //output() << ' ' << (int) _S::self();
   //output() << endl;
+  //_S::wakeup();
+  timespec syscall_time = update_time();
   _S::wakeup();
+  timespec sched_wakeup_time = update_time();
+  timespec sched_time = {
+    sched_wakeup_time.tv_sec + sched_block_time.tv_sec, 
+    sched_wakeup_time.tv_nsec + sched_block_time.tv_nsec
+    };
+  Logger::the->logSync(ins, syncfunc::recvfrom, _S::getTurnCount(), app_time, syscall_time, sched_time);
   return ret;
 }
 
 template <typename _S>
 ssize_t RecorderRT<_S>::__recvmsg(unsigned ins, int sockfd, struct msghdr *msg, int flags)
 {
+  //_S::block();
+  timespec app_time = update_time();
   _S::block();
+  timespec sched_block_time = update_time();
   ssize_t ret = Runtime::__recvmsg(ins, sockfd, msg, flags);
   //output() << "recvmsg_wakeup";
   //output() << ' ' << _S::turnCount;
   //output() << ' ' << (int) _S::self();
   //output() << endl;
+  //_S::wakeup();
+  timespec syscall_time = update_time();
   _S::wakeup();
+  timespec sched_wakeup_time = update_time();
+  timespec sched_time = {
+    sched_wakeup_time.tv_sec + sched_block_time.tv_sec, 
+    sched_wakeup_time.tv_nsec + sched_block_time.tv_nsec
+    };
+  Logger::the->logSync(ins, syncfunc::recvmsg, _S::getTurnCount(), app_time, syscall_time, sched_time);
   return ret;
 }
 
@@ -1577,13 +1630,24 @@ int RecorderRT<_S>::__close(unsigned ins, int fd)
 template <typename _S>
 ssize_t RecorderRT<_S>::__read(unsigned ins, int fd, void *buf, size_t count)
 {
+  //_S::block();
+  timespec app_time = update_time();
   _S::block();
+  timespec sched_block_time = update_time();
   ssize_t ret = Runtime::__read(ins, fd, buf, count);
   //output() << "read_wakeup";
   //output() << ' ' << _S::turnCount;
   //output() << ' ' << (int) _S::self();
   //output() << endl;
+  //_S::wakeup();
+  timespec syscall_time = update_time();
   _S::wakeup();
+  timespec sched_wakeup_time = update_time();
+  timespec sched_time = {
+    sched_wakeup_time.tv_sec + sched_block_time.tv_sec, 
+    sched_wakeup_time.tv_nsec + sched_block_time.tv_nsec
+    };
+  Logger::the->logSync(ins, syncfunc::read, _S::getTurnCount(), app_time, syscall_time, sched_time);
   return ret;
 }
 
@@ -1596,31 +1660,64 @@ ssize_t RecorderRT<_S>::__write(unsigned ins, int fd, const void *buf, size_t co
 template <typename _S>
 int RecorderRT<_S>::__select(unsigned ins, int nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds, struct timeval *timeout)
 {
+  //_S::block();
+  timespec app_time = update_time();
   _S::block();
+  timespec sched_block_time = update_time();
   int ret = Runtime::__select(ins, nfds, readfds, writefds, exceptfds, timeout);
   //output() << "select_wakeup";
   //output() << ' ' << _S::turnCount;
   //output() << ' ' << (int) _S::self();
   //output() << endl;
+  //_S::wakeup();
+  timespec syscall_time = update_time();
   _S::wakeup();
+  timespec sched_wakeup_time = update_time();
+  timespec sched_time = {
+    sched_wakeup_time.tv_sec + sched_block_time.tv_sec, 
+    sched_wakeup_time.tv_nsec + sched_block_time.tv_nsec
+    };
+  Logger::the->logSync(ins, syncfunc::select, _S::getTurnCount(), app_time, syscall_time, sched_time);
   return ret;
 }
 
 template <typename _S>
 int RecorderRT<_S>::__epoll_wait(unsigned ins, int epfd, struct epoll_event *events, int maxevents, int timeout)
 {
+  //_S::block();
+  timespec app_time = update_time();
   _S::block();
+  timespec sched_block_time = update_time();
   int ret = epoll_wait(epfd, events, maxevents, timeout);
+  //_S::wakeup();
+  timespec syscall_time = update_time();
   _S::wakeup();
+  timespec sched_wakeup_time = update_time();
+  timespec sched_time = {
+    sched_wakeup_time.tv_sec + sched_block_time.tv_sec, 
+    sched_wakeup_time.tv_nsec + sched_block_time.tv_nsec
+    };
+  Logger::the->logSync(ins, syncfunc::epoll_wait, _S::getTurnCount(), app_time, syscall_time, sched_time);
   return ret;
 }
 
 template <typename _S>
 int RecorderRT<_S>::__sigwait(unsigned ins, const sigset_t *set, int *sig)
 {
+  //_S::block();
+  timespec app_time = update_time();
   _S::block();
+  timespec sched_block_time = update_time();
   int ret = sigwait(set, sig);
+  //_S::wakeup();
+  timespec syscall_time = update_time();
   _S::wakeup();
+  timespec sched_wakeup_time = update_time();
+  timespec sched_time = {
+    sched_wakeup_time.tv_sec + sched_block_time.tv_sec, 
+    sched_wakeup_time.tv_nsec + sched_block_time.tv_nsec
+    };
+  Logger::the->logSync(ins, syncfunc::sigwait, _S::getTurnCount(), app_time, syscall_time, sched_time);
   return ret;
 }
 

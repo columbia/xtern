@@ -8,4 +8,5 @@ do
   make $2
   mv out out_$i
   i=`expr $i + 1`
+  sleep 1
 done

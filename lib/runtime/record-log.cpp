@@ -95,6 +95,17 @@ void TxtLogger::logSync(unsigned insid, unsigned short sync,
   va_start(args, after);
 
   switch(sync) {
+    // log nothing, mostly for sched point. 
+  case syncfunc::accept:
+  case syncfunc::connect:
+  case syncfunc::recv:
+  case syncfunc::recvfrom:
+  case syncfunc::recvmsg:
+  case syncfunc::read:
+  case syncfunc::select:
+  case syncfunc::epoll_wait:
+  case syncfunc::sigwait:
+    break;
     // log one sync var (common case)
   case syncfunc::pthread_mutex_lock:
   case syncfunc::pthread_mutex_unlock:
