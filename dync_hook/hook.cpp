@@ -120,6 +120,7 @@ void *get_eip()
 #define __SPEC_HOOK_recv
 #define __SPEC_HOOK_connect
 #define __SPEC_HOOK_accept
+#define __SPEC_HOOK_accept4
 #define __SPEC_HOOK_read
 #define __SPEC_HOOK_write
 #define __SPEC_HOOK_sigwait
