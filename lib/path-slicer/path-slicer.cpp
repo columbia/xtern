@@ -60,8 +60,8 @@ void initTakenReasons() {
 
   takenReasons[START_TARGET] = "START_TARGET";
   takenReasons[TAKEN_EVENT] = "TAKEN_EVENT";
-  takenReasons[TAKEN_RACE] = "TAKEN_RACE";
 
+  takenReasons[INTER_RACE] = "INTER_RACE";
   takenReasons[INTER_INSTR2] = "INTER_INSTR2";
   takenReasons[INTER_LOAD_TGT] = "INTER_LOAD_TGT";
   takenReasons[INTER_STORE_TGT] = "INTER_STORE_TGT";
@@ -69,6 +69,8 @@ void initTakenReasons() {
   takenReasons[INTER_BR_INSTR] = "INTER_BR_INSTR";
 
   takenReasons[INTER_BR_BR] = "INTER_BR_BR";
+
+  takenReasons[CHECKER_TARET] = "CHECKER_TARET";
 
   takenReasons[INTRA_ALLOCA] = "INTRA_ALLOCA";
 
@@ -164,7 +166,7 @@ void PathSlicer::init(llvm::Module &M) {
   idMgr.initModules(origModule, mxModule, simModule, LmTrace.c_str());
 
   /* Init call stack manager. */
-  ctxMgr.init(&stat, &idMgr, &funcSumm);
+  ctxMgr.init(&stat, &idMgr, &funcSumm, &chkMgr);
 
   /* Init CFG manager. */
   cfgMgr.initStat(&stat);
@@ -240,17 +242,24 @@ void PathSlicer::runPathSlicer(void *pathId, set<BranchInst *> &brInstrs) {
     uchar tid = 0;
 
     // (2) Init slicing start index (target instruction).
-    size_t startIndex = trace->size();
-    assert(startIndex > 0);
-    startIndex--;
-
+    size_t startIndex;
+    if (chkMgr.hasTarget())    // Do slicing if there is target..
+      startIndex = chkMgr.getLargestCheckerIdx();
+    else if (INTRA_SLICING_FOR_TEST) {  // Else if it is testing scenario, do slicing on the last instruction.
+      startIndex = trace->size();
+      assert(startIndex > 0);
+      startIndex--;
+    } else    // Don't do any slicing if there is no targets.
+      break;
+    
     /* (3) Init slicing sub modules. This function will also clean live set and 
       slice set in the intra-thread slicer. */
     intraSlicer.init((ExecutionState *)pathId, &oprdSumm, &funcSumm,
       &aliasMgr, &idMgr, &cfgMgr, &stat, trace, startIndex);
 
     // (4) Take target instruction, and add dyn oprds of the instruction, depending on slicing goals.
-    intraSlicer.takeStartTarget(trace->at(startIndex));
+    if (!chkMgr.hasTarget() && INTRA_SLICING_FOR_TEST)
+      intraSlicer.takeStartTarget(trace->at(startIndex));
 
     // (5) Do intra-thread slicing.
     intraSlicer.detectInputDepRaces(tid);
@@ -291,4 +300,18 @@ void PathSlicer::copyTrace(void *newPathId, void *curPathId) {
   DynInstrVector *curTrace = allPathTraces[curPathId];
   newTrace->insert(newTrace->begin(), curTrace->begin(), curTrace->end());
 }
+
+void PathSlicer::recordCheckerResult(void *pathId, Checker::Result globalResult,
+  Checker::Result localResult) {
+  if (globalResult == Checker::OK && localResult == Checker::OK)
+    return; 
+
+  DynInstrVector *trace = allPathTraces[pathId];
+  assert(trace);
+  assert(trace->size() > 0);
+  DynInstr *dynInstr = trace->back();
+  chkMgr.markCheckerTarget(dynInstr);
+  stat.printDynInstr(dynInstr, "PathSlicer::recordCheckerResult Checker::IMPORTANT");
+}
+
 

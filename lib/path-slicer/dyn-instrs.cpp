@@ -66,12 +66,26 @@ bool DynInstr::isTaken() {
   return takenFlag != NOT_TAKEN;
 }
 
+uchar DynInstr::getTakenFlag() {
+  return takenFlag;
+}
+
 const char *DynInstr::takenReason() {
   return takenReasons[takenFlag];
 }
 
+bool DynInstr::isInterThreadTarget() {
+  return isTaken() &&
+    takenFlag >= INTER_PHASE_BASE && takenFlag < INTER_PHASE_MAX;
+}
+
+bool DynInstr::isCheckerTarget() {
+  return isTaken() && 
+    takenFlag >= CHECKER_TARGET_BASE && takenFlag < CHECKER_TARGET_MAX;
+}
+
 bool DynInstr::isTarget() {
-  return isTaken() && takenFlag < INTRA_PHASE_BASE;
+  return isTaken() && takenFlag < TARGET_MAX;
 }
 
 DynPHIInstr::DynPHIInstr() {
@@ -137,6 +151,7 @@ DynCallInstr *DynRetInstr::getDynCallInstr() {
 
 DynCallInstr::DynCallInstr() {
   calledFunc = NULL;
+  containTarget = false;
 }
 
 DynCallInstr::~DynCallInstr() {
@@ -149,6 +164,15 @@ void DynCallInstr::setCalledFunc(llvm::Function *f) {
 
 llvm::Function *DynCallInstr::getCalledFunc() {
   return calledFunc;
+}
+
+void DynCallInstr::setContainTarget(bool containTarget) {
+  assert(containTarget);
+  this->containTarget = containTarget;
+}
+
+bool DynCallInstr::getContainTarget() {
+  return containTarget;
 }
 
 DynSpawnThreadInstr::DynSpawnThreadInstr() {

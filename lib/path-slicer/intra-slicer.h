@@ -52,6 +52,9 @@ namespace tern {
     bool empty();
     DynInstr *delTraceTail(uchar tid);
 
+    /* If the checkers from KLEE mark an instruction as IMPORTANT, we handle this in this function. */
+    void handleCheckerTarget(DynInstr *dynInstr);
+
     void takeNonMem(DynInstr *dynInstr, uchar reason = INTRA_NON_MEM);
     void delRegOverWritten(DynInstr *dynInstr);
     bool regOverWritten(DynInstr *dynInstr);

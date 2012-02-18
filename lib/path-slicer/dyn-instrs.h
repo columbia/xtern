@@ -92,9 +92,17 @@ namespace tern {
     bool isTaken();
 
     /* TBD */
+    uchar getTakenFlag();
+
+    /* TBD */
     const char *takenReason();
 
-    /* Whether an instruction is a slicing target already, currently it is the same as taken. */
+    /* Whether an instruction is a inter-thread phase slicing target. */
+    bool isInterThreadTarget();
+
+    /* Whether an instruction is marked as IMPORTANT returned from the checker. */
+    bool isCheckerTarget();
+
     bool isTarget();
   };
 
@@ -139,11 +147,17 @@ namespace tern {
     in function pointers. Need to add constraint assertion to fix this called one. */
     llvm::Function *calledFunc;
 
+    /* Mark whether a function call contains any target instruction (e.g., inter-thread target or checker target).
+    The bool type can be replaced as a set of dyninstr * which are targets. */
+    bool containTarget;   
+
   public:
     DynCallInstr();
     ~DynCallInstr();
     void setCalledFunc(llvm::Function *f);
-    llvm::Function *getCalledFunc();    
+    llvm::Function *getCalledFunc();
+    void setContainTarget(bool containTarget);
+    bool getContainTarget();
   };
 
   class DynRetInstr: public DynInstr {

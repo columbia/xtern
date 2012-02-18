@@ -13,6 +13,9 @@ tern_path_slicer::do_intra_thread_slicing 1
 # iff do_inter_thread_slicing is 0.
 tern_path_slicer::intra_thread_slicing_start_index 0
 
+# Whether do intra-thread slicing starting from the last instruction in the trace path. This is for testing.
+tern_path_slicer::do_intra_slicing_at_last_instr 0
+
 # Debug print flag.
 tern_path_slicer::print_debug_info 0
 

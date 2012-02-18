@@ -244,7 +244,8 @@ void KleeTraceUtil::postProcess(DynInstrVector *trace) {
   otherwise further slicing on other paths would have logical corruptions. */
   for (size_t i = 0; i < trace->size(); i++) {
     DynInstr *dynInstr = trace->at(i);
-    dynInstr->setTaken(NOT_TAKEN);
+    if (!dynInstr->isTarget())
+      dynInstr->setTaken(NOT_TAKEN);
   }
 }
 

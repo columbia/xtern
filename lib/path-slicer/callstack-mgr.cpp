@@ -36,10 +36,12 @@ void CallStackMgr::clear() {
   // TBD.
 }
 
-void CallStackMgr::init(Stat *stat, InstrIdMgr *idMgr, FuncSumm *funcSumm) {
+void CallStackMgr::init(Stat *stat, InstrIdMgr *idMgr,
+  FuncSumm *funcSumm, CheckerMgr *chkMgr) {
   this->stat = stat;
   this->idMgr = idMgr;
   this->funcSumm = funcSumm;
+  this->chkMgr = chkMgr;
 }
 
 void CallStackMgr::updateCallStack(DynInstr *dynInstr) {

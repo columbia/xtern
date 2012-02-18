@@ -7,13 +7,13 @@ extern const char *takenReasons[NUM_TAKEN_FLAGS];
 /* Flags to identify whether a dynamic instruction is taken, and reasons of taken. */
 #define NOT_TAKEN 0
 
-/* Reasons of taken by handling important events (star target or buggy points, synch calls, real races). */
+/* Reasons of taken by handling important events (star target or buggy points, synch calls). */
 #define START_TARGET 1
 #define TAKEN_EVENT 2
-#define TAKEN_RACE 3
 // TBD
 
-#define INTER_PHASE_BASE 29  /* Base of inter-thread phase. */
+#define INTER_PHASE_BASE 29                              /* Base of inter-thread phase. */
+#define INTER_RACE INTER_PHASE_BASE                 /* real races. */
 /* Reasons of taken by handling inter-thread phase. */
 /* Reasons of taken by handling instruction -instruction may race in inter-thread phase. */
 #define INTER_INSTR2 30
@@ -29,7 +29,27 @@ extern const char *takenReasons[NUM_TAKEN_FLAGS];
 #define INTER_BR_BR 50
 // TBD
 
-#define INTRA_PHASE_BASE 99  /* Base of intra-thread phase. */
+#define INTER_PHASE_MAX 69                              /* End of inter-thread phase. */
+
+
+
+/* Starting target of checkers in directed symbolic execution project. */
+#define CHECKER_TARGET_BASE 80
+#define CHECKER_TARET CHECKER_TARGET_BASE
+// TBD
+#define CHECKER_TARGET_MAX 89
+
+
+
+/*********************************************************************/
+/* Base of intra-thread phase. This is also the ending of all targets (any number bigger than this
+must not be a target). */
+#define INTRA_PHASE_BASE 99
+#define TARGET_MAX INTRA_PHASE_BASE
+/*********************************************************************/
+
+
+
 /* Reasons of taken by handling intra-thread phase. */
 /* Reasons of taken by handling alloca instructions. */
 #define INTRA_ALLOCA 100

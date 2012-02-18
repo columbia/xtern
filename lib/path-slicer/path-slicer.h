@@ -10,6 +10,7 @@
 #include "llvm/ADT/DenseSet.h"
 
 #include "klee/Internal/Module/KModule.h"
+#include "klee/Checker.h"
 
 #include "stat.h"
 #include "dyn-instrs.h"
@@ -23,6 +24,7 @@
 #include "xtern-trace-util.h"
 #include "oprd-summ.h"
 #include "func-summ.h"
+#include "checker-mgr.h"
 
 namespace tern {
   struct PathSlicer: public llvm::ModulePass {
@@ -71,6 +73,8 @@ namespace tern {
     /* Function summary. */
     FuncSumm funcSumm;
 
+    CheckerMgr chkMgr;
+
   protected:
     /* Init all sub-components of the path-slicer. */
     void init(llvm::Module &M);
@@ -102,6 +106,12 @@ namespace tern {
 
     /* Copy recorded instructions from current path to a new branched path. */
     void copyTrace(void *newPathId, void *curPathId);
+
+    /* Read checker result, if it is IMPORTANT, then mark the latest recorded instruction in current
+    path as CHECKER_TARGET. This "latest" assumes executor of KLEE interpretes each instruction
+    atomically (once for each instruction). */
+    void recordCheckerResult(void *pathId, klee::Checker::Result globalResult,
+      klee::Checker::Result localResult);
   };
 }
 

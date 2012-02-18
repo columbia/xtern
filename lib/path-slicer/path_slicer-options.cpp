@@ -19,6 +19,8 @@ int __tern_path_slicer__context_sensitive_ailas_query = 1;
 
 int __tern_path_slicer__do_inter_thread_slicing = 1;
 
+int __tern_path_slicer__do_intra_slicing_at_last_instr = 0;
+
 int __tern_path_slicer__do_intra_thread_slicing = 1;
 
 int __tern_path_slicer__intra_thread_slicing_start_index = 0;
@@ -46,9 +48,11 @@ struct _options: public options {
 
 
 
+
     }
 
     virtual void init() {
+
 
 
 
@@ -67,6 +71,8 @@ struct _options: public options {
             { __tern_path_slicer__context_sensitive_ailas_query = (int)strtoul(val, 0, 0); return 1; }
         if (!strcmp (opt, "do_inter_thread_slicing"))
             { __tern_path_slicer__do_inter_thread_slicing = (int)strtoul(val, 0, 0); return 1; }
+        if (!strcmp (opt, "do_intra_slicing_at_last_instr"))
+            { __tern_path_slicer__do_intra_slicing_at_last_instr = (int)strtoul(val, 0, 0); return 1; }
         if (!strcmp (opt, "do_intra_thread_slicing"))
             { __tern_path_slicer__do_intra_thread_slicing = (int)strtoul(val, 0, 0); return 1; }
         if (!strcmp (opt, "intra_thread_slicing_start_index"))
@@ -87,6 +93,7 @@ struct _options: public options {
     o << "tern_path_slicer::aaol_dbg_level    " << __tern_path_slicer__aaol_dbg_level << endl;
     o << "tern_path_slicer::context_sensitive_ailas_query    " << __tern_path_slicer__context_sensitive_ailas_query << endl;
     o << "tern_path_slicer::do_inter_thread_slicing    " << __tern_path_slicer__do_inter_thread_slicing << endl;
+    o << "tern_path_slicer::do_intra_slicing_at_last_instr    " << __tern_path_slicer__do_intra_slicing_at_last_instr << endl;
     o << "tern_path_slicer::do_intra_thread_slicing    " << __tern_path_slicer__do_intra_thread_slicing << endl;
     o << "tern_path_slicer::intra_thread_slicing_start_index    " << __tern_path_slicer__intra_thread_slicing_start_index << endl;
     o << "tern_path_slicer::print_debug_info    " << __tern_path_slicer__print_debug_info << endl;

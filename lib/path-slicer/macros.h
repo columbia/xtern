@@ -35,6 +35,8 @@
 #define BEGINTIME(clock) GETTIME(clock)
 #define ENDTIME(num, clock_st, clock_end) GETTIME(clock_end);ADDTIME(num, clock_st, clock_end)
 
+#define INTRA_SLICING_FOR_TEST (get_option(tern_path_slicer,do_intra_slicing_at_last_instr)==1)
+
 #define NORMAL_SLICING (get_option(tern_path_slicer,slicing_mode)==0)
 #define MAX_SLICING (get_option(tern_path_slicer,slicing_mode)==1)
 #define RANGE_SLICING (get_option(tern_path_slicer, slicing_mode)==2)

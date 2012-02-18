@@ -27,7 +27,14 @@ void IntraSlicer::detectInputDepRaces(uchar tid) {
 
     if (!cur)
       return;
-  
+
+    // Handle checker targets.
+    if (cur->isCheckerTarget()) {
+      handleCheckerTarget(cur);
+      continue;
+    }
+
+    // Do slicing.
     Instruction *instr = idMgr->getOrigInstr(cur);
     if (Util::isPHI(instr)) {
       handlePHI(cur);
@@ -143,6 +150,14 @@ bool IntraSlicer::mayCallEvent(DynRetInstr *dynRetInstr) {
   return funcSumm->mayCallEvent(dynCallInstr);
 }
 
+void IntraSlicer::handleCheckerTarget(DynInstr *dynInstr) {
+  stat->printDynInstr(dynInstr, "IntraSlicer::handleCheckerTarget");
+  if (regOverWritten(dynInstr))
+    delRegOverWritten(dynInstr);
+  live.addUsedRegs(dynInstr);
+  slice.add(dynInstr, dynInstr->getTakenFlag());
+}
+
 void IntraSlicer::handlePHI(DynInstr *dynInstr) {
   DynPHIInstr *phiInstr = (DynPHIInstr*)dynInstr;
   if (regOverWritten(phiInstr)) {
@@ -162,7 +177,10 @@ void IntraSlicer::handlePHI(DynInstr *dynInstr) {
 
 void IntraSlicer::handleBranch(DynInstr *dynInstr) {
   DynBrInstr *brInstr = (DynBrInstr*)dynInstr;
-  if (brInstr->isTaken() || brInstr->isTarget()) {
+  /* A branch can be taken already by considering control dependency in 
+  handling phi instructions, or taken already by considering br-br may race in 
+  inter-thread phase. */
+  if (brInstr->isTaken() || brInstr->isInterThreadTarget()) {
     takeNonMem(brInstr);
   } else {
     DynInstr *head = slice.getHead();
@@ -219,7 +237,7 @@ void IntraSlicer::handleMem(DynInstr *dynInstr) {
   Instruction *instr = idMgr->getOrigInstr(dynInstr);
   if (Util::isLoad(instr)) {
     DynMemInstr *loadInstr = (DynMemInstr*)dynInstr;
-    bool reason1 = loadInstr->isTarget();
+    bool reason1 = loadInstr->isInterThreadTarget();
     bool reason2 = regOverWritten(loadInstr);
     SERRS << "IntraSlicer::handleMem reason1 " 
       << reason1 << ", reason2 " << reason2 << "\n";
@@ -238,7 +256,7 @@ void IntraSlicer::handleMem(DynInstr *dynInstr) {
     DynMemInstr *storeInstr = (DynMemInstr*)dynInstr;
     DynOprd storeValue(storeInstr, instr->getOperand(0), 0);
     DynOprd storePtrOprd(storeInstr, instr->getOperand(1), 1);
-    if (storeInstr->isTarget()) {
+    if (storeInstr->isInterThreadTarget()) {
       live.addReg(&storePtrOprd);
       slice.add(storeInstr, INTER_STORE_TGT);
     }
