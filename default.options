@@ -42,3 +42,6 @@ whole_stack_eip_signature = 1
 
 # if turned on, record-schedule will do sleep, otherwise simple bypass sleep.
 exec_sleep = 1
+
+# if turned on, mutex_init will automatically set attr to PTHREAD_MUTEX_ERRORCHECK
+set_mutex_errorcheck = 0

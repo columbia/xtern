@@ -627,11 +627,11 @@ void analyze_time(vector<op_t> &ops)
       vector<int64_t> &sytcol = syt_collection[insid];
       vector<int64_t> &sctcol = sct_collection[insid];
       count += aptcol.size() || sytcol.size() || sctcol.size();
-      if (aptcol.size()) { fprintf(ouf, "%lld", aptcol.back()); aptcol.pop_back(); } 
+      if (aptcol.size()) { fprintf(ouf, "%lld", (long long) aptcol.back()); aptcol.pop_back(); } 
       fprintf(ouf, ", "); 
-      if (sytcol.size()) { fprintf(ouf, "%lld", sytcol.back()); sytcol.pop_back(); } 
+      if (sytcol.size()) { fprintf(ouf, "%lld", (long long) sytcol.back()); sytcol.pop_back(); } 
       fprintf(ouf, ", "); 
-      if (sctcol.size()) { fprintf(ouf, "%lld", sctcol.back()); sctcol.pop_back(); } 
+      if (sctcol.size()) { fprintf(ouf, "%lld", (long long) sctcol.back()); sctcol.pop_back(); } 
       fprintf(ouf, ", "); 
     }
     fprintf(ouf, "\n");
@@ -657,7 +657,7 @@ void analyze_time(vector<op_t> &ops)
     printf(" %08d", rec.count);
     //printf(" %lld", rec.sum_sct);
 #define defprint(x) \
-    printf(" %09lld", rec.sum_##x / rec.count); \
+    printf(" %09lld", (long long) (rec.sum_##x / rec.count)); \
     avg = rec.sum_##x * double(1.0) / rec.count;\
     printf(" %016.04f", sqrt(rec.sum_sqr_##x - 2 * avg * rec.sum_##x + rec.count * avg * avg));
     defprint(apt);

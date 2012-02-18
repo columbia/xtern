@@ -7,6 +7,7 @@
 #include "tern/config.h"
 #include "tern/hooks.h"
 #include "tern/space.h"
+#include "tern/options.h"
 #include "tern/runtime/runtime.h"
 #include "tern/runtime/scheduler.h"
 #include "helper.h"
@@ -120,6 +121,15 @@ int tern_pthread_join(unsigned ins, pthread_t th, void **retval) {
 int tern_pthread_mutex_init(unsigned ins, pthread_mutex_t *mutex, const pthread_mutexattr_t *mutexattr) {
   int ret;
   Space::enterSys();
+  if (options::set_mutex_errorcheck && mutexattr == NULL)
+  {
+//    pthread_mutexattr_t *sharedm = new pthread_mutexattr_t;
+//    pthread_mutexattr_t &psharedm = *sharedm;
+    pthread_mutexattr_t psharedm;
+    pthread_mutexattr_init(&psharedm);
+    pthread_mutexattr_settype(&psharedm, PTHREAD_MUTEX_ERRORCHECK);
+    mutexattr = &psharedm;
+  }
   ret = Runtime::the->pthreadMutexInit(ins, mutex, mutexattr);
   Space::exitSys();
   return ret;
