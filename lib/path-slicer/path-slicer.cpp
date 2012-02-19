@@ -70,7 +70,7 @@ void initTakenReasons() {
 
   takenReasons[INTER_BR_BR] = "INTER_BR_BR";
 
-  takenReasons[CHECKER_TARET] = "CHECKER_TARET";
+  takenReasons[CHECKER_TARGET] = "CHECKER_TARGET";
 
   takenReasons[INTRA_ALLOCA] = "INTRA_ALLOCA";
 
@@ -166,7 +166,7 @@ void PathSlicer::init(llvm::Module &M) {
   idMgr.initModules(origModule, mxModule, simModule, LmTrace.c_str());
 
   /* Init call stack manager. */
-  ctxMgr.init(&stat, &idMgr, &funcSumm, &chkMgr);
+  ctxMgr.init(&stat, &idMgr, &funcSumm, &tgtMgr);
 
   /* Init CFG manager. */
   cfgMgr.initStat(&stat);
@@ -243,8 +243,8 @@ void PathSlicer::runPathSlicer(void *pathId, set<BranchInst *> &brInstrs) {
 
     // (2) Init slicing start index (target instruction).
     size_t startIndex;
-    if (chkMgr.hasTarget())    // Do slicing if there is target..
-      startIndex = chkMgr.getLargestCheckerIdx();
+    if (tgtMgr.hasTarget())    // Do slicing if there is target..
+      startIndex = tgtMgr.getLargestTargetIdx();
     else if (INTRA_SLICING_FOR_TEST) {  // Else if it is testing scenario, do slicing on the last instruction.
       startIndex = trace->size();
       assert(startIndex > 0);
@@ -258,7 +258,7 @@ void PathSlicer::runPathSlicer(void *pathId, set<BranchInst *> &brInstrs) {
       &aliasMgr, &idMgr, &cfgMgr, &stat, trace, startIndex);
 
     // (4) Take target instruction, and add dyn oprds of the instruction, depending on slicing goals.
-    if (!chkMgr.hasTarget() && INTRA_SLICING_FOR_TEST)
+    if (!tgtMgr.hasTarget() && INTRA_SLICING_FOR_TEST)
       intraSlicer.takeStartTarget(trace->at(startIndex));
 
     // (5) Do intra-thread slicing.
@@ -310,7 +310,7 @@ void PathSlicer::recordCheckerResult(void *pathId, Checker::Result globalResult,
   assert(trace);
   assert(trace->size() > 0);
   DynInstr *dynInstr = trace->back();
-  chkMgr.markCheckerTarget(dynInstr);
+  tgtMgr.markTarget(dynInstr, CHECKER_TARGET);
   stat.printDynInstr(dynInstr, "PathSlicer::recordCheckerResult Checker::IMPORTANT");
 }
 

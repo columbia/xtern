@@ -7,7 +7,7 @@
 #include "instr-id-mgr.h"
 #include "stat.h"
 #include "func-summ.h"
-#include "checker-mgr.h"
+#include "target-mgr.h"
 
 namespace tern {
   class CallStackMgr {
@@ -15,7 +15,7 @@ namespace tern {
     FuncSumm *funcSumm;
     Stat *stat;
     InstrIdMgr *idMgr;
-    CheckerMgr *chkMgr;
+    TargetMgr *tgtMgr;
     
     /* Map from thread id to a sequence of current active dynamic call instructions. */
     llvm::DenseMap<int, std::vector<DynCallInstr *> *> tidToCallSeqMap;
@@ -37,7 +37,7 @@ namespace tern {
     CallStackMgr();
     ~CallStackMgr();
     void clear();
-    void init(Stat *stat, InstrIdMgr *idMgr, FuncSumm *funcSumm, CheckerMgr *chkMgr);
+    void init(Stat *stat, InstrIdMgr *idMgr, FuncSumm *funcSumm, TargetMgr *tgtMgr);
     
     /* For normal slicing mode, this is the orig call stack;
         for mx slicing mode, this is the mx call stack. */

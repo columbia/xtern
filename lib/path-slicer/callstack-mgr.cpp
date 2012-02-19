@@ -37,11 +37,11 @@ void CallStackMgr::clear() {
 }
 
 void CallStackMgr::init(Stat *stat, InstrIdMgr *idMgr,
-  FuncSumm *funcSumm, CheckerMgr *chkMgr) {
+  FuncSumm *funcSumm, TargetMgr *tgtMgr) {
   this->stat = stat;
   this->idMgr = idMgr;
   this->funcSumm = funcSumm;
-  this->chkMgr = chkMgr;
+  this->tgtMgr = tgtMgr;
 }
 
 void CallStackMgr::updateCallStack(DynInstr *dynInstr) {

@@ -27,7 +27,7 @@ namespace tern {
     llvm::DenseMap<llvm::Function *, llvm::Function *> parent; // Used in DFS
     llvm::DenseSet<llvm::Function *> visited;
     DenseMap<BasicBlock *, bool> bbVisited;
-    std::vector<llvm::Function *> sync_funcs;
+    std::vector<llvm::Function *> eventFuncs;
 
     bool is_exit_block(llvm::BasicBlock *bb);
     void DFS(llvm::Function *f);

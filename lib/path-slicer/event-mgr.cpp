@@ -1,3 +1,4 @@
+#include "event-funcs.h"
 #include "util.h"
 #include "event-mgr.h"
 #include "tern/syncfuncs.h"
@@ -41,25 +42,28 @@ void EventMgr::getAnalysisUsage(AnalysisUsage &AU) const {
 }
 
 void EventMgr::setupEvents(Module &M) {
-  // Get function list from syncfuncs.h.
   for (Module::iterator f = M.begin(); f != M.end(); ++f) {
     if (f->hasName()) {
+      // Get function list from syncfuncs.h.
       unsigned nr = tern::syncfunc::getNameID(f->getNameStr().c_str());
-      fprintf(stderr, "FuncSumm::initEvents %s %u\n", f->getNameStr().c_str(), 
-      nr);
-      if (nr != tern::syncfunc::not_sync)
-        sync_funcs.push_back(f);
+      if (nr != tern::syncfunc::not_sync) {
+        fprintf(stderr, "EventMgr::initEvents sync %s %u\n", f->getNameStr().c_str(), nr);
+        eventFuncs.push_back(f);
+      }
+
+      // Get function list from event-funcs.h.
+      if (tern::EventFuncs::isEventFunc(f->getNameStr().c_str())) {
+        fprintf(stderr, "EventMgr::initEvents event %s\n", f->getNameStr().c_str());
+        eventFuncs.push_back(f);
+      }
     }
   }
-
-  // Add fopen/fclose() if necessary in the future.
-  // TBD
 }
 
 // TODO: search in vector may be slow
 bool EventMgr::is_sync_function(Function *f) {
-  for (size_t i = 0; i < sync_funcs.size(); ++i) {
-    if (sync_funcs[i] == f)
+  for (size_t i = 0; i < eventFuncs.size(); ++i) {
+    if (eventFuncs[i] == f)
       return true;
   }
   return false;
@@ -153,8 +157,8 @@ void EventMgr::DFS(BasicBlock *x, BasicBlock *sink) {
 void EventMgr::traverse_call_graph(Module &M) {
   visited.clear();
   parent.clear();
-  for (size_t i = 0; i < sync_funcs.size(); ++i) {
-    DFS(sync_funcs[i]);
+  for (size_t i = 0; i < eventFuncs.size(); ++i) {
+    DFS(eventFuncs[i]);
   }
 }
 

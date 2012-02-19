@@ -148,7 +148,9 @@ namespace tern {
     llvm::Function *calledFunc;
 
     /* Mark whether a function call contains any target instruction (e.g., inter-thread target or checker target).
-    The bool type can be replaced as a set of dyninstr * which are targets. */
+    The bool type can be replaced as a set of dyninstr * which are targets.
+    FIXME: when we implement the inter-thread phase, the call stack is built before inter-thread phase
+    starts to work, so we need to repick those targets. */
     bool containTarget;   
 
   public:

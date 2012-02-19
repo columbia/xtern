@@ -24,7 +24,7 @@
 #include "xtern-trace-util.h"
 #include "oprd-summ.h"
 #include "func-summ.h"
-#include "checker-mgr.h"
+#include "target-mgr.h"
 
 namespace tern {
   struct PathSlicer: public llvm::ModulePass {
@@ -73,7 +73,7 @@ namespace tern {
     /* Function summary. */
     FuncSumm funcSumm;
 
-    CheckerMgr chkMgr;
+    TargetMgr tgtMgr;
 
   protected:
     /* Init all sub-components of the path-slicer. */
@@ -109,7 +109,8 @@ namespace tern {
 
     /* Read checker result, if it is IMPORTANT, then mark the latest recorded instruction in current
     path as CHECKER_TARGET. This "latest" assumes executor of KLEE interpretes each instruction
-    atomically (once for each instruction). */
+    atomically (once for each instruction). For each a checker error, the last recorded instruction 
+    (which triggered the error) will also be marked as target. */
     void recordCheckerResult(void *pathId, klee::Checker::Result globalResult,
       klee::Checker::Result localResult);
   };
