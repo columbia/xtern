@@ -1456,8 +1456,8 @@ int RecorderRT<_S>::__accept(unsigned ins, int sockfd, struct sockaddr *cliaddr,
   //output() << ' ' << _S::turnCount;
   //output() << ' ' << (int) _S::self();
   //output() << endl;
-  timespec syscall_time = update_time();
   int backup_errno = errno;
+  timespec syscall_time = update_time();
 	_S::wakeup();
   timespec sched_wakeup_time = update_time();
   timespec sched_time = {
@@ -1476,8 +1476,8 @@ int RecorderRT<_S>::__accept4(unsigned ins, int sockfd, struct sockaddr *cliaddr
   _S::block();
   timespec sched_block_time = update_time();
   int ret = Runtime::__accept4(ins, sockfd, cliaddr, addrlen, flags);
-  timespec syscall_time = update_time();
   int backup_errno = errno;
+  timespec syscall_time = update_time();
 	_S::wakeup();
   timespec sched_wakeup_time = update_time();
   timespec sched_time = {
@@ -1501,10 +1501,8 @@ int RecorderRT<_S>::__connect(unsigned ins, int sockfd, const struct sockaddr *s
   //output() << ' ' << _S::turnCount;
   //output() << ' ' << (int) _S::self();
   //output() << endl;
-  //int backup_errno = errno;
-	_S::wakeup();
-  timespec syscall_time = update_time();
   int backup_errno = errno;
+  timespec syscall_time = update_time();
 	_S::wakeup();
   timespec sched_wakeup_time = update_time();
   timespec sched_time = {
@@ -1562,10 +1560,8 @@ ssize_t RecorderRT<_S>::__recv(unsigned ins, int sockfd, void *buf, size_t len, 
   //output() << ' ' << _S::turnCount;
   //output() << ' ' << (int) _S::self();
   //output() << endl;
-  //int backup_errno = errno;
-	_S::wakeup();
-  timespec syscall_time = update_time();
   int backup_errno = errno;
+  timespec syscall_time = update_time();
 	_S::wakeup();
   timespec sched_wakeup_time = update_time();
   timespec sched_time = {
@@ -1589,10 +1585,8 @@ ssize_t RecorderRT<_S>::__recvfrom(unsigned ins, int sockfd, void *buf, size_t l
   //output() << ' ' << _S::turnCount;
   //output() << ' ' << (int) _S::self();
   //output() << endl;
-  //int backup_errno = errno;
-	_S::wakeup();
-  timespec syscall_time = update_time();
   int backup_errno = errno;
+  timespec syscall_time = update_time();
 	_S::wakeup();
   timespec sched_wakeup_time = update_time();
   timespec sched_time = {
@@ -1616,10 +1610,8 @@ ssize_t RecorderRT<_S>::__recvmsg(unsigned ins, int sockfd, struct msghdr *msg, 
   //output() << ' ' << _S::turnCount;
   //output() << ' ' << (int) _S::self();
   //output() << endl;
-  //int backup_errno = errno;
-	_S::wakeup();
-  timespec syscall_time = update_time();
   int backup_errno = errno;
+  timespec syscall_time = update_time();
 	_S::wakeup();
   timespec sched_wakeup_time = update_time();
   timespec sched_time = {
@@ -1673,10 +1665,8 @@ ssize_t RecorderRT<_S>::__read(unsigned ins, int fd, void *buf, size_t count)
   //output() << ' ' << _S::turnCount;
   //output() << ' ' << (int) _S::self();
   //output() << endl;
-  //int backup_errno = errno;
-	_S::wakeup();
-  timespec syscall_time = update_time();
   int backup_errno = errno;
+  timespec syscall_time = update_time();
 	_S::wakeup();
   timespec sched_wakeup_time = update_time();
   timespec sched_time = {
@@ -1706,10 +1696,8 @@ int RecorderRT<_S>::__select(unsigned ins, int nfds, fd_set *readfds, fd_set *wr
   //output() << ' ' << _S::turnCount;
   //output() << ' ' << (int) _S::self();
   //output() << endl;
-  //int backup_errno = errno;
-	_S::wakeup();
-  timespec syscall_time = update_time();
   int backup_errno = errno;
+  timespec syscall_time = update_time();
 	_S::wakeup();
   timespec sched_wakeup_time = update_time();
   timespec sched_time = {
@@ -1731,10 +1719,8 @@ int RecorderRT<_S>::__epoll_wait(unsigned ins, int epfd, struct epoll_event *eve
 //  clock_gettime(CLOCK_MONOTONIC_RAW , &timeout);
 //  timeout.tv_sec += 5;    //  TODO should not fix the time here, it's hacking!!
   int ret = epoll_wait(epfd, events, maxevents, timeout);
-  //int backup_errno = errno;
-	_S::wakeup();
-  timespec syscall_time = update_time();
   int backup_errno = errno;
+  timespec syscall_time = update_time();
 	_S::wakeup();
   timespec sched_wakeup_time = update_time();
   timespec sched_time = {
@@ -1754,10 +1740,8 @@ int RecorderRT<_S>::__sigwait(unsigned ins, const sigset_t *set, int *sig)
   _S::block();
   timespec sched_block_time = update_time();
   int ret = sigwait(set, sig);
-  //int backup_errno = errno;
-	_S::wakeup();
-  timespec syscall_time = update_time();
   int backup_errno = errno;
+  timespec syscall_time = update_time();
 	_S::wakeup();
   timespec sched_wakeup_time = update_time();
   timespec sched_time = {
