@@ -5,7 +5,6 @@ using namespace llvm;
 
 #include "intra-slicer.h"
 #include "util.h"
-#include "macros.h"
 #include "path-slicer.h"
 using namespace tern;
 
@@ -59,7 +58,10 @@ bool IntraSlicer::empty() {
 }
 
 DynInstr *IntraSlicer::delTraceTail(uchar tid) {
-  ASSERT(curIndex < trace->size());
+  if (curIndex >= trace->size()) {
+    fprintf(stderr, "IntraSlicer::delTraceTail " SZ ", " SZ "\n", curIndex, trace->size());
+    assert(false);
+  }
   DynInstr *dynInstr = NULL;
   while (!empty()) {
     if (trace->at(curIndex)->getTid() == tid) {
@@ -169,9 +171,9 @@ void IntraSlicer::handlePHI(DynInstr *dynInstr) {
       live.addReg(&oprd);
     } else {
       DynInstr *prevInstr = prevDynInstr(phiInstr);
-      prevInstr->setTaken(INTRA_PHI_BR_CTRL_DEP);
+      prevInstr->setTaken(TakenFlags::INTRA_PHI_BR_CTRL_DEP);
     }
-    slice.add(phiInstr, INTRA_PHI);
+    slice.add(phiInstr, TakenFlags::INTRA_PHI);
   }
 }
 
@@ -190,11 +192,11 @@ void IntraSlicer::handleBranch(DynInstr *dynInstr) {
     SERRS << "IntraSlicer::handleBranch reason1 " << reason1
       << ", reason2 " << reason2 << ", reason3 " << reason3 << ".\n";
     if (reason1)
-      takeNonMem(brInstr, INTRA_BR_N_POSTDOM);
+      takeNonMem(brInstr, TakenFlags::INTRA_BR_N_POSTDOM);
     else if (reason2)
-      takeNonMem(brInstr, INTRA_BR_EVENT_BETWEEN);
+      takeNonMem(brInstr, TakenFlags::INTRA_BR_EVENT_BETWEEN);
     else if (reason3)
-      takeNonMem(brInstr, INTRA_BR_WR_BETWEEN);
+      takeNonMem(brInstr, TakenFlags::INTRA_BR_WR_BETWEEN);
    }
 }
 
@@ -203,16 +205,16 @@ void IntraSlicer::handleRet(DynInstr *dynInstr) {
   if (retRegOverWritten(retInstr)) {
     delRegOverWritten(retInstr);
     live.addUsedRegs(retInstr);
-    slice.add(retInstr, INTRA_RET_REG_OW);
+    slice.add(retInstr, TakenFlags::INTRA_RET_REG_OW);
   } else {
     bool reason1 = mayCallEvent(retInstr);
     bool reason2 = mayWriteFunc(retInstr);
     if (reason1 && reason2)
-      slice.add(retInstr, INTRA_RET_BOTH);
+      slice.add(retInstr, TakenFlags::INTRA_RET_BOTH);
     else if (reason1 && !reason2)
-      slice.add(retInstr, INTRA_RET_CALL_EVENT);
+      slice.add(retInstr, TakenFlags::INTRA_RET_CALL_EVENT);
     else if (!reason1 && reason2)
-      slice.add(retInstr, INTRA_RET_WRITE_FUNC);
+      slice.add(retInstr, TakenFlags::INTRA_RET_WRITE_FUNC);
     else
       removeRange(retInstr);
   }
@@ -248,9 +250,9 @@ void IntraSlicer::handleMem(DynInstr *dynInstr) {
       live.addReg(&loadPtrOprd);
       live.addLoadMem(loadInstr);
       if (reason1 /* no matter whether reason2 is true */)
-        slice.add(loadInstr, INTER_LOAD_TGT);
+        slice.add(loadInstr, TakenFlags::INTER_LOAD_TGT);
       else if (reason2)
-        slice.add(loadInstr, INTRA_LOAD_OW);
+        slice.add(loadInstr, TakenFlags::INTRA_LOAD_OW);
     }
   } else {
     DynMemInstr *storeInstr = (DynMemInstr*)dynInstr;
@@ -258,7 +260,7 @@ void IntraSlicer::handleMem(DynInstr *dynInstr) {
     DynOprd storePtrOprd(storeInstr, instr->getOperand(1), 1);
     if (storeInstr->isInterThreadTarget()) {
       live.addReg(&storePtrOprd);
-      slice.add(storeInstr, INTER_STORE_TGT);
+      slice.add(storeInstr, TakenFlags::INTER_STORE_TGT);
     }
     DenseSet<DynInstr *> loadInstrs = live.getAllLoadInstrs();
     DenseSet<DynInstr *>::iterator itr(loadInstrs.begin());
@@ -274,13 +276,13 @@ void IntraSlicer::handleMem(DynInstr *dynInstr) {
         live.addReg(&storeValue);
         if (!storeInstr->isTaken()) {
           live.addReg(&storePtrOprd);
-          slice.add(storeInstr, INTRA_STORE_OW);
+          slice.add(storeInstr, TakenFlags::INTRA_STORE_OW);
         }
       } else if (aliasMgr->mayAlias(&loadPtrOprd, &storePtrOprd)) {
         live.addReg(&storeValue);
         if (!storeInstr->isTaken()) {
           live.addReg(&storePtrOprd);
-          slice.add(storeInstr, INTRA_STORE_ALIAS);
+          slice.add(storeInstr, TakenFlags::INTRA_STORE_ALIAS);
         }
       }
     }
@@ -344,9 +346,9 @@ void IntraSlicer::addMemAddrEqConstr(DynMemInstr *loadInstr,
 /* Even for store instructions, we still need to take the store pointer 
 operand, because it has meaningful effect for this instruction (the stored 
 target memory location). */
-void IntraSlicer::takeStartTarget(DynInstr *dynInstr) {
+void IntraSlicer::takeTestTarget(DynInstr *dynInstr) {
   live.addUsedRegs(dynInstr);
-  slice.add(dynInstr, START_TARGET);
+  slice.add(dynInstr, TakenFlags::TEST_TARGET);
   curIndex = dynInstr->getIndex()-1;
 }
 

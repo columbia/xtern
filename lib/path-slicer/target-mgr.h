@@ -8,18 +8,19 @@
 namespace tern {
   class TargetMgr {
   private:
-    size_t largestIdx;
-    llvm::DenseSet<DynInstr *> targets;
+    llvm::DenseMap<void *, llvm::DenseSet<DynInstr *> *> targets;
     
   protected:
 
   public:
     TargetMgr();
     ~TargetMgr();
-    void markTarget(DynInstr *dynInstr, uchar reason);
+    void markTarget(void *pathId, DynInstr *dynInstr, uchar reason);
     void markTargetOfCall(DynCallInstr *dynCallInstr);
-    size_t getLargestTargetIdx();
-    bool hasTarget();
+    size_t getLargestTargetIdx(void *pathId);
+    void copyTargets(void *newPathId,void *curPathId);
+    bool hasTarget(void *pathId);
+    void clearTargets(void *pathId);
     // There could be other functionalities to be added when there are more checkers.
   };
 }

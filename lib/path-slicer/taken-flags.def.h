@@ -28,7 +28,7 @@ DEF(INTER_PHASE_MAX, InterThreadTarget)                         /* End of inter-
 
 /* Starting target of checkers in directed symbolic execution project. */
 DEF(CHECKER_IMPORTANT, CheckerTarget)
-DEF(CHECKER_ERROR, CheckerTarget)
+//DEF(CHECKER_ERROR, CheckerTarget)
 // TBD
 
 
@@ -42,40 +42,40 @@ must not be a target). */
 
 /* Reasons of taken by handling intra-thread phase. */
 /* Reasons of taken by handling alloca instructions. */
-DEF(INTRA_ALLOCA, IntraThreadTarget)
+DEF(INTRA_ALLOCA, IntraThread)
 
 /* Reasons of taken by handling PHI instructions. */
-DEF(INTRA_PHI, IntraThreadTarget)
-DEF(INTRA_PHI_BR_CTRL_DEP, IntraThreadTarget)
+DEF(INTRA_PHI, IntraThread)
+DEF(INTRA_PHI_BR_CTRL_DEP, IntraThread)
 // TBD
 
 /* Reasons of taken by handling branch instructions. */
-DEF(INTRA_BR_N_POSTDOM, IntraThreadTarget)
-DEF(INTRA_BR_EVENT_BETWEEN, IntraThreadTarget)
-DEF(INTRA_BR_WR_BETWEEN, IntraThreadTarget)
+DEF(INTRA_BR_N_POSTDOM, IntraThread)
+DEF(INTRA_BR_EVENT_BETWEEN, IntraThread)
+DEF(INTRA_BR_WR_BETWEEN, IntraThread)
 // TBD
 
 /* Reasons of taken by handling return instructions. */
-DEF(INTRA_RET_REG_OW, IntraThreadTarget) /* OVERWRITE. */
-DEF(INTRA_RET_CALL_EVENT, IntraThreadTarget) /* Calling event only. */
-DEF(INTRA_RET_WRITE_FUNC, IntraThreadTarget) /* Write func only. */
-DEF(INTRA_RET_BOTH, IntraThreadTarget) /* Both calling event and writing func. */
+DEF(INTRA_RET_REG_OW, IntraThread) /* OVERWRITE. */
+DEF(INTRA_RET_CALL_EVENT, IntraThread) /* Calling event only. */
+DEF(INTRA_RET_WRITE_FUNC, IntraThread) /* Write func only. */
+DEF(INTRA_RET_BOTH, IntraThread) /* Both calling event and writing func. */
 // TBD
 
 /* Reasons of taken by handling call instructions. */
-DEF(INTRA_CALL, IntraThreadTarget)
+DEF(INTRA_CALL, IntraThread)
 // TBD
 
 /* Reasons of taken by handling load instructions. */
-DEF(INTRA_LOAD_OW, IntraThreadTarget)
+DEF(INTRA_LOAD_OW, IntraThread)
 // TBD
 
 /* Reasons of taken by handling store instructions. */
-DEF(INTRA_STORE_OW, IntraThreadTarget) /* OVERWRITE. */
-DEF(INTRA_STORE_ALIAS, IntraThreadTarget)
+DEF(INTRA_STORE_OW, IntraThread) /* OVERWRITE. */
+DEF(INTRA_STORE_ALIAS, IntraThread)
 // TBD
 
 /* Reasons of taken by handling all other non memory instructions. */
-DEF(INTRA_NON_MEM, IntraThreadTarget)
+DEF(INTRA_NON_MEM, IntraThread)
 // TBD
 

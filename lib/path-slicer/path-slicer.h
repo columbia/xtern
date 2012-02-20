@@ -85,6 +85,13 @@ namespace tern {
     void enforceRacyEdges();
     void calStat();
     llvm::Module *loadModule(const char *path);
+
+    /* If no checker error is reported but there are important targets markded, we have to 
+    also mark the last instruction in the trace as important as well in order to figure out branches
+    happened after the last important target reported by checker. If ther is checker error reported,
+    then the important targets would have been already cleared by recordCheckerResult(). */
+    void checkInstrAsTarget(void *pathId);
+
     
   public:
         static char ID;
@@ -113,6 +120,7 @@ namespace tern {
     (which triggered the error) will also be marked as target. */
     void recordCheckerResult(void *pathId, klee::Checker::Result globalResult,
       klee::Checker::Result localResult);
+
   };
 }
 

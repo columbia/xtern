@@ -245,7 +245,7 @@ void KleeTraceUtil::postProcess(DynInstrVector *trace) {
   for (size_t i = 0; i < trace->size(); i++) {
     DynInstr *dynInstr = trace->at(i);
     if (!dynInstr->isTarget())
-      dynInstr->setTaken(NOT_TAKEN);
+      dynInstr->setTaken(TakenFlags::NOT_TAKEN);
   }
 }
 

@@ -7,7 +7,7 @@ namespace tern {
 namespace EventFuncs {
 
 const char* eventName[] = {
-  NULL, // not_sync
+  NULL, // not_event
 # define DEF(func,kind,...) #func,
 # include "event-funcs.def.h"
 # undef DEF

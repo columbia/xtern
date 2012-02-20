@@ -10,6 +10,7 @@
 
 #include "klee/ExecutionState.h"
 
+#include "macros.h"
 #include "stat.h"
 #include "dyn-instrs.h"
 #include "slice.h"
@@ -55,7 +56,7 @@ namespace tern {
     /* If the checkers from KLEE mark an instruction as IMPORTANT, we handle this in this function. */
     void handleCheckerTarget(DynInstr *dynInstr);
 
-    void takeNonMem(DynInstr *dynInstr, uchar reason = INTRA_NON_MEM);
+    void takeNonMem(DynInstr *dynInstr, uchar reason = TakenFlags::INTRA_NON_MEM);
     void delRegOverWritten(DynInstr *dynInstr);
     bool regOverWritten(DynInstr *dynInstr);
     bool retRegOverWritten(DynRetInstr *dynRetInstr);
@@ -84,7 +85,7 @@ namespace tern {
 
     /* The function to initially take a instruction for path-slicer (for reachability and the value of its
     used operands, do not need to care about its destination operand, even if it exists). */
-    void takeStartTarget(DynInstr *dynInstr);
+    void takeTestTarget(DynInstr *dynInstr);
 
     void calStat();
   };

@@ -15,18 +15,19 @@ enum {
   first_taken_flag = 1
 };
 
-enum {TestTarget, EventTarget, RaceTarget, InterThreadTarget, CheckerTarget, IntraThreadTarget};
+enum {TestTarget, EventTarget, RaceTarget, InterThreadTarget, CheckerTarget, IntraThread};
 
-extern const char *takenReasons[num_taken_flags];
+extern const char *takenReasons[];
+extern const int takenKind[];
 
 // Internal functions.
-static inline const char* getReason(unsigned nr) {
-  assert(first_taken_flag <= nr && nr < num_taken_flags);
-  return takenReasons[nr];
-}
+
 
 // Public functions.
-extern unsigned char getReasonID(const char* reason);
+extern const char* getReason(unsigned char reason);
+extern int getReasonKind(unsigned char reason);
+extern int getReasonID(unsigned char reason);
+extern bool isTarget(unsigned char reason);
 
 }
 }

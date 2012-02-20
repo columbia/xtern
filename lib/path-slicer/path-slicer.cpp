@@ -53,52 +53,8 @@ static cl::opt<string> SchedLeaf(
 
 char PathSlicer::ID = 0;
 
-const char *takenReasons[NUM_TAKEN_FLAGS];
-
-void initTakenReasons() {
-  takenReasons[NOT_TAKEN] = "NOT_TAKEN";
-
-  takenReasons[START_TARGET] = "START_TARGET";
-  takenReasons[TAKEN_EVENT] = "TAKEN_EVENT";
-
-  takenReasons[INTER_RACE] = "INTER_RACE";
-  takenReasons[INTER_INSTR2] = "INTER_INSTR2";
-  takenReasons[INTER_LOAD_TGT] = "INTER_LOAD_TGT";
-  takenReasons[INTER_STORE_TGT] = "INTER_STORE_TGT";
-
-  takenReasons[INTER_BR_INSTR] = "INTER_BR_INSTR";
-
-  takenReasons[INTER_BR_BR] = "INTER_BR_BR";
-
-  takenReasons[CHECKER_TARGET] = "CHECKER_TARGET";
-
-  takenReasons[INTRA_ALLOCA] = "INTRA_ALLOCA";
-
-  takenReasons[INTRA_PHI] = "INTRA_PHI";
-  takenReasons[INTRA_PHI_BR_CTRL_DEP] = "INTRA_PHI_BR_CTRL_DEP";
-
-  takenReasons[INTRA_BR_N_POSTDOM] = "INTRA_BR_N_POSTDOM";
-  takenReasons[INTRA_BR_EVENT_BETWEEN] = "INTRA_BR_EVENT_BETWEEN";
-  takenReasons[INTRA_BR_WR_BETWEEN] = "INTRA_BR_WR_BETWEEN";
-
-  takenReasons[INTRA_RET_REG_OW] = "INTRA_RET_REG_OW";
-  takenReasons[INTRA_RET_CALL_EVENT] = "INTRA_RET_CALL_EVENT";
-  takenReasons[INTRA_RET_WRITE_FUNC] = "INTRA_RET_WRITE_FUNC";
-  takenReasons[INTRA_RET_BOTH] = "INTRA_RET_BOTH";
-
-  takenReasons[INTRA_CALL] = "INTRA_CALL";
-
-  takenReasons[INTRA_LOAD_OW] = "INTRA_LOAD_OW";
-
-  takenReasons[INTRA_STORE_OW] = "INTRA_STORE_OW";
-  takenReasons[INTRA_STORE_ALIAS] = "INTRA_STORE_ALIAS";
-
-  takenReasons[INTRA_NON_MEM] = "INTRA_NON_MEM";
-}
-
 PathSlicer::PathSlicer(): ModulePass(&ID) {
   fprintf(stderr, "PathSlicer::PathSlicer()\n");
-  initTakenReasons();
   load_options("local.options");
 }
 
@@ -222,9 +178,12 @@ void PathSlicer::enforceRacyEdges() {
 void PathSlicer::runPathSlicer(void *pathId, set<BranchInst *> &brInstrs) {  
   // Get trace of current path and do some pre-processing.
   assert(DM_IN(pathId, allPathTraces));
+  checkInstrAsTarget(pathId);
   DynInstrVector *trace = allPathTraces[pathId];
   if (trace->size() == 0)
-    return;
+    goto finish;
+  if (!tgtMgr.hasTarget(pathId) && !INTRA_SLICING_FOR_TEST)
+    goto finish;
   traceUtil->preProcess(trace);
 
 #if 0
@@ -243,14 +202,14 @@ void PathSlicer::runPathSlicer(void *pathId, set<BranchInst *> &brInstrs) {
 
     // (2) Init slicing start index (target instruction).
     size_t startIndex;
-    if (tgtMgr.hasTarget())    // Do slicing if there is target..
-      startIndex = tgtMgr.getLargestTargetIdx();
-    else if (INTRA_SLICING_FOR_TEST) {  // Else if it is testing scenario, do slicing on the last instruction.
+    if (tgtMgr.hasTarget(pathId)) {   // Do slicing if there is target..
+      startIndex = tgtMgr.getLargestTargetIdx(pathId);
+      assert(startIndex < trace->size());
+    } else if (INTRA_SLICING_FOR_TEST) {  // Else if it is testing scenario, do slicing on the last instruction.
       startIndex = trace->size();
       assert(startIndex > 0);
       startIndex--;
-    } else    // Don't do any slicing if there is no targets.
-      break;
+    }
     
     /* (3) Init slicing sub modules. This function will also clean live set and 
       slice set in the intra-thread slicer. */
@@ -258,8 +217,8 @@ void PathSlicer::runPathSlicer(void *pathId, set<BranchInst *> &brInstrs) {
       &aliasMgr, &idMgr, &cfgMgr, &stat, trace, startIndex);
 
     // (4) Take target instruction, and add dyn oprds of the instruction, depending on slicing goals.
-    if (!tgtMgr.hasTarget() && INTRA_SLICING_FOR_TEST)
-      intraSlicer.takeStartTarget(trace->at(startIndex));
+    if (!tgtMgr.hasTarget(pathId) && INTRA_SLICING_FOR_TEST)
+      intraSlicer.takeTestTarget(trace->at(startIndex));
 
     // (5) Do intra-thread slicing.
     intraSlicer.detectInputDepRaces(tid);
@@ -270,6 +229,9 @@ void PathSlicer::runPathSlicer(void *pathId, set<BranchInst *> &brInstrs) {
 
   // Free the trace along current path. 
   traceUtil->postProcess(trace);
+
+finish:  
+  tgtMgr.clearTargets(pathId);
   allPathTraces.erase(pathId);
   delete trace;
 }
@@ -278,6 +240,7 @@ void PathSlicer::calStat() {
   interSlicer.calStat();
   errs() << BAN;
   intraSlicer.calStat();
+  errs() << BAN;
 }
 
 void PathSlicer::initKModule(KModule *kmodule) {
@@ -294,24 +257,39 @@ void PathSlicer::record(void *pathId, void *instr, void *state, void *f) {
 }
 
 void PathSlicer::copyTrace(void *newPathId, void *curPathId) {
+  fprintf(stderr, "PathSlicer::copyTrace new %p, cur %p\n", (void *)newPathId, (void *)curPathId);
   assert (!DM_IN(newPathId, allPathTraces));
   allPathTraces[newPathId] = new DynInstrVector;
   DynInstrVector *newTrace = allPathTraces[newPathId];
   DynInstrVector *curTrace = allPathTraces[curPathId];
   newTrace->insert(newTrace->begin(), curTrace->begin(), curTrace->end());
+  tgtMgr.copyTargets(newPathId, curPathId);
 }
 
 void PathSlicer::recordCheckerResult(void *pathId, Checker::Result globalResult,
   Checker::Result localResult) {
-  if (globalResult == Checker::OK && localResult == Checker::OK)
-    return; 
-
-  DynInstrVector *trace = allPathTraces[pathId];
-  assert(trace);
-  assert(trace->size() > 0);
-  DynInstr *dynInstr = trace->back();
-  tgtMgr.markTarget(dynInstr, CHECKER_TARGET);
-  stat.printDynInstr(dynInstr, "PathSlicer::recordCheckerResult Checker::IMPORTANT");
+  /* Only mark checker targets when there is no error but IMPORTANT is 
+  returned from checker. */
+  assert(globalResult == Checker::OK);
+  if (localResult == Checker::IMPORTANT) {
+    DynInstrVector *trace = allPathTraces[pathId];
+    assert(trace);
+    assert(trace->size() > 0);
+    DynInstr *dynInstr = trace->back();
+    tgtMgr.markTarget(pathId, dynInstr, TakenFlags::CHECKER_IMPORTANT);
+    stat.printDynInstr(dynInstr, "PathSlicer::recordCheckerResult Checker::IMPORTANT");
+  } else if (localResult == Checker::ERROR) {
+    fprintf(stderr, "PathSlicer::recordCheckerResult Checker::ERROR\n");
+    tgtMgr.clearTargets(pathId);
+  }
 }
 
+void PathSlicer::checkInstrAsTarget(void *pathId) {
+  if (tgtMgr.hasTarget(pathId)) {
+    DynInstrVector *trace = allPathTraces[pathId];
+    assert(trace);
+    assert(trace->size() > 0);
+    tgtMgr.markTarget(pathId, trace->back(), TakenFlags::CHECKER_IMPORTANT);
+  }
+}
 

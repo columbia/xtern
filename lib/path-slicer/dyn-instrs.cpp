@@ -11,7 +11,7 @@ DynInstr::DynInstr() {
   //simCallingCtx = NULL;
   instrId = -1;
   tid = -1;
-  takenFlag = NOT_TAKEN;
+  takenFlag = TakenFlags::NOT_TAKEN;
 }
 
 DynInstr::~DynInstr() {
@@ -63,7 +63,7 @@ void DynInstr::setTaken(uchar takenFlag) {
 }
 
 bool DynInstr::isTaken() {
-  return takenFlag != NOT_TAKEN;
+  return takenFlag != TakenFlags::NOT_TAKEN;
 }
 
 uchar DynInstr::getTakenFlag() {
@@ -71,21 +71,21 @@ uchar DynInstr::getTakenFlag() {
 }
 
 const char *DynInstr::takenReason() {
-  return takenReasons[takenFlag];
+  return TakenFlags::getReason(takenFlag);
 }
 
 bool DynInstr::isInterThreadTarget() {
   return isTaken() &&
-    takenFlag >= INTER_PHASE_BASE && takenFlag < INTER_PHASE_MAX;
+    TakenFlags::getReasonKind(takenFlag) == TakenFlags::InterThreadTarget;
 }
 
 bool DynInstr::isCheckerTarget() {
   return isTaken() && 
-    takenFlag >= CHECKER_TARGET_BASE && takenFlag < CHECKER_TARGET_MAX;
+    TakenFlags::getReasonKind(takenFlag) == TakenFlags::CheckerTarget;
 }
 
 bool DynInstr::isTarget() {
-  return isTaken() && takenFlag < TARGET_MAX;
+  return isTaken() && TakenFlags::isTarget(takenFlag);
 }
 
 DynPHIInstr::DynPHIInstr() {
