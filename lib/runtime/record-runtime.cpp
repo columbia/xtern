@@ -125,7 +125,10 @@ int RecorderRT<_S>::relTimeToTurn(const struct timespec *reltime)
   // TODO: convert physical time to logical time (number of turns)
   //return 10;
   //return 3 * _S::nthread + 10; //rand() % 10;
-  return 3;
+  if (!reltime) return 0;
+  uint64_t ns = reltime->tv_sec;
+  ns = ns * 1000000000 + reltime->tv_nsec;
+  return ns / options::nanosec_per_turn;
 }
 
 template <typename _S>
@@ -1759,12 +1762,15 @@ template <typename _S>
 unsigned int RecorderRT<_S>::sleep(unsigned ins, unsigned int seconds)
 {
   struct timespec ts = {seconds, 0};
-  timespec time1 = update_time();
+  timespec app_time = update_time();
 	_S::getTurn();
 	timespec sched_time = update_time();
   // must call _S::getTurnCount with turn held
   unsigned timeout = _S::getTurnCount() + relTimeToTurn(&ts);
   _S::wait(NULL, timeout);
+  int nturn = _S::incTurnCount(); 
+  timespec syscall_time = update_time();
+  Logger::the->logSync(ins, syncfunc::sleep, nturn, app_time, syscall_time, sched_time, 0, (uint64_t) seconds * 1000000000);
   _S::putTurn();
   if (options::exec_sleep)
     ::sleep(seconds);
@@ -1775,12 +1781,15 @@ template <typename _S>
 int RecorderRT<_S>::usleep(unsigned ins, useconds_t usec)
 {
   struct timespec ts = {0, 1000*usec};
-  timespec time1 = update_time();
+  timespec app_time = update_time();
 	_S::getTurn();
 	timespec sched_time = update_time();
   // must call _S::getTurnCount with turn held
   unsigned timeout = _S::getTurnCount() + relTimeToTurn(&ts);
   _S::wait(NULL, timeout);
+  int nturn = _S::incTurnCount(); 
+  timespec syscall_time = update_time();
+  Logger::the->logSync(ins, syncfunc::usleep, nturn, app_time, syscall_time, sched_time, 0, (uint64_t) usec * 1000);
   _S::putTurn();
   if (options::exec_sleep)
     ::usleep(usec);
@@ -1792,12 +1801,16 @@ int RecorderRT<_S>::nanosleep(unsigned ins,
                               const struct timespec *req,
                               struct timespec *rem)
 {
-  timespec time1 = update_time();
+  timespec app_time = update_time();
 	_S::getTurn();
 	timespec sched_time = update_time();
   // must call _S::getTurnCount with turn held
   unsigned timeout = _S::getTurnCount() + relTimeToTurn(req);
   _S::wait(NULL, timeout);
+  int nturn = _S::incTurnCount(); 
+  timespec syscall_time = update_time();
+  uint64_t nsec = !req ? 0 : (req->tv_sec * 1000000000 + req->tv_nsec); 
+  Logger::the->logSync(ins, syncfunc::nanosleep, nturn, app_time, syscall_time, sched_time, 0, (int64_t) nsec);
   _S::putTurn();
   if (options::exec_sleep)
     ::nanosleep(req, rem);

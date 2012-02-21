@@ -51,8 +51,8 @@ void TxtLogger::logSync(unsigned insid, unsigned short sync,
   assert(sync >= syncfunc::first_sync && sync < syncfunc::num_syncs
     && "trying to log unknown synchronization operation!");
 
-  if(!syncfunc::isSync(sync))
-  {
+//  if(!syncfunc::isSync(sync))
+//  {
     if (sync == syncfunc::tern_thread_begin
       || sync == syncfunc::tern_thread_end)    //  for tests, i need to know the thread_mapping
     {
@@ -72,9 +72,10 @@ void TxtLogger::logSync(unsigned insid, unsigned short sync,
       va_end(args);
       ouf << "\n";
       ouf.flush();
+      return;
     }
-    return;
-  }
+//    return;
+//  }
   // YJF: why ignore prog_begin/end and thread_begin/end?
   const char *suffix = "";
   if(NumRecordsForSync(sync) == 2)
@@ -117,6 +118,9 @@ void TxtLogger::logSync(unsigned insid, unsigned short sync,
   case syncfunc::sem_wait:
   case syncfunc::sem_post:
   case syncfunc::pthread_join:
+  case syncfunc::sleep:
+  case syncfunc::usleep:
+  case syncfunc::nanosleep:
     ouf << hex << " 0x" << va_arg(args, uint64_t) << dec;
     break;
 

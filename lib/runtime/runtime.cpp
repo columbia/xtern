@@ -45,7 +45,7 @@ void *idle_thread(void *)
 {
   //tern_thread_begin();
   while (true)
-    tern_sleep(0xdeadbeef, 1);
+    tern_usleep(0xdeadbeef, options::idle_sleep_length);
   //tern_thread_end(-1);
 }
 
