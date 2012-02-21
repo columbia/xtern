@@ -182,8 +182,10 @@ void PathSlicer::runPathSlicer(void *pathId, set<BranchInst *> &brInstrs) {
   DynInstrVector *trace = allPathTraces[pathId];
   if (trace->size() == 0)
     goto finish;
-  if (!tgtMgr.hasTarget(pathId) && !INTRA_SLICING_FOR_TEST)
+  if (!tgtMgr.hasTarget(pathId) && !INTRA_SLICING_FOR_TEST) {
+    fprintf(stderr, "PathSlicer::runPathSlicer no targets , trace size " SZ "\n", trace->size());
     goto finish;
+  }
   traceUtil->preProcess(trace);
 
 #if 0
@@ -257,7 +259,7 @@ void PathSlicer::record(void *pathId, void *instr, void *state, void *f) {
 }
 
 void PathSlicer::copyTrace(void *newPathId, void *curPathId) {
-  fprintf(stderr, "PathSlicer::copyTrace new %p, cur %p\n", (void *)newPathId, (void *)curPathId);
+  //fprintf(stderr, "PathSlicer::copyTrace new %p, cur %p\n", (void *)newPathId, (void *)curPathId);
   assert (!DM_IN(newPathId, allPathTraces));
   allPathTraces[newPathId] = new DynInstrVector;
   DynInstrVector *newTrace = allPathTraces[newPathId];
@@ -280,6 +282,10 @@ void PathSlicer::recordCheckerResult(void *pathId, Checker::Result globalResult,
     stat.printDynInstr(dynInstr, "PathSlicer::recordCheckerResult Checker::IMPORTANT");
   } else if (localResult == Checker::ERROR) {
     fprintf(stderr, "PathSlicer::recordCheckerResult Checker::ERROR\n");
+    DynInstrVector *trace = allPathTraces[pathId];
+    assert(trace);
+    assert(trace->size() > 0);
+    traceUtil->store(pathId, trace);
     tgtMgr.clearTargets(pathId);
   }
 }

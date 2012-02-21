@@ -51,6 +51,7 @@ void OprdSumm::init(Stat *stat, FuncSumm *funcSumm,
 }
 
 void OprdSumm::printSumm(InstrDenseSet &summ, const char *tag) {
+  return;
   InstrDenseSet::iterator itr(summ.begin());
   for (; itr != summ.end(); ++itr)
     errs() << stat->printInstr(*itr, tag);

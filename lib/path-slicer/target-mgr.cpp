@@ -48,7 +48,7 @@ void TargetMgr::copyTargets(void *newPathId,void *curPathId) {
 }
 
 void TargetMgr::clearTargets(void *pathId) {
-  fprintf(stderr, "TargetMgr::clearTargets start\n");
+  //fprintf(stderr, "TargetMgr::clearTargets start\n");
   if (!hasTarget(pathId))
     return;
   DenseSet<DynInstr *> *targetSet = targets[pathId];
@@ -56,7 +56,7 @@ void TargetMgr::clearTargets(void *pathId) {
   targets.erase(pathId);
   delete targetSet;
   assert(!hasTarget(pathId));
-  fprintf(stderr, "TargetMgr::clearTargets end\n");
+  //fprintf(stderr, "TargetMgr::clearTargets end\n");
 }
 
 

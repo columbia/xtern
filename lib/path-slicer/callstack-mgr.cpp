@@ -50,9 +50,13 @@ void CallStackMgr::updateCallStack(DynInstr *dynInstr) {
   Instruction *instr = idMgr->getOrigInstr(dynInstr);
 
   // Update call seq, push or pop.
-  if (Util::isCall(instr) && funcSumm->isInternalCall((DynCallInstr *)dynInstr)) {
-    curSeq->push_back((DynCallInstr *)dynInstr);  // Push.
+  if (Util::isCall(instr)) {
+    if (funcSumm->isInternalCall((DynCallInstr *)dynInstr)) {
+      curSeq->push_back((DynCallInstr *)dynInstr);  // Push.
+    } else
+      return;   // if it is external call or intrinsic call, no operation.
   } else {
+    assert(Util::isRet(instr));
     if (curSeq->size() > 0)
       curSeq->pop_back();   // Pop.
   }

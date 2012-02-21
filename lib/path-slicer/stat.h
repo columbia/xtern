@@ -37,6 +37,7 @@ namespace tern {
     const char *printInstr(const llvm::Instruction *instr, const char *tag);    
     const char *printValue(const llvm::Value *v, const char *tag);
     void printDynInstr(DynInstr *dynInstr, const char *tag);
+    void printDynInstr(llvm::raw_ostream &S, DynInstr *dynInstr, const char *tag);
   };
 }
 

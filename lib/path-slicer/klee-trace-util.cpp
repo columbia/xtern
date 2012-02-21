@@ -34,8 +34,16 @@ void KleeTraceUtil::load(const char *tracePath, DynInstrVector *trace) {
   //NOP.
 }
 
-void KleeTraceUtil::store(const char *tracePath) {
-  //NOP.
+void KleeTraceUtil::store(void *pathId, DynInstrVector *trace) {
+  char path[BUF_SIZE];
+  memset(path, 0, BUF_SIZE);
+  snprintf(path, BUF_SIZE, "./error-%p.txt", pathId);
+  std::string ErrorInfo;
+  raw_fd_ostream OS(path, ErrorInfo, raw_fd_ostream::F_Append);
+  for (size_t i = 0; i < trace->size(); i++)
+    stat->printDynInstr(OS, trace->at(i), __func__);
+  OS.flush();
+  OS.close();
 }
 
 void KleeTraceUtil::record(DynInstrVector *trace, void *instr, void *state, void *f) {
@@ -163,6 +171,7 @@ void KleeTraceUtil::preProcess(DynInstrVector *trace) {
   // For each path, must clear ctx mgr.
   ctxMgr->clear();
   size_t traceSize = trace->size();
+  DPRINT("KleeTraceUtil::preProcess trace size " SZ "\n", traceSize);
   
   for (size_t i = 0; i < traceSize; i++) {
     DynInstr *dynInstr = trace->at(i);
@@ -196,7 +205,7 @@ void KleeTraceUtil::preProcess(DynInstrVector *trace) {
         if (nextInstr->getTid() == dynInstr->getTid())
           break;
       }
-      assert(nextInstr);
+      assert(nextInstr || i == traceSize - 1);  // The branch must have successor, or it is the last instruction in the trace.
       BasicBlock *successor = Util::getBasicBlock(idMgr->getOrigInstr(nextInstr));
       ((DynBrInstr *)dynInstr)->setSuccessorBB(successor);
     }

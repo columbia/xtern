@@ -201,6 +201,7 @@ void IntraSlicer::handleBranch(DynInstr *dynInstr) {
 }
 
 void IntraSlicer::handleRet(DynInstr *dynInstr) {
+  stat->printDynInstr(dynInstr, __func__);
   DynRetInstr *retInstr = (DynRetInstr*)dynInstr;
   if (retRegOverWritten(retInstr)) {
     delRegOverWritten(retInstr);

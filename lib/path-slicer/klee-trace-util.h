@@ -53,7 +53,7 @@ namespace tern {
     void initKModule(klee::KModule *kmodule);
 
     virtual void load(const char *tracePath, DynInstrVector *trace);
-    virtual void store(const char *tracePath);
+    virtual void store(void *pathId, DynInstrVector *trace);
     
     /* This is the key function inserted to KLEE interpreter to record each instruction
     (at the place before they are executed). */

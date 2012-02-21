@@ -47,10 +47,14 @@ const char *Stat::printValue(const llvm::Value *v, const char *tag) {
 }
 
 void Stat::printDynInstr(DynInstr *dynInstr, const char *tag) {
+  printDynInstr(errs(), dynInstr, tag);
+}
+
+void Stat::printDynInstr(raw_ostream &S, DynInstr *dynInstr, const char *tag) {
   //fprintf(stderr, "Stat::printDynInstr %p, tid %u\n", (void *)dynInstr, 
     //(unsigned)dynInstr->getTid());
   Instruction *instr = idMgr->getOrigInstr(dynInstr);
-  errs() << tag
+  S << tag
     << ": IDX: " << dynInstr->getIndex()
     << ": TID: " << (int)dynInstr->getTid()
     << ": INSTRID: " << dynInstr->getOrigInstrId()
@@ -59,7 +63,7 @@ void Stat::printDynInstr(DynInstr *dynInstr, const char *tag) {
     << "\n\n";
 
   // Print the condition if this is a symbolic branch.
-  if (Util::isBr(instr) && !Util::isUniCondBr(instr)) {
+  if (DBG && Util::isBr(instr) && !Util::isUniCondBr(instr)) {
     DynBrInstr *br = (DynBrInstr *)dynInstr;
     if (br->isSymbolicBr()) {
       errs() << EXPR_BEGIN;

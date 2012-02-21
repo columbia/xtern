@@ -30,7 +30,7 @@ namespace tern {
     virtual void load(const char *tracePath, DynInstrVector *trace) = 0;
 
     /* Store all recorded instructions to a specified trace path. */
-    virtual void store(const char *tracePath) = 0;
+    virtual void store(void *pathId, DynInstrVector *trace) = 0;
 
     /* Record one dynamic instruction. The passed in pointer can be any type depending on
     recording targets (KLEE or xtern). */
