@@ -171,7 +171,7 @@ void KleeTraceUtil::preProcess(DynInstrVector *trace) {
   // For each path, must clear ctx mgr.
   ctxMgr->clear();
   size_t traceSize = trace->size();
-  DPRINT("KleeTraceUtil::preProcess trace size " SZ "\n", traceSize);
+  dprint("KleeTraceUtil::preProcess trace size " SZ "\n", traceSize);
   
   for (size_t i = 0; i < traceSize; i++) {
     DynInstr *dynInstr = trace->at(i);

@@ -131,8 +131,8 @@ bool IntraSlicer::eventBetween(DynBrInstr *dynBrInstr, DynInstr *dynPostInstr) {
     postInstr = idMgr->getOrigInstr((DynInstr *)dynPostInstr);
   else {
     postInstr = cfgMgr->getStaticPostDom(prevInstr);
-    if (DBG && postInstr)
-      stat->printInstr(postInstr, __func__);
+    /*if (DBG && postInstr)
+      errs() << "IntraSlicer::eventBetween: " << *(postInstr) << "\n";*/
   }
   return funcSumm->eventBetween(branch, postInstr);
 }
@@ -212,7 +212,6 @@ void IntraSlicer::handleBranch(DynInstr *dynInstr) {
 }
 
 void IntraSlicer::handleRet(DynInstr *dynInstr) {
-  stat->printDynInstr(dynInstr, __func__);
   DynRetInstr *retInstr = (DynRetInstr*)dynInstr;
   /* If current return instruction does not have a call instruction, it must 
   be the return of main() of thread routines, if it is target, it is already 
@@ -254,7 +253,6 @@ void IntraSlicer::handleNonMem(DynInstr *dynInstr) {
 }
 
 void IntraSlicer::handleMem(DynInstr *dynInstr) {
-  stat->printDynInstr(dynInstr, "IntraSlicer::handleMem");
   Instruction *instr = idMgr->getOrigInstr(dynInstr);
   if (Util::isLoad(instr)) {
     DynMemInstr *loadInstr = (DynMemInstr*)dynInstr;
