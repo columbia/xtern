@@ -33,7 +33,9 @@
 //
 
 #include <sys/time.h>
+#include <execinfo.h>
 #include <time.h>
+#include <string.h>
 #include <errno.h>
 #include "tern/runtime/record-log.h"
 #include "tern/runtime/record-runtime.h"
@@ -45,10 +47,20 @@
 #include <map>
 #include <sys/types.h>
 
+// FIXME: these should be in tern/config.h
+#if !defined(_POSIX_C_SOURCE) || (_POSIX_C_SOURCE<199309L)
+// Need this for clock_gettime
+#  define _POSIX_C_SOURCE (199309L)
+#endif
+
 //#define _DEBUG_RECORDER
 
 #ifdef _DEBUG_RECORDER
-#  define dprintf(fmt...) fprintf(stderr, fmt)
+#  define dprintf(fmt...) do {                   \
+     fprintf(stderr, "[%d]", self());            \
+     fprintf(stderr, fmt);                       \
+     fflush(stderr);                             \
+  } while(0)
 #else
 #  define dprintf(fmt...)
 #endif
@@ -1461,6 +1473,7 @@ int RecorderRT<_S>::__accept(unsigned ins, int sockfd, struct sockaddr *cliaddr,
   //output() << endl;
   int backup_errno = errno;
   timespec syscall_time = update_time();
+  dprintf("accept(%d, %p, %d) = %d\n", sockfd, cliaddr, (int)*addrlen, ret);
 	_S::wakeup();
   timespec sched_wakeup_time = update_time();
   timespec sched_time = {
@@ -1481,6 +1494,7 @@ int RecorderRT<_S>::__accept4(unsigned ins, int sockfd, struct sockaddr *cliaddr
   int ret = Runtime::__accept4(ins, sockfd, cliaddr, addrlen, flags);
   int backup_errno = errno;
   timespec syscall_time = update_time();
+  dprintf("accept4(%d, %p, %d) = %d\n", sockfd, cliaddr, (int)*addrlen, ret);
 	_S::wakeup();
   timespec sched_wakeup_time = update_time();
   timespec sched_time = {
@@ -1506,6 +1520,7 @@ int RecorderRT<_S>::__connect(unsigned ins, int sockfd, const struct sockaddr *s
   //output() << endl;
   int backup_errno = errno;
   timespec syscall_time = update_time();
+  dprintf("connect(%d, %p, %d) = %d\n", sockfd, serv_addr, (int)addrlen, ret);
 	_S::wakeup();
   timespec sched_wakeup_time = update_time();
   timespec sched_time = {
@@ -1653,6 +1668,10 @@ int RecorderRT<_S>::__setsockopt(unsigned ins, int sockfd, int level, int optnam
 template <typename _S>
 int RecorderRT<_S>::__close(unsigned ins, int fd)
 {
+  dprintf("close(%d)\n", fd);
+  //void *trace[10];
+  //backtrace(trace, 10);
+  //backtrace_symbols_fd(trace, 10, 2);
   return Runtime::__close(ins, fd);
 }
 
@@ -1670,6 +1689,9 @@ ssize_t RecorderRT<_S>::__read(unsigned ins, int fd, void *buf, size_t count)
   //output() << endl;
   int backup_errno = errno;
   timespec syscall_time = update_time();
+  dprintf("read(%d, %p, %d) = %d\n", fd, buf, count, ret);
+if(ret < 0)
+  fprintf(stderr, "RT: read error %s", strerror(backup_errno));
 	_S::wakeup();
   timespec sched_wakeup_time = update_time();
   timespec sched_time = {
@@ -1684,7 +1706,14 @@ ssize_t RecorderRT<_S>::__read(unsigned ins, int fd, void *buf, size_t count)
 template <typename _S>
 ssize_t RecorderRT<_S>::__write(unsigned ins, int fd, const void *buf, size_t count)
 {
-  return Runtime::__write(ins, fd, buf, count);
+  ssize_t ret = Runtime::__write(ins, fd, buf, count);
+  int backup_errno = errno;
+
+  dprintf("write(%d, %p, %d) = %d\n", fd, buf, count, ret);
+if(ret < 0)
+  fprintf(stderr, "RT: write error %s", strerror(backup_errno));
+  errno = backup_errno;
+  return ret;
 }
 
 template <typename _S>
@@ -1752,6 +1781,27 @@ int RecorderRT<_S>::__sigwait(unsigned ins, const sigset_t *set, int *sig)
     sched_wakeup_time.tv_nsec + sched_block_time.tv_nsec
     };
   Logger::the->logSync(ins, syncfunc::sigwait, _S::getTurnCount(), app_time, syscall_time, sched_time);
+  errno = backup_errno;
+  return ret;
+}
+
+template <typename _S>
+char *RecorderRT<_S>::__fgets(unsigned ins, char *s, int size, FILE *stream)
+{
+  timespec app_time = update_time();
+  _S::block();
+  timespec sched_block_time = update_time();
+  char *ret = fgets(s, size, stream);
+dprintf("fgets(%p, %d, %p) = %p\n", s, size, stream, ret);
+  int backup_errno = errno;
+  timespec syscall_time = update_time();
+  _S::wakeup();
+  timespec sched_wakeup_time = update_time();
+  timespec sched_time = {
+    sched_wakeup_time.tv_sec + sched_block_time.tv_sec,
+    sched_wakeup_time.tv_nsec + sched_block_time.tv_nsec
+    };
+  Logger::the->logSync(ins, syncfunc::fgets, _S::getTurnCount(), app_time, syscall_time, sched_time);
   errno = backup_errno;
   return ret;
 }

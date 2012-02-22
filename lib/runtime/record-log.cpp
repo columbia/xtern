@@ -107,6 +107,7 @@ void TxtLogger::logSync(unsigned insid, unsigned short sync,
   case syncfunc::select:
   case syncfunc::epoll_wait:
   case syncfunc::sigwait:
+  case syncfunc::fgets:
     break;
     // log one sync var (common case)
   case syncfunc::pthread_mutex_lock:
@@ -160,7 +161,8 @@ void TxtLogger::logSync(unsigned insid, unsigned short sync,
     break;
 
   default:
-    assert(0 && "sync not handled");
+    cerr << "sync " << syncfunc::getName(sync) << " is not yet handled!\n";
+    assert(0);
   }
 
   va_end(args);
@@ -419,6 +421,9 @@ void TestLogger::logSync(unsigned insid, unsigned short sync,
   case syncfunc::pthread_join:
   case syncfunc::tern_thread_begin:
   case syncfunc::tern_thread_end:
+  case syncfunc::sleep:
+  case syncfunc::usleep:
+  case syncfunc::nanosleep:
     a = va_arg(args, uint64_t);
     ouf << hex << " 0x" << a << dec;
     break;
@@ -454,6 +459,7 @@ void TestLogger::logSync(unsigned insid, unsigned short sync,
     break;
 
   default:
+cerr << syncfunc::getName(sync) << "\n";
     assert(0 && "sync not handled");
   }
   va_end(args);

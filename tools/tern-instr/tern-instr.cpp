@@ -1,4 +1,5 @@
 /* Author: Junfeng Yang (junfeng@cs.columbia.edu) */
+#include <stddef.h>
 #include "llvm/Linker.h"
 #include "llvm/Module.h"
 #include "llvm/LLVMContext.h"

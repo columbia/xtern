@@ -29,27 +29,8 @@ void __attribute((weak)) InstallRuntime() {
 extern "C" {
 #endif
 
-/*
-    This idle thread is created to avoid empty runq.
-    In the implementation with semaphore, there's a global token that must be 
-    held by some threads. In the case that all threads are executing blocking
-    function calls, the global token can be held by nothing. So we create this
-    idle thread to ensure there's at least one thread in the runq to hold the 
-    global token.
-
-    Another solution is to add a flag in schedule showing if it happens that 
-    runq is empty and the global token is held by no one. And recover the global
-    token when some thread comes back to runq from blocking function call. 
- */
-void *idle_thread(void *)
-{
-  //tern_thread_begin();
-  while (true)
-    tern_usleep(0xdeadbeef, options::idle_sleep_length);
-  //tern_thread_end(-1);
-}
-
 static bool prog_began = false; // sanity
+
 void tern_prog_begin() {
   assert(!prog_began && "tern_prog_begin() already called!");
   prog_began = true;
@@ -68,21 +49,9 @@ void tern_symbolic_real(unsigned insid, void *addr,
   Runtime::the->symbolic(insid, addr, nbytes, name);
 }
 
-int first_thread = true;
-
 void tern_thread_begin(void) {
   // thread begins in Sys space
   Runtime::the->threadBegin();
-
-  if (first_thread)
-  {
-    first_thread = false;
-    Space::exitSys();
-    pthread_t pt;
-    tern_pthread_create(0xdeadceae, &pt, NULL, idle_thread, NULL);
-    Space::enterSys();
-  }
-
   Space::exitSys();
 }
 
@@ -275,6 +244,12 @@ void tern_pthread_exit(unsigned ins, void *retval) {
     // printf("calling tern_thread_end\n");
     tern_thread_end(ins);
     // printf("calling tern_thread_end, done\n");
+  } else {
+    // FIXME: Need to call exit() to stop the idle thread here because
+    // when the main thread calls pthread_exit(), it may wait for all
+    // current threads to finish, before calling __tern_prog_end().
+    usleep(500);
+    exit(0);
   }
   pthread_exit(retval);
 }
@@ -520,6 +495,15 @@ int tern_nanosleep(unsigned ins, const struct timespec *req, struct timespec *re
   return ret;
 }
 
+char *tern_fgets(unsigned ins, char *s, int size, FILE *stream)
+{
+  char *ret;
+  Space::enterSys();
+  ret = Runtime::the->__fgets(ins, s, size, stream);
+  Space::exitSys();
+  return ret;
+}
+
 /*
 int tern_poll(unsigned ins, struct pollfd *fds, nfds_t nfds, int timeout)
 {
@@ -696,7 +680,7 @@ int Runtime::__close(unsigned ins, int fd)
 
 ssize_t Runtime::__read(unsigned ins, int fd, void *buf, size_t count)
 {
-  return read(fd, buf, count);
+  return ::read(fd, buf, count);
 }
 
 ssize_t Runtime::__write(unsigned ins, int fd, const void *buf, size_t count)
@@ -717,6 +701,11 @@ int Runtime::__sigwait(unsigned ins, const sigset_t *set, int *sig)
 int Runtime::__epoll_wait(unsigned ins, int epfd, struct epoll_event *events, int maxevents, int timeout)
 {
   return epoll_wait(epfd, events, maxevents, timeout);
+}
+
+char *Runtime::__fgets(unsigned ins, char *s, int size, FILE *stream)
+{
+  return fgets(s, size, stream);
 }
 
 unsigned int Runtime::sleep(unsigned ins, unsigned int seconds)

@@ -34,6 +34,7 @@ int main(int argc, char *argv[], char *env[]) {
 
   printf("calling pthread_exit(NULL)\n");
   pthread_exit(NULL);
+  assert(0 && "never reached");
   return 0;
 }
 
