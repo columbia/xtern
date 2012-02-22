@@ -11,15 +11,15 @@ namespace tern {
     llvm::DenseMap<void *, llvm::DenseSet<DynInstr *> *> targets;
     
   protected:
+    size_t getLargestTargetIdx(void *pathId);
+    bool hasTarget(void *pathId);
 
   public:
     TargetMgr();
     ~TargetMgr();
     void markTarget(void *pathId, DynInstr *dynInstr, uchar reason);
     void markTargetOfCall(DynCallInstr *dynCallInstr);
-    size_t getLargestTargetIdx(void *pathId);
     void copyTargets(void *newPathId,void *curPathId);
-    bool hasTarget(void *pathId);
     void clearTargets(void *pathId);
     // There could be other functionalities to be added when there are more checkers.
   };

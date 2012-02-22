@@ -178,14 +178,9 @@ void PathSlicer::enforceRacyEdges() {
 void PathSlicer::runPathSlicer(void *pathId, set<BranchInst *> &brInstrs) {  
   // Get trace of current path and do some pre-processing.
   assert(DM_IN(pathId, allPathTraces));
-  checkInstrAsTarget(pathId);
   DynInstrVector *trace = allPathTraces[pathId];
   if (trace->size() == 0)
     goto finish;
-  if (!tgtMgr.hasTarget(pathId) && !INTRA_SLICING_FOR_TEST) {
-    fprintf(stderr, "PathSlicer::runPathSlicer no targets , trace size " SZ "\n", trace->size());
-    goto finish;
-  }
   traceUtil->preProcess(trace);
 
 #if 0
@@ -202,25 +197,17 @@ void PathSlicer::runPathSlicer(void *pathId, set<BranchInst *> &brInstrs) {
     // (1) Specify current slicing thread id.
     uchar tid = 0;
 
-    // (2) Init slicing start index (target instruction).
-    size_t startIndex;
-    if (tgtMgr.hasTarget(pathId)) {   // Do slicing if there is target..
-      startIndex = tgtMgr.getLargestTargetIdx(pathId);
-      assert(startIndex < trace->size());
-    } else if (INTRA_SLICING_FOR_TEST) {  // Else if it is testing scenario, do slicing on the last instruction.
-      startIndex = trace->size();
-      assert(startIndex > 0);
-      startIndex--;
-    }
+    // (2) Init slicing start index.
+    size_t startIndex = trace->size() - 1;
     
     /* (3) Init slicing sub modules. This function will also clean live set and 
       slice set in the intra-thread slicer. */
     intraSlicer.init((ExecutionState *)pathId, &oprdSumm, &funcSumm,
       &aliasMgr, &idMgr, &cfgMgr, &stat, trace, startIndex);
 
-    // (4) Take target instruction, and add dyn oprds of the instruction, depending on slicing goals.
-    if (!tgtMgr.hasTarget(pathId) && INTRA_SLICING_FOR_TEST)
-      intraSlicer.takeTestTarget(trace->at(startIndex));
+    // If it is in testing mode, take the last instruction in trace as test target.
+    if (INTRA_SLICING_FOR_TEST)
+      intraSlicer.takeTestTarget(trace->back());
 
     // (5) Do intra-thread slicing.
     intraSlicer.detectInputDepRaces(tid);
@@ -270,32 +257,19 @@ void PathSlicer::copyTrace(void *newPathId, void *curPathId) {
 
 void PathSlicer::recordCheckerResult(void *pathId, Checker::Result globalResult,
   Checker::Result localResult) {
-  /* Only mark checker targets when there is no error but IMPORTANT is 
-  returned from checker. */
   assert(globalResult == Checker::OK);
-  if (localResult == Checker::IMPORTANT) {
+  if (localResult == Checker::IMPORTANT || localResult == Checker::IMPORTANT) {
     DynInstrVector *trace = allPathTraces[pathId];
     assert(trace);
     assert(trace->size() > 0);
     DynInstr *dynInstr = trace->back();
-    tgtMgr.markTarget(pathId, dynInstr, TakenFlags::CHECKER_IMPORTANT);
-    stat.printDynInstr(dynInstr, "PathSlicer::recordCheckerResult Checker::IMPORTANT");
-  } else if (localResult == Checker::ERROR) {
-    fprintf(stderr, "PathSlicer::recordCheckerResult Checker::ERROR\n");
-    DynInstrVector *trace = allPathTraces[pathId];
-    assert(trace);
-    assert(trace->size() > 0);
-    traceUtil->store(pathId, trace);
-    tgtMgr.clearTargets(pathId);
-  }
-}
-
-void PathSlicer::checkInstrAsTarget(void *pathId) {
-  if (tgtMgr.hasTarget(pathId)) {
-    DynInstrVector *trace = allPathTraces[pathId];
-    assert(trace);
-    assert(trace->size() > 0);
-    tgtMgr.markTarget(pathId, trace->back(), TakenFlags::CHECKER_IMPORTANT);
+    if (localResult == Checker::IMPORTANT) {
+      tgtMgr.markTarget(pathId, dynInstr, TakenFlags::CHECKER_IMPORTANT);
+      stat.printDynInstr(dynInstr, "PathSlicer::recordCheckerResult Checker::IMPORTANT");
+    } else {
+      tgtMgr.markTarget(pathId, dynInstr, TakenFlags::CHECKER_ERROR);
+      stat.printDynInstr(dynInstr, "PathSlicer::recordCheckerResult Checker::ERROR");
+    }
   }
 }
 

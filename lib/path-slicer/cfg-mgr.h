@@ -20,7 +20,11 @@ namespace tern {
       the latter one postdominates the prev one. */
     CacheUtil postDomCache;
 
+    llvm::DenseMap<const llvm::Instruction *, llvm::Instruction *> neareastPostDomInst;
+
   protected:
+    llvm::BasicBlock *findNearestCommonPostDominator(
+      llvm::PostDominatorTree &PDT, llvm::BasicBlock *A, llvm::BasicBlock *B);
 
   public:
     CfgMgr();
@@ -29,6 +33,7 @@ namespace tern {
     virtual void getAnalysisUsage(llvm::AnalysisUsage &AU) const;
     virtual bool runOnModule(llvm::Module &M);    
     bool postDominate(llvm::Instruction *prevInstr, llvm::Instruction *postInstr);
+    llvm::Instruction *getStaticPostDom(llvm::Instruction *prevInstr);
   };
 }
 

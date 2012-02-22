@@ -117,21 +117,32 @@ bool IntraSlicer::regOverWritten(DynInstr *dynInstr) {
 }
 
 bool IntraSlicer::retRegOverWritten(DynRetInstr *dynRetInstr) {
-  DynInstr *callDynInstr = (DynInstr *)(dynRetInstr->getDynCallInstr());
-  if (!callDynInstr)  // If this is a return instruction of main() or thread routine, return false.
-    return false;
-  return regOverWritten(callDynInstr);
+  DynInstr *dynCallInstr = (DynInstr *)(dynRetInstr->getDynCallInstr());
+  assert(dynCallInstr);
+  return regOverWritten(dynCallInstr);
 }
 
 bool IntraSlicer::eventBetween(DynBrInstr *dynBrInstr, DynInstr *dynPostInstr) {
   Instruction *prevInstr = idMgr->getOrigInstr((DynInstr *)dynBrInstr);
   BranchInst *branch = dyn_cast<BranchInst>(prevInstr);
   assert(branch);
-  Instruction *postInstr = idMgr->getOrigInstr((DynInstr *)dynPostInstr);
+  Instruction *postInstr = NULL;
+  if (dynPostInstr) /* dynPostInstr can be NULL because sometimes we start from empty target. */
+    postInstr = idMgr->getOrigInstr((DynInstr *)dynPostInstr);
+  else {
+    postInstr = cfgMgr->getStaticPostDom(prevInstr);
+    if (DBG && postInstr)
+      stat->printInstr(postInstr, __func__);
+  }
   return funcSumm->eventBetween(branch, postInstr);
 }
 
 bool IntraSlicer::writtenBetween(DynBrInstr *dynBrInstr, DynInstr *dynPostInstr) {
+  /* dynPostInstr or successor can be NULL because sometimes we start from empty target. */
+  if (!dynPostInstr || !dynBrInstr->getSuccessorBB()) {  
+    assert(slice.size() == 0 && live.virtRegsSize() == 0 && live.loadInstrsSize() == 0);
+    return false;
+  }
   bdd bddBetween = bddfalse;
   oprdSumm->getStoreSummBetween(dynBrInstr, dynPostInstr, bddBetween);
   const bdd bddOfLive = live.getAllLoadMem();
@@ -203,6 +214,13 @@ void IntraSlicer::handleBranch(DynInstr *dynInstr) {
 void IntraSlicer::handleRet(DynInstr *dynInstr) {
   stat->printDynInstr(dynInstr, __func__);
   DynRetInstr *retInstr = (DynRetInstr*)dynInstr;
+  /* If current return instruction does not have a call instruction, it must 
+  be the return of main() of thread routines, if it is target, it is already 
+  taken by handle*Target(); if it is not target, it should not be taken, but we 
+  still should not remove the instruction range for current funcion, we just 
+  simply return. */
+  if (!retInstr->getDynCallInstr())
+    return;
   if (retRegOverWritten(retInstr)) {
     delRegOverWritten(retInstr);
     live.addUsedRegs(retInstr);
@@ -314,7 +332,12 @@ DynInstr *IntraSlicer::prevDynInstr(DynInstr *dynInstr) {
   return prevInstr;
 }
 
-bool IntraSlicer::postDominate(DynInstr *dynPostInstr, DynInstr *dynPrevInstr) {
+bool IntraSlicer::postDominate(DynInstr *dynPostInstr, DynBrInstr *dynPrevInstr) {
+  /* dynPostInstr or successor can be NULL because sometimes we start from empty target. */
+  if (!dynPostInstr || !dynPrevInstr->getSuccessorBB()) {
+    assert(slice.size() == 0);
+    return true;
+  }
   Instruction *prevInstr = idMgr->getOrigInstr(dynPrevInstr);
   Instruction *postInstr = idMgr->getOrigInstr(dynPostInstr);
   bool result = cfgMgr->postDominate(prevInstr, postInstr);

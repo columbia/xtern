@@ -21,6 +21,10 @@ size_t LiveSet::virtRegsSize() {
   return virtRegs.size();
 }
 
+size_t LiveSet::loadInstrsSize() {
+  return loadInstrs.size();
+}
+
 void LiveSet::clear() {
   virtRegs.clear();
   loadInstrs.clear();

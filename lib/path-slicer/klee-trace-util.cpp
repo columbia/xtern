@@ -206,7 +206,9 @@ void KleeTraceUtil::preProcess(DynInstrVector *trace) {
           break;
       }
       assert(nextInstr || i == traceSize - 1);  // The branch must have successor, or it is the last instruction in the trace.
-      BasicBlock *successor = Util::getBasicBlock(idMgr->getOrigInstr(nextInstr));
+      BasicBlock *successor = NULL;
+      if (nextInstr)
+        successor = Util::getBasicBlock(idMgr->getOrigInstr(nextInstr));
       ((DynBrInstr *)dynInstr)->setSuccessorBB(successor);
     }
     

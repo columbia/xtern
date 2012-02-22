@@ -39,6 +39,8 @@ bool Slice::in(DynInstr *dynInstr) {
 }
 
 DynInstr *Slice::getHead() {
+  if (size() == 0)
+    return NULL;
   DynInstrItr itr = begin();
   return *itr;
 }

@@ -113,7 +113,9 @@ bool EventMgr::mayCallEvent(Function *f) {
 
 bool EventMgr::eventBetween(BranchInst *prevInstr, Instruction *postInstr) {
   Function *func = Util::getFunction(prevInstr);
-  BasicBlock *postDomBB = Util::getBasicBlock(postInstr);
+  BasicBlock *postDomBB = NULL;
+  if (postInstr)
+    postDomBB = Util::getBasicBlock(postInstr);
   
   /* Flood fill from <bb> until reaching <post_dominator_bb> */
   bbVisited.clear();

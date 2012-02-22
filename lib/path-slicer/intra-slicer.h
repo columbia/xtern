@@ -41,7 +41,7 @@ namespace tern {
     size_t curIndex;
 
   protected:
-    bool postDominate(DynInstr *dynPostInstr, DynInstr *dynPrevInstr);
+    bool postDominate(DynInstr *dynPostInstr, DynBrInstr *dynPrevInstr);
     DynInstrItr current();
     DynInstr *delFromTrace();
     void handlePHI(DynInstr *dynInstr);

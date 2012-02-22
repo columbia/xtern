@@ -40,6 +40,7 @@ namespace tern {
     ~LiveSet();
     void init(AliasMgr *aliasMgr, InstrIdMgr *idMgr);
     size_t virtRegsSize();
+    size_t loadInstrsSize();
     void clear();
 
     /** Virtual registers. **/

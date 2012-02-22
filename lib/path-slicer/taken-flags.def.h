@@ -2,7 +2,7 @@
 
 /* Flags to identify whether a dynamic instruction is taken, and reasons of taken. */
 
-/* Reasons of taken by handling important events (star target or buggy points, synch calls). */
+/* Reasons of taken by handling important events (synch calls or other important function calls). */
 DEF(TEST_TARGET, TestTarget)
 DEF(TAKEN_EVENT, EventTarget)
 
@@ -28,7 +28,7 @@ DEF(INTER_PHASE_MAX, InterThreadTarget)                         /* End of inter-
 
 /* Starting target of checkers in directed symbolic execution project. */
 DEF(CHECKER_IMPORTANT, CheckerTarget)
-//DEF(CHECKER_ERROR, CheckerTarget)
+DEF(CHECKER_ERROR, CheckerTarget)
 // TBD
 
 

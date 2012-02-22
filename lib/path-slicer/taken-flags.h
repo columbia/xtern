@@ -15,7 +15,8 @@ enum {
   first_taken_flag = 1
 };
 
-enum {TestTarget, EventTarget, RaceTarget, InterThreadTarget, CheckerTarget, IntraThread};
+enum {TestTarget, EventTarget, RaceTarget, InterThreadTarget,
+  CheckerTarget, IntraThread};
 
 extern const char *takenReasons[];
 extern const int takenKind[];
