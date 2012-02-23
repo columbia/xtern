@@ -87,6 +87,7 @@ DEF(nanosleep,              BlockingSyscall, int, const struct timespec *req, st
 //socket DEF(select,                 BlockingSyscall, int, int nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds, struct timeval *timeout)
 DEF(epoll_wait,             BlockingSyscall, int, int epfd, struct epoll_event *events, int maxevents, int timeout)
 DEF(sigwait,                BlockingSyscall, int, const sigset_t *set, int *sig)
+DEF(fgets,                  BlockingSyscall, char*, char* s, int size, FILE *stream)
 /* should include sched_yield */
 
 /* We don't consider exit a sync event because our instrumentation code

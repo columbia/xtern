@@ -132,9 +132,9 @@ int64_t txt_log_reader::get_int64(int idx)
 {
   if (idx >= 0 && idx < (int) cur_rec.args.size())
   {
-    int64_t x;
-    sscanf(cur_rec.args[idx].c_str(), "%lx", &x);
-    return x; 
+    unsigned long long x;
+    sscanf(cur_rec.args[idx].c_str(), "%llx", &x);
+    return (int64_t) x; 
   }
   else
     return -1;
@@ -144,9 +144,9 @@ int txt_log_reader::get_int(int idx)
 {
   if (idx >= 0 && idx < (int) cur_rec.args.size())
   {
-    int x;
+    unsigned x;
     sscanf(cur_rec.args[idx].c_str(), "%x", &x);
-    return x; 
+    return (int)x; 
   }
   else
     return -1;

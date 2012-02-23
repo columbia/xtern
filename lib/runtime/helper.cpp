@@ -10,6 +10,7 @@
 #include "tern/config.h"
 #include "tern/hooks.h"
 #include "tern/runtime/runtime.h"
+#include "tern/space.h"
 #include "helper.h"
 #include "tern/options.h"
 
@@ -54,6 +55,28 @@ int __tern_pthread_create(pthread_t *thread,  const pthread_attr_t *attr,
   return ret;
 }
 
+/*
+    This idle thread is created to avoid empty runq.
+    In the implementation with semaphore, there's a global token that must be 
+    held by some threads. In the case that all threads are executing blocking
+    function calls, the global token can be held by nothing. So we create this
+    idle thread to ensure there's at least one thread in the runq to hold the 
+    global token.
+
+    Another solution is to add a flag in schedule showing if it happens that 
+    runq is empty and the global token is held by no one. And recover the global
+    token when some thread comes back to runq from blocking function call. 
+ */
+volatile int idle_done = 0;
+pthread_t idle_th;
+void *idle_thread(void *)
+{
+  while (!idle_done) {
+    tern_usleep(0xdeadbeef, options::idle_sleep_length);
+  }
+  return NULL;
+}
+
 void __tern_prog_begin(void) {
   options::read_options("local.options");
   options::read_env_options();
@@ -67,9 +90,18 @@ void __tern_prog_begin(void) {
 
   tern_prog_begin();
   tern_thread_begin(); // main thread begins
+
+  tern_pthread_create(0xdeadceae, &idle_th, NULL, idle_thread, NULL);
 }
 
 void __tern_prog_end (void) {
+
+  // terminate the idle thread because it references the runtime which we
+  // are about to free
+  idle_done = 1;
+  // printf("idle_done = %d\n", idle_done);
+  tern_pthread_join(0xdeadceae, idle_th, NULL);
+
   tern_thread_end(-1); // main thread ends
   tern_prog_end();
 

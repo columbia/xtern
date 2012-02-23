@@ -247,6 +247,14 @@ int Runtime::usleep(unsigned ins, int &error, useconds_t usec)
   return ret;
 }
 
+char *Runtime::__fgets(unsigned ins, int &error, char *s, int size, FILE *stream)
+{
+  errno = error;
+  char *ret = fgets(s, size, stream);
+  error = errno;
+  return ret;
+}
+
 int Runtime::nanosleep(unsigned ins, int &error, const struct timespec *req, struct timespec *rem)
 {
   errno = error;

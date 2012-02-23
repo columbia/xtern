@@ -1,5 +1,6 @@
 /* Author: Junfeng Yang (junfeng@cs.columbia.edu) */
 #include <list>
+#include <stddef.h>
 #include "llvm/Module.h"
 #include "llvm/LLVMContext.h"
 #include "llvm/PassManager.h"

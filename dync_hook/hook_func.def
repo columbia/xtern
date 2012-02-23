@@ -399,3 +399,19 @@ epoll_wait
 (int epfd, struct epoll_event *events, int maxevents, int timeout)
 END_SHORT_DEFINE
 
+STARTDEF
+char*
+fgets
+/lib/x86_64-linux-gnu/libc.so.6
+char *,
+int ,
+FILE*
+SECTION
+char *s,
+int size,
+FILE* stream
+SECTION
+s, size, stream
+SECTION
+ENDDEF
+

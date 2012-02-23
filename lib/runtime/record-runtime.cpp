@@ -33,7 +33,9 @@
 //
 
 #include <sys/time.h>
+#include <execinfo.h>
 #include <time.h>
+#include <string.h>
 #include <errno.h>
 #include "tern/runtime/record-log.h"
 #include "tern/runtime/record-runtime.h"
@@ -45,10 +47,20 @@
 #include <map>
 #include <sys/types.h>
 
+// FIXME: these should be in tern/config.h
+#if !defined(_POSIX_C_SOURCE) || (_POSIX_C_SOURCE<199309L)
+// Need this for clock_gettime
+#  define _POSIX_C_SOURCE (199309L)
+#endif
+
 //#define _DEBUG_RECORDER
 
 #ifdef _DEBUG_RECORDER
-#  define dprintf(fmt...) fprintf(stderr, fmt)
+#  define dprintf(fmt...) do {                   \
+     fprintf(stderr, "[%d]", self());            \
+     fprintf(stderr, fmt);                       \
+     fflush(stderr);                             \
+  } while(0)
 #else
 #  define dprintf(fmt...)
 #endif
@@ -1167,7 +1179,7 @@ ssize_t RecorderRT<_S>::__sendmsg(unsigned ins, int &error, int sockfd, const st
   BLOCK_TIMER_START;
   int ret = Runtime::__sendmsg(ins, error, sockfd, msg, flags);
   uint64_t sig = hash((char*)msg, sizeof(struct msghdr)); 
-  BLOCK_TIMER_END(syncfunc::sendto, (uint64_t) sig, (uint64_t) ret);
+  BLOCK_TIMER_END(syncfunc::sendmsg, (uint64_t) sig, (uint64_t) ret);
   return ret;
 }
 
@@ -1177,7 +1189,7 @@ ssize_t RecorderRT<_S>::__recv(unsigned ins, int &error, int sockfd, void *buf, 
   BLOCK_TIMER_START;
   ssize_t ret = Runtime::__recv(ins, error, sockfd, buf, len, flags);
   uint64_t sig = hash((char*)buf, len); 
-  BLOCK_TIMER_END(syncfunc::sendto, (uint64_t) sig, (uint64_t) ret);
+  BLOCK_TIMER_END(syncfunc::recv, (uint64_t) sig, (uint64_t) ret);
   return ret;
 }
 
@@ -1187,7 +1199,7 @@ ssize_t RecorderRT<_S>::__recvfrom(unsigned ins, int &error, int sockfd, void *b
   BLOCK_TIMER_START;
   ssize_t ret = Runtime::__recvfrom(ins, error, sockfd, buf, len, flags, src_addr, addrlen);
   uint64_t sig = hash((char*)buf, len); 
-  BLOCK_TIMER_END(syncfunc::sendto, (uint64_t) sig, (uint64_t) ret);
+  BLOCK_TIMER_END(syncfunc::recvfrom, (uint64_t) sig, (uint64_t) ret);
   return ret;
 }
 
@@ -1197,7 +1209,7 @@ ssize_t RecorderRT<_S>::__recvmsg(unsigned ins, int &error, int sockfd, struct m
   BLOCK_TIMER_START;
   ssize_t ret = Runtime::__recvmsg(ins, error, sockfd, msg, flags);
   uint64_t sig = hash((char*)msg, sizeof(struct msghdr)); 
-  BLOCK_TIMER_END(syncfunc::sendto, (uint64_t) sig, (uint64_t) ret);
+  BLOCK_TIMER_END(syncfunc::recvmsg, (uint64_t) sig, (uint64_t) ret);
   return ret;
 }
 
@@ -1207,7 +1219,7 @@ ssize_t RecorderRT<_S>::__read(unsigned ins, int &error, int fd, void *buf, size
   BLOCK_TIMER_START;
   ssize_t ret = Runtime::__read(ins, error, fd, buf, count);
   uint64_t sig = hash((char*)buf, count); 
-  BLOCK_TIMER_END(syncfunc::sendto, (uint64_t) sig, (uint64_t) ret);
+  BLOCK_TIMER_END(syncfunc::read, (uint64_t) sig, (uint64_t) ret);
   return ret;
 }
 
@@ -1217,7 +1229,7 @@ ssize_t RecorderRT<_S>::__write(unsigned ins, int &error, int fd, const void *bu
   BLOCK_TIMER_START;
   ssize_t ret = Runtime::__write(ins, error, fd, buf, count);
   uint64_t sig = hash((char*)buf, count); 
-  BLOCK_TIMER_END(syncfunc::sendto, (uint64_t) sig, (uint64_t) ret);
+  BLOCK_TIMER_END(syncfunc::write, (uint64_t) sig, (uint64_t) ret);
   return ret;
 }
 
@@ -1226,7 +1238,7 @@ int RecorderRT<_S>::__select(unsigned ins, int &error, int nfds, fd_set *readfds
 {
   BLOCK_TIMER_START;
   int ret = Runtime::__select(ins, error, nfds, readfds, writefds, exceptfds, timeout);
-  BLOCK_TIMER_END(syncfunc::sendto, (uint64_t) ret);
+  BLOCK_TIMER_END(syncfunc::select, (uint64_t) ret);
   return ret;
 }
 
@@ -1235,7 +1247,7 @@ int RecorderRT<_S>::__epoll_wait(unsigned ins, int &error, int epfd, struct epol
 {
   BLOCK_TIMER_START;
   int ret = Runtime::__epoll_wait(ins, error, epfd, events, maxevents, timeout);
-  BLOCK_TIMER_END(syncfunc::sendto, (uint64_t) ret);
+  BLOCK_TIMER_END(syncfunc::epoll_wait, (uint64_t) ret);
   return ret;
 }
 
@@ -1244,7 +1256,16 @@ int RecorderRT<_S>::__sigwait(unsigned ins, int &error, const sigset_t *set, int
 {
   BLOCK_TIMER_START;
   int ret = Runtime::__sigwait(ins, error, set, sig);
-  BLOCK_TIMER_END(syncfunc::sendto, (uint64_t) ret);
+  BLOCK_TIMER_END(syncfunc::sigwait, (uint64_t) ret);
+  return ret;
+}
+
+template <typename _S>
+char *RecorderRT<_S>::__fgets(unsigned ins, int &error, char *s, int size, FILE *stream)
+{
+  BLOCK_TIMER_START;
+  char * ret = Runtime::__fgets(ins, error, s, size, stream);
+  BLOCK_TIMER_END(syncfunc::sigwait, (uint64_t) ret);
   return ret;
 }
 

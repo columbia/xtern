@@ -26,28 +26,7 @@ void __attribute((weak)) InstallRuntime() {
 extern "C" {
 #endif
 
-/*
-    This idle thread is created to avoid empty runq.
-    In the implementation with semaphore, there's a global token that must be 
-    held by some threads. In the case that all threads are executing blocking
-    function calls, the global token can be held by nothing. So we create this
-    idle thread to ensure there's at least one thread in the runq to hold the 
-    global token.
-
-    Another solution is to add a flag in schedule showing if it happens that 
-    runq is empty and the global token is held by no one. And recover the global
-    token when some thread comes back to runq from blocking function call. 
- */
-void *idle_thread(void *)
-{
-  //tern_thread_begin();
-  while (true)
-  {
-    tern_usleep(0xdeadbeef, options::idle_sleep_length);
-  }
-  //tern_thread_end(-1);
-  return 0;
-}
+extern void *idle_thread(void*);
 
 static bool prog_began = false; // sanity
 void tern_prog_begin() {
@@ -78,7 +57,7 @@ void tern_thread_begin(void) {
   // thread begins in Sys space
   Runtime::the->threadBegin();
 
-  if (first_thread && 0)
+  if (first_thread)
   {
     Space::exitSys();
     pthread_t pt;
@@ -618,6 +597,18 @@ int tern_nanosleep(unsigned ins, const struct timespec *req, struct timespec *re
   errno = error;
   return ret;
 }
+
+char *tern_fgets(unsigned ins, char *s, int size, FILE *stream)
+{
+  int error = errno;
+  char *ret;
+  Space::enterSys();
+  ret = Runtime::the->__fgets(ins, error, s, size, stream);
+  Space::exitSys();
+  errno = error;
+  return ret;
+}
+
 
 /*
 int tern_poll(unsigned ins, struct pollfd *fds, nfds_t nfds, int timeout)

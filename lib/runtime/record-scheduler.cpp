@@ -18,7 +18,11 @@ using namespace tern;
 
 #ifdef _DEBUG_RECORDER
 #  define SELFCHECK  dump(cerr); selfcheck()
-#  define dprintf(fmt...) fprintf(stderr, fmt); fflush(stderr);
+#  define dprintf(fmt...) do {                   \
+     fprintf(stderr, "[%d]", self());            \
+     fprintf(stderr, fmt);                       \
+     fflush(stderr);                             \
+   } while(0)
 #else
 #  define SELFCHECK
 #  define dprintf(fmt...) ;
@@ -618,14 +622,14 @@ void RRScheduler::block()
   int tid = self();
   assert(tid>=0 && tid < Scheduler::nthread);
   assert(tid == runq.front());
+  dprintf("RRScheduler: %d blocks\n", self());
   next();
-  SELFCHECK;
 }
 
 void RRScheduler::wakeup()
 {
   int tid = -1;
-  fprintf(stderr, "thread %d, wakeup start at turn %d\n", self(), getTurnCount());
+  dprintf("thread %d, wakeup start at turn %d\n", self(), getTurnCount());
 
   while (tid < 0)
   {
@@ -646,13 +650,13 @@ void RRScheduler::wakeup()
     }
 #endif
   }
-  fprintf(stderr, "thread %d, wakeup returned at turn %d\n", self(), getTurnCount());
+  dprintf("thread %d, wakeup returned at turn %d\n", self(), getTurnCount());
   
+  dprintf("RRScheduler: %d wakes up by stealing %d's turn\n", self(), tid);
   runq.push_back(self());
   timemark[self()] = timer;
   runq.push_front(self());  //  hack code
   next();
-  SELFCHECK;
 }
 
 //@before with turn

@@ -139,6 +139,8 @@ struct Runtime {
 
   virtual int __sigwait(unsigned insid, int &error, const sigset_t *set, int *sig); 
 
+  virtual char *__fgets(unsigned ins, int &error, char *s, int size, FILE *stream);
+
   // sleep
   virtual unsigned int sleep(unsigned insid, int &error, unsigned int seconds);
   virtual int usleep(unsigned insid, int &error, useconds_t usec);
