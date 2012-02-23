@@ -624,7 +624,9 @@ void RRScheduler::block()
 
 void RRScheduler::wakeup()
 {
-   int tid = -1;
+  int tid = -1;
+  fprintf(stderr, "thread %d, wakeup start at turn %d\n", self(), getTurnCount());
+
   while (tid < 0)
   {
 #if 0
@@ -644,6 +646,7 @@ void RRScheduler::wakeup()
     }
 #endif
   }
+  fprintf(stderr, "thread %d, wakeup returned at turn %d\n", self(), getTurnCount());
   
   runq.push_back(self());
   timemark[self()] = timer;

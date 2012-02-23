@@ -1,4 +1,4 @@
-
+#if 0
 #include <errno.h>
 #include "tern/runtime/record-log.h"
 #include "tern/runtime/record-runtime.h"
@@ -606,4 +606,4 @@ int RRuntime::__select(unsigned ins, int nfds, fd_set *readfds, fd_set *writefds
 
 
 
-
+#endif

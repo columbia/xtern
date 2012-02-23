@@ -103,12 +103,13 @@ void TxtLogger::logSync(unsigned insid, unsigned short sync,
   case syncfunc::recv:
   case syncfunc::recvfrom:
   case syncfunc::recvmsg:
-  case syncfunc::read:
   case syncfunc::select:
   case syncfunc::epoll_wait:
   case syncfunc::sigwait:
     break;
     // log one sync var (common case)
+  case syncfunc::pthread_mutex_init:
+  case syncfunc::pthread_mutex_destroy:
   case syncfunc::pthread_mutex_lock:
   case syncfunc::pthread_mutex_unlock:
   case syncfunc::pthread_barrier_wait:
@@ -121,6 +122,8 @@ void TxtLogger::logSync(unsigned insid, unsigned short sync,
   case syncfunc::sleep:
   case syncfunc::usleep:
   case syncfunc::nanosleep:
+  case syncfunc::read:
+  case syncfunc::write:
     ouf << hex << " 0x" << va_arg(args, uint64_t) << dec;
     break;
 
@@ -407,7 +410,20 @@ void TestLogger::logSync(unsigned insid, unsigned short sync,
 
   va_start(args, after);
   switch(sync) {
-    // log one arg (common case)
+    // log nothing, mostly for sched point. 
+  case syncfunc::accept:
+  case syncfunc::accept4:
+  case syncfunc::connect:
+  case syncfunc::recv:
+  case syncfunc::recvfrom:
+  case syncfunc::recvmsg:
+  case syncfunc::select:
+  case syncfunc::epoll_wait:
+  case syncfunc::sigwait:
+    break;
+    // log one sync var (common case)
+  case syncfunc::pthread_mutex_init:
+  case syncfunc::pthread_mutex_destroy:
   case syncfunc::pthread_mutex_lock:
   case syncfunc::pthread_mutex_unlock:
   case syncfunc::pthread_barrier_wait:
@@ -417,40 +433,47 @@ void TestLogger::logSync(unsigned insid, unsigned short sync,
   case syncfunc::sem_wait:
   case syncfunc::sem_post:
   case syncfunc::pthread_join:
-  case syncfunc::tern_thread_begin:
-  case syncfunc::tern_thread_end:
-    a = va_arg(args, uint64_t);
-    ouf << hex << " 0x" << a << dec;
+  case syncfunc::sleep:
+  case syncfunc::usleep:
+  case syncfunc::nanosleep:
+  case syncfunc::read:
+  case syncfunc::write:
+    ouf << hex << " 0x" << va_arg(args, uint64_t) << dec;
     break;
 
-    // log two args
+    // log two sync vars for cond_*wait
+  case syncfunc::pthread_mutex_timedlock:
   case syncfunc::pthread_cond_wait:
   case syncfunc::pthread_barrier_init:
   case syncfunc::pthread_create:
   case syncfunc::pthread_mutex_trylock:
-  case syncfunc::pthread_mutex_timedlock:
   case syncfunc::sem_trywait:
   case syncfunc::sem_timedwait:
-    a = va_arg(args, uint64_t);
-    b = va_arg(args, uint64_t);
+    {
+      //  notice "<<" operator is expanded from right to left.
+      uint64_t a = va_arg(args, uint64_t);
+      uint64_t b = va_arg(args, uint64_t);
+
     ouf << hex
         << " 0x" << a
         << " 0x" << b
         << dec;
+    }
     break;
-
-    // log three args
+    // log three sync vars
   case syncfunc::pthread_cond_timedwait:
-    a = va_arg(args, uint64_t);
-    b = va_arg(args, uint64_t);
-    if(after)
-      c = va_arg(args, uint64_t);
+    {
+      //  notice "<<" operator is explained from right to left.
+      uint64_t a = va_arg(args, uint64_t);
+      uint64_t b = va_arg(args, uint64_t);
+      uint64_t c = va_arg(args, uint64_t);
+
     ouf << hex
         << " 0x" << a
-        << " 0x" << b;
-    if(after)
-      ouf << " 0x" << c;
-    ouf << dec;
+        << " 0x" << b
+        << " 0x" << c
+        << dec;
+    }
     break;
 
   default:

@@ -1,6 +1,7 @@
 #include <pthread.h>
 #include <stdio.h>
 #include <dlfcn.h>
+#include <errno.h>
 #include <stdlib.h>
 #include <sys/types.h>
 #include <sys/socket.h>

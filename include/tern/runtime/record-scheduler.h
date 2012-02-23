@@ -93,7 +93,7 @@ struct RRScheduler: public Scheduler {
 
   void getTurn();
   void putTurn(bool at_thread_end = false);
-  int  wait(void *chan, unsigned timeout = FOREVER);
+  int  wait(void *chan, unsigned timeout = Scheduler::FOREVER);
   void signal(void *chan, bool all=false);
 
   void block(); 

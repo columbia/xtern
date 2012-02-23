@@ -29,67 +29,69 @@ struct RecorderRT: public Runtime, public _Scheduler {
   void threadEnd(unsigned insid);
 
   // thread
-  int pthreadCreate(unsigned insid, pthread_t *thread,  pthread_attr_t *attr,
+  int pthreadCreate(unsigned insid, int &error, pthread_t *thread,  pthread_attr_t *attr,
                     void *(*thread_func)(void*), void *arg);
-  int pthreadJoin(unsigned insid, pthread_t th, void **thread_return);
+  int pthreadJoin(unsigned insid, int &error, pthread_t th, void **thread_return);
 
   // mutex
-  int pthreadMutexLock(unsigned insid, pthread_mutex_t *mutex);
-  int pthreadMutexTimedLock(unsigned insid, pthread_mutex_t *mutex,
+  int pthreadMutexInit(unsigned insid, int &error, pthread_mutex_t *mutex, const  pthread_mutexattr_t *mutexattr);
+  int pthreadMutexDestroy(unsigned insid, int &error, pthread_mutex_t *mutex);
+  int pthreadMutexLock(unsigned insid, int &error, pthread_mutex_t *mutex);
+  int pthreadMutexTimedLock(unsigned insid, int &error, pthread_mutex_t *mutex,
                             const struct timespec *abstime);
-  int pthreadMutexTryLock(unsigned insid, pthread_mutex_t *mutex);
+  int pthreadMutexTryLock(unsigned insid, int &error, pthread_mutex_t *mutex);
 
-  int pthreadMutexUnlock(unsigned insid, pthread_mutex_t *mutex);
+  int pthreadMutexUnlock(unsigned insid, int &error, pthread_mutex_t *mutex);
 
   // cond var
-  int pthreadCondWait(unsigned insid, pthread_cond_t *cv, pthread_mutex_t *mu);
-  int pthreadCondTimedWait(unsigned insid, pthread_cond_t *cv,
+  int pthreadCondWait(unsigned insid, int &error, pthread_cond_t *cv, pthread_mutex_t *mu);
+  int pthreadCondTimedWait(unsigned insid, int &error, pthread_cond_t *cv,
                            pthread_mutex_t *mu, const struct timespec *abstime);
-  int pthreadCondSignal(unsigned insid, pthread_cond_t *cv);
-  int pthreadCondBroadcast(unsigned insid, pthread_cond_t *cv);
+  int pthreadCondSignal(unsigned insid, int &error, pthread_cond_t *cv);
+  int pthreadCondBroadcast(unsigned insid, int &error, pthread_cond_t *cv);
 
   // barrier
-  int pthreadBarrierInit(unsigned insid, pthread_barrier_t *barrier, unsigned count);
-  int pthreadBarrierWait(unsigned insid, pthread_barrier_t *barrier);
-  int pthreadBarrierDestroy(unsigned insid, pthread_barrier_t *barrier);
+  int pthreadBarrierInit(unsigned insid, int &error, pthread_barrier_t *barrier, unsigned count);
+  int pthreadBarrierWait(unsigned insid, int &error, pthread_barrier_t *barrier);
+  int pthreadBarrierDestroy(unsigned insid, int &error, pthread_barrier_t *barrier);
 
   // semaphore
-  int semWait(unsigned insid, sem_t *sem);
-  int semTryWait(unsigned insid, sem_t *sem);
-  int semTimedWait(unsigned insid, sem_t *sem, const struct timespec *abstime);
-  int semPost(unsigned insid, sem_t *sem);
+  int semWait(unsigned insid, int &error, sem_t *sem);
+  int semTryWait(unsigned insid, int &error, sem_t *sem);
+  int semTimedWait(unsigned insid, int &error, sem_t *sem, const struct timespec *abstime);
+  int semPost(unsigned insid, int &error, sem_t *sem);
 
-  void symbolic(unsigned insid, void *addr, int nbytes, const char *name);
+  void symbolic(unsigned insid, int &error, void *addr, int nbytes, const char *name);
 
   // socket & file
-  int __socket(unsigned ins, int domain, int type, int protocol);
-  int __listen(unsigned ins, int sockfd, int backlog);
-  int __accept(unsigned ins, int sockfd, struct sockaddr *cliaddr, socklen_t *addrlen);
-  int __accept4(unsigned ins, int sockfd, struct sockaddr *cliaddr, socklen_t *addrlen, int flags);
-  int __connect(unsigned ins, int sockfd, const struct sockaddr *serv_addr, socklen_t addrlen);
-  //struct hostent *__gethostbyname(unsigned ins, const char *name);
-  //struct hostent *__gethostbyaddr(unsigned ins, const void *addr, int len, int type);
-  ssize_t __send(unsigned ins, int sockfd, const void *buf, size_t len, int flags);
-  ssize_t __sendto(unsigned ins, int sockfd, const void *buf, size_t len, int flags, const struct sockaddr *dest_addr, socklen_t addrlen);
-  ssize_t __sendmsg(unsigned ins, int sockfd, const struct msghdr *msg, int flags);
-  ssize_t __recv(unsigned ins, int sockfd, void *buf, size_t len, int flags);
-  ssize_t __recvfrom(unsigned ins, int sockfd, void *buf, size_t len, int flags, struct sockaddr *src_addr, socklen_t *addrlen);
-  ssize_t __recvmsg(unsigned ins, int sockfd, struct msghdr *msg, int flags);
-  int __shutdown(unsigned ins, int sockfd, int how);
-  int __getpeername(unsigned ins, int sockfd, struct sockaddr *addr, socklen_t *addrlen);  
-  int __getsockopt(unsigned ins, int sockfd, int level, int optname, void *optval, socklen_t *optlen);
-  int __setsockopt(unsigned ins, int sockfd, int level, int optname, const void *optval, socklen_t optlen);
-  int __close(unsigned ins, int fd);
-  ssize_t __read(unsigned ins, int fd, void *buf, size_t count);
-  ssize_t __write(unsigned ins, int fd, const void *buf, size_t count);
-  int __select(unsigned ins, int nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds, struct timeval *timeout);  
-  int __epoll_wait(unsigned ins, int epfd, struct epoll_event *events, int maxevents, int timeout);
-  int __sigwait(unsigned ins, const sigset_t *set, int *sig); 
+  int __socket(unsigned insid, int &error, int domain, int type, int protocol);
+  int __listen(unsigned insid, int &error, int sockfd, int backlog);
+  int __accept(unsigned insid, int &error, int sockfd, struct sockaddr *cliaddr, socklen_t *addrlen);
+  int __accept4(unsigned insid, int &error, int sockfd, struct sockaddr *cliaddr, socklen_t *addrlen, int flags);
+  int __connect(unsigned insid, int &error, int sockfd, const struct sockaddr *serv_addr, socklen_t addrlen);
+  //struct hostent *__gethostbyname(unsigned insid, int &error, const char *name);
+  //struct hostent *__gethostbyaddr(unsigned insid, int &error, const void *addr, int len, int type);
+  ssize_t __send(unsigned insid, int &error, int sockfd, const void *buf, size_t len, int flags);
+  ssize_t __sendto(unsigned insid, int &error, int sockfd, const void *buf, size_t len, int flags, const struct sockaddr *dest_addr, socklen_t addrlen);
+  ssize_t __sendmsg(unsigned insid, int &error, int sockfd, const struct msghdr *msg, int flags);
+  ssize_t __recv(unsigned insid, int &error, int sockfd, void *buf, size_t len, int flags);
+  ssize_t __recvfrom(unsigned insid, int &error, int sockfd, void *buf, size_t len, int flags, struct sockaddr *src_addr, socklen_t *addrlen);
+  ssize_t __recvmsg(unsigned insid, int &error, int sockfd, struct msghdr *msg, int flags);
+  int __shutdown(unsigned insid, int &error, int sockfd, int how);
+  int __getpeername(unsigned insid, int &error, int sockfd, struct sockaddr *addr, socklen_t *addrlen);  
+  int __getsockopt(unsigned insid, int &error, int sockfd, int level, int optname, void *optval, socklen_t *optlen);
+  int __setsockopt(unsigned insid, int &error, int sockfd, int level, int optname, const void *optval, socklen_t optlen);
+  int __close(unsigned insid, int &error, int fd);
+  ssize_t __read(unsigned insid, int &error, int fd, void *buf, size_t count);
+  ssize_t __write(unsigned insid, int &error, int fd, const void *buf, size_t count);
+  int __select(unsigned insid, int &error, int nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds, struct timeval *timeout);  
+  int __epoll_wait(unsigned insid, int &error, int epfd, struct epoll_event *events, int maxevents, int timeout);
+  int __sigwait(unsigned insid, int &error, const sigset_t *set, int *sig); 
 
   // sleep
-  unsigned int sleep(unsigned ins, unsigned int seconds);
-  int usleep(unsigned ins, useconds_t usec);
-  int nanosleep(unsigned ins, const struct timespec *req, struct timespec *rem);
+  unsigned int sleep(unsigned insid, int &error, unsigned int seconds);
+  int usleep(unsigned insid, int &error, useconds_t usec);
+  int nanosleep(unsigned insid, int &error, const struct timespec *req, struct timespec *rem);
 
   RecorderRT(): _Scheduler() {
     int ret;
@@ -101,12 +103,12 @@ struct RecorderRT: public Runtime, public _Scheduler {
 
 protected:
 
-  void wait(void *chan);
+  int wait(void *chan, unsigned timeout = Scheduler::FOREVER);
   void signal(void *chan, bool all=false);
   int absTimeToTurn(const struct timespec *abstime);
   int relTimeToTurn(const struct timespec *reltime);
 
-  void pthreadMutexLockHelper(pthread_mutex_t *mutex);
+  int pthreadMutexLockHelper(pthread_mutex_t *mutex, unsigned timeout = Scheduler::FOREVER);
   
   /// for each pthread barrier, track the count of the number and number
   /// of threads arrived at the barrier
@@ -117,7 +119,7 @@ protected:
   sem_t thread_begin_sem;
   sem_t thread_begin_done_sem;
 };
-
+#if 0
 struct RRuntime: public Runtime {
 
   void progBegin(void);
@@ -126,63 +128,63 @@ struct RRuntime: public Runtime {
   void threadEnd(unsigned insid);
 
   // thread
-  int pthreadMutexInit(unsigned insid, pthread_mutex_t *mutex, const  pthread_mutexattr_t *mutexattr);
-  int pthreadMutexDestroy(unsigned insid, pthread_mutex_t *mutex);
-  int pthreadCreate(unsigned insid, pthread_t *thread,  pthread_attr_t *attr,
+  int pthreadMutexInit(unsigned insid, int &error, pthread_mutex_t *mutex, const  pthread_mutexattr_t *mutexattr);
+  int pthreadMutexDestroy(unsigned insid, int &error, pthread_mutex_t *mutex);
+  int pthreadCreate(unsigned insid, int &error, pthread_t *thread,  pthread_attr_t *attr,
                     void *(*thread_func)(void*), void *arg);
-  int pthreadJoin(unsigned insid, pthread_t th, void **thread_return);
-  int pthreadCancel(unsigned insid, pthread_t th);
+  int pthreadJoin(unsigned insid, int &error, pthread_t th, void **thread_return);
+  int pthreadCancel(unsigned insid, int &error, pthread_t th);
 
   // mutex
-  int pthreadMutexLock(unsigned insid, pthread_mutex_t *mutex);
-  int pthreadMutexTimedLock(unsigned insid, pthread_mutex_t *mutex,
+  int pthreadMutexLock(unsigned insid, int &error, pthread_mutex_t *mutex);
+  int pthreadMutexTimedLock(unsigned insid, int &error, pthread_mutex_t *mutex,
                             const struct timespec *abstime);
-  int pthreadMutexTryLock(unsigned insid, pthread_mutex_t *mutex);
+  int pthreadMutexTryLock(unsigned insid, int &error, pthread_mutex_t *mutex);
 
-  int pthreadMutexUnlock(unsigned insid, pthread_mutex_t *mutex);
+  int pthreadMutexUnlock(unsigned insid, int &error, pthread_mutex_t *mutex);
 
   // cond var
-  int pthreadCondWait(unsigned insid, pthread_cond_t *cv, pthread_mutex_t *mu);
-  int pthreadCondTimedWait(unsigned insid, pthread_cond_t *cv,
+  int pthreadCondWait(unsigned insid, int &error, pthread_cond_t *cv, pthread_mutex_t *mu);
+  int pthreadCondTimedWait(unsigned insid, int &error, pthread_cond_t *cv,
                            pthread_mutex_t *mu, const struct timespec *abstime);
-  int pthreadCondSignal(unsigned insid, pthread_cond_t *cv);
-  int pthreadCondBroadcast(unsigned insid, pthread_cond_t *cv);
+  int pthreadCondSignal(unsigned insid, int &error, pthread_cond_t *cv);
+  int pthreadCondBroadcast(unsigned insid, int &error, pthread_cond_t *cv);
 
   // barrier
-  int pthreadBarrierInit(unsigned insid, pthread_barrier_t *barrier, unsigned count);
-  int pthreadBarrierWait(unsigned insid, pthread_barrier_t *barrier);
-  int pthreadBarrierDestroy(unsigned insid, pthread_barrier_t *barrier);
+  int pthreadBarrierInit(unsigned insid, int &error, pthread_barrier_t *barrier, unsigned count);
+  int pthreadBarrierWait(unsigned insid, int &error, pthread_barrier_t *barrier);
+  int pthreadBarrierDestroy(unsigned insid, int &error, pthread_barrier_t *barrier);
 
   // semaphore
-  int semWait(unsigned insid, sem_t *sem);
-  int semTryWait(unsigned insid, sem_t *sem);
-  int semTimedWait(unsigned insid, sem_t *sem, const struct timespec *abstime);
-  int semPost(unsigned insid, sem_t *sem);
+  int semWait(unsigned insid, int &error, sem_t *sem);
+  int semTryWait(unsigned insid, int &error, sem_t *sem);
+  int semTimedWait(unsigned insid, int &error, sem_t *sem, const struct timespec *abstime);
+  int semPost(unsigned insid, int &error, sem_t *sem);
 
-  void symbolic(unsigned insid, void *addr, int nbytes, const char *name);
+  void symbolic(unsigned insid, int &error, void *addr, int nbytes, const char *name);
 
   // socket & file
-  int __socket(unsigned ins, int domain, int type, int protocol);
-  int __listen(unsigned ins, int sockfd, int backlog);
-  int __accept(unsigned ins, int sockfd, struct sockaddr *cliaddr, socklen_t *addrlen);
-  int __accept4(unsigned ins, int sockfd, struct sockaddr *cliaddr, socklen_t *addrlen, int flags);
-  int __connect(unsigned ins, int sockfd, const struct sockaddr *serv_addr, socklen_t addrlen);
-  //struct hostent *__gethostbyname(unsigned ins, const char *name);
-  //struct hostent *__gethostbyaddr(unsigned ins, const void *addr, int len, int type);
-  ssize_t __send(unsigned ins, int sockfd, const void *buf, size_t len, int flags);
-  ssize_t __sendto(unsigned ins, int sockfd, const void *buf, size_t len, int flags, const struct sockaddr *dest_addr, socklen_t addrlen);
-  ssize_t __sendmsg(unsigned ins, int sockfd, const struct msghdr *msg, int flags);
-  ssize_t __recv(unsigned ins, int sockfd, void *buf, size_t len, int flags);
-  ssize_t __recvfrom(unsigned ins, int sockfd, void *buf, size_t len, int flags, struct sockaddr *src_addr, socklen_t *addrlen);
-  ssize_t __recvmsg(unsigned ins, int sockfd, struct msghdr *msg, int flags);
-  int __shutdown(unsigned ins, int sockfd, int how);
-  int __getpeername(unsigned ins, int sockfd, struct sockaddr *addr, socklen_t *addrlen);
-  int __getsockopt(unsigned ins, int sockfd, int level, int optname, void *optval, socklen_t *optlen);
-  int __setsockopt(unsigned ins, int sockfd, int level, int optname, const void *optval, socklen_t optlen);
-  int __close(unsigned ins, int fd);
-  ssize_t __read(unsigned ins, int fd, void *buf, size_t count);
-  ssize_t __write(unsigned ins, int fd, const void *buf, size_t count);
-  int __select(unsigned ins, int nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds, struct timeval *timeout);  
+  int __socket(unsigned insid, int &error, int domain, int type, int protocol);
+  int __listen(unsigned insid, int &error, int sockfd, int backlog);
+  int __accept(unsigned insid, int &error, int sockfd, struct sockaddr *cliaddr, socklen_t *addrlen);
+  int __accept4(unsigned insid, int &error, int sockfd, struct sockaddr *cliaddr, socklen_t *addrlen, int flags);
+  int __connect(unsigned insid, int &error, int sockfd, const struct sockaddr *serv_addr, socklen_t addrlen);
+  //struct hostent *__gethostbyname(unsigned insid, int &error, const char *name);
+  //struct hostent *__gethostbyaddr(unsigned insid, int &error, const void *addr, int len, int type);
+  ssize_t __send(unsigned insid, int &error, int sockfd, const void *buf, size_t len, int flags);
+  ssize_t __sendto(unsigned insid, int &error, int sockfd, const void *buf, size_t len, int flags, const struct sockaddr *dest_addr, socklen_t addrlen);
+  ssize_t __sendmsg(unsigned insid, int &error, int sockfd, const struct msghdr *msg, int flags);
+  ssize_t __recv(unsigned insid, int &error, int sockfd, void *buf, size_t len, int flags);
+  ssize_t __recvfrom(unsigned insid, int &error, int sockfd, void *buf, size_t len, int flags, struct sockaddr *src_addr, socklen_t *addrlen);
+  ssize_t __recvmsg(unsigned insid, int &error, int sockfd, struct msghdr *msg, int flags);
+  int __shutdown(unsigned insid, int &error, int sockfd, int how);
+  int __getpeername(unsigned insid, int &error, int sockfd, struct sockaddr *addr, socklen_t *addrlen);
+  int __getsockopt(unsigned insid, int &error, int sockfd, int level, int optname, void *optval, socklen_t *optlen);
+  int __setsockopt(unsigned insid, int &error, int sockfd, int level, int optname, const void *optval, socklen_t optlen);
+  int __close(unsigned insid, int &error, int fd);
+  ssize_t __read(unsigned insid, int &error, int fd, void *buf, size_t count);
+  ssize_t __write(unsigned insid, int &error, int fd, const void *buf, size_t count);
+  int __select(unsigned insid, int &error, int nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds, struct timeval *timeout);  
 
   
   RRuntime() {
@@ -289,7 +291,7 @@ protected:
   barrier_map barriers;
   tid_map_t tid_map;
 };
-
+#endif
 } // namespace tern
 
 #endif
