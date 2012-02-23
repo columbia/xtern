@@ -175,7 +175,7 @@ void PathSlicer::enforceRacyEdges() {
   // TBD: enforce all racy edges, and split new regions.
 }
 
-void PathSlicer::runPathSlicer(void *pathId, set<BranchInst *> &brInstrs) {  
+void PathSlicer::runPathSlicer(void *pathId, set<BranchInst *> &rmBrs) {  
   // Get trace of current path and do some pre-processing.
   assert(DM_IN(pathId, allPathTraces));
   DynInstrVector *trace = allPathTraces[pathId];
@@ -214,7 +214,7 @@ void PathSlicer::runPathSlicer(void *pathId, set<BranchInst *> &brInstrs) {
   } while (0);
   
   // Calculate stat results.
-  calStat();
+  calStat(rmBrs);
 
   // Free the trace along current path. 
   traceUtil->postProcess(trace);
@@ -225,10 +225,10 @@ finish:
   delete trace;
 }
 
-void PathSlicer::calStat() {
+void PathSlicer::calStat(set<BranchInst *> &rmBrs) {
   interSlicer.calStat();
   errs() << BAN;
-  intraSlicer.calStat();
+  intraSlicer.calStat(rmBrs);
   errs() << BAN;
 }
 
@@ -265,10 +265,12 @@ void PathSlicer::recordCheckerResult(void *pathId, Checker::Result globalResult,
     DynInstr *dynInstr = trace->back();
     if (localResult == Checker::IMPORTANT) {
       tgtMgr.markTarget(pathId, dynInstr, TakenFlags::CHECKER_IMPORTANT);
-      stat.printDynInstr(dynInstr, "PathSlicer::recordCheckerResult Checker::IMPORTANT");
+      if (DBG)
+        stat.printDynInstr(dynInstr, "PathSlicer::recordCheckerResult Checker::IMPORTANT");
     } else {
       tgtMgr.markTarget(pathId, dynInstr, TakenFlags::CHECKER_ERROR);
-      stat.printDynInstr(dynInstr, "PathSlicer::recordCheckerResult Checker::ERROR");
+      if (DBG)
+        stat.printDynInstr(dynInstr, "PathSlicer::recordCheckerResult Checker::ERROR");
     }
   }
 }

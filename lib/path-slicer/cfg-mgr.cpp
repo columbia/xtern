@@ -29,8 +29,8 @@ bool CfgMgr::runOnModule(Module &M) {
 }
 
 bool CfgMgr::postDominate(Instruction *prevInstr, Instruction *postInstr) {
-  SERRS << "CfgMgr::postDominate PREV: " << *(prevInstr) << "\n";
-  SERRS << "CfgMgr::postDominate POST: " << *(postInstr) << "\n";
+  SERRS << "CfgMgr::postDominate PREV: " << stat->printInstr(prevInstr, __func__) << "\n";
+  SERRS << "CfgMgr::postDominate POST: " << stat->printInstr(postInstr, __func__) << "\n";
   
   bool result = false;
   
@@ -40,7 +40,13 @@ bool CfgMgr::postDominate(Instruction *prevInstr, Instruction *postInstr) {
 
   // Query PostDominatorTree.
   Function *f = Util::getFunction(postInstr);
-  assert(f == Util::getFunction(prevInstr));
+  if (f != Util::getFunction(prevInstr)) {
+    errs() << "CfgMgr::postDominate PREV: " << stat->printInstr(prevInstr, __func__) << "\n";
+    errs() << "CfgMgr::postDominate POST: " << stat->printInstr(postInstr, __func__) << "\n";
+    fprintf(stderr, "Please examine the trace to make sure whether prev and \
+    post instructions are within the same function\n");
+    exit(1);
+  }
   
   PostDominatorTree &PDT = getAnalysis<PostDominatorTree>(*f);
   BasicBlock *prevBB = Util::getBasicBlock(prevInstr);

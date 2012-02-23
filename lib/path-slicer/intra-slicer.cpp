@@ -164,7 +164,6 @@ bool IntraSlicer::mayCallEvent(DynRetInstr *dynRetInstr) {
 }
 
 void IntraSlicer::handleCheckerTarget(DynInstr *dynInstr) {
-  stat->printDynInstr(dynInstr, "IntraSlicer::handleCheckerTarget");
   if (regOverWritten(dynInstr))
     delRegOverWritten(dynInstr);
   live.addUsedRegs(dynInstr);
@@ -344,7 +343,6 @@ bool IntraSlicer::postDominate(DynInstr *dynPostInstr, DynBrInstr *dynPrevInstr)
   if (Util::getBasicBlock(prevInstr) == Util::getBasicBlock(postInstr)) {
     stat->printDynInstr(dynPrevInstr, "IntraSlicer::postDominate");
     stat->printDynInstr(dynPostInstr, "IntraSlicer::postDominate");
-    calStat();
     fprintf(stderr, "IntraSlicer::postDominate result %d\n", result);
     //assert(false);  
   }
@@ -374,7 +372,7 @@ void IntraSlicer::takeTestTarget(DynInstr *dynInstr) {
   curIndex = dynInstr->getIndex()-1;
 }
 
-void IntraSlicer::calStat() {
+void IntraSlicer::calStat(set<BranchInst *> &rmBrs) {
   std::string checkTag = LLVM_CHECK_TAG;
   checkTag += "IntraSlicer::calStat TAKEN";
   size_t numExedInstrs = trace->size();
@@ -397,9 +395,14 @@ void IntraSlicer::calStat() {
           numExedSymBrs++;
       }
     }
-    
+
+    // Handle not-taken bi-cond branches, pass to argument.
+    if (!dynInstr->isTaken() && Util::isBr(instr) && !Util::isUniCondBr(instr))
+      rmBrs.insert(cast<BranchInst>(instr));
+
+    // Handle taken instructions.
     if (dynInstr->isTaken()) {
-      // Handle branches.
+      // Handle taken branches.
       if (Util::isBr(instr)) {
         numTakenBrs++;
         if (!Util::isUniCondBr(instr)) {
@@ -408,8 +411,9 @@ void IntraSlicer::calStat() {
             numTakenSymBrs++;
         }
       }
-      
-      stat->printDynInstr(dynInstr, checkTag.c_str());
+
+      if (DBG)
+        stat->printDynInstr(dynInstr, checkTag.c_str());
     }
   }
 

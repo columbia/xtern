@@ -83,7 +83,7 @@ namespace tern {
     A challenge is if we enforce partial order of racy edge, how to adjust the logical clock 
     for these regions, given the logical clocks are based on start/end totol order of synch op index. */
     void enforceRacyEdges();
-    void calStat();
+    void calStat(std::set<llvm::BranchInst *> &rmBrs);
     llvm::Module *loadModule(const char *path);
     
   public:
