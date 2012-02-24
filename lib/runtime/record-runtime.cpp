@@ -936,8 +936,10 @@ int RecorderRT<RecordSerializer>::pthreadMutexTimedLock(unsigned ins, int &error
   SCHED_TIMER_START;
   while((ret=pthread_mutex_trylock(mu))) {
     assert(ret==EBUSY && "failed sync calls are not yet supported!");
-    _S::putTurn();
-    sched_yield();
+    //_S::putTurn();
+    //sched_yield();
+    //_S::getTurn();
+    wait(mu);
 
     struct timespec curtime;
     struct timeval curtimetv;
@@ -969,8 +971,10 @@ int RecorderRT<RecordSerializer>::semTimedWait(unsigned ins, int &error, sem_t *
   SCHED_TIMER_START;
   while((ret=sem_trywait(sem))) {
     assert(errno==EAGAIN && "failed sync calls are not yet supported!");
-    _S::putTurn();
-    sched_yield();
+    //_S::putTurn();
+    //sched_yield();
+    //_S::getTurn();
+    wait(sem);
 
     struct timespec curtime;
     struct timeval curtimetv;
