@@ -27,6 +27,8 @@ extern "C" {
 #endif
 
 extern void *idle_thread(void*);
+static int thread_count = 0;
+static int main_thread_alive = 0;
 
 static bool prog_began = false; // sanity
 void tern_prog_begin() {
@@ -50,32 +52,36 @@ void tern_symbolic_real(unsigned ins, void *addr,
   errno = error;
 }
 
-int first_thread = true;
-
 void tern_thread_begin(void) {
   int error = errno;
+  int tc = ++thread_count;
   // thread begins in Sys space
   Runtime::the->threadBegin();
-
-  if (first_thread)
-  {
-    Space::exitSys();
-    pthread_t pt;
-    tern_pthread_create(0xdeadceae, &pt, NULL, idle_thread, NULL);
-    Space::enterSys();
-  }
-  first_thread = false;
-
   Space::exitSys();
   errno = error;
+  //fprintf(stderr, "thread_begin %d, thread_count = %d\n", 
+  //  Scheduler::self(), tc);
 }
 
+extern void __prog_end_from_non_main_thread(void);
 void tern_thread_end(unsigned ins) {
+
   int error = errno;
   Space::enterSys();
   Runtime::the->threadEnd(ins);
   // thread ends in Sys space
   errno = error;
+  thread_count--;
+  //fprintf(stderr, "thread_end %d, thread_count = %d\n", 
+  //  Scheduler::self(), thread_count);
+  if(Scheduler::self() != Scheduler::MainThreadTid &&
+    !main_thread_alive &&
+    thread_count == (options::launch_idle_thread != 0))
+  {
+    //fprintf(stderr, "non-main thread go to tern_prog_end()\n");
+    Space::exitSys();
+    __prog_end_from_non_main_thread();
+  }
 }
 
 int tern_pthread_cancel(unsigned ins, pthread_t thread) {
@@ -292,6 +298,13 @@ int tern_sem_post(unsigned ins, sem_t *sem) {
   return ret;
 }
 
+void tern_exit(unsigned ins, int status) {
+  //  this will be called in __tern_prog_end after exit().
+  //tern_thread_end(ins); // main thread ends
+  //tern_prog_end();
+  exit(status);
+}
+
 /// just a wrapper to tern_thread_end() and pthread_exit()
 void tern_pthread_exit(unsigned ins, void *retval) {
   // don't call tern_thread_end() for the main thread, since we'll call
@@ -301,14 +314,19 @@ void tern_pthread_exit(unsigned ins, void *retval) {
     // printf("calling tern_thread_end\n");
     tern_thread_end(ins);
     // printf("calling tern_thread_end, done\n");
+  } else
+  {
+    main_thread_alive = false;
+
+    //  TODO  data race here.
+    if (thread_count == (options::launch_idle_thread != 0) + 1)
+    {
+      //  I am the last thread, then go to prog_end
+      tern_exit(-1, 0);
+    }
+    --thread_count;
   }
   pthread_exit(retval);
-}
-
-void tern_exit(unsigned ins, int status) {
-  tern_thread_end(ins); // main thread ends
-  tern_prog_end();
-  exit(status);
 }
 
 int tern_sigwait(unsigned ins, const sigset_t *set, int *sig)

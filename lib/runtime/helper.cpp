@@ -94,12 +94,35 @@ void __tern_prog_begin(void) {
   tern_pthread_create(0xdeadceae, &idle_th, NULL, idle_thread, NULL);
 }
 
+void __prog_end_from_non_main_thread(void)
+{ 
+  //  exit(0) is supposed to call __tern_prog_end
+#if 0
+  // terminate the idle thread because it references the runtime which we
+  // are about to free
+  idle_done = 1;
+  // printf("idle_done = %d\n", idle_done);
+  if (!tern::Space::isApp())
+    tern::Space::exitSys();
+  tern_pthread_join(0xdeadceae, idle_th, NULL);
+
+  //tern_thread_end(-1); // main thread ends
+  tern_prog_end();
+
+  delete tern::Runtime::the;
+  tern::Runtime::the = NULL;
+#endif
+  exit(0);
+}
+
 void __tern_prog_end (void) {
 
   // terminate the idle thread because it references the runtime which we
   // are about to free
   idle_done = 1;
   // printf("idle_done = %d\n", idle_done);
+  if (!tern::Space::isApp())
+    tern::Space::exitSys();
   tern_pthread_join(0xdeadceae, idle_th, NULL);
 
   tern_thread_end(-1); // main thread ends

@@ -30,10 +30,11 @@ using namespace tern;
 
 #if 1
 #define RRSchedulerCV RRScheduler
+extern int idle_done;
 static void *monitor(void *arg)
 {
   RRSchedulerCV * sched = (RRSchedulerCV*) arg;
-  while (true)
+  while (!idle_done)
   {
     usleep(options::RR_skip_threshold * 1000);
     //dprintf( "checking zombie\n");

@@ -139,9 +139,10 @@ int RecorderRT<_S>::relTimeToTurn(const struct timespec *reltime)
   const int MAX_REL = 1000000;
   int ret =  (ret64 > MAX_REL) ? MAX_REL : (int) ret64;
   ret = ret < 30 * _S::nthread + 1 ? 30 * _S::nthread + 1 : ret;
-  int tmp = rand() % 100 * _S::nthread;
-  fprintf(stderr, "computed turn = %d, tmp = %d\n", ret, tmp);
+  //int tmp = rand() % 100 * _S::nthread;
+  dprintf("computed turn = %d, tmp = %d\n", ret, tmp);
   //return tmp;
+  return 100000;
   return ret;
 }
 
@@ -224,7 +225,7 @@ template <typename _S>
 void RecorderRT<_S>::threadEnd(unsigned ins) {
   SCHED_TIMER_START;
   pthread_t th = pthread_self();
-  SCHED_TIMER_END(syncfunc::tern_thread_end, (uint64_t)th);
+  SCHED_TIMER_THREAD_END(syncfunc::tern_thread_end, (uint64_t)th);
   
   Logger::threadEnd();
 }
@@ -874,6 +875,7 @@ int RecorderRT<_S>::semTimedWait(unsigned ins, int &error, sem_t *sem,
     if(ret == ETIMEDOUT) {
       ret = -1;
       saved_err = ETIMEDOUT;
+      error = ETIMEDOUT;
       break;
     }
   }
@@ -979,6 +981,7 @@ int RecorderRT<RecordSerializer>::semTimedWait(unsigned ins, int &error, sem_t *
        || (curtime.tv_sec == abstime->tv_sec &&
            curtime.tv_nsec >= abstime->tv_nsec)) {
       ret = -1;
+      error = ETIMEDOUT;
       saved_err = ETIMEDOUT;
       break;
     }
@@ -1085,7 +1088,7 @@ int RecorderRT<RecordSerializer>::pthreadCondTimedWait(unsigned ins, int &error,
   assert((ret==0||ret==ETIMEDOUT) && "failed sync calls are not yet supported!");
 
   pthreadMutexLockHelper(mu);
-  SCHED_TIMER_END(ins, error, syncfunc::pthread_cond_timedwait, (uint64_t)cv, (uint64_t)mu, (uint64_t) ret);
+  SCHED_TIMER_END(syncfunc::pthread_cond_timedwait, (uint64_t)cv, (uint64_t)mu, (uint64_t) ret);
  
   return ret;
 }
@@ -1156,31 +1159,43 @@ static uint64_t hash(const char *buffer, int len)
 template <typename _S>
 ssize_t RecorderRT<_S>::__send(unsigned ins, int &error, int sockfd, const void *buf, size_t len, int flags)
 {
-  BLOCK_TIMER_START;
-  int ret = Runtime::__send(ins, error, sockfd, buf, len, flags);
-  uint64_t sig = hash((char*)buf, len); 
-  BLOCK_TIMER_END(syncfunc::send, (uint64_t) sig, (uint64_t) ret);
-  return ret;
+  if (options::schedule_write)
+  {
+    BLOCK_TIMER_START;
+    int ret = Runtime::__send(ins, error, sockfd, buf, len, flags);
+    uint64_t sig = hash((char*)buf, len); 
+    BLOCK_TIMER_END(syncfunc::send, (uint64_t) sig, (uint64_t) ret);
+    return ret;
+  } else
+    return Runtime::__send(ins, error, sockfd, buf, len, flags);
 }
 
 template <typename _S>
 ssize_t RecorderRT<_S>::__sendto(unsigned ins, int &error, int sockfd, const void *buf, size_t len, int flags, const struct sockaddr *dest_addr, socklen_t addrlen)
 {
-  BLOCK_TIMER_START;
-  int ret = Runtime::__sendto(ins, error, sockfd, buf, len, flags, dest_addr, addrlen);
-  uint64_t sig = hash((char*)buf, len); 
-  BLOCK_TIMER_END(syncfunc::sendto, (uint64_t) sig, (uint64_t) ret);
-  return ret;
+  if (options::schedule_write)
+  {
+    BLOCK_TIMER_START;
+    int ret = Runtime::__sendto(ins, error, sockfd, buf, len, flags, dest_addr, addrlen);
+    uint64_t sig = hash((char*)buf, len); 
+    BLOCK_TIMER_END(syncfunc::sendto, (uint64_t) sig, (uint64_t) ret);
+    return ret;
+  } else
+    return Runtime::__sendto(ins, error, sockfd, buf, len, flags, dest_addr, addrlen);
 }
 
 template <typename _S>
 ssize_t RecorderRT<_S>::__sendmsg(unsigned ins, int &error, int sockfd, const struct msghdr *msg, int flags)
 {
-  BLOCK_TIMER_START;
-  int ret = Runtime::__sendmsg(ins, error, sockfd, msg, flags);
-  uint64_t sig = hash((char*)msg, sizeof(struct msghdr)); 
-  BLOCK_TIMER_END(syncfunc::sendmsg, (uint64_t) sig, (uint64_t) ret);
-  return ret;
+  if (options::schedule_write)
+  {
+    BLOCK_TIMER_START;
+    int ret = Runtime::__sendmsg(ins, error, sockfd, msg, flags);
+    uint64_t sig = hash((char*)msg, sizeof(struct msghdr)); 
+    BLOCK_TIMER_END(syncfunc::sendmsg, (uint64_t) sig, (uint64_t) ret);
+    return ret;
+  } else
+    return Runtime::__sendmsg(ins, error, sockfd, msg, flags);
 }
 
 template <typename _S>
@@ -1226,11 +1241,15 @@ ssize_t RecorderRT<_S>::__read(unsigned ins, int &error, int fd, void *buf, size
 template <typename _S>
 ssize_t RecorderRT<_S>::__write(unsigned ins, int &error, int fd, const void *buf, size_t count)
 {
-  BLOCK_TIMER_START;
-  ssize_t ret = Runtime::__write(ins, error, fd, buf, count);
-  uint64_t sig = hash((char*)buf, count); 
-  BLOCK_TIMER_END(syncfunc::write, (uint64_t) sig, (uint64_t) ret);
-  return ret;
+  if (options::schedule_write)
+  {
+    BLOCK_TIMER_START;
+    ssize_t ret = Runtime::__write(ins, error, fd, buf, count);
+    uint64_t sig = hash((char*)buf, count); 
+    BLOCK_TIMER_END(syncfunc::write, (uint64_t) sig, (uint64_t) ret);
+    return ret;
+  } else
+    return Runtime::__write(ins, error, fd, buf, count);
 }
 
 template <typename _S>

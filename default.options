@@ -53,3 +53,9 @@ nanosec_per_turn = 1000000
 # this number set the length of idle_thread sleep loop, in microsecond
 idle_sleep_length = 1000
 
+# whether we schedule on output operations like write, send and so. 
+schedule_write = 0
+
+# determine whether we start an idle thread to avoid empty runq 
+launch_idle_thread = 1
+
