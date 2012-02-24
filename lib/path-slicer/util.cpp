@@ -79,6 +79,14 @@ bool Util::isCall(const Instruction *instr) {
   return instr->getOpcode() == Instruction::Call;
 }
 
+bool Util::isIntrinsicCall(const Instruction *instr) {
+  const CallInst *ci = dyn_cast<CallInst>(instr);
+  if (!ci)
+    return false;
+  const Function *callee = ci->getCalledFunction();
+  return (callee && callee->isIntrinsic());
+}
+
 bool Util::isLoad(const Instruction *instr) {
   return instr->getOpcode() == Instruction::Load;
 }

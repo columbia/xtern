@@ -3,6 +3,7 @@
 #include "dyn-instrs.h"
 #include "instr-id-mgr.h"
 #include "callstack-mgr.h"
+#include "func-summ.h"
 using namespace tern;
 
 using namespace llvm;
@@ -16,9 +17,10 @@ Stat::~Stat() {
 
 }
 
-void Stat::init(InstrIdMgr *idMgr, CallStackMgr *ctxMgr) {
+void Stat::init(InstrIdMgr *idMgr, CallStackMgr *ctxMgr, FuncSumm *funcSumm) {
   this->idMgr = idMgr;
   this->ctxMgr = ctxMgr;
+  this->funcSumm = funcSumm;
 }
 
 void Stat::printStat(const char *tag) {
@@ -26,7 +28,6 @@ void Stat::printStat(const char *tag) {
 }
 
 const char *Stat::printInstr(const llvm::Instruction *instr, const char *tag) {
-  //errs() << "Stat::printInstr: " << *(instr) << "\n";
   if (DM_IN(instr, buf)) {
     return buf[instr]->str().c_str();
   } else {
@@ -51,8 +52,6 @@ void Stat::printDynInstr(DynInstr *dynInstr, const char *tag) {
 }
 
 void Stat::printDynInstr(raw_ostream &S, DynInstr *dynInstr, const char *tag) {
-  //fprintf(stderr, "Stat::printDynInstr %p, tid %u\n", (void *)dynInstr, 
-    //(unsigned)dynInstr->getTid());
   Instruction *instr = idMgr->getOrigInstr(dynInstr);
   S << tag
     << ": IDX: " << dynInstr->getIndex()
@@ -73,4 +72,46 @@ void Stat::printDynInstr(raw_ostream &S, DynInstr *dynInstr, const char *tag) {
   }
 }
 
+void Stat::collectStaticInstrs(llvm::Module &M) {
+  for (Module::iterator f = M.begin(); f != M.end(); ++f)
+    for (Function::iterator b = f->begin(), be = f->end(); b != be; ++b)
+      for (BasicBlock::iterator i = b->begin(), ie = b->end(); i != ie; ++i) {
+        if (Util::isIntrinsicCall(i)) // Ignore intrinsic calls.
+          continue;
+        staticInstrs.insert(i);
+      }
+}
+
+void Stat::collectExedStaticInstrs(DynInstr *dynInstr) {
+  Instruction *instr = idMgr->getOrigInstr(dynInstr);
+  if (Util::isIntrinsicCall(instr)) // Ignore intrinsic calls.
+    return;
+  exedStaticInstrs.insert(instr);
+}
+
+size_t Stat::sizeOfStaticInstrs() {
+  return staticInstrs.size();
+}
+
+size_t Stat::sizeOfExedStaticInstrs() {
+  return exedStaticInstrs.size();
+}
+
+void Stat::collectExternalCalls(DynCallInstr *dynCallInstr) {
+  Instruction *instr = idMgr->getOrigInstr(dynCallInstr);
+  externalCalls.insert(instr);
+}
+
+void Stat::printExternalCalls() {
+  DenseSet<const Instruction *>::iterator itr(externalCalls.begin());
+  for (; itr != externalCalls.end(); ++itr)
+    errs() << printInstr(*itr, "Stat::printExternalCalls") << "\n";
+}
+
+void Stat::collectExed(DynInstr *dynInstr) {
+  Instruction *instr = idMgr->getOrigInstr(dynInstr);
+  collectExedStaticInstrs(dynInstr);
+  if (Util::isCall(instr) && !funcSumm->isInternalCall(dynInstr))
+    collectExternalCalls((DynCallInstr *)dynInstr);
+}
 

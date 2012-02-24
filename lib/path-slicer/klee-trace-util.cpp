@@ -235,6 +235,9 @@ void KleeTraceUtil::preProcess(DynInstrVector *trace) {
     if (Util::isCall(instr) || Util::isRet(instr))
       ctxMgr->updateCallStack(dynInstr);
 
+    // (7) Update stat of executed instructions.
+    stat->collectExed(dynInstr);
+
     if (DBG)
       stat->printDynInstr(dynInstr, __func__);
   }

@@ -51,10 +51,11 @@ void OprdSumm::init(Stat *stat, FuncSumm *funcSumm,
 }
 
 void OprdSumm::printSumm(InstrDenseSet &summ, const char *tag) {
-  return;
+  if (!DBG)
+    return;
   InstrDenseSet::iterator itr(summ.begin());
   for (; itr != summ.end(); ++itr)
-    errs() << stat->printInstr(*itr, tag);
+    errs() << tag << " : " << stat->printInstr(*itr, tag) << "\n";
 }
 
 InstrDenseSet *OprdSumm::getLoadSummBetween(
@@ -200,7 +201,7 @@ void OprdSumm::DFSTopDown(const llvm::Function *f) {
   CallGraphFP &CG = getAnalysis<CallGraphFP>();
   for (Function::const_iterator b = f->begin(), be = f->end(); b != be; ++b) {
     for (BasicBlock::const_iterator i = b->begin(), ie = b->end(); i != ie; ++i) {
-      if (Util::isCall(i) && funcSumm->isInternalCall(i)) {
+      if (Util::isCall(i)) {
         vector<Function *> calledFuncs = CG.get_called_functions(i);
         for (size_t j = 0; j < calledFuncs.size(); ++j) {
           const Function *callee = calledFuncs[j];
@@ -213,8 +214,10 @@ void OprdSumm::DFSTopDown(const llvm::Function *f) {
             }
           }
 
-          // Add the collected summary to caller.
-          addSummToCallerTopDown(callee, f, i);
+          /* Add the collected summary to caller, if the callee is an internal function.
+          If it is external, it does not have any summary. */
+          if (funcSumm->isInternalFunction(callee))
+            addSummToCallerTopDown(callee, f, i);
         }
       }
     }

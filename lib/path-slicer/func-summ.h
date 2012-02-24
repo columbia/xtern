@@ -63,7 +63,7 @@ namespace tern {
     Of couse, this feature might bring troubles for me writing external function summaries.
     */
     bool isInternalFunction(const llvm::Function *f);
-    bool isInternalCall(const llvm::Instruction *instr);
+    //bool isInternalCall(const llvm::Instruction *instr);
     bool isInternalCall(DynInstr *dynInstr);
   };
 

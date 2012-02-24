@@ -151,7 +151,8 @@ void PathSlicer::init(llvm::Module &M) {
     assert(false);
 
   // Init stat.
-  stat.init(&idMgr, &ctxMgr);
+  stat.init(&idMgr, &ctxMgr, &funcSumm);
+  stat.collectStaticInstrs(*origModule);
   
   fprintf(stderr, "PathSlicer::init end\n");
 }
@@ -269,6 +270,7 @@ void PathSlicer::recordCheckerResult(void *pathId, Checker::Result globalResult,
         stat.printDynInstr(dynInstr, "PathSlicer::recordCheckerResult Checker::IMPORTANT");
     } else {
       tgtMgr.markTarget(pathId, dynInstr, TakenFlags::CHECKER_ERROR);
+      traceUtil->store(pathId, trace);
       if (DBG)
         stat.printDynInstr(dynInstr, "PathSlicer::recordCheckerResult Checker::ERROR");
     }

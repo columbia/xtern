@@ -18,8 +18,7 @@ IntraSlicer::~IntraSlicer() {}
 
 /* Core function for intra-thread slicer. */
 void IntraSlicer::detectInputDepRaces(uchar tid) {
-  fprintf(stderr, "%sIntraSlicer::detectInputDepRaces tid %u, start index " SZ "\n",
-    BAN, tid, curIndex);
+  dprint("%sIntraSlicer::detectInputDepRaces tid %u, start index " SZ "\n", BAN, tid, curIndex);
   DynInstr *cur = NULL;
   while (!empty()) {
     cur = delTraceTail(tid);
@@ -48,8 +47,6 @@ void IntraSlicer::detectInputDepRaces(uchar tid) {
     } else { /* Handle all the other non-memory instructions. */
       handleNonMem(cur);
     }
-
-    //stat->printDynInstr(cur, __func__);
   }
 }
 
@@ -226,6 +223,8 @@ void IntraSlicer::handleRet(DynInstr *dynInstr) {
   } else {
     bool reason1 = mayCallEvent(retInstr);
     bool reason2 = mayWriteFunc(retInstr);
+    SERRS << "IntraSlicer::handleRet reason1 " << reason1
+      << ", reason2 " << reason2 << ".\n";
     if (reason1 && reason2)
       slice.add(retInstr, TakenFlags::INTRA_RET_BOTH);
     else if (reason1 && !reason2)
@@ -425,7 +424,10 @@ void IntraSlicer::calStat(set<BranchInst *> &rmBrs) {
     << ";  numTakenBrs: " << numTakenBrs
     << ";  numExedSymBrs: " << numExedSymBrs
     << ";  numTakenSymBrs: " << numTakenSymBrs
+    << ". StaticExed/Static Instrs: " << stat->sizeOfExedStaticInstrs() 
+    << "/" << stat->sizeOfStaticInstrs()
     << ".\n\n\n";
-    
+
+  stat->printExternalCalls();
 }
 

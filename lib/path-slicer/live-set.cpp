@@ -32,7 +32,7 @@ void LiveSet::clear() {
 
 void LiveSet::addReg(CallCtx *ctx, const Value *v) {
   if (!Util::isConstant(v)) { // Discard it if it is a LLVM Constant.
-    SERRS << "LiveSet::addReg <" << (void *)v << ">: " << *v << "\n";
+    //SERRS << "LiveSet::addReg <" << (void *)v << ">: " << *v << "\n";
     CtxVPair p = std::make_pair(ctx, v);
     //ASSERT(!DS_IN(p, virtRegs));
     virtRegs.insert(p);
@@ -53,8 +53,8 @@ void LiveSet::addReg(DynOprd *dynOprd) {
       }
       assert(false);
     }*/
-    SERRS << "LiveSet::addReg OK <" << (void *)(dynOprd->getStaticValue())
-      << ">: " << *(dynOprd->getStaticValue()) << "\n";
+    /*SERRS << "LiveSet::addReg OK <" << (void *)(dynOprd->getStaticValue())
+      << ">: " << *(dynOprd->getStaticValue()) << "\n";*/
     virtRegs.insert(p);
   }
 }
