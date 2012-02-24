@@ -70,6 +70,20 @@ def gen(cmd, prog):
     os.rename(fo.name, fi.name)
     return True
 
+class ptrmap:
+    def __init__(self):
+        self.map = dict()
+        self.num = 0
+    def get(self, k, create=0):
+        if k not in self.map:
+            if not create:
+                return None
+            self.map[k] = 'ptr' + str(self.num)
+            self.num += 1
+        return self.map[k]
+    def rem(self, k):
+        del self.map[k]
+
 def normalize_ptr(kvmap, m):
     k = int(m.group(), 16)
     limit = 10
@@ -77,11 +91,25 @@ def normalize_ptr(kvmap, m):
         return str(k)
     if k == errno.ETIMEDOUT or k == errno.EBUSY:
         return str(k)
-    if k not in kvmap:
-        kvmap[k] = 'ptr' + str(len(kvmap))
-    return str(kvmap[k])
+    return kvmap.get(k, create=1)
 
-curry = lambda func, *args, **kw:\
+def remove_destroyed(kvmap, l):
+    destroy_list = ["pthread_join",
+                    "pthread_mutex_destroy",
+                    "pthread_barrier_destroy",
+                    "pthread_cond_destroy",
+                    "sem_destroy"]
+    for s in destroy_list:
+        if s not in l:
+            continue
+        m = re.search('0x[\dA-Fa-f]+', l)
+        if m == None:
+            continue
+        k = int(m.group(), 16)
+        if kvmap.get(k) != None:
+            kvmap.rem(k)
+
+curry = lambda func, *args, **kw: \
     lambda *p, **n: func(*args + p, **dict(kw.items() + n.items()))
 
 def check_schedule(schedule):
@@ -91,12 +119,13 @@ def check_schedule(schedule):
     # TODO: check that semaphore count is always non-negative
 
 def normalize_schedule(schedule):
-    kvmap = dict()
+    kvmap = ptrmap()
     pat = re.compile('0x[\dA-Fa-f]+')
     fi = open(schedule, 'r')
     fo = open(schedule + '~', 'w')
     for l in fi:
         lo = pat.sub(curry(normalize_ptr, kvmap), l)
+        remove_destroyed(kvmap, l)
         fo.write(lo)
     fo.close()
     fi.close()

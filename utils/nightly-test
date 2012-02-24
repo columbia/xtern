@@ -14,6 +14,7 @@ gccver="4.2-$llvmver"
 arch=`uname -m`
 timeout=1200
 sendmail="/usr/sbin/sendmail"
+toaddr="dmt-dev@lists.cs.columbia.edu"
 
 #testdir=`date +%F`
 testdir="/tmp/xtern-nightly-test-$build_mode"
@@ -82,11 +83,12 @@ wait $pid
 status=$?
 if test $status != 0 ; then
     (
+        echo "TO: $toaddr";
         echo "FROM: junfeng@cs.columbia.edu";
         echo "SUBJECT: xtern nightly test failed with status $status";
         cat $log;
         echo "."
-    ) | $sendmail dmt-dev@lists.cs.columbia.edu
+    ) | $sendmail $toaddr
 # > $testdir/email.txt
 #    $sendmail junfeng@cs.columbia.edu < $testdir/email.txt
 #    $sendmail huayang@cs.columbia.edu < $testdir/email.txt
