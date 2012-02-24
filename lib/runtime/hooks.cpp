@@ -27,21 +27,24 @@ extern "C" {
 #endif
 
 extern void *idle_thread(void*);
-static int thread_count = 0;
 static int main_thread_alive = 0;
 
 static bool prog_began = false; // sanity
 void tern_prog_begin() {
+  assert(Space::isSys() && "tern_prog_begin must start in sys space");
   assert(!prog_began && "tern_prog_begin() already called!");
   prog_began = true;
   Runtime::the->progBegin();
+  assert(Space::isSys() && "tern_prog_begin must end in sys space");
 }
 
 void tern_prog_end() {
+  assert(Space::isSys() && "tern_prog_end must start in sys space");
   assert(prog_began && "tern_prog_begin() not called "  \
          "or tern_prog_end() already called!");
   prog_began = false;
   Runtime::the->progEnd();
+  assert(Space::isSys() && "tern_prog_end must end in sys space");
 }
 
 void tern_symbolic_real(unsigned ins, void *addr,
@@ -53,35 +56,26 @@ void tern_symbolic_real(unsigned ins, void *addr,
 }
 
 void tern_thread_begin(void) {
+  assert(Space::isSys() && "tern_thread_begin must start in sys space");
   int error = errno;
-  int tc = ++thread_count;
   // thread begins in Sys space
   Runtime::the->threadBegin();
   Space::exitSys();
   errno = error;
-  //fprintf(stderr, "thread_begin %d, thread_count = %d\n", 
-  //  Scheduler::self(), tc);
+  assert(Space::isApp() && "tern_thread_begin must end in app space");
 }
 
 extern void __prog_end_from_non_main_thread(void);
+
 void tern_thread_end(unsigned ins) {
+  assert(Space::isApp() && "tern_thread_end must start in app space");
 
   int error = errno;
   Space::enterSys();
   Runtime::the->threadEnd(ins);
   // thread ends in Sys space
   errno = error;
-  thread_count--;
-  //fprintf(stderr, "thread_end %d, thread_count = %d\n", 
-  //  Scheduler::self(), thread_count);
-  if(Scheduler::self() != Scheduler::MainThreadTid &&
-    !main_thread_alive &&
-    thread_count == (options::launch_idle_thread != 0))
-  {
-    //fprintf(stderr, "non-main thread go to tern_prog_end()\n");
-    Space::exitSys();
-    __prog_end_from_non_main_thread();
-  }
+  assert(Space::isSys() && "tern_thread_end must end in sys space");
 }
 
 int tern_pthread_cancel(unsigned ins, pthread_t thread) {
@@ -299,9 +293,11 @@ int tern_sem_post(unsigned ins, sem_t *sem) {
 }
 
 void tern_exit(unsigned ins, int status) {
+  assert(0 && "why do we call tern_exit?");
   //  this will be called in __tern_prog_end after exit().
-  //tern_thread_end(ins); // main thread ends
-  //tern_prog_end();
+  tern_thread_end(ins); // main thread ends
+  tern_prog_end();
+  assert(Space::isSys());
   exit(status);
 }
 
@@ -311,21 +307,18 @@ void tern_pthread_exit(unsigned ins, void *retval) {
   // tern_prog_end() later (which calls tern_thread_end())
   if(Scheduler::self() != Scheduler::MainThreadTid)
   {
-    // printf("calling tern_thread_end\n");
     tern_thread_end(ins);
-    // printf("calling tern_thread_end, done\n");
   } else
   {
     main_thread_alive = false;
 
-    //  TODO  data race here.
-    if (thread_count == (options::launch_idle_thread != 0) + 1)
-    {
-      //  I am the last thread, then go to prog_end
-      tern_exit(-1, 0);
-    }
-    --thread_count;
+    // FIXME: Need to call exit() to stop the idle thread here because
+    // when the main thread calls pthread_exit(), it may wait for all
+    // current threads to finish, before calling __tern_prog_end().
+    usleep(500);
+    exit(0);
   }
+  assert(Space::isSys());
   pthread_exit(retval);
 }
 

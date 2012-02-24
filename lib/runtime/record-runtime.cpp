@@ -218,7 +218,6 @@ void RecorderRT<_S>::threadBegin(void) {
   Logger::threadBegin(_S::self());
   
   SCHED_TIMER_END(syncfunc::tern_thread_begin, (uint64_t)th);
-
 }
 
 template <typename _S>

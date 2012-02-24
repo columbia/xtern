@@ -48,11 +48,6 @@ void TxtLogger::logSync(unsigned insid, unsigned short sync,
                         timespec time1, 
                         timespec time2, timespec sched_time, 
                         bool after, ...) {
-  if (!(sync >= syncfunc::first_sync && sync < syncfunc::num_syncs))
-  {
-    while (true)
-      sleep(1);
-  }
   assert(sync >= syncfunc::first_sync && sync < syncfunc::num_syncs
     && "trying to log unknown synchronization operation!");
 

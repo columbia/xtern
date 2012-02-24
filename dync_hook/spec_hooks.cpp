@@ -19,6 +19,8 @@ struct arg_type
 
 main_type saved_init_func = NULL;
 void tern_init_func(int argc, char **argv, char **env){
+  fprintf(stderr, "%04d: __tern_init_func() called.\n", (int) pthread_self());
+  atexit(__tern_prog_end);
   if(saved_init_func)
     saved_init_func(argc, argv, env);
   __tern_prog_begin();
@@ -30,7 +32,7 @@ void tern_fini_func(void* status) {
   // note that fprintf may not print out anything here because (1) stderr
   // may be redirected and (2) we're close to program exit and the libc
   // data structures may already be cleared
-  fprintf(stderr, "%04d: __tern_prog_end() called.\n", (int) pthread_self());
+  fprintf(stderr, "%04d: __tern_fini_func() called.\n", (int) pthread_self());
   __tern_prog_end();
   if(saved_fini_func)
     saved_fini_func(status);
@@ -42,7 +44,6 @@ extern "C" int my_main(int argc, char **pt, char **aa)
   arg_type *args = (arg_type*)pt;
   fprintf(stderr, "%04d: __libc_start_main() called.\n", (int) pthread_self());
   ret = args->main_func(argc, args->argv, aa);
-  fflush(stderr);
   return ret;
 }
 

@@ -14,6 +14,8 @@
 #include "helper.h"
 #include "tern/options.h"
 
+using namespace tern;
+
 extern "C" {
 
 typedef void * (*thread_func_t)(void*);
@@ -77,7 +79,15 @@ void *idle_thread(void *)
   return NULL;
 }
 
+static pthread_t main_thread_th;
+//  SYS -> SYS
+//  must be called by the main thread
 void __tern_prog_begin(void) {
+  //fprintf(stderr, "%08d calls __tern_prog_begin\n", (int) pthread_self());
+  assert(Space::isSys() && "__tern_prog_begin must start in sys space");
+
+  main_thread_th = pthread_self();
+
   options::read_options("local.options");
   options::read_env_options();
   options::print_options("dump.options");
@@ -86,50 +96,42 @@ void __tern_prog_begin(void) {
 
   // FIXME: the version of uclibc in klee doesn't seem to pick up the
   // functions registered with atexit()
-  atexit(__tern_prog_end);
+  //atexit(__tern_prog_end);
 
   tern_prog_begin();
+  assert(Space::isSys());
   tern_thread_begin(); // main thread begins
+  assert(Space::isApp());
 
-  tern_pthread_create(0xdeadceae, &idle_th, NULL, idle_thread, NULL);
+  //  use tern_pthread_create because we want to fake the eip
+  if (options::launch_idle_thread)
+    tern_pthread_create(0xdead0000, &idle_th, NULL, idle_thread, NULL);
+  assert(Space::isApp() && "__tern_prog_begin must end in app space");
 }
 
-void __prog_end_from_non_main_thread(void)
-{ 
-  //  exit(0) is supposed to call __tern_prog_end
-#if 0
-  // terminate the idle thread because it references the runtime which we
-  // are about to free
-  idle_done = 1;
-  // printf("idle_done = %d\n", idle_done);
-  if (!tern::Space::isApp())
-    tern::Space::exitSys();
-  tern_pthread_join(0xdeadceae, idle_th, NULL);
-
-  //tern_thread_end(-1); // main thread ends
-  tern_prog_end();
-
-  delete tern::Runtime::the;
-  tern::Runtime::the = NULL;
-#endif
-  exit(0);
-}
-
+//  SYS -> SYS
 void __tern_prog_end (void) {
+  //fprintf(stderr, "%08d calls __tern_prog_end\n", (int) pthread_self());
+  assert(Space::isApp() && "__tern_prog_end must start in app space");
 
   // terminate the idle thread because it references the runtime which we
   // are about to free
   idle_done = 1;
-  // printf("idle_done = %d\n", idle_done);
-  if (!tern::Space::isApp())
-    tern::Space::exitSys();
-  tern_pthread_join(0xdeadceae, idle_th, NULL);
+
+  //  use tern_pthread_join because we want to fake the eip
+  if (options::launch_idle_thread)
+  {
+    assert(pthread_self() != idle_th && "idle_th should never reach __tern_prog_end");
+    tern_pthread_join(0xdeadffff, idle_th, NULL);
+  }
 
   tern_thread_end(-1); // main thread ends
+  assert(Space::isSys());
   tern_prog_end();
 
   delete tern::Runtime::the;
   tern::Runtime::the = NULL;
+  assert(Space::isSys() && "__tern_prog_end must end in system space");
 }
 
 void __tern_symbolic(unsigned insid, void *addr,
