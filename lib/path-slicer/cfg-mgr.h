@@ -22,6 +22,9 @@ namespace tern {
 
     llvm::DenseMap<const llvm::Instruction *, llvm::Instruction *> neareastPostDomInst;
 
+    /* The first instruction in bb entry in main(). */
+    llvm::Instruction *firstInstr;
+
   protected:
     llvm::BasicBlock *findNearestCommonPostDominator(
       llvm::PostDominatorTree &PDT, llvm::BasicBlock *A, llvm::BasicBlock *B);
@@ -34,6 +37,7 @@ namespace tern {
     virtual bool runOnModule(llvm::Module &M);    
     bool postDominate(llvm::Instruction *prevInstr, llvm::Instruction *postInstr);
     llvm::Instruction *getStaticPostDom(llvm::Instruction *prevInstr);
+    llvm::Instruction *getFirstInstr();
   };
 }
 

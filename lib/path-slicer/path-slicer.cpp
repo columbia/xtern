@@ -251,6 +251,8 @@ void PathSlicer::record(void *pathId, void *instr, void *state, void *f) {
 void PathSlicer::copyTrace(void *newPathId, void *curPathId) {
   //fprintf(stderr, "PathSlicer::copyTrace new %p, cur %p\n", (void *)newPathId, (void *)curPathId);
   assert (!DM_IN(newPathId, allPathTraces));
+  if (!DM_IN(curPathId, allPathTraces))
+    return;
   allPathTraces[newPathId] = new DynInstrVector;
   DynInstrVector *newTrace = allPathTraces[newPathId];
   DynInstrVector *curTrace = allPathTraces[curPathId];
@@ -284,9 +286,9 @@ bool PathSlicer::getStartRecord(void *instr) {
     return true;
   else {
     KInstruction *kInstr = (KInstruction *)instr;
-    Function *f = Util::getFunction(kInstr->inst);
-    if (f && f->getNameStr().find("main") != std::string::npos) {
+    if (cfgMgr.getFirstInstr() == kInstr->inst) {
       startRecord = true;
+      //SERRS << stat.printInstr(kInstr->inst, "PathSlicer::getStartRecord") << "\n";
       return true;
     }
   }

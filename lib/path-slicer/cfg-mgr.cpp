@@ -8,6 +8,7 @@ using namespace llvm;
 
 CfgMgr::CfgMgr(): ModulePass(&ID) {
   postDomCache.clear();
+  firstInstr = NULL;
 }
 
 CfgMgr::~CfgMgr() {
@@ -25,8 +26,17 @@ void CfgMgr::getAnalysisUsage(AnalysisUsage &AU) const {
 }
 
 bool CfgMgr::runOnModule(Module &M) {
+  Function *f = M.getFunction("main");
+  assert(f);
+  firstInstr = &(f->getEntryBlock().front());
   return false;
 }
+
+Instruction *CfgMgr::getFirstInstr() {
+  assert(firstInstr);
+  return firstInstr;
+}
+
 
 bool CfgMgr::postDominate(Instruction *prevInstr, Instruction *postInstr) {
   SERRS << "CfgMgr::postDominate PREV: " << stat->printInstr(prevInstr, __func__) << "\n";
