@@ -241,7 +241,7 @@ void PathSlicer::initKModule(KModule *kmodule) {
 }
 
 void PathSlicer::record(void *pathId, void *instr, void *state, void *f) {
-  if (!getStartRecord())
+  if (!getStartRecord(instr))
     return;
   if (!DM_IN(pathId, allPathTraces))
     allPathTraces[pathId] = new DynInstrVector;
@@ -279,11 +279,17 @@ void PathSlicer::recordCheckerResult(void *pathId, Checker::Result globalResult,
   }
 }
 
-void PathSlicer::setStartRecord() {
-  startRecord = true;
-}
-
-bool PathSlicer::getStartRecord() {
-  return startRecord;
+bool PathSlicer::getStartRecord(void *instr) {
+  if (startRecord)
+    return true;
+  else {
+    KInstruction *kInstr = (KInstruction *)instr;
+    Function *f = Util::getFunction(kInstr->inst);
+    if (f && f->getNameStr().find("main") != std::string::npos) {
+      startRecord = true;
+      return true;
+    }
+  }
+  return false;
 }
 

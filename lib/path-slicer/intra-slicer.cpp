@@ -321,8 +321,8 @@ bool IntraSlicer::mustAlias(DynOprd *oprd1, DynOprd *oprd2) {
     if (Util::isConstant(v1) || isa<AllocaInst>(v1))
       return true;
   }
-  //if (Util::isErrnoAddr(v1) && Util::isErrnoAddr(v2))
-    //return true;
+  if (Util::isErrnoAddr(v1) && Util::isErrnoAddr(v2))
+    return true;
   return false;
 }
 

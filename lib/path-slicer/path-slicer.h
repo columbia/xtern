@@ -87,7 +87,9 @@ namespace tern {
     void enforceRacyEdges();
     void calStat(std::set<llvm::BranchInst *> &rmBrs);
     llvm::Module *loadModule(const char *path);
-    bool getStartRecord();
+
+    /* Filter out instructions before the first instruction in main(), such as C++ ctor and klee_range(). */
+    bool getStartRecord(void *instr);
     
   public:
         static char ID;
@@ -116,9 +118,6 @@ namespace tern {
     (which triggered the error) will also be marked as target. */
     void recordCheckerResult(void *pathId, klee::Checker::Result globalResult,
       klee::Checker::Result localResult);
-
-    void setStartRecord();
-
   };
 }
 
