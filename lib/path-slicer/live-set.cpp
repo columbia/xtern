@@ -12,9 +12,10 @@ LiveSet::~LiveSet() {
 
 }
 
-void LiveSet::init(AliasMgr *aliasMgr, InstrIdMgr *idMgr) {
+void LiveSet::init(AliasMgr *aliasMgr, InstrIdMgr *idMgr, Stat *stat) {
   this->aliasMgr = aliasMgr;
   this->idMgr = idMgr;
+  this->stat = stat;
 }
 
 size_t LiveSet::virtRegsSize() {
@@ -117,20 +118,19 @@ DenseSet<DynInstr *> &LiveSet::getAllLoadInstrs() {
   return loadInstrs;
 }
 
-const bdd LiveSet::getAllLoadMem() {
   /* TBD: USE SLOW VERSION TEMPORARILLY UNTIL WE FIGURE OUT HOW TO IMPLEMENT
   REF-COUNTED BDD. */
-  //return loadInstrsBdd.getBdd();
+bdd LiveSet::getAllLoadMem() {
   bdd retBDD = bddfalse;
-
   DenseSet<DynInstr *>::iterator itr(loadInstrs.begin());
   for (; itr != loadInstrs.end(); ++itr) {
     DynInstr *loadInstr = *itr;
     Instruction *staticLoadInstr = idMgr->getOrigInstr(loadInstr);
     DynOprd loadPtrOprd(loadInstr, staticLoadInstr->getOperand(0), 0);
+    if (DBG)
+      stat->printDynInstr(loadInstr, "LiveSet::getAllLoadMem");
     retBDD |= aliasMgr->getPointTee(&loadPtrOprd);
   }
-
   return retBDD;
 }
 

@@ -56,6 +56,7 @@ namespace tern {
     /* If the checkers from KLEE mark an instruction as IMPORTANT, we handle this in this function. */
     void handleCheckerTarget(DynInstr *dynInstr);
 
+    void takeBr(DynInstr *dynInstr, uchar reason);
     void takeNonMem(DynInstr *dynInstr, uchar reason = TakenFlags::INTRA_NON_MEM);
     void delRegOverWritten(DynInstr *dynInstr);
     bool regOverWritten(DynInstr *dynInstr);
@@ -72,6 +73,8 @@ namespace tern {
     void removeRange(DynRetInstr *dynRetInstr);
     void addMemAddrEqConstr(DynMemInstr *loadInstr, DynMemInstr *storeInstr);
     bool mustAlias(DynOprd *oprd1, DynOprd *oprd2);
+
+    static bool containErrnoAddr(InstrDenseSet &instrSet);
 
   public:
     IntraSlicer();

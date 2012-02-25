@@ -21,42 +21,6 @@ const BasicBlock *Util::getBasicBlock(const Instruction *instr) {
   return instr->getParent();
 }
 
-/*
-bool Util::isPHI(DynInstr *dynInstr) {
-  Instruction *instr = dynInstr->getOrigInstr();
-  return isPHI(instr);
-}
-
-bool Util::isBr(DynInstr *dynInstr) {
-  Instruction *instr = dynInstr->getOrigInstr();
-  return isBr(instr);
-}
-
-bool Util::isRet(DynInstr *dynInstr) {
-  Instruction *instr = dynInstr->getOrigInstr();
-  return isRet(instr);
-}
-
-bool Util::isCall(DynInstr *dynInstr) {
-  Instruction *instr = dynInstr->getOrigInstr();
-  return isCall(instr);
-}
-
-bool Util::isLoad(DynInstr *dynInstr) {
-  Instruction *instr = dynInstr->getOrigInstr();
-  return isLoad(instr);
-}
-
-bool Util::isStore(DynInstr *dynInstr) {
-  Instruction *instr = dynInstr->getOrigInstr();
-  return isStore(instr);
-}
-
-bool Util::isMem(DynInstr *dynInstr) {
-  return isLoad(dynInstr) || isStore(dynInstr);
-}
-*/
-
 bool Util::isPHI(const Instruction *instr) {
   return instr->getOpcode() == Instruction::PHI;
 }
@@ -98,6 +62,15 @@ bool Util::isStore(const Instruction *instr) {
 bool Util::isMem(const Instruction *instr) {
   return isLoad(instr) || isStore(instr);
 }
+
+bool Util::isErrnoAddr(const Value *v) {
+  const CallInst *ci = dyn_cast<CallInst>(v);
+  if (!ci)
+    return false;
+  const Function *callee = ci->getCalledFunction();
+  return (callee && callee->getNameStr() == "__errno_location");  // LLVM errno mechanism.
+}
+
 
 bool Util::hasDestOprd(const Instruction *instr) {
       /*  LLVM instructions that do not have dest operands.

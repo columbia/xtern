@@ -38,7 +38,7 @@ namespace tern {
   public:
     LiveSet();
     ~LiveSet();
-    void init(AliasMgr *aliasMgr, InstrIdMgr *idMgr);
+    void init(AliasMgr *aliasMgr, InstrIdMgr *idMgr, Stat *stat);
     size_t virtRegsSize();
     size_t loadInstrsSize();
     void clear();
@@ -70,7 +70,7 @@ namespace tern {
 
     /** Get the abstract locations for all load memory locations.
     This is used in writtenBetween() and mayWriteFunc(). **/
-    const bdd getAllLoadMem();   
+    bdd getAllLoadMem();   
   };
 }
 

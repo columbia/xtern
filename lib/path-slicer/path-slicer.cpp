@@ -54,6 +54,7 @@ static cl::opt<string> SchedLeaf(
 char PathSlicer::ID = 0;
 
 PathSlicer::PathSlicer(): ModulePass(&ID) {
+  startRecord = false;
   fprintf(stderr, "PathSlicer::PathSlicer()\n");
   load_options("local.options");
 }
@@ -69,7 +70,6 @@ void PathSlicer::getAnalysisUsage(AnalysisUsage &AU) const {
 
 bool PathSlicer::runOnModule(Module &M) {
   init(M);
-  //runPathSlicer(M);
   return false;
 }
 
@@ -241,6 +241,8 @@ void PathSlicer::initKModule(KModule *kmodule) {
 }
 
 void PathSlicer::record(void *pathId, void *instr, void *state, void *f) {
+  if (!getStartRecord())
+    return;
   if (!DM_IN(pathId, allPathTraces))
     allPathTraces[pathId] = new DynInstrVector;
   traceUtil->record(allPathTraces[pathId], instr, state, f);
@@ -275,5 +277,13 @@ void PathSlicer::recordCheckerResult(void *pathId, Checker::Result globalResult,
         stat.printDynInstr(dynInstr, "PathSlicer::recordCheckerResult Checker::ERROR");
     }
   }
+}
+
+void PathSlicer::setStartRecord() {
+  startRecord = true;
+}
+
+bool PathSlicer::getStartRecord() {
+  return startRecord;
 }
 

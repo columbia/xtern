@@ -87,11 +87,16 @@ void IntraSlicer::init(ExecutionState *state, OprdSumm *oprdSumm, FuncSumm *func
   curIndex = startIndex;
   live.clear();
   slice.clear();
-  live.init(aliasMgr, idMgr);
+  live.init(aliasMgr, idMgr, stat);
 }
 
 void IntraSlicer::takeNonMem(DynInstr *dynInstr, uchar reason) {
   delRegOverWritten(dynInstr);
+  live.addUsedRegs(dynInstr);
+  slice.add(dynInstr, reason);
+}
+
+void IntraSlicer::takeBr(DynInstr *dynInstr, uchar reason) {
   live.addUsedRegs(dynInstr);
   slice.add(dynInstr, reason);
 }
@@ -190,20 +195,21 @@ void IntraSlicer::handleBranch(DynInstr *dynInstr) {
   handling phi instructions, or taken already by considering br-br may race in 
   inter-thread phase. */
   if (brInstr->isTaken() || brInstr->isInterThreadTarget()) {
-    takeNonMem(brInstr);
+    takeBr(brInstr, brInstr->getTakenFlag());
   } else {
     DynInstr *head = slice.getHead();
-    bool reason1 = (!postDominate(head, brInstr));
-    bool reason2 = eventBetween(brInstr, head);
-    bool reason3 = writtenBetween(brInstr, head);
-    SERRS << "IntraSlicer::handleBranch reason1 " << reason1
-      << ", reason2 " << reason2 << ", reason3 " << reason3 << ".\n";
-    if (reason1)
-      takeNonMem(brInstr, TakenFlags::INTRA_BR_N_POSTDOM);
-    else if (reason2)
-      takeNonMem(brInstr, TakenFlags::INTRA_BR_EVENT_BETWEEN);
-    else if (reason3)
-      takeNonMem(brInstr, TakenFlags::INTRA_BR_WR_BETWEEN);
+    if (!postDominate(head, brInstr)) {
+      takeBr(brInstr, TakenFlags::INTRA_BR_N_POSTDOM);
+      return;
+    }
+    if (eventBetween(brInstr, head)) {
+      takeBr(brInstr, TakenFlags::INTRA_BR_EVENT_BETWEEN);
+      return;
+    }
+    if (writtenBetween(brInstr, head)) {
+      takeBr(brInstr, TakenFlags::INTRA_BR_WR_BETWEEN);
+      return;
+    }
    }
 }
 
@@ -239,7 +245,11 @@ void IntraSlicer::handleRet(DynInstr *dynInstr) {
 void IntraSlicer::handleCall(DynInstr *dynInstr) {
   DynCallInstr *callInstr = (DynCallInstr*)dynInstr;
   if (funcSumm->isInternalCall(callInstr)) {
-    takeNonMem(callInstr);
+    if (regOverWritten(dynInstr))
+      delRegOverWritten(dynInstr);
+    live.addUsedRegs(dynInstr);
+    // Currently set the reason to non mem, real reason depends on its return instr.
+    slice.add(dynInstr, TakenFlags::INTRA_NON_MEM); 
   } else {
     // TBD: QUERY FUNCTION SUMMARY.
   }
@@ -311,6 +321,8 @@ bool IntraSlicer::mustAlias(DynOprd *oprd1, DynOprd *oprd2) {
     if (Util::isConstant(v1) || isa<AllocaInst>(v1))
       return true;
   }
+  if (Util::isErrnoAddr(v1) && Util::isErrnoAddr(v2))
+    return true;
   return false;
 }
 

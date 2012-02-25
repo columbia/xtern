@@ -75,6 +75,8 @@ namespace tern {
 
     TargetMgr tgtMgr;
 
+    bool startRecord;
+
   protected:
     /* Init all sub-components of the path-slicer. */
     void init(llvm::Module &M);
@@ -85,6 +87,7 @@ namespace tern {
     void enforceRacyEdges();
     void calStat(std::set<llvm::BranchInst *> &rmBrs);
     llvm::Module *loadModule(const char *path);
+    bool getStartRecord();
     
   public:
         static char ID;
@@ -113,6 +116,8 @@ namespace tern {
     (which triggered the error) will also be marked as target. */
     void recordCheckerResult(void *pathId, klee::Checker::Result globalResult,
       klee::Checker::Result localResult);
+
+    void setStartRecord();
 
   };
 }

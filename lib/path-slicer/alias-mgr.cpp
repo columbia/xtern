@@ -121,6 +121,8 @@ bool AliasMgr::mayAlias(DynOprd *dynOprd1, DynOprd *dynOprd2) {
         (void *)ctx2, ctx2->size(), instrId2, opIndex2);
       for (size_t i = 0; i < ctx1->size(); i++)
         fprintf(stderr, "CTX [" SZ "]: %d\n", i, ctx1->at(i));
+      errs() << "INSTR1: " << stat->printInstr(idMgr->getOrigInstr(dynInstr1), "ALIAS1") << "\n";
+      errs() << "INSTR2: " << stat->printInstr(idMgr->getOrigInstr(dynInstr2), "ALIAS2") << "\n";
     }
     result = origAaol->aliasQuery(*ctx1, instrId1, opIndex1, *ctx2, instrId2, opIndex2);
   } else

@@ -55,7 +55,7 @@ void OprdSumm::printSumm(InstrDenseSet &summ, const char *tag) {
     return;
   InstrDenseSet::iterator itr(summ.begin());
   for (; itr != summ.end(); ++itr)
-    errs() << tag << " : " << stat->printInstr(*itr, tag) << "\n";
+    errs() << stat->printInstr(*itr, tag) << "\n";
 }
 
 InstrDenseSet *OprdSumm::getLoadSummBetween(
@@ -64,8 +64,7 @@ InstrDenseSet *OprdSumm::getLoadSummBetween(
 }
 
 InstrDenseSet *OprdSumm::getStoreSummBetween(
-      DynBrInstr *prevBrInstr, DynInstr *postInstr, bdd &bddResults) {
-
+  DynBrInstr *prevBrInstr, DynInstr *postInstr, bdd &bddResults) {
   // Collect static store instructions.
   visitedBB.clear();
   InstrDenseSet summ;
@@ -79,20 +78,20 @@ InstrDenseSet *OprdSumm::getStoreSummBetween(
   }
 
   // Get bdd of these store instructions with the calling context.
-  printSumm(summ, "OprdSumm::getStoreSummBetween");
   bddResults = bddfalse;
   InstrDenseSet::iterator itr(summ.begin());
   for (; itr != summ.end(); ++itr) {
     /* The instructions here are already from either normal or max slicing 
     module depending on slicing mode, so this is correct. */
     const Instruction *storeInstr = *itr;
+    SERRS << "\n" << stat->printInstr(storeInstr, "OprdSumm::getStoreSummBetween") << "\n";
     bddResults |= aliasMgr->getPointTee(prevBrInstr, storeInstr->getOperand(1));
   }
   return NULL;
 }
 
 InstrDenseSet *OprdSumm::getStoreSummInFunc(
-      DynRetInstr *retInstr, bdd &bddResults) {
+  DynRetInstr *retInstr, bdd &bddResults) {
   DynCallInstr *callInstr = retInstr->getDynCallInstr();
   Function *calledFunc = callInstr->getCalledFunc();
   assert(calledFunc);
@@ -101,13 +100,13 @@ InstrDenseSet *OprdSumm::getStoreSummInFunc(
   assert(summ);
 
   // Get bdd of these store instructions with the calling context (of the dynamic return instruction).
-  printSumm(*summ, "OprdSumm::getStoreSummInFunc");
   bddResults = bddfalse;
   InstrDenseSet::iterator itr(summ->begin());
   for (; itr != summ->end(); ++itr) {
     /* The instructions here are already from either normal or max slicing 
     module depending on slicing mode, so this is correct. */
     const Instruction *storeInstr = *itr;
+    SERRS << "\n" << stat->printInstr(storeInstr, "OprdSumm::getStoreSummInFunc") << "\n";
     bddResults |= aliasMgr->getPointTee(retInstr, storeInstr->getOperand(1));
   }
   return NULL;
