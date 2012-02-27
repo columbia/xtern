@@ -620,6 +620,27 @@ char *tern_fgets(unsigned ins, char *s, int size, FILE *stream)
   return ret;
 }
 
+pid_t tern_fork(unsigned ins)
+{
+  int error = errno;
+  pid_t ret;
+  Space::enterSys();
+  ret = Runtime::the->__fork(ins, error);
+  Space::exitSys();
+  errno = error;
+  return ret;
+}
+
+pid_t tern_wait(unsigned ins, int *status)
+{
+  int error = errno;
+  pid_t ret;
+  Space::enterSys();
+  ret = Runtime::the->__wait(ins, error, status);
+  Space::exitSys();
+  errno = error;
+  return ret;
+}
 
 /*
 int tern_poll(unsigned ins, struct pollfd *fds, nfds_t nfds, int timeout)

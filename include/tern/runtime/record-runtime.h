@@ -88,6 +88,8 @@ struct RecorderRT: public Runtime, public _Scheduler {
   int __epoll_wait(unsigned insid, int &error, int epfd, struct epoll_event *events, int maxevents, int timeout);
   int __sigwait(unsigned insid, int &error, const sigset_t *set, int *sig); 
   char *__fgets(unsigned insid, int &error, char *s, int size, FILE *stream);
+  pid_t __fork(unsigned insid, int &error);
+  pid_t __wait(unsigned insid, int &error, int *status);
 
   // sleep
   unsigned int sleep(unsigned insid, int &error, unsigned int seconds);

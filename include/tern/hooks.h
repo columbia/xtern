@@ -44,14 +44,13 @@ extern "C" {
 # undef DEFTERNAUTO
 # undef DEFTERNUSER
 # define DEF(func, kind, rettype, args...) \
-    rettype tern_ ## func (unsigned insid, args);
+    rettype tern_ ## func (unsigned insid, ##args);
 # define DEFTERNAUTO(func)
 # define DEFTERNUSER(func)
 # include "syncfuncs.def.h"
 # undef DEF
 # undef DEFTERNAUTO
 # undef DEFTERNUSER
-
 
 #ifdef __cplusplus
 }

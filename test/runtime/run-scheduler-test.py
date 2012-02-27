@@ -29,6 +29,8 @@ parser.add_argument('-ternruntime', dest='ternruntime', required=True,
                     help='tern x86 runtime')
 parser.add_argument('-ternbcruntime', dest='ternbcruntime', required=True,
                     help='tern bc runtime')
+parser.add_argument('-nondet', dest='nondet', default=False, action='store_true',
+                    help='skip checking of determinism')
 parser.add_argument('-gen', dest='gen', default=False, action='store_true',
                     help='generate expected outputs instead of testing them')
 
@@ -135,7 +137,7 @@ def run(cmd, map):
             cmd = cmd.replace('%'+key, val)
     if args['gen'] and gen(cmd, prog):
         return
-    if cmd.endswith('ScheduleCheck'):
+    if (not args['nondet']) and cmd.endswith('ScheduleCheck'):
         cmd = cmd.split('ScheduleCheck')[0]
         check_deterministic(cmd, prog)
         return

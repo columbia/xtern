@@ -14,6 +14,8 @@
 #include <errno.h>
 #include <sys/socket.h>
 #include <netdb.h>
+#include <sys/types.h>
+#include <sys/wait.h>
 
 using namespace tern;
 
@@ -251,6 +253,22 @@ char *Runtime::__fgets(unsigned ins, int &error, char *s, int size, FILE *stream
 {
   errno = error;
   char *ret = fgets(s, size, stream);
+  error = errno;
+  return ret;
+}
+
+pid_t Runtime::__fork(unsigned ins, int &error)
+{
+  errno = error;
+  pid_t ret = fork();
+  error = errno;
+  return ret;
+}
+
+pid_t Runtime::__wait(unsigned ins, int &error, int *status)
+{
+  errno = error;
+  pid_t ret = wait(status);
   error = errno;
   return ret;
 }

@@ -19,7 +19,7 @@ using namespace tern;
 #ifdef _DEBUG_RECORDER
 #  define SELFCHECK  dump(cerr); selfcheck()
 #  define dprintf(fmt...) do {                   \
-     fprintf(stderr, "[%d]", self());            \
+     fprintf(stderr, "[%d] ", self());            \
      fprintf(stderr, fmt);                       \
      fflush(stderr);                             \
    } while(0)
@@ -738,6 +738,12 @@ unsigned RRScheduler::incTurnCount(void)
   unsigned ret = turnCount++;
   fireTimeouts();
   return ret;
+}
+
+void RRScheduler::childForkReturn() {
+  Parent::childForkReturn();
+  for(int i=0; i<MaxThreads; ++i)
+    waits[i].reset();
 }
 
 
