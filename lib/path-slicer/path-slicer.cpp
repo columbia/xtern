@@ -178,7 +178,8 @@ void PathSlicer::enforceRacyEdges() {
 
 void PathSlicer::runPathSlicer(void *pathId, set<BranchInst *> &rmBrs) {  
   // Get trace of current path and do some pre-processing.
-  assert(DM_IN(pathId, allPathTraces));
+  if (!DM_IN(pathId, allPathTraces))
+    return;
   DynInstrVector *trace = allPathTraces[pathId];
   if (trace->size() == 0)
     goto finish;
