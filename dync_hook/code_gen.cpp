@@ -32,6 +32,7 @@ void init_filter()
   add(sockaddr);
   add(size_t);
   add(ssize_t);
+  add(pid_t);
   add(msghdr);
   add(socklen_t);
   add(epoll_event);
@@ -71,7 +72,13 @@ void print_func(
 	replace(pattern, "FUNC_NAME", func_name);
 	replace(pattern, "ARGS_WITH_NAME", args_with_name);
 	replace(pattern, "ARGS_WITHOUT_NAME", args_without_name);
-	replace(pattern, "ARGS_ONLY_NAME", args_only_name);
+	if (!strlen(args_only_name))
+  {
+    replace(pattern, ", ARGS_ONLY_NAME", args_only_name);
+    replace(pattern, "ARGS_ONLY_NAME", args_only_name);
+  } else
+    replace(pattern, "ARGS_ONLY_NAME", args_only_name);
+ 
 	replace(pattern, "LIB_PATH", lib_path);
 	fprintf(file, "%s", pattern.c_str());
 }
@@ -158,6 +165,7 @@ void convert(FILE *fin)
           else
             args_without_name += token;
         else {
+          if (!st.size()) break;
           if (st[0] == ',')
           {
             args_only_name += ',';
