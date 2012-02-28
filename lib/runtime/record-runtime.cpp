@@ -331,7 +331,7 @@ int RecorderRT<_S>::pthreadJoin(unsigned ins, int &error, pthread_t th, void **r
       ret = pthread_tryjoin_np(th, rv);
       if(ret != EBUSY)
         break;
-      ::usleep(1);
+      ::usleep(10);
     }
     if(ret == EBUSY) {
       dprintf("can't join thread; try canceling it instead");

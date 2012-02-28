@@ -1,4 +1,4 @@
-// RUN: %srcroot/test/runtime/run-scheduler-test.py %s -gxx "%gxx" -llvmgcc "%llvmgcc" -projbindir "%projbindir" -ternruntime "%ternruntime"  -ternbcruntime "%ternbcruntime"
+// RUN: %srcroot/test/runtime/run-scheduler-test.py %s -gxx "%gxx" -llvmgcc "%llvmgcc" -projbindir "%projbindir" -ternruntime "%ternruntime"  -ternbcruntime "%ternbcruntime" -nondet
 
 #include <pthread.h>
 #include <unistd.h>
