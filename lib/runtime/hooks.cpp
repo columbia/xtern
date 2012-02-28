@@ -620,6 +620,12 @@ char *tern_fgets(unsigned ins, char *s, int size, FILE *stream)
   return ret;
 }
 
+void tern_idle_sleep()
+{
+  Space::enterSys();
+  Runtime::the->idle_sleep();
+  Space::exitSys();
+}
 
 /*
 int tern_poll(unsigned ins, struct pollfd *fds, nfds_t nfds, int timeout)

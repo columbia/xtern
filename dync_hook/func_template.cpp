@@ -24,7 +24,7 @@ extern "C" FUNC_RET_TYPE FUNC_NAME(ARGS_WITH_NAME){
   dlclose(handle);
 
 #ifdef __USE_TERN_RUNTIME
-  if (Space::isApp()) {
+  if (Space::isApp() && options::DMT) {
 
 #ifdef PRINT_DEBUG
     fprintf(stdout, "%04d: FUNC_NAME is hooked.\n", (int) pthread_self());
@@ -47,11 +47,11 @@ extern "C" FUNC_RET_TYPE FUNC_NAME(ARGS_WITH_NAME){
 #endif
     return ret;
   } 
-#else
+#endif
+
 #ifdef PRINT_DEBUG
   fprintf(stdout, "%04d: FUNC_NAME is called.\n", (int) pthread_self());
   fflush(stdout);
-#endif
 #endif
   ret = orig_func(ARGS_ONLY_NAME);
 

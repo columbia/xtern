@@ -570,12 +570,29 @@ int RRScheduler::fireTimeouts()
   return timedout;
 }
 
+void RRScheduler::check_wakeup()
+{
+  if (wakeup_flag)
+  {
+    pthread_mutex_lock(&wakeup_mutex);
+    //sort(wakeup_queue.begin(), wakeup_queue.end()); //  TODO
+    for (int i = 0; i < wakeup_queue.size(); ++i)
+      runq.push_back(wakeup_queue[i]);
+    wakeup_queue.clear();
+    wakeup_flag = false;
+    pthread_mutex_unlock(&wakeup_mutex);
+  }
+}
+
 //@before with turn
 //@after with turn
 void RRScheduler::next(bool at_thread_end)
 {
   int next_tid;
   runq.pop_front(); // remove self from runq
+
+  check_wakeup();
+
   if(runq.empty()) {
     // if there are any timed-waiting threads, we can fast forward the
     // turn to wake up these threads
@@ -629,6 +646,11 @@ void RRScheduler::block()
 
 void RRScheduler::wakeup()
 {
+  pthread_mutex_lock(&wakeup_mutex);
+  wakeup_queue.push_back(self());
+  wakeup_flag = true;
+  pthread_mutex_unlock(&wakeup_mutex);
+#if 0
   int tid = -1;
   dprintf("thread %d, wakeup start at turn %d\n", self(), getTurnCount());
 
@@ -658,6 +680,7 @@ void RRScheduler::wakeup()
   timemark[self()] = timer;
   runq.push_front(self());  //  hack code
   next();
+#endif
 }
 
 //@before with turn
@@ -692,7 +715,7 @@ int RRScheduler::wait(void *chan, unsigned nturn)
   waits[tid].chan = chan;
   waits[tid].timeout = nturn;
   waitq.push_back(tid);
-  dprintf("RRScheduler: %d waits on (%p, %u)\n", tid, chan, nturn);
+  fprintf(stderr, "RRScheduler: %d waits on (%p, %u)\n", tid, chan, nturn);
 
   next();
 
@@ -751,6 +774,10 @@ RRScheduler::RRScheduler()
   runq.push_back(self());
   sem_post(&waits[MainThreadTid].sem);
 
+  wakeup_queue.clear();
+  wakeup_flag = 0;
+  pthread_mutex_init(&wakeup_mutex, NULL);
+
   if (options::RR_skip_zombie)
   {
     timer = 0;
@@ -758,7 +785,6 @@ RRScheduler::RRScheduler()
     pthread_create(&monitor_th, NULL, monitor, this);
   } else
     monitor_th = 0;
-
 }
 
 void RRScheduler::selfcheck(void)

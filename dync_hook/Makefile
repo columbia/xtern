@@ -79,25 +79,25 @@ run_yfs: prepare_yfs
 	rm -rf out
 	$(PREFIX) ./lock_server $(PORT_BASE) $(PORT_BASE) > lock_server1.log 2>&1 &
 	#./lock_server $(PORT_BASE) $(PORT_BASE) > lock_server1.log 2>&1 &
-	sleep 10
-	#$(PREFIX) ./lock_server $(PORT_BASE) $(shell expr $(PORT_BASE) + 10) > lock_server2.log 2>&1 &
-	./lock_server $(PORT_BASE) $(shell expr $(PORT_BASE) + 10) > lock_server2.log 2>&1 &
-	sleep 10
+	sleep 5
+	$(PREFIX) ./lock_server $(PORT_BASE) $(shell expr $(PORT_BASE) + 10) > lock_server2.log 2>&1 &
+	#./lock_server $(PORT_BASE) $(shell expr $(PORT_BASE) + 10) > lock_server2.log 2>&1 &
+	sleep 5
 	#$(PREFIX) ./lock_server $(PORT_BASE) $(shell expr $(PORT_BASE) + 20) > lock_server3.log 2>&1 &
 	#./lock_server $(PORT_BASE) $(shell expr $(PORT_BASE) + 20) > lock_server3.log 2>&1 &
 	sleep 1
-	#$(PREFIX) ./extent_server $(EXTENT_PORT) > extent_server.log 2>&1  &
-	./extent_server $(EXTENT_PORT) > extent_server.log 2>&1  &
-	sleep 1
+	$(PREFIX) ./extent_server $(EXTENT_PORT) > extent_server.log 2>&1  &
+	#./extent_server $(EXTENT_PORT) > extent_server.log 2>&1  &
+	sleep 5
 	mkdir -p yfs1
-	#$(PREFIX) ./yfs_client yfs1 $(EXTENT_PORT) $(LOCK_PORT) > yfs_client1.log 2>&1  &
-	./yfs_client yfs1 $(EXTENT_PORT) $(LOCK_PORT) > yfs_client1.log 2>&1  &
-	sleep 1000
+	$(PREFIX) ./yfs_client yfs1 $(EXTENT_PORT) $(LOCK_PORT) > yfs_client1.log 2>&1  &
+	#./yfs_client yfs1 $(EXTENT_PORT) $(LOCK_PORT) > yfs_client1.log 2>&1  &
+	sleep 10
 	mount > tmp1
 	mkdir -p yfs2
-	#$(PREFIX) ./yfs_client yfs2 $(EXTENT_PORT) $(LOCK_PORT) > yfs_client2.log 2>&1  &
+	$(PREFIX) ./yfs_client yfs2 $(EXTENT_PORT) $(LOCK_PORT) > yfs_client2.log 2>&1  &
 	#./yfs_client yfs2 $(EXTENT_PORT) $(LOCK_PORT) > yfs_client2.log 2>&1  &
-	#sleep 10
+	sleep 1000
 	#./rand_tester yfs1 yfs2 & 
 	#./rand_tester yfs1  &
 	#sleep 5

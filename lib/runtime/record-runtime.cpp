@@ -136,13 +136,13 @@ int RecorderRT<_S>::relTimeToTurn(const struct timespec *reltime)
   uint64_t ns = reltime->tv_sec;
   ns = ns * 1000000000 + reltime->tv_nsec;
   int64_t ret64 = (ns / 1000 / options::nanosec_per_turn + 1) * _S::nthread;
-  const int MAX_REL = 1000000;
+  const int MAX_REL = 100000;
   int ret =  (ret64 > MAX_REL) ? MAX_REL : (int) ret64;
-  ret = ret < 30 * _S::nthread + 1 ? 30 * _S::nthread + 1 : ret;
+  ret = ret < 5 * _S::nthread + 1 ? 5 * _S::nthread + 1 : ret;
   //int tmp = rand() % 100 * _S::nthread;
-  dprintf("computed turn = %d, tmp = %d\n", ret, tmp);
+  fprintf(stderr, "computed turn = %d\n", ret);
   //return tmp;
-  return 100000;
+  //return 100000;
   return ret;
 }
 
@@ -154,6 +154,33 @@ void RecorderRT<_S>::progBegin(void) {
 template <typename _S>
 void RecorderRT<_S>::progEnd(void) {
   Logger::progEnd();
+}
+
+template <typename _S>
+void RecorderRT<_S>::idle_sleep(void) {
+  //_S::getTurn();
+  //_S::putTurn();
+  ::usleep(10);
+}
+
+template <>
+void RecorderRT<RRScheduler>::idle_sleep(void) {
+//  _S::getTurn();
+//  _S::putTurn();
+  RRScheduler::getTurn();
+  while (RRScheduler::runq.size() == 1 && RRScheduler::waitq.empty())
+  {
+    if (RRScheduler::wakeup_flag)
+      RRScheduler::check_wakeup();
+    else
+      ::usleep(100);
+  }
+  if (RRScheduler::runq.size() == 1)
+  {
+    ::usleep(100);
+    RRScheduler::incTurnCount();  //  TODO fix the convertion rate
+  }
+  RRScheduler::putTurn();
 }
 
 #define BLOCK_TIMER_START \
@@ -402,7 +429,7 @@ int RecorderRT<_S>::pthreadMutexTimedLock(unsigned ins, int &error, pthread_mute
   rel_time = time_diff(cur_time, *abstime);
 
   SCHED_TIMER_START;
-  unsigned timeout = relTimeToTurn(&rel_time);
+  unsigned timeout = _S::getTurnCount() + relTimeToTurn(&rel_time);
   errno = error;
   int ret = pthreadMutexLockHelper(mu, timeout);
   error = errno;
@@ -788,13 +815,14 @@ int RecorderRT<_S>::pthreadCondTimedWait(unsigned ins, int &error,
 
   int ret;
   SCHED_TIMER_START;
-  unsigned timeout = relTimeToTurn(&rel_time);
   pthread_mutex_unlock(mu);
     
   SCHED_TIMER_FAKE_END(syncfunc::pthread_cond_timedwait, (uint64_t)cv, (uint64_t)mu, (uint64_t) 0);
 
   _S::signal(mu);
+  unsigned timeout = _S::getTurnCount() + relTimeToTurn(&rel_time);
   saved_ret = ret = _S::wait(cv, timeout);
+  fprintf(stderr, "timedwait return = %d, after %d turns\n", ret, _S::getTurnCount() - nturn);
 
   sched_time = update_time();
   errno = error;
@@ -867,7 +895,7 @@ int RecorderRT<_S>::semTimedWait(unsigned ins, int &error, sem_t *sem,
   int ret;
   SCHED_TIMER_START;
   
-  unsigned timeout = relTimeToTurn(&rel_time);
+  unsigned timeout = _S::getTurnCount() + relTimeToTurn(&rel_time);
   while((ret=sem_trywait(sem))) {
     assert(errno==EAGAIN && "failed sync calls are not yet supported!");
     ret = _S::wait(sem, timeout);

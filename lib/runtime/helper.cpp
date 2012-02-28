@@ -74,7 +74,8 @@ pthread_t idle_th;
 void *idle_thread(void *)
 {
   while (!idle_done) {
-    tern_usleep(0xdeadbeef, options::idle_sleep_length);
+    //tern_usleep(0xdeadbeef, options::idle_sleep_length);
+    tern_idle_sleep();
   }
   return NULL;
 }

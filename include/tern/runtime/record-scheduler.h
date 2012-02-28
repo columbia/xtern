@@ -13,6 +13,7 @@
 #define __TERN_RECORDER_SCHEDULER_H
 
 #include <list>
+#include <vector>
 #include <errno.h>
 #include <pthread.h>
 #include <iostream>
@@ -130,6 +131,12 @@ protected:
   pthread_t monitor_th;
   int timer;
   int timemark[MaxThreads];
+
+  //  for wakeup
+  std::vector<int> wakeup_queue;
+  bool wakeup_flag;
+  pthread_mutex_t wakeup_mutex;
+  void check_wakeup();
 };
 
 

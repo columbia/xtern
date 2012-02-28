@@ -23,7 +23,7 @@ extern "C" void FUNC_NAME(ARGS_WITH_NAME){
   dlclose(handle);
 
 #ifdef __USE_TERN_RUNTIME
-  if (Space::isApp()) {
+  if (Space::isApp() && options::DMT) {
 
 #ifdef __NEED_INPUT_INSID
     Space::enterSys();

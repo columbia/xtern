@@ -27,6 +27,7 @@ struct RecorderRT: public Runtime, public _Scheduler {
   void progEnd(void);
   void threadBegin(void);
   void threadEnd(unsigned insid);
+  void idle_sleep();
 
   // thread
   int pthreadCreate(unsigned insid, int &error, pthread_t *thread,  pthread_attr_t *attr,
