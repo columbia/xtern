@@ -1,4 +1,4 @@
-
+#include "ext-func-summ.h"
 #include "func-summ.h"
 //#include "tern/syncfuncs.h"
 using namespace tern;
@@ -9,10 +9,10 @@ using namespace llvm;
 char tern::FuncSumm::ID = 0;
 
 FuncSumm::FuncSumm(): ModulePass(&ID) {
-  
 }
 
 FuncSumm::~FuncSumm() {
+  tern::ExtFuncSumm::printAllSumm();  
   fprintf(stderr, "FuncSumm::~FuncSumm\n");
 }
 
@@ -78,12 +78,45 @@ bool FuncSumm::isInternalFunction(const Function *f) {
   // TBD: If the called function is a function pointer, would "f" be NULL?
   if (!f)
     return false;
-  
-  /*fprintf(stderr, "Function %s(%p) is isInternalFunction?\n", 
-    f->getNameStr().c_str(), (void *)f);*/
   bool result = !f->isDeclaration() && internalFunctions.count(f) > 0;
-  /*fprintf(stderr, "Function %s is isInternalFunction %d.\n", 
-    f->getNameStr().c_str(), result);*/
   return result;
+}
+
+bool FuncSumm::extFuncHasLoadSumm(llvm::Instruction *instr) {
+  assert(isa<CallInst>(instr));
+  CallInst *ci = cast<CallInst>(instr);
+  Function *f = ci->getCalledFunction();
+  if (!f) // Ignore function pointer for now, affect soundness.
+    return false;
+  return ExtFuncSumm::extFuncHasLoadSumm(f->getNameStr().c_str());
+}
+
+bool FuncSumm::extFuncHasStoreSumm(llvm::Instruction *instr) {
+  assert(isa<CallInst>(instr));
+  CallInst *ci = cast<CallInst>(instr);
+  Function *f = ci->getCalledFunction();
+  if (!f) // Ignore function pointer for now, affect soundness.
+    return false;
+  return ExtFuncSumm::extFuncHasStoreSumm(f->getNameStr().c_str());
+}
+
+bool FuncSumm::isExtFuncSummLoad(llvm::Instruction *instr, unsigned argOffset) {
+  assert(isa<CallInst>(instr));
+  CallInst *ci = cast<CallInst>(instr);
+  Function *f = ci->getCalledFunction();
+  if (!f) // Ignore function pointer for now, affect soundness.
+    return false;
+  return ExtFuncSumm::getExtFuncSummType(f->getNameStr().c_str(), argOffset) ==
+    ExtFuncSumm::ExtLoad;
+}
+
+bool FuncSumm::isExtFuncSummStore(llvm::Instruction *instr, unsigned argOffset) {
+  assert(isa<CallInst>(instr));
+  CallInst *ci = cast<CallInst>(instr);
+  Function *f = ci->getCalledFunction();
+  if (!f) // Ignore function pointer for now, affect soundness.
+    return false;
+  return ExtFuncSumm::getExtFuncSummType(f->getNameStr().c_str(), argOffset) ==
+    ExtFuncSumm::ExtStore;
 }
 

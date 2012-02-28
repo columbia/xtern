@@ -110,6 +110,10 @@ namespace tern {
     called function and their bdd. The store instructions are those in corespoing module 
     (normal, mx, or sim).*/
     InstrDenseSet *getStoreSummInFunc(DynRetInstr *retInstr, bdd &bddResults);
+
+    /* Given a dynamic call instruction, return a bdd to specify all the "ExtStore" summary of
+    that instruction.*/
+    InstrDenseSet *getExtCallStoreSumm(DynCallInstr *callInstr, bdd &bddResults);
   };
 }
 

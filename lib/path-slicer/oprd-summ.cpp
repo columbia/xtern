@@ -112,6 +112,13 @@ InstrDenseSet *OprdSumm::getStoreSummInFunc(
   return NULL;
 }
 
+InstrDenseSet *OprdSumm::getExtCallStoreSumm(DynCallInstr *callInstr,
+  bdd &bddResults) {
+  // TBD.
+  return NULL;
+}
+
+
 void OprdSumm::DFSBasicBlock(BasicBlock *x, BasicBlock *sink,
   InstrDenseSet &summ, OprdType oprdType) {
   if (visitedBB.count(x))

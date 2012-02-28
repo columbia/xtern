@@ -49,15 +49,7 @@ bool CfgMgr::postDominate(Instruction *prevInstr, Instruction *postInstr) {
     return result;
 
   // Query PostDominatorTree.
-  Function *f = Util::getFunction(postInstr);
-  if (f != Util::getFunction(prevInstr)) {
-    errs() << "CfgMgr::postDominate PREV: " << stat->printInstr(prevInstr, __func__) << "\n";
-    errs() << "CfgMgr::postDominate POST: " << stat->printInstr(postInstr, __func__) << "\n";
-    fprintf(stderr, "Please examine the trace to make sure whether prev and \
-    post instructions are within the same function\n");
-    exit(1);
-  }
-  
+  Function *f = Util::getFunction(postInstr);  
   PostDominatorTree &PDT = getAnalysis<PostDominatorTree>(*f);
   BasicBlock *prevBB = Util::getBasicBlock(prevInstr);
   BasicBlock *postBB = Util::getBasicBlock(postInstr);

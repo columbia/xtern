@@ -101,6 +101,17 @@ void IntraSlicer::takeBr(DynInstr *dynInstr, uchar reason) {
   slice.add(dynInstr, reason);
 }
 
+void IntraSlicer::takeExternalCall(DynInstr *dynInstr, uchar reason) {
+  if (regOverWritten(dynInstr))
+    delRegOverWritten(dynInstr);
+  live.addUsedRegs(dynInstr);
+  Instruction *instr = idMgr->getOrigInstr(dynInstr);
+  if (funcSumm->extFuncHasLoadSumm(instr)) {
+    live.addLoadMem(instr);
+  }
+  slice.add(dynInstr, reason);
+}
+
 void IntraSlicer::delRegOverWritten(DynInstr *dynInstr) {
   Instruction *instr = idMgr->getOrigInstr(dynInstr);
   if (Util::hasDestOprd(instr)) {
@@ -251,7 +262,11 @@ void IntraSlicer::handleCall(DynInstr *dynInstr) {
     // Currently set the reason to non mem, real reason depends on its return instr.
     slice.add(dynInstr, TakenFlags::INTRA_NON_MEM); 
   } else {
-    // TBD: QUERY FUNCTION SUMMARY.
+    if (live.regOverWritten(dynInstr))
+      takeExternalCall(DynInstr * dynInstr, INTRA_EXT_CALL_REG_OW);
+    else {
+      
+    }
   }
 }
 
@@ -350,15 +365,24 @@ bool IntraSlicer::postDominate(DynInstr *dynPostInstr, DynBrInstr *dynPrevInstr)
   Instruction *postInstr = idMgr->getOrigInstr(dynPostInstr);
   bool result = cfgMgr->postDominate(prevInstr, postInstr);
 
-  // DEBUG. This assertion does not hold, because we can have loops.
-  if (Util::getBasicBlock(prevInstr) == Util::getBasicBlock(postInstr)) {
-    stat->printDynInstr(dynPrevInstr, "IntraSlicer::postDominate");
-    stat->printDynInstr(dynPostInstr, "IntraSlicer::postDominate");
-    fprintf(stderr, "IntraSlicer::postDominate result %d\n", result);
-    //assert(false);  
+  if (Util::getFunction(prevInstr) != Util::getFunction(postInstr)) {
+    errs() << "IntraSlicer::postDominate PREV: " << stat->printInstr(prevInstr, __func__) << "\n";
+    errs() << "IntraSlicer::postDominate POST: " << stat->printInstr(postInstr, __func__) << "\n";
+    fprintf(stderr, "Please examine the trace to make sure whether prev and \
+    post instructions are within the same function\n");
+    dump("IntraSlicer::postDominate");
+    exit(1);
   }
 
   return result;
+}
+
+void IntraSlicer::dump(const char *tag) {
+  assert(trace);
+  errs() << BAN;
+  for (size_t i = 0; i < trace->size(); i++)
+    stat->printDynInstr(trace->at(i), tag);
+  errs() << BAN;
 }
 
 void IntraSlicer::removeRange(DynRetInstr *dynRetInstr) {

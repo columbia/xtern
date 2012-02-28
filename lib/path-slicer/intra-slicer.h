@@ -57,6 +57,7 @@ namespace tern {
     void handleCheckerTarget(DynInstr *dynInstr);
 
     void takeBr(DynInstr *dynInstr, uchar reason);
+    void takeExternalCall(DynInstr *dynInstr, uchar reason);
     void takeNonMem(DynInstr *dynInstr, uchar reason = TakenFlags::INTRA_NON_MEM);
     void delRegOverWritten(DynInstr *dynInstr);
     bool regOverWritten(DynInstr *dynInstr);
@@ -73,8 +74,7 @@ namespace tern {
     void removeRange(DynRetInstr *dynRetInstr);
     void addMemAddrEqConstr(DynMemInstr *loadInstr, DynMemInstr *storeInstr);
     bool mustAlias(DynOprd *oprd1, DynOprd *oprd2);
-
-    static bool containErrnoAddr(InstrDenseSet &instrSet);
+    void dump(const char *tag);
 
   public:
     IntraSlicer();

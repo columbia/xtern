@@ -65,6 +65,18 @@ namespace tern {
     bool isInternalFunction(const llvm::Function *f);
     //bool isInternalCall(const llvm::Instruction *instr);
     bool isInternalCall(DynInstr *dynInstr);
+
+
+    /* External function summary. Ignore function pointer for now. Must handle bitcast for now. */
+    /* Given a static instruction (must be a function call), whether it has load/store summary. */
+    bool extFuncHasLoadSumm(llvm::Instruction *instr);
+    bool extFuncHasStoreSumm(llvm::Instruction *instr);
+
+    /* Given a static instruction (must be a function call) and the formal argument offset,
+    whether the argument has load/store summary. */
+    bool isExtFuncSummLoad(llvm::Instruction *instr, unsigned argOffset);
+    bool isExtFuncSummStore(llvm::Instruction *instr, unsigned argOffset);
+
   };
 
 }
