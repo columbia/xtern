@@ -59,3 +59,5 @@ schedule_write = 0
 # determine whether we start an idle thread to avoid empty runq 
 launch_idle_thread = 1
 
+# whether or not to use pthread_tryjoin_np to join a thread
+pthread_tryjoin = 1

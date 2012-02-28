@@ -1,0 +1,14 @@
+#/bin/sh
+
+sleep 1
+echo "XXX 10"
+sleep 1
+echo "YYY 100"
+sleep 1
+echo "ZZZ 1000"
+sleep 1
+echo # print quotes
+sleep 1
+echo # print quotes
+sleep 1
+echo # print quotes

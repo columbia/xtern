@@ -40,9 +40,11 @@
 #include "tern/runtime/record-log.h"
 #include "tern/runtime/record-runtime.h"
 #include "tern/runtime/record-scheduler.h"
-#include "tern/options.h"
 #include "signal.h"
 #include "helper.h"
+#include "tern/space.h"
+#include "tern/options.h"
+#include "tern/hooks.h"
 #include <fstream>
 #include <map>
 #include <sys/types.h>
@@ -57,7 +59,7 @@
 
 #ifdef _DEBUG_RECORDER
 #  define dprintf(fmt...) do {                   \
-     fprintf(stderr, "[%d]", self());            \
+     fprintf(stderr, "[%d] ", _S::self());        \
      fprintf(stderr, fmt);                       \
      fflush(stderr);                             \
   } while(0)
@@ -140,7 +142,7 @@ int RecorderRT<_S>::relTimeToTurn(const struct timespec *reltime)
   int ret =  (ret64 > MAX_REL) ? MAX_REL : (int) ret64;
   ret = ret < 5 * _S::nthread + 1 ? 5 * _S::nthread + 1 : ret;
   //int tmp = rand() % 100 * _S::nthread;
-  fprintf(stderr, "computed turn = %d\n", ret);
+  dprintf("computed turn = %d\n", ret);
   //return tmp;
   //return 100000;
   return ret;
@@ -346,11 +348,31 @@ int RecorderRT<_S>::pthreadJoin(unsigned ins, int &error, pthread_t th, void **r
   while(!_S::zombie(th))
     wait((void*)th);
   errno = error;
-  ret = pthread_join(th, rv);
+
+  if(options::pthread_tryjoin) {
+    // FIXME: sometimes a child process gets stuck in
+    // pthread_join(idle_th, NULL) in __tern_prog_end(), perhaps because
+    // idle_th has become zombie and since the program is exiting, the
+    // zombie thread is reaped.
+    for(int i=0; i<10; ++i) {
+      ret = pthread_tryjoin_np(th, rv);
+      if(ret != EBUSY)
+        break;
+      ::usleep(10);
+    }
+    if(ret == EBUSY) {
+      dprintf("can't join thread; try canceling it instead");
+      pthread_cancel(th);
+      ret = 0;
+    }
+  } else {
+    ret = pthread_join(th, rv);
+  }
+
   error = errno;
   assert(!ret && "failed sync calls are not yet supported!");
   _S::join(th);
-  
+
   SCHED_TIMER_END(syncfunc::pthread_join, (uint64_t)th);
 
   return ret;
@@ -1318,6 +1340,56 @@ char *RecorderRT<_S>::__fgets(unsigned ins, int &error, char *s, int size, FILE 
   BLOCK_TIMER_END(syncfunc::sigwait, (uint64_t) ret);
   return ret;
 }
+
+extern "C" void *idle_thread(void*);
+extern "C" pthread_t idle_th;
+
+template <typename _S>
+pid_t RecorderRT<_S>::__fork(unsigned ins, int &error)
+{
+  pid_t ret;
+
+  Logger::the->flush(); // so child process won't write it again
+
+  SCHED_TIMER_START;
+  errno = error;
+  ret = fork();
+  error = errno;
+
+  if(ret == 0) {
+    // child process returns from fork; re-initializes scheduler and
+    // logger state
+    dprintf("fork return in child %d\n", (int)getpid());
+    Logger::threadEnd(); // close log
+    Logger::threadBegin(_S::self()); // re-open log
+    _S::childForkReturn();
+  }
+
+  SCHED_TIMER_END(syncfunc::fork, (uint64_t) ret);
+
+  if(ret == 0) { // spawn idle thread for child process
+    // FIXME: this is gross.  idle thread should be part of RecorderRT
+    if (options::launch_idle_thread) {
+      Space::exitSys();
+      int ret = tern_pthread_create(0xdead0000, &idle_th,
+                                    NULL, idle_thread, NULL);
+      assert(ret == 0 && "tern_pthread_create failed!");
+      Space::enterSys();
+    }
+  }
+
+  return ret;
+}
+
+template <typename _S>
+pid_t RecorderRT<_S>::__wait(unsigned ins, int &error, int *status)
+{
+  BLOCK_TIMER_START;
+  pid_t ret = Runtime::__wait(ins, error, status);
+  BLOCK_TIMER_END(syncfunc::wait, (uint64_t) ret);
+  return ret;
+}
+
 
 // TODO: right now we treat sleep functions just as a turn; should convert
 // real time to logical time

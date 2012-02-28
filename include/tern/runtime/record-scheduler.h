@@ -102,6 +102,8 @@ struct RRScheduler: public Scheduler {
 
   unsigned incTurnCount(void);
 
+  void childForkReturn();
+
   RRScheduler();
   ~RRScheduler();
 

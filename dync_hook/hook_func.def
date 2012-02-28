@@ -415,3 +415,16 @@ s, size, stream
 SECTION
 ENDDEF
 
+START_SHORT_DEFINE
+/lib/x86_64-linux-gnu/libc.so.6
+pid_t
+fork
+()
+END_SHORT_DEFINE
+
+START_SHORT_DEFINE
+/lib/x86_64-linux-gnu/libc.so.6
+pid_t
+wait
+(int *status)
+END_SHORT_DEFINE

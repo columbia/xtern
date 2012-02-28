@@ -25,6 +25,7 @@ struct Logger {
                        timespec time1, 
                        timespec time2, timespec sched_time, 
                        bool after = true, ...) {}
+  virtual void flush() {}
   virtual ~Logger() {}
   static __thread Logger* the; /// pointer to per-thread logger
 
@@ -121,6 +122,7 @@ struct TestLogger: public Logger {
                        timespec time1, 
                        timespec time2, timespec sched_time, 
                        bool after = true, ...);
+  virtual void flush();
   TestLogger(int tid);
   virtual ~TestLogger();
 

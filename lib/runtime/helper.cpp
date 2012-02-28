@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
+#include <unistd.h>
 
 #include "tern/config.h"
 #include "tern/hooks.h"
@@ -97,7 +98,7 @@ void __tern_prog_begin(void) {
 
   // FIXME: the version of uclibc in klee doesn't seem to pick up the
   // functions registered with atexit()
-  //atexit(__tern_prog_end);
+  atexit(__tern_prog_end);
 
   tern_prog_begin();
   assert(Space::isSys());

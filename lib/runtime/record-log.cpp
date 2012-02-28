@@ -107,6 +107,8 @@ void TxtLogger::logSync(unsigned insid, unsigned short sync,
   case syncfunc::epoll_wait:
   case syncfunc::sigwait:
   case syncfunc::fgets:
+  case syncfunc::fork:
+  case syncfunc::wait:
     break;
     // log one sync var (common case)
   case syncfunc::pthread_mutex_init:
@@ -421,6 +423,8 @@ void TestLogger::logSync(unsigned insid, unsigned short sync,
   case syncfunc::select:
   case syncfunc::epoll_wait:
   case syncfunc::sigwait:
+  case syncfunc::fork:
+  case syncfunc::wait:
     break;
     // log one sync var (common case)
   case syncfunc::pthread_mutex_init:
@@ -483,11 +487,15 @@ void TestLogger::logSync(unsigned insid, unsigned short sync,
     break;
 
   default:
-cerr << syncfunc::getName(sync) << "\n";
+    cerr << syncfunc::getName(sync) << "\n";
     assert(0 && "sync not handled");
   }
   va_end(args);
   ouf << "\n";
+}
+
+void TestLogger::flush() {
+  ouf.flush();
 }
 
 TestLogger::TestLogger(int thid) {

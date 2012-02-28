@@ -141,6 +141,8 @@ struct Runtime {
   virtual int __sigwait(unsigned insid, int &error, const sigset_t *set, int *sig); 
 
   virtual char *__fgets(unsigned ins, int &error, char *s, int size, FILE *stream);
+  virtual pid_t __fork(unsigned ins, int &error);
+  virtual pid_t __wait(unsigned ins, int &error, int *status);
 
   // sleep
   virtual unsigned int sleep(unsigned insid, int &error, unsigned int seconds);

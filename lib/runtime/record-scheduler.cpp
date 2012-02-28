@@ -19,7 +19,7 @@ using namespace tern;
 #ifdef _DEBUG_RECORDER
 #  define SELFCHECK  dump(cerr); selfcheck()
 #  define dprintf(fmt...) do {                   \
-     fprintf(stderr, "[%d]", self());            \
+     fprintf(stderr, "[%d] ", self());            \
      fprintf(stderr, fmt);                       \
      fflush(stderr);                             \
    } while(0)
@@ -576,7 +576,7 @@ void RRScheduler::check_wakeup()
   {
     pthread_mutex_lock(&wakeup_mutex);
     //sort(wakeup_queue.begin(), wakeup_queue.end()); //  TODO
-    for (int i = 0; i < wakeup_queue.size(); ++i)
+    for (int i = 0; i < (int) wakeup_queue.size(); ++i)
       runq.push_back(wakeup_queue[i]);
     wakeup_queue.clear();
     wakeup_flag = false;
@@ -761,6 +761,12 @@ unsigned RRScheduler::incTurnCount(void)
   unsigned ret = turnCount++;
   fireTimeouts();
   return ret;
+}
+
+void RRScheduler::childForkReturn() {
+  Parent::childForkReturn();
+  for(int i=0; i<MaxThreads; ++i)
+    waits[i].reset();
 }
 
 

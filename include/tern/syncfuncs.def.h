@@ -63,8 +63,10 @@ DEF(read, Synchronization, ssize_t, int fd, void *buf, size_t count)
 DEF(write, Synchronization, ssize_t, int fd, const void *buf, size_t count)
 DEF(select, Synchronization, int, int nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds, struct timeval *timeout)
 //DEF(poll, Synchronization, int, struct pollfd *fds, nfds_t nfds, int timeout)
+DEF(fork, Synchronization, pid_t)
+DEF(wait, Synchronization, pid_t, int *status)
 
-// file operations not handled not. 
+// file operations not handled not.
 //DEF(open, Synchronization, int, const char *pathname, int flags)
 //DEF(open, Synchronization, int, const char *pathname, int flags, mode_t mode)
 //DEF(creat, Synchronization, int, const char *pathname, mode_t mode)
