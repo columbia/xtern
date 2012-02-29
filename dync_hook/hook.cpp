@@ -92,6 +92,10 @@ void *get_eip()
 #define HOOK_SEMAPHORE
 #define HOOK_BLOCKING_FUNCS
 
+//  notice we have not implemented tern_fork yet. so the
+//  hooking code is disabled. 
+#define __SPEC_HOOK_fork
+
 #ifndef HOOK_MUTEX_COND
 #define __SPEC_HOOK_pthread_mutex_init
 #define __SPEC_HOOK_pthread_mutex_lock
