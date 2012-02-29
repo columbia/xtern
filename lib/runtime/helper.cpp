@@ -82,9 +82,13 @@ void *idle_thread(void *)
 }
 
 static pthread_t main_thread_th;
+static bool prog_began = false; // sanity
 //  SYS -> SYS
 //  must be called by the main thread
 void __tern_prog_begin(void) {
+  assert(!prog_began && "__tern_prog_begin() already called!");
+  prog_began = true;
+
   //fprintf(stderr, "%08d calls __tern_prog_begin\n", (int) pthread_self());
   assert(Space::isSys() && "__tern_prog_begin must start in sys space");
 
@@ -113,6 +117,11 @@ void __tern_prog_begin(void) {
 
 //  SYS -> SYS
 void __tern_prog_end (void) {
+
+  assert(prog_began && "__tern_prog_begin() not called "\
+         "or __tern_prog_end() already called!");
+  prog_began = false;
+
   //fprintf(stderr, "%08d calls __tern_prog_end\n", (int) pthread_self());
   assert(Space::isApp() && "__tern_prog_end must start in app space");
 

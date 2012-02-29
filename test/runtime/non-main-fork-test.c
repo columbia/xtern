@@ -7,6 +7,8 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <sys/types.h>
+#include <sys/wait.h>
 
 pthread_mutex_t mutex;
 
@@ -23,12 +25,14 @@ void *fork_thread(void *arg)
 
   pthread_create(&t, NULL, myfunc, NULL);
 
-  pthread_mutex_lock(&mutex); // fix the state of the @mutex so the child
-                              // won't be surprised
   if (fork() == 0) { // child process
+    // reinitialize mutex since it's state may be undefined
+    pthread_mutex_init(&mutex, NULL);
+    pthread_mutex_lock(&mutex);
     pthread_mutex_unlock(&mutex);
     exit(0);
   }
+  pthread_mutex_lock(&mutex);
   pthread_mutex_unlock(&mutex);
 
   wait(NULL);

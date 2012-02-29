@@ -160,29 +160,27 @@ void RecorderRT<_S>::progEnd(void) {
 
 template <typename _S>
 void RecorderRT<_S>::idle_sleep(void) {
-  //_S::getTurn();
-  //_S::putTurn();
-  ::usleep(10);
-}
-
-template <>
-void RecorderRT<RRScheduler>::idle_sleep(void) {
 //  _S::getTurn();
 //  _S::putTurn();
-  RRScheduler::getTurn();
-  while (RRScheduler::runq.size() == 1 && RRScheduler::waitq.empty())
+  _S::getTurn();
+  while (_S::runq.size() == 1 && _S::waitq.empty())
   {
-    if (RRScheduler::wakeup_flag)
-      RRScheduler::check_wakeup();
+    if (_S::wakeup_flag)
+      _S::check_wakeup();
     else
       ::usleep(100);
   }
-  if (RRScheduler::runq.size() == 1)
+  if (_S::runq.size() == 1)
   {
     ::usleep(100);
-    RRScheduler::incTurnCount();  //  TODO fix the convertion rate
+    _S::incTurnCount();  //  TODO fix the convertion rate
   }
-  RRScheduler::putTurn();
+  _S::putTurn();
+}
+
+template <>
+void RecorderRT<RecordSerializer>::idle_sleep(void) {
+  ::usleep(10);
 }
 
 #define BLOCK_TIMER_START \
@@ -468,6 +466,9 @@ int RecorderRT<_S>::pthreadMutexUnlock(unsigned ins, int &error, pthread_mutex_t
   errno = error;
   ret = pthread_mutex_unlock(mu);
   error = errno;
+if(ret!=0) {
+  fprintf(stderr, "unlock failed: %s\n", strerror(ret));
+}
   assert(!ret && "failed sync calls are not yet supported!");
   signal(mu);
  
@@ -838,13 +839,13 @@ int RecorderRT<_S>::pthreadCondTimedWait(unsigned ins, int &error,
   int ret;
   SCHED_TIMER_START;
   pthread_mutex_unlock(mu);
-    
+
   SCHED_TIMER_FAKE_END(syncfunc::pthread_cond_timedwait, (uint64_t)cv, (uint64_t)mu, (uint64_t) 0);
 
   _S::signal(mu);
   unsigned timeout = _S::getTurnCount() + relTimeToTurn(&rel_time);
   saved_ret = ret = _S::wait(cv, timeout);
-  fprintf(stderr, "timedwait return = %d, after %d turns\n", ret, _S::getTurnCount() - nturn);
+  dprintf("timedwait return = %d, after %d turns\n", ret, _S::getTurnCount() - nturn);
 
   sched_time = update_time();
   errno = error;

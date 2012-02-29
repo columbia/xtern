@@ -1,6 +1,6 @@
 all: xternruntime interpose.so 
 
-INC_DIRS=-I$(TERN_ROOT)/include/ -I$(XTERN_ROOT)/include/
+INC_DIRS=-I$(TERN_ROOT)/include/ -I$(XTERN_ROOT)/include/ -I$(XTERN_ROOT)/obj/include
 #INC_DIRS=-I$(XTERN_ROOT)/include/
 STD_LIBS=-lsupc++ -lpthread -lstdc++ -lrt
 FLAG=`date +%F\#%T`

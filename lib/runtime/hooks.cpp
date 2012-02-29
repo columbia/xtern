@@ -29,20 +29,14 @@ extern "C" {
 extern void *idle_thread(void*);
 static int main_thread_alive = 0;
 
-static bool prog_began = false; // sanity
 void tern_prog_begin() {
   assert(Space::isSys() && "tern_prog_begin must start in sys space");
-  assert(!prog_began && "tern_prog_begin() already called!");
-  prog_began = true;
   Runtime::the->progBegin();
   assert(Space::isSys() && "tern_prog_begin must end in sys space");
 }
 
 void tern_prog_end() {
   assert(Space::isSys() && "tern_prog_end must start in sys space");
-  assert(prog_began && "tern_prog_begin() not called "  \
-         "or tern_prog_end() already called!");
-  prog_began = false;
   Runtime::the->progEnd();
   assert(Space::isSys() && "tern_prog_end must end in sys space");
 }

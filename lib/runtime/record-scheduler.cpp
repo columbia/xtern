@@ -715,7 +715,7 @@ int RRScheduler::wait(void *chan, unsigned nturn)
   waits[tid].chan = chan;
   waits[tid].timeout = nturn;
   waitq.push_back(tid);
-  fprintf(stderr, "RRScheduler: %d waits on (%p, %u)\n", tid, chan, nturn);
+  dprintf("RRScheduler: %d waits on (%p, %u)\n", tid, chan, nturn);
 
   next();
 
