@@ -27,6 +27,9 @@ namespace tern {
     static bool isStore(const llvm::Instruction *instr);
     static bool isMem(const llvm::Instruction *instr);
     static bool isErrnoAddr(const llvm::Value *v);
+    
+    static bool isCastInstr(llvm::Value *v);
+    static llvm::Value *stripCast(llvm::Value *v);
 
     static bool hasDestOprd(const llvm::Instruction *instr);
     static llvm::Value *getDestOprd(llvm::Instruction *instr);

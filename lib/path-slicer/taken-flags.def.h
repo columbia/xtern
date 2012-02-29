@@ -74,6 +74,7 @@ DEF(INTRA_LOAD_OW, IntraThread)
 /* Reasons of taken by handling store instructions. */
 DEF(INTRA_STORE_OW, IntraThread) /* OVERWRITE. */
 DEF(INTRA_STORE_ALIAS, IntraThread)
+DEF(INTRA_STORE_ALIAS_EXT_CALL, IntraThread)
 // TBD
 
 /* Reasons of taken by handling all other non memory instructions. */

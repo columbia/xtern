@@ -63,7 +63,7 @@ namespace tern {
     Of couse, this feature might bring troubles for me writing external function summaries.
     */
     bool isInternalFunction(const llvm::Function *f);
-    //bool isInternalCall(const llvm::Instruction *instr);
+    bool isInternalCall(const llvm::Instruction *instr);
     bool isInternalCall(DynInstr *dynInstr);
 
 
@@ -71,6 +71,7 @@ namespace tern {
     /* Given a static instruction (must be a function call), whether it has load/store summary. */
     bool extFuncHasLoadSumm(llvm::Instruction *instr);
     bool extFuncHasStoreSumm(llvm::Instruction *instr);
+    bool extFuncHasSumm(llvm::Instruction *instr);
 
     /* Given a static instruction (must be a function call) and the formal argument offset,
     whether the argument has load/store summary. */

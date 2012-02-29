@@ -56,6 +56,7 @@ namespace tern {
     /* If the checkers from KLEE mark an instruction as IMPORTANT, we handle this in this function. */
     void handleCheckerTarget(DynInstr *dynInstr);
 
+    void takeStore(DynInstr *dynInstr, uchar reason);
     void takeBr(DynInstr *dynInstr, uchar reason);
     void takeExternalCall(DynInstr *dynInstr, uchar reason);
     void takeNonMem(DynInstr *dynInstr, uchar reason = TakenFlags::INTRA_NON_MEM);

@@ -137,3 +137,37 @@ void Util::addTargetDataToPM(Module *module, PassManager *pm) {
     pm->add(TD);
 }
 
+/*
+We handle all the 12 conversion instructions from LLVM ref manual. They are all 
+inheritated from CastInst.
+7. Conversion Operations
+'trunc .. to' Instruction
+'zext .. to' Instruction
+'sext .. to' Instruction
+'fptrunc .. to' Instruction
+'fpext .. to' Instruction
+'fptoui .. to' Instruction
+'fptosi .. to' Instruction
+'uitofp .. to' Instruction
+'sitofp .. to' Instruction
+'ptrtoint .. to' Instruction
+'inttoptr .. to' Instruction
+'bitcast .. to' Instruction
+*/
+bool Util::isCastInstr(llvm::Value *v) {
+  return isa<CastInst>(v);
+}
+
+Value *Util::stripCast(llvm::Value *v) {
+  Value *retV = v;
+  if (isCastInstr(v)) {
+    retV = (cast<CastInst>(v))->getOperand(0);
+    if (!isCastInstr(retV))
+      return retV;
+    else
+      return stripCast(retV); // Recursive.
+  }
+  return retV;
+}
+
+

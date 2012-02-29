@@ -39,8 +39,8 @@ Instruction *CfgMgr::getFirstInstr() {
 
 
 bool CfgMgr::postDominate(Instruction *prevInstr, Instruction *postInstr) {
-  SERRS << "CfgMgr::postDominate PREV: " << stat->printInstr(prevInstr, __func__) << "\n";
-  SERRS << "CfgMgr::postDominate POST: " << stat->printInstr(postInstr, __func__) << "\n";
+  SERRS << "CfgMgr::postDominate PREV: " << stat->printInstr(prevInstr) << "\n";
+  SERRS << "CfgMgr::postDominate POST: " << stat->printInstr(postInstr) << "\n";
   
   bool result = false;
   

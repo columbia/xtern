@@ -34,7 +34,6 @@ static inline const char* getName(unsigned nr) {
 // Public functions.
 extern void printAllSumm();
 extern unsigned getNameID(const char* name);
-//extern bool extFuncHasSumm(const char *name);
 extern bool extFuncHasLoadSumm(const char *name);
 extern bool extFuncHasStoreSumm(const char *name);
 extern ExtSummType getExtFuncSummType(const char *name, unsigned argOffset);

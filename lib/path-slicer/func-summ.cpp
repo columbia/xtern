@@ -57,7 +57,6 @@ void FuncSumm::collectInternalFunctions(Module &M) {
   fprintf(stderr, "FuncSumm::collectInternalFunctions end\n");
 }
 
-/*
 bool FuncSumm::isInternalCall(const Instruction *instr) {
   const CallInst *ci = dyn_cast<CallInst>(instr);
   assert(ci);
@@ -67,7 +66,7 @@ bool FuncSumm::isInternalCall(const Instruction *instr) {
   else
     return isInternalFunction(f);
 }
-*/
+
 bool FuncSumm::isInternalCall(DynInstr *dynInstr) {
   DynCallInstr *callInstr = (DynCallInstr*)dynInstr;
   Function *f = callInstr->getCalledFunc();
@@ -119,4 +118,9 @@ bool FuncSumm::isExtFuncSummStore(llvm::Instruction *instr, unsigned argOffset) 
   return ExtFuncSumm::getExtFuncSummType(f->getNameStr().c_str(), argOffset) ==
     ExtFuncSumm::ExtStore;
 }
+
+bool FuncSumm::extFuncHasSumm(llvm::Instruction *instr) {
+  return extFuncHasLoadSumm(instr) || extFuncHasStoreSumm(instr);
+}
+
 

@@ -59,8 +59,10 @@ unsigned getNameID(const char* name) {
 bool extFuncHasLoadSumm(const char *name) {
   unsigned id = getNameID(name);
   for (int i = 0; i < ARG_LEN; i++) {
-    if (argSumm[id][i] == ExtLoad)
+    if (argSumm[id][i] == ExtLoad) {
+      fprintf(stderr, "Ext function %s has ExtLoad\n", name);
       return true;
+    }
   }
   return false;
 }
@@ -68,16 +70,14 @@ bool extFuncHasLoadSumm(const char *name) {
 bool extFuncHasStoreSumm(const char *name) {
   unsigned id = getNameID(name);
   for (int i = 0; i < ARG_LEN; i++) {
-    if (argSumm[id][i] == ExtStore)
+    if (argSumm[id][i] == ExtStore) {
+      fprintf(stderr, "Ext function %s has ExtStore\n", name);
       return true;
+    }
   }
   return false;
 }
-/*
-bool extFuncHasSumm(const char *name) {
-  return (extFuncHasLoadSumm(name) || extFuncHasStoreSumm(name));
-}
-*/
+
 ExtSummType getExtFuncSummType(const char *name, unsigned argOffset) {
   unsigned id = getNameID(name);
   if (id == no_ext_summ)

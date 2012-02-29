@@ -27,13 +27,12 @@ void Stat::printStat(const char *tag) {
   // TBD.
 }
 
-const char *Stat::printInstr(const llvm::Instruction *instr, const char *tag) {
+const char *Stat::printInstr(const llvm::Instruction *instr) {
   if (DM_IN(instr, buf)) {
     return buf[instr]->str().c_str();
   } else {
     std::string *str = new std::string;
     llvm::raw_string_ostream *newStream = new llvm::raw_string_ostream(*str);
-    (*newStream) << tag << ": ";
     (*newStream) << "F: " << Util::getFunction(instr)->getNameStr()
       << ": BB: " << Util::getBasicBlock(instr)->getNameStr() << ": ";
     instr->print(*newStream);
@@ -41,10 +40,6 @@ const char *Stat::printInstr(const llvm::Instruction *instr, const char *tag) {
     newStream->flush();
     return str->c_str();
   }
-}
-    
-const char *Stat::printValue(const llvm::Value *v, const char *tag) {
-  return printInstr((const llvm::Instruction *)v, tag);
 }
 
 void Stat::printDynInstr(DynInstr *dynInstr, const char *tag) {
@@ -58,7 +53,7 @@ void Stat::printDynInstr(raw_ostream &S, DynInstr *dynInstr, const char *tag) {
     << ": TID: " << (int)dynInstr->getTid()
     << ": INSTRID: " << dynInstr->getOrigInstrId()
     << ": TAKEN: " << dynInstr->takenReason()
-    << ": INSTR: " << printInstr(instr, "")
+    << ": INSTR: " << printInstr(instr)
     << "\n\n";
 
   // Print the condition if this is a symbolic branch.
@@ -104,8 +99,8 @@ void Stat::collectExternalCalls(DynCallInstr *dynCallInstr) {
 
 void Stat::printExternalCalls() {
   DenseSet<const Instruction *>::iterator itr(externalCalls.begin());
-  for (; itr != externalCalls.end(); ++itr)
-    errs() << printInstr(*itr, "Stat::printExternalCalls") << "\n";
+  //for (; itr != externalCalls.end(); ++itr)
+    //errs() << "External Calls: " << *(*itr) << "\n";//printInstr(*itr, "Stat::printExternalCalls") << "\n";
 }
 
 void Stat::collectExed(DynInstr *dynInstr) {

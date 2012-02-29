@@ -47,8 +47,7 @@ namespace tern {
     ~Stat();
     void init(InstrIdMgr *idMgr, CallStackMgr *ctxMgr, FuncSumm *funcSumm);
     void printStat(const char *tag);
-    const char *printInstr(const llvm::Instruction *instr, const char *tag);    
-    const char *printValue(const llvm::Value *v, const char *tag);
+    const char *printInstr(const llvm::Instruction *instr);    
     void printDynInstr(DynInstr *dynInstr, const char *tag);
     void printDynInstr(llvm::raw_ostream &S, DynInstr *dynInstr, const char *tag);
 

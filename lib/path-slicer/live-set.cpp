@@ -12,10 +12,11 @@ LiveSet::~LiveSet() {
 
 }
 
-void LiveSet::init(AliasMgr *aliasMgr, InstrIdMgr *idMgr, Stat *stat) {
+void LiveSet::init(AliasMgr *aliasMgr, InstrIdMgr *idMgr, Stat *stat, FuncSumm *funcSumm) {
   this->aliasMgr = aliasMgr;
   this->idMgr = idMgr;
   this->stat = stat;
+  this->funcSumm = funcSumm;
 }
 
 size_t LiveSet::virtRegsSize() {
@@ -31,7 +32,7 @@ void LiveSet::clear() {
   loadInstrs.clear();
 }
 
-void LiveSet::addReg(CallCtx *ctx, const Value *v) {
+void LiveSet::addReg(CallCtx *ctx, Value *v) {
   if (!Util::isConstant(v)) { // Discard it if it is a LLVM Constant.
     //SERRS << "LiveSet::addReg <" << (void *)v << ">: " << *v << "\n";
     CtxVPair p = std::make_pair(ctx, v);
@@ -109,6 +110,11 @@ void LiveSet::addLoadMem(DynInstr *dynInstr) {
   loadInstrs.insert(dynInstr);
 }
 
+void LiveSet::addExtCallLoadMem(DynInstr *dynInstr) {
+  ASSERT(!DS_IN(dynInstr, extCallLoadInstrs));
+  extCallLoadInstrs.insert(dynInstr);  
+}
+
 void LiveSet::delLoadMem(DynInstr *dynInstr) {
   ASSERT(DS_IN(dynInstr, loadInstrs));
   loadInstrs.erase(dynInstr);
@@ -122,14 +128,40 @@ DenseSet<DynInstr *> &LiveSet::getAllLoadInstrs() {
   REF-COUNTED BDD. */
 bdd LiveSet::getAllLoadMem() {
   bdd retBDD = bddfalse;
+
+  // First, get the load bdd from all real load instructions.
   DenseSet<DynInstr *>::iterator itr(loadInstrs.begin());
   for (; itr != loadInstrs.end(); ++itr) {
     DynInstr *loadInstr = *itr;
     Instruction *staticLoadInstr = idMgr->getOrigInstr(loadInstr);
     DynOprd loadPtrOprd(loadInstr, staticLoadInstr->getOperand(0), 0);
     if (DBG)
-      stat->printDynInstr(loadInstr, "LiveSet::getAllLoadMem");
+      stat->printDynInstr(loadInstr, "LiveSet::getAllLoadMem RealLoad");
     retBDD |= aliasMgr->getPointTee(&loadPtrOprd);
+  }
+
+  // Second, get the load bdd from all load arguments of external calls.
+  retBDD |= getExtCallLoadMem();
+  return retBDD;
+}
+
+bdd LiveSet::getExtCallLoadMem() {
+  bdd retBDD = bddfalse;
+  DenseSet<DynInstr *>::iterator itrCall(extCallLoadInstrs.begin());
+  for (; itrCall != extCallLoadInstrs.end(); ++itrCall) {
+    DynInstr *extCallInstr = *itrCall;
+    Instruction *staticCall = idMgr->getOrigInstr(extCallInstr);
+    if (DBG)
+      stat->printDynInstr(extCallInstr, "LiveSet::getExtCallLoadMem ExtCall");
+    assert(isa<CallInst>(staticCall));
+    CallSite cs  = CallSite(cast<CallInst>(staticCall));
+    unsigned argOffset = 0;
+    for (CallSite::arg_iterator ci = cs.arg_begin(), ce = cs.arg_end(); ci != ce; ++ci, ++argOffset) {
+      if (funcSumm->isExtFuncSummLoad(staticCall, argOffset)) {
+        Value *arg = Util::stripCast(*ci);
+        retBDD |= aliasMgr->getPointTee(extCallInstr, arg);
+      }
+    }
   }
   return retBDD;
 }

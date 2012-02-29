@@ -55,7 +55,7 @@ void OprdSumm::printSumm(InstrDenseSet &summ, const char *tag) {
     return;
   InstrDenseSet::iterator itr(summ.begin());
   for (; itr != summ.end(); ++itr)
-    errs() << stat->printInstr(*itr, tag) << "\n";
+    errs() << tag << ": " << stat->printInstr(*itr) << "\n";
 }
 
 InstrDenseSet *OprdSumm::getLoadSummBetween(
@@ -81,11 +81,27 @@ InstrDenseSet *OprdSumm::getStoreSummBetween(
   bddResults = bddfalse;
   InstrDenseSet::iterator itr(summ.begin());
   for (; itr != summ.end(); ++itr) {
-    /* The instructions here are already from either normal or max slicing 
-    module depending on slicing mode, so this is correct. */
-    const Instruction *storeInstr = *itr;
-    SERRS << "\n" << stat->printInstr(storeInstr, "OprdSumm::getStoreSummBetween") << "\n";
-    bddResults |= aliasMgr->getPointTee(prevBrInstr, storeInstr->getOperand(1));
+    if (Util::isStore(*itr)) {
+      /* The instructions here are already from either normal or max slicing 
+      module depending on slicing mode, so this is correct. */
+      Instruction *storeInstr = *itr;
+      SERRS << "\nOprdSumm::getStoreSummBetween Store: " << stat->printInstr(storeInstr) << "\n";
+      bddResults |= aliasMgr->getPointTee(prevBrInstr, storeInstr->getOperand(1));
+    } else {
+      Instruction *instr = *itr;
+      assert(Util::isCall(instr));
+      CallSite cs  = CallSite(cast<CallInst>(instr));
+      unsigned argOffset = 0;
+      for (CallSite::arg_iterator ci = cs.arg_begin(), ce = cs.arg_end();
+        ci != ce; ++ci, ++argOffset) {
+        if (funcSumm->isExtFuncSummStore(instr, argOffset)) {
+          Value *arg = Util::stripCast(*ci);
+          SERRS << "\nOprdSumm::getStoreSummBetween ExtCall" << stat->printInstr(instr)
+            << " argOffset: " << argOffset << "\n";
+          bddResults |= aliasMgr->getPointTee(prevBrInstr, arg);
+        }
+      }
+    }
   }
   return NULL;
 }
@@ -103,18 +119,47 @@ InstrDenseSet *OprdSumm::getStoreSummInFunc(
   bddResults = bddfalse;
   InstrDenseSet::iterator itr(summ->begin());
   for (; itr != summ->end(); ++itr) {
-    /* The instructions here are already from either normal or max slicing 
-    module depending on slicing mode, so this is correct. */
-    const Instruction *storeInstr = *itr;
-    SERRS << "\n" << stat->printInstr(storeInstr, "OprdSumm::getStoreSummInFunc") << "\n";
-    bddResults |= aliasMgr->getPointTee(retInstr, storeInstr->getOperand(1));
+    if (Util::isStore(*itr)) {
+      /* The instructions here are already from either normal or max slicing 
+      module depending on slicing mode, so this is correct. */
+      Instruction *storeInstr = *itr;
+      SERRS << "\nOprdSumm::getStoreSummInFunc: " << stat->printInstr(storeInstr) << "\n";
+      bddResults |= aliasMgr->getPointTee(retInstr, storeInstr->getOperand(1));
+    } else {
+      Instruction *instr = *itr;
+      assert(Util::isCall(instr));
+      CallSite cs  = CallSite(cast<CallInst>(instr));
+      unsigned argOffset = 0;
+      for (CallSite::arg_iterator ci = cs.arg_begin(), ce = cs.arg_end();
+        ci != ce; ++ci, ++argOffset) {
+        if (funcSumm->isExtFuncSummStore(instr, argOffset)) {
+          Value *arg = Util::stripCast(*ci);
+          SERRS << "\nOprdSumm::getStoreSummInFunc ExtCall argOffSet[" << argOffset << "]: "
+            << stat->printInstr(instr) << "\n";
+          bddResults |= aliasMgr->getPointTee(retInstr, arg);
+        }
+      }
+    }
   }
   return NULL;
 }
 
 InstrDenseSet *OprdSumm::getExtCallStoreSumm(DynCallInstr *callInstr,
   bdd &bddResults) {
-  // TBD.
+  bddResults = bddfalse;
+  Instruction *instr = idMgr->getOrigInstr((DynInstr *)callInstr);
+  assert(isa<CallInst>(instr));
+  CallSite cs  = CallSite(cast<CallInst>(instr));
+  unsigned argOffset = 0;
+  for (CallSite::arg_iterator ci = cs.arg_begin(), ce = cs.arg_end();
+    ci != ce; ++ci, ++argOffset) {
+    Value *arg = Util::stripCast(*ci);
+    if (funcSumm->isExtFuncSummStore(instr, argOffset)) {
+      SERRS << "OprdSumm::getExtCallStoreSumm ExtStore arg[" << argOffset << "]: "
+        << stat->printInstr(instr) << "n";
+      bddResults |= aliasMgr->getPointTee(callInstr, arg);
+    }
+  }
   return NULL;
 }
 
@@ -169,25 +214,38 @@ void OprdSumm::collectSummLocal(llvm::Module &M) {
   }
 }
 
-void OprdSumm::collectFuncSummLocal(const llvm::Function *f) {
-  for (Function::const_iterator bi = f->begin(); bi != f->end(); ++bi) {
+void OprdSumm::collectFuncSummLocal(llvm::Function *f) {
+  for (Function::iterator bi = f->begin(); bi != f->end(); ++bi) {
     bbLoadSumm[bi] = new InstrDenseSet;
     bbStoreSumm[bi] = new InstrDenseSet;
-    for (BasicBlock::const_iterator ii = bi->begin(); ii != bi->end(); ++ii) {
+    for (BasicBlock::iterator ii = bi->begin(); ii != bi->end(); ++ii) {
       collectInstrSummLocal(ii);
     }
   } 
 }
 
-void OprdSumm::collectInstrSummLocal(const llvm::Instruction *instr) {
-  const Function *f = Util::getFunction(instr);
-  const BasicBlock *bb = Util::getBasicBlock(instr);
-  if (instr->getOpcode() == Instruction::Load) {
+void OprdSumm::collectInstrSummLocal(llvm::Instruction *instr) {
+  Function *f = Util::getFunction(instr);
+  BasicBlock *bb = Util::getBasicBlock(instr);
+  if (Util::isLoad(instr)) {
     bbLoadSumm[bb]->insert(instr);
     funcLoadSumm[f]->insert(instr);
-  } else if (instr->getOpcode() == Instruction::Store) {
+  } else if (Util::isStore(instr)) {
     bbStoreSumm[bb]->insert(instr);
     funcStoreSumm[f]->insert(instr);
+  } else if (Util::isCall(instr)) {
+    if (!funcSumm->isInternalCall(instr)) {
+      if (funcSumm->extFuncHasLoadSumm(instr)) { // External function load summary.
+        SERRS << "collectInstrSummLocal ExtLoad: " << stat->printInstr(instr) << "\n";
+        bbLoadSumm[bb]->insert(instr);
+        funcLoadSumm[f]->insert(instr);
+      }
+      if (funcSumm->extFuncHasStoreSumm(instr)) { // External function store summary.
+        SERRS << "collectInstrSummLocal ExtStore: " << stat->printInstr(instr) << "\n";
+        bbStoreSumm[bb]->insert(instr);
+        funcStoreSumm[f]->insert(instr);
+      }
+    }
   }
 }
 
@@ -203,14 +261,14 @@ void OprdSumm::collectSummTopDown(llvm::Module &M) {
   }
 }
 
-void OprdSumm::DFSTopDown(const llvm::Function *f) {
+void OprdSumm::DFSTopDown(llvm::Function *f) {
   CallGraphFP &CG = getAnalysis<CallGraphFP>();
-  for (Function::const_iterator b = f->begin(), be = f->end(); b != be; ++b) {
-    for (BasicBlock::const_iterator i = b->begin(), ie = b->end(); i != ie; ++i) {
+  for (Function::iterator b = f->begin(), be = f->end(); b != be; ++b) {
+    for (BasicBlock::iterator i = b->begin(), ie = b->end(); i != ie; ++i) {
       if (Util::isCall(i)) {
         vector<Function *> calledFuncs = CG.get_called_functions(i);
         for (size_t j = 0; j < calledFuncs.size(); ++j) {
-          const Function *callee = calledFuncs[j];
+          Function *callee = calledFuncs[j];
 
           // First, do DFS to collect summary.
           if (visited.count(callee) == 0) {
@@ -231,8 +289,8 @@ void OprdSumm::DFSTopDown(const llvm::Function *f) {
 
 }
 
-void OprdSumm::addSummToCallerTopDown(const llvm::Function *callee,
-  const llvm::Function *caller, const Instruction *callInstr) {
+void OprdSumm::addSummToCallerTopDown(llvm::Function *callee,
+  llvm::Function *caller, Instruction *callInstr) {
   // Add function load summary from callee to caller.
   if (funcLoadSumm[callee]) {
     if (!funcLoadSumm[caller])
@@ -248,7 +306,7 @@ void OprdSumm::addSummToCallerTopDown(const llvm::Function *callee,
   }
 
   // Add function load summary from callee to the bb containing the call instruction.
-  const BasicBlock *bb = Util::getBasicBlock(callInstr);
+  BasicBlock *bb = Util::getBasicBlock(callInstr);
   if (funcLoadSumm[callee]) {
     if (!bbLoadSumm[bb])
       bbLoadSumm[bb] = new InstrDenseSet;

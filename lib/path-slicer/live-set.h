@@ -14,6 +14,7 @@
 #include "type-defs.h"
 #include "alias-mgr.h"
 #include "instr-id-mgr.h"
+#include "func-summ.h"
 
 namespace tern {  
   struct LiveSet {
@@ -21,6 +22,7 @@ namespace tern {
     Stat *stat;
     AliasMgr *aliasMgr;
     InstrIdMgr *idMgr;
+    FuncSumm *funcSumm;
 
     /** Store all the virtual registers, they are only calling context plus the value pointer 
           of virtual registers. **/
@@ -28,17 +30,18 @@ namespace tern {
 
     /** Store all the load instructions. **/
     llvm::DenseSet<DynInstr *> loadInstrs;
+    llvm::DenseSet<DynInstr *> extCallLoadInstrs;
 
     /** Store all the pointed to locations of pointer operands of all load instructions. **/
     //RefCntBdd loadInstrsBdd;
 
   protected:
-    void addReg(CallCtx *ctx, const Value *v);
+    void addReg(CallCtx *ctx, Value *v);
 
   public:
     LiveSet();
     ~LiveSet();
-    void init(AliasMgr *aliasMgr, InstrIdMgr *idMgr, Stat *stat);
+    void init(AliasMgr *aliasMgr, InstrIdMgr *idMgr, Stat *stat, FuncSumm *funcSumm);
     size_t virtRegsSize();
     size_t loadInstrsSize();
     void clear();
@@ -61,6 +64,7 @@ namespace tern {
     /** Add a load memory location (the load instruction) to live set.
     The pointed-to locations of them are represented as refcounted-bdd. **/
     void addLoadMem(DynInstr *dynInstr);
+    void addExtCallLoadMem(DynInstr *dynInstr);
                                                                           
     /** Delete a load memory location from the refcounted-bdd. **/
     void delLoadMem(DynInstr *dynInstr);     
@@ -69,8 +73,13 @@ namespace tern {
     llvm::DenseSet<DynInstr *> &getAllLoadInstrs();    
 
     /** Get the abstract locations for all load memory locations.
-    This is used in writtenBetween() and mayWriteFunc(). **/
-    bdd getAllLoadMem();   
+    This is used in writtenBetween() and mayWriteFunc(). This bdd
+    contains both real load instructions and sematic load from external calls. **/
+    bdd getAllLoadMem(); 
+
+    /** Get the abstract locations for all load memory locations.
+    This is used in handleMem() in intra-thread phase. **/
+    bdd getExtCallLoadMem();
   };
 }
 

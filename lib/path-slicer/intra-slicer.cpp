@@ -87,13 +87,25 @@ void IntraSlicer::init(ExecutionState *state, OprdSumm *oprdSumm, FuncSumm *func
   curIndex = startIndex;
   live.clear();
   slice.clear();
-  live.init(aliasMgr, idMgr, stat);
+  live.init(aliasMgr, idMgr, stat, funcSumm);
 }
 
 void IntraSlicer::takeNonMem(DynInstr *dynInstr, uchar reason) {
   delRegOverWritten(dynInstr);
   live.addUsedRegs(dynInstr);
   slice.add(dynInstr, reason);
+}
+
+void IntraSlicer::takeStore(DynInstr *dynInstr, uchar reason) {
+  Instruction *instr = idMgr->getOrigInstr(dynInstr);
+  DynMemInstr *storeInstr = (DynMemInstr*)dynInstr;
+  DynOprd storeValue(storeInstr, instr->getOperand(0), 0);
+  DynOprd storePtrOprd(storeInstr, instr->getOperand(1), 1);
+  live.addReg(&storeValue);
+  if (!storeInstr->isTaken()) {
+    live.addReg(&storePtrOprd);
+    slice.add(storeInstr, reason);
+  }
 }
 
 void IntraSlicer::takeBr(DynInstr *dynInstr, uchar reason) {
@@ -107,7 +119,7 @@ void IntraSlicer::takeExternalCall(DynInstr *dynInstr, uchar reason) {
   live.addUsedRegs(dynInstr);
   Instruction *instr = idMgr->getOrigInstr(dynInstr);
   if (funcSumm->extFuncHasLoadSumm(instr)) {
-    live.addLoadMem(instr);
+    live.addExtCallLoadMem(dynInstr);
   }
   slice.add(dynInstr, reason);
 }
@@ -262,10 +274,17 @@ void IntraSlicer::handleCall(DynInstr *dynInstr) {
     // Currently set the reason to non mem, real reason depends on its return instr.
     slice.add(dynInstr, TakenFlags::INTRA_NON_MEM); 
   } else {
-    if (live.regOverWritten(dynInstr))
-      takeExternalCall(DynInstr * dynInstr, INTRA_EXT_CALL_REG_OW);
+    if (regOverWritten(dynInstr))
+      takeExternalCall(dynInstr, TakenFlags::INTRA_EXT_CALL_REG_OW);
     else {
-      
+      Instruction *instr = idMgr->getOrigInstr(dynInstr);
+      if (funcSumm->extFuncHasSumm(instr)) {
+        bdd storeSumm = bddfalse;
+        oprdSumm->getExtCallStoreSumm(callInstr, storeSumm);
+        const bdd bddOfLive = live.getAllLoadMem();
+        if ((storeSumm & bddOfLive) != bddfalse)
+          takeExternalCall(dynInstr, TakenFlags::INTRA_EXT_CALL_MOD_LIVE);
+      }
     }
   }
 }
@@ -296,12 +315,13 @@ void IntraSlicer::handleMem(DynInstr *dynInstr) {
     }
   } else {
     DynMemInstr *storeInstr = (DynMemInstr*)dynInstr;
-    DynOprd storeValue(storeInstr, instr->getOperand(0), 0);
     DynOprd storePtrOprd(storeInstr, instr->getOperand(1), 1);
     if (storeInstr->isInterThreadTarget()) {
       live.addReg(&storePtrOprd);
       slice.add(storeInstr, TakenFlags::INTER_STORE_TGT);
     }
+
+    // Handle real load instructions in live set.
     DenseSet<DynInstr *> loadInstrs = live.getAllLoadInstrs();
     DenseSet<DynInstr *>::iterator itr(loadInstrs.begin());
     for (; itr != loadInstrs.end(); ++itr) {
@@ -313,19 +333,14 @@ void IntraSlicer::handleMem(DynInstr *dynInstr) {
           addMemAddrEqConstr(loadInstr, storeInstr);
         }
         live.delLoadMem(loadInstr);
-        live.addReg(&storeValue);
-        if (!storeInstr->isTaken()) {
-          live.addReg(&storePtrOprd);
-          slice.add(storeInstr, TakenFlags::INTRA_STORE_OW);
-        }
-      } else if (aliasMgr->mayAlias(&loadPtrOprd, &storePtrOprd)) {
-        live.addReg(&storeValue);
-        if (!storeInstr->isTaken()) {
-          live.addReg(&storePtrOprd);
-          slice.add(storeInstr, TakenFlags::INTRA_STORE_ALIAS);
-        }
-      }
+        takeStore(dynInstr, TakenFlags::INTRA_STORE_OW);
+      } else if (aliasMgr->mayAlias(&loadPtrOprd, &storePtrOprd))
+        takeStore(dynInstr, TakenFlags::INTRA_STORE_ALIAS);
     }
+
+    // Handle external calls which have semantic "load" in live set.
+    if ((aliasMgr->getPointTee(&storePtrOprd) & live.getExtCallLoadMem()) != bddfalse)
+      takeStore(dynInstr, TakenFlags::INTRA_STORE_ALIAS_EXT_CALL);
   }
 }
 
@@ -366,8 +381,8 @@ bool IntraSlicer::postDominate(DynInstr *dynPostInstr, DynBrInstr *dynPrevInstr)
   bool result = cfgMgr->postDominate(prevInstr, postInstr);
 
   if (Util::getFunction(prevInstr) != Util::getFunction(postInstr)) {
-    errs() << "IntraSlicer::postDominate PREV: " << stat->printInstr(prevInstr, __func__) << "\n";
-    errs() << "IntraSlicer::postDominate POST: " << stat->printInstr(postInstr, __func__) << "\n";
+    errs() << "IntraSlicer::postDominate PREV: " << stat->printInstr(prevInstr) << "\n";
+    errs() << "IntraSlicer::postDominate POST: " << stat->printInstr(postInstr) << "\n";
     fprintf(stderr, "Please examine the trace to make sure whether prev and \
     post instructions are within the same function\n");
     dump("IntraSlicer::postDominate");

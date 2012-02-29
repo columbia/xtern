@@ -40,29 +40,29 @@ namespace tern {
 
     /* All "reachable" store pointer operands. This is collected by a inter-procedural algorithm. */
     /* Used by mayWriteFunc() in intra-thread phase. */
-    llvm::DenseMap<const llvm::Function *, InstrDenseSet * > funcStoreSumm;
+    llvm::DenseMap<llvm::Function *, InstrDenseSet * > funcStoreSumm;
     /* cache */
     //llvm::DenseMap<std::pair<CallCtx *, const llvm::Function *>, bdd * > funcStoreBDD;
     
     /* Used by writtenBetween() in intra-thread phase and rw-set in inter-thread phase. */
-    llvm::DenseMap<const llvm::BasicBlock *, InstrDenseSet * > bbStoreSumm;
+    llvm::DenseMap<llvm::BasicBlock *, InstrDenseSet * > bbStoreSumm;
     /* cache */
     //llvm::DenseMap<std::pair<CallCtx *, const llvm::BasicBlock *>, bdd * > bbStoreBDD;
 
     /* All "reachable" load pointer operands. This is collected by a inter-procedural algorithm. */
     /* It is not directly used by other modules, but it is used when collecting inter-procedural
     load summary for bbLoadSumm. */
-    llvm::DenseMap<const llvm::Function *, InstrDenseSet * > funcLoadSumm;
+    llvm::DenseMap<llvm::Function *, InstrDenseSet * > funcLoadSumm;
     /* cache */
     //llvm::DenseMap<std::pair<CallCtx *, const llvm::Function *>, bdd * > funcLoadBDD;
 
     /* Used by rw-set in inter-thread phase (branch-branch may race). */
-    llvm::DenseMap<const llvm::BasicBlock *, InstrDenseSet * > bbLoadSumm;
+    llvm::DenseMap<llvm::BasicBlock *, InstrDenseSet * > bbLoadSumm;
     /* cache */
     //llvm::DenseMap<std::pair<CallCtx *, const llvm::BasicBlock *>, bdd * > bbLoadBDD;
 
-    DenseSet<const llvm::Function *> visited;
-    DenseSet<const llvm::BasicBlock *> visitedBB;
+    DenseSet<llvm::Function *> visited;
+    DenseSet<llvm::BasicBlock *> visitedBB;
 
   protected:
     void clean();
@@ -71,14 +71,14 @@ namespace tern {
     /* Phase 1: compute store pointer operands for a function (locally).
       The summary of callees are ignores in this phase. */
     void collectSummLocal(llvm::Module &M);
-    void collectFuncSummLocal(const llvm::Function *f);
-    void collectInstrSummLocal(const llvm::Instruction *instr);
+    void collectFuncSummLocal(llvm::Function *f);
+    void collectInstrSummLocal(llvm::Instruction *instr);
 
     /* Phase 2: goes from top to bottom of call graph, append summary from callee to caller. */
     void collectSummTopDown(llvm::Module &M);
-    void DFSTopDown(const llvm::Function *f);
-    void addSummToCallerTopDown(const llvm::Function *callee,
-      const llvm::Function *caller, const Instruction *callInstr);
+    void DFSTopDown(llvm::Function *f);
+    void addSummToCallerTopDown(llvm::Function *callee,
+      llvm::Function *caller, Instruction *callInstr);
     void addSummTopDown(InstrDenseSet *calleeSet, InstrDenseSet *callerSet);
 
     /* Functions used during outside query. */
