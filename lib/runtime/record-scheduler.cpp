@@ -754,13 +754,19 @@ void RRScheduler::signal(void *chan, bool all)
   SELFCHECK;
 }
 
+extern int idle_done;
 //@before with turn
 //@after with turn
 unsigned RRScheduler::incTurnCount(void)
 {
   unsigned ret = turnCount++;
   fireTimeouts();
-  return ret;
+  return idle_done ? (1 << 30) : ret;
+}
+
+unsigned RRScheduler::getTurnCount(void)
+{
+  return idle_done ? (1 << 30) : turnCount;
 }
 
 void RRScheduler::childForkReturn() {
