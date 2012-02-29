@@ -99,8 +99,10 @@ void Stat::collectExternalCalls(DynCallInstr *dynCallInstr) {
 
 void Stat::printExternalCalls() {
   DenseSet<const Instruction *>::iterator itr(externalCalls.begin());
-  //for (; itr != externalCalls.end(); ++itr)
-    //errs() << "External Calls: " << *(*itr) << "\n";//printInstr(*itr, "Stat::printExternalCalls") << "\n";
+  errs() << "\n";
+  for (; itr != externalCalls.end(); ++itr)
+    errs() << "External call: " << printInstr(*itr) << "\n";
+  errs() << "\n";
 }
 
 void Stat::collectExed(DynInstr *dynInstr) {
