@@ -280,3 +280,52 @@ int Runtime::nanosleep(unsigned ins, int &error, const struct timespec *req, str
   error = errno;
   return ret;
 }
+
+time_t Runtime::__time(unsigned ins, int &error, time_t *t)
+{
+  errno = error;
+  time_t ret = ::time(t);
+  error = errno;
+  return ret;
+}
+
+int Runtime::__clock_getres(unsigned ins, int &error, clockid_t clk_id, struct timespec *res)
+{
+  errno = error;
+  int ret = ::clock_getres(clk_id, res);
+  error = errno;
+  return ret;
+}
+
+int Runtime::__clock_gettime(unsigned ins, int &error, clockid_t clk_id, struct timespec *tp)
+{
+  errno = error;
+  int ret = ::clock_gettime(clk_id, tp);
+  error = errno;
+  return ret;
+}
+
+int Runtime::__clock_settime(unsigned ins, int &error, clockid_t clk_id, const struct timespec *tp)
+{
+  errno = error;
+  int ret = ::clock_settime(clk_id, tp);
+  error = errno;
+  return ret;
+}
+
+int Runtime::__gettimeofday(unsigned ins, int &error, struct timeval *tv, struct timezone *tz)
+{
+  errno = error;
+  int ret = ::gettimeofday(tv, tz);
+  error = errno;
+  return ret;
+}
+
+int Runtime::__settimeofday(unsigned ins, int &error, const struct timeval *tv, const struct timezone *tz)
+{
+  errno = error;
+  int ret = ::settimeofday(tv, tz);
+  error = errno;
+  return ret;
+}
+

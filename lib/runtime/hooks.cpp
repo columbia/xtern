@@ -643,6 +643,73 @@ pid_t tern_wait(unsigned ins, int *status)
   return ret;
 }
 
+time_t tern_time(unsigned ins, time_t *t)
+{
+  int error = errno;
+  pid_t ret;
+  Space::enterSys();
+  ret = Runtime::the->__time(ins, error, t);
+  Space::exitSys();
+  errno = error;
+  return ret;
+}
+
+int tern_clock_getres(unsigned ins, clockid_t clk_id, struct timespec *res)
+{
+  int error = errno;
+  pid_t ret;
+  Space::enterSys();
+  ret = Runtime::the->__clock_getres(ins, error, clk_id, res);
+  Space::exitSys();
+  errno = error;
+  return ret;
+}
+
+int tern_clock_gettime(unsigned ins, clockid_t clk_id, struct timespec *tp)
+{
+  int error = errno;
+  pid_t ret;
+  Space::enterSys();
+  ret = Runtime::the->__clock_gettime(ins, error, clk_id, tp);
+  Space::exitSys();
+  errno = error;
+  return ret;
+}
+
+int tern_clock_settime(unsigned ins, clockid_t clk_id, const struct timespec *tp)
+{
+  int error = errno;
+  pid_t ret;
+  Space::enterSys();
+  ret = Runtime::the->__clock_settime(ins, error, clk_id, tp);
+  Space::exitSys();
+  errno = error;
+  return ret;
+}
+
+int tern_gettimeofday(unsigned ins, struct timeval *tv, struct timezone *tz)
+{
+  int error = errno;
+  pid_t ret;
+  Space::enterSys();
+  ret = Runtime::the->__gettimeofday(ins, error, tv, tz);
+  Space::exitSys();
+  errno = error;
+  return ret;
+}
+
+int tern_settimeofday(unsigned ins, const struct timeval *tv, const struct timezone *tz)
+{
+  int error = errno;
+  pid_t ret;
+  Space::enterSys();
+  ret = Runtime::the->__settimeofday(ins, error, tv, tz);
+  Space::exitSys();
+  errno = error;
+  return ret;
+}
+
+
 /*
 int tern_poll(unsigned ins, struct pollfd *fds, nfds_t nfds, int timeout)
 {

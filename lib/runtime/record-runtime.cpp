@@ -1503,6 +1503,74 @@ int RecorderRT<RecordSerializer>::nanosleep(unsigned ins, int &error,
   return _P::nanosleep(ins, error, req, rem);
 }
 
+template <typename _S>
+time_t RecorderRT<_S>::__time(unsigned ins, int &error, time_t *t)
+{
+  if (!options::epoch_mode)
+    return Runtime::__time(ins, error, t);
+  errno = error;
+  time_t ret = ::time(t);
+  error = errno;
+  return ret;
+}
+
+template <typename _S>
+int RecorderRT<_S>::__clock_getres(unsigned ins, int &error, clockid_t clk_id, struct timespec *res)
+{
+  if (!options::epoch_mode)
+    return Runtime::__clock_getres(ins, error, clk_id, res);
+  errno = error;
+  int ret = ::clock_getres(clk_id, res);
+  error = errno;
+  return ret;
+}
+
+template <typename _S>
+int RecorderRT<_S>::__clock_gettime(unsigned ins, int &error, clockid_t clk_id, struct timespec *tp)
+{
+  if (!options::epoch_mode)
+    return Runtime::__clock_gettime(ins, error, clk_id, tp);
+  errno = error;
+  int ret = ::clock_gettime(clk_id, tp);
+  error = errno;
+  return ret;
+}
+
+template <typename _S>
+int RecorderRT<_S>::__clock_settime(unsigned ins, int &error, clockid_t clk_id, const struct timespec *tp)
+{
+  if (!options::epoch_mode)
+    return Runtime::__clock_settime(ins, error, clk_id, tp);
+  assert(0 && "clock_settime is not allowd in epoch mode");
+  errno = error;
+  int ret = ::clock_settime(clk_id, tp);
+  error = errno;
+  return ret;
+}
+
+template <typename _S>
+int RecorderRT<_S>::__gettimeofday(unsigned ins, int &error, struct timeval *tv, struct timezone *tz)
+{
+  if (!options::epoch_mode)
+    return Runtime::__gettimeofday(ins, error, tv, tz);
+  errno = error;
+  int ret = ::gettimeofday(tv, tz);
+  error = errno;
+  return ret;
+}
+
+template <typename _S>
+int RecorderRT<_S>::__settimeofday(unsigned ins, int &error, const struct timeval *tv, const struct timezone *tz)
+{
+  if (!options::epoch_mode)
+    return Runtime::__settimeofday(ins, error, tv, tz);
+  assert(0 && "settimeofday is not allowd in epoch mode");
+  errno = error;
+  int ret = ::settimeofday(tv, tz);
+  error = errno;
+  return ret;
+}
+
 /*
 template <typename _S>
 struct hostent *RecorderRT<_S>::__gethostbyname(unsigned ins, int &error, const char *name)

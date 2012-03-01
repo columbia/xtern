@@ -185,7 +185,7 @@ cmds = '''
 // XXX: env TERN_OPTIONS=runtime_type=RR:RR_skip_zombie=0:log_type=test:output_dir=%t3.outdir ./%t3  ScheduleCheck
 
 // test dynamic hooking
-// RUN: %gxx -o %t4 %s -lpthread
+// RUN: %gxx -o %t4 %s -lpthread -lrt
 // test FCFS scheduler
 // NOTE: do not use dync_geteip as the lock used by backtrace() may cause
 // a deadlock
@@ -203,7 +203,7 @@ cmds = '''
 if os.getenv('test_dync_only') != None :
   cmds = '''
 // test dynamic hooking
-// RUN: %gxx -o %t4 %s -lpthread
+// RUN: %gxx -o %t4 %s -lpthread -lrt
 // test FCFS scheduler
 // NOTE: do not use dync_geteip as the lock used by backtrace() may cause
 // a deadlock

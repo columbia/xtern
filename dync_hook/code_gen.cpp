@@ -23,6 +23,10 @@ void init_filter()
   add(pthread_mutexattr_t);
   add(struct);
   add(timespec);
+  add(time_t);
+  add(clockid_t);
+  add(timeval);
+  add(timezone);
   add(pthread_cond_t);
   add(sem_t);
   add(pthread_barrier_t);

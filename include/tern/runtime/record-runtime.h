@@ -91,6 +91,12 @@ struct RecorderRT: public Runtime, public _Scheduler {
   char *__fgets(unsigned insid, int &error, char *s, int size, FILE *stream);
   pid_t __fork(unsigned insid, int &error);
   pid_t __wait(unsigned insid, int &error, int *status);
+  time_t __time(unsigned ins, int &error, time_t *t);
+  int __clock_getres(unsigned ins, int &error, clockid_t clk_id, struct timespec *res);
+  int __clock_gettime(unsigned ins, int &error, clockid_t clk_id, struct timespec *tp);
+  int __clock_settime(unsigned ins, int &error, clockid_t clk_id, const struct timespec *tp);
+  int __gettimeofday(unsigned ins, int &error, struct timeval *tv, struct timezone *tz);
+  int __settimeofday(unsigned ins, int &error, const struct timeval *tv, const struct timezone *tz);
 
   // sleep
   unsigned int sleep(unsigned insid, int &error, unsigned int seconds);

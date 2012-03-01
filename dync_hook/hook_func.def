@@ -428,3 +428,47 @@ pid_t
 wait
 (int *status)
 END_SHORT_DEFINE
+
+START_SHORT_DEFINE
+/lib/x86_64-linux-gnu/libc.so.6
+time_t
+time
+(time_t *t)
+END_SHORT_DEFINE
+
+START_SHORT_DEFINE
+/lib/x86_64-linux-gnu/librt.so.1
+int
+clock_getres
+(clockid_t clk_id, struct timespec *res)
+END_SHORT_DEFINE
+
+START_SHORT_DEFINE
+/lib/x86_64-linux-gnu/librt.so.1
+int
+clock_gettime
+(clockid_t clk_id, struct timespec *tp)
+END_SHORT_DEFINE
+
+START_SHORT_DEFINE
+/lib/x86_64-linux-gnu/librt.so.1
+int
+clock_settime
+(clockid_t clk_id, const struct timespec *tp)
+END_SHORT_DEFINE
+
+START_SHORT_DEFINE
+/lib/x86_64-linux-gnu/libc.so.6
+int
+gettimeofday
+(struct timeval *tv, struct timezone *tz)
+END_SHORT_DEFINE
+
+START_SHORT_DEFINE
+/lib/x86_64-linux-gnu/libc.so.6
+int
+settimeofday
+(const struct timeval *tv, const struct timezone *tz)
+END_SHORT_DEFINE
+
+

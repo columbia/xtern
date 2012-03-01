@@ -61,3 +61,6 @@ launch_idle_thread = 1
 
 # whether or not to use pthread_tryjoin_np to join a thread
 pthread_tryjoin = 1
+
+# whether to turn on epoch approach
+epoch_mode = 0

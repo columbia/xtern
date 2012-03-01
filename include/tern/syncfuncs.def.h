@@ -66,6 +66,14 @@ DEF(select, Synchronization, int, int nfds, fd_set *readfds, fd_set *writefds, f
 DEF(fork, Synchronization, pid_t)
 DEF(wait, Synchronization, pid_t, int *status)
 
+//  real time functions
+DEF(time, Synchronization, time_t, time_t *t)
+DEF(clock_getres, Synchronization, int, clockid_t clk_id, struct timespec *res)
+DEF(clock_gettime, Synchronization, int, clockid_t clk_id, struct timespec *tp)
+DEF(clock_settime, Synchronization, int, clockid_t clk_id, const struct timespec *tp)
+DEF(gettimeofday, Synchronization, int, struct timeval *tv, struct timezone *tz)
+DEF(settimeofday, Synchronization, int, const struct timeval *tv, const struct timezone *tz)
+
 // file operations not handled not.
 //DEF(open, Synchronization, int, const char *pathname, int flags)
 //DEF(open, Synchronization, int, const char *pathname, int flags, mode_t mode)
