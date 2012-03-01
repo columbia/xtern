@@ -166,11 +166,11 @@ cmds = '''
 // test FCFS scheduler
 // RUN: env TERN_OPTIONS=runtime_type=FCFS:set_mutex_errorcheck=1 ./%t2 | FileCheck %s
 // test RR scheduler
-// RUN: env TERN_OPTIONS=runtime_type=RR::RR_skip_zombie=0:log_type=test:exec_sleep=0:output_dir=%t2.outdir ./%t2  | FileCheck %s
+// RUN: env TERN_OPTIONS=runtime_type=RR:RR_skip_zombie=0:log_type=test:exec_sleep=0:output_dir=%t2.outdir ./%t2  | FileCheck %s
 // RUN: env TERN_OPTIONS=runtime_type=RR:set_mutex_errorcheck=1:RR_skip_zombie=0:log_type=test:exec_sleep=0:output_dir=%t2.outdir ./%t2  ScheduleCheck
 
 // test SeededRR scheduler
-// RUN: env TERN_OPTIONS=runtime_type=SeededRR::RR_skip_zombie=0:log_type=test:exec_sleep=0:output_dir=%t2.outdir ./%t2  | FileCheck %s
+// RUN: env TERN_OPTIONS=runtime_type=SeededRR:RR_skip_zombie=0:log_type=test:exec_sleep=0:output_dir=%t2.outdir ./%t2  | FileCheck %s
 // RUN: env TERN_OPTIONS=runtime_type=SeededRR:set_mutex_errorcheck=1:RR_skip_zombie=0:log_type=test:exec_sleep=0:output_dir=%t2.outdir ./%t2  ScheduleCheck
 
 // test the LLVM .bc modules
