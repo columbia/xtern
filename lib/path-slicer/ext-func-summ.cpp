@@ -60,7 +60,7 @@ bool extFuncHasLoadSumm(const char *name) {
   unsigned id = getNameID(name);
   for (int i = 0; i < ARG_LEN; i++) {
     if (argSumm[id][i] == ExtLoad) {
-      fprintf(stderr, "Ext function %s has ExtLoad\n", name);
+      //fprintf(stderr, "Ext function %s has ExtLoad\n", name);
       return true;
     }
   }
@@ -71,7 +71,7 @@ bool extFuncHasStoreSumm(const char *name) {
   unsigned id = getNameID(name);
   for (int i = 0; i < ARG_LEN; i++) {
     if (argSumm[id][i] == ExtStore) {
-      fprintf(stderr, "Ext function %s has ExtStore\n", name);
+      //fprintf(stderr, "Ext function %s has ExtStore\n", name);
       return true;
     }
   }

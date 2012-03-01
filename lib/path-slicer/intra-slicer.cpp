@@ -384,7 +384,7 @@ bool IntraSlicer::postDominate(DynInstr *dynPostInstr, DynBrInstr *dynPrevInstr)
     errs() << "IntraSlicer::postDominate PREV: " << stat->printInstr(prevInstr) << "\n";
     errs() << "IntraSlicer::postDominate POST: " << stat->printInstr(postInstr) << "\n";
     fprintf(stderr, "Please examine the trace to make sure whether prev and \
-    post instructions are within the same function\n");
+      post instructions are within the same function\n");
     dump("IntraSlicer::postDominate");
     exit(1);
   }

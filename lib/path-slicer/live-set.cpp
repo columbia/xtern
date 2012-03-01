@@ -30,6 +30,7 @@ size_t LiveSet::loadInstrsSize() {
 void LiveSet::clear() {
   virtRegs.clear();
   loadInstrs.clear();
+  extCallLoadInstrs.clear();
 }
 
 void LiveSet::addReg(CallCtx *ctx, Value *v) {
