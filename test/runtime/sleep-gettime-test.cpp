@@ -54,6 +54,7 @@ void* thread_func(void*) {
   pthread_mutex_lock(&mu);
 
   check_time();
+  usleep(10);
 
   pthread_mutex_unlock(&mu);
 }
