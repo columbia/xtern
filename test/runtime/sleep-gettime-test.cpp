@@ -24,6 +24,7 @@ void check_time(bool init = false)
   struct timespec ts;
   struct timeval tv;
   time_t tt;
+
   gettimeofday(&tv, NULL);
   clock_gettime(CLOCK_REALTIME, &ts);
   time(&tt);
@@ -33,12 +34,26 @@ void check_time(bool init = false)
     if (tv.tv_sec < oldtv.tv_sec || 
       tv.tv_sec == oldtv.tv_sec && tv.tv_usec < oldtv.tv_usec)
       assert(0 && "gettimeofday is not monotonic");
+
+    if (tv.tv_sec < oldts.tv_sec || 
+      tv.tv_sec == oldts.tv_sec && tv.tv_usec * 1000 < oldts.tv_nsec)
+      assert(0 && "gettimeofday is not monotonic");
+
+    if (tv.tv_sec < oldtt)
+      assert(0 && "gettimeofday is not monotonic");
   
     if (ts.tv_sec < oldts.tv_sec || 
       ts.tv_sec == oldts.tv_sec && ts.tv_nsec < oldts.tv_nsec)
       assert(0 && "clock_gettime is not monotonic");
+
+    if (ts.tv_sec < oldtv.tv_sec || 
+      ts.tv_sec == oldtv.tv_sec && ts.tv_nsec < oldtv.tv_usec * 1000)
+      assert(0 && "clock_gettime is not monotonic");
+
+    if (ts.tv_sec < oldtt)
+      assert(0 && "clock_gettime is not monotonic");
   
-    if (tt < oldtt)
+    if (tt < oldtt || tt < oldtv.tv_sec || tt < oldts.tv_sec)
       assert(0 && "time is not monotonic");
   }
 
