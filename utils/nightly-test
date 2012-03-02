@@ -1,0 +1,91 @@
+#!/bin/bash
+
+llvm_debug="ENABLE_OPTIMIZED=0"
+build_mode="Debug"
+for arg in "$@"; do
+    if test "$arg" = "--optimized"; then
+        llvm_debug="ENABLE_OPTIMIZED=1"
+        build_mode="Release"
+    fi
+done
+
+llvmver="2.7"
+gccver="4.2-$llvmver"
+arch=`uname -m`
+timeout=600
+
+#testdir=`date +%F`
+testdir="/tmp/xtern-nightly-test-$build_mode"
+#rm -rf $testdir
+mkdir -p $testdir
+cd $testdir
+testdir=$PWD
+log=$testdir/out.txt
+
+export LLVM_ROOT="$testdir/llvm"
+export PATH="$PATH:$LLVM_ROOT/install/bin:$LLVM_ROOT/scripts"
+export XTERN_ROOT="$testdir/xtern"
+
+# # build llvm
+# git clone git@repair.cs.columbia.edu:llvm
+# cd $LLVM_ROOT
+# mkdir -p install
+
+# wget http://llvm.org/releases/2.7/llvm-gcc$gccver-$arch-linux.tar.bz2
+# tar xjvf llvm-gcc$gccver-$arch-linux.tar.bz2
+# (cd llvm-gcc$gccver-$arch-linux; tar cf - .) |(cd install; tar xvf -)
+
+# wget http://llvm.org/releases/$llvmver/llvm-$llvmver.tgz
+# tar xzvf llvm-$llvmver.tgz
+# if test "$llvmver" = "2.7" ; then
+#     cd llvm-$llvmver
+#     patch -p1 < ../fix-cstddef-2.7.patch
+#     cd ../
+# fi
+# mkdir -p llvm-obj
+# cd llvm-obj
+# ../llvm-$llvmver/configure --prefix="$LLVM_ROOT/install" --enable-targets=$arch
+# make $llvm_debug -j2
+# make $llvm_debug install
+
+# # build llvm/common
+# cd $LLVM_ROOT
+# mkdir common-obj
+# cd common-obj
+# ../common/configure --with-llvmsrc="$LLVM_ROOT/llvm-$llvmver" \
+#                     --with-llvmobj="$LLVM_ROOT/llvm-obj"      \
+#                     --prefix="$LLVM_ROOT/install"
+# make $llvm_debug
+# make $llvm_debug install
+
+# # build xtern
+# cd $testdir
+# git clone git@repair.cs.columbia.edu:xtern
+# cd $XTERN_ROOT
+# mkdir obj
+# cd obj
+# ../configure >> $log
+# make $llvm_debug  >> $log
+# make -C $XTERN_ROOT/dync_hook >> $log
+
+# test
+cd $XTERN_ROOT/obj
+setsid make $llvm_debug BuildMode=$build_mode check >> $log 2>&1 &
+pid=$!
+(
+    sleep $timeout;
+    echo "$timeout seconds have passed; killing process $pid" >> $log;
+    kill -9 -$pid > /dev/null 2>&1 &
+)
+wait $pid
+status=$?
+if test $status != 0 ; then
+    (
+        echo "FROM: junfeng@cs.columbia.edu";
+        echo "SUBJECT: xtern nightly test failed with status $status";
+        cat $log;
+        echo "."
+    ) > email.txt
+    sendmail junfeng@cs.columbia.edu < email.txt
+#    sendmail huayang@cs.columbia.edu < email.txt
+fi
