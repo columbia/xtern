@@ -422,7 +422,7 @@ void IntraSlicer::takeTestTarget(DynInstr *dynInstr) {
   curIndex = dynInstr->getIndex()-1;
 }
 
-void IntraSlicer::calStat(set<BranchInst *> &rmBrs) {
+void IntraSlicer::calStat(set<BranchInst *> &rmBrs, set<CallInst *> &rmCalls) {
   std::string checkTag = LLVM_CHECK_TAG;
   checkTag += "IntraSlicer::calStat TAKEN";
   size_t numExedInstrs = trace->size();
@@ -431,6 +431,8 @@ void IntraSlicer::calStat(set<BranchInst *> &rmBrs) {
   size_t numExedSymBrs = 0;
   size_t numTakenBrs = 0;
   size_t numTakenSymBrs = 0;
+  size_t numExedExtCalls = 0;
+  size_t numTakenExtCalls = 0;
   
   for (size_t i = 0; i < trace->size(); i++) {
     DynInstr *dynInstr = trace->at(i);
@@ -446,9 +448,17 @@ void IntraSlicer::calStat(set<BranchInst *> &rmBrs) {
       }
     }
 
+    // Handle executed external calls.
+    if (Util::isCall(instr) && !funcSumm->isInternalCall(dynInstr))
+      numExedExtCalls++;
+
     // Handle not-taken bi-cond branches, pass to argument.
     if (!dynInstr->isTaken() && Util::isBr(instr) && !Util::isUniCondBr(instr))
       rmBrs.insert(cast<BranchInst>(instr));
+
+    // Handle not-taken external calls.
+    if (!dynInstr->isTaken() && Util::isCall(instr) && !funcSumm->isInternalCall(dynInstr))
+      rmCalls.insert(cast<CallInst>(instr));
 
     // Handle taken instructions.
     if (dynInstr->isTaken()) {
@@ -461,6 +471,10 @@ void IntraSlicer::calStat(set<BranchInst *> &rmBrs) {
             numTakenSymBrs++;
         }
       }
+
+      // Handle taken external calls.
+      if (Util::isCall(instr) && !funcSumm->isInternalCall(dynInstr))
+        numTakenExtCalls++;
 
       if (DBG)
         stat->printDynInstr(dynInstr, checkTag.c_str());
@@ -475,9 +489,9 @@ void IntraSlicer::calStat(set<BranchInst *> &rmBrs) {
     << ";  numTakenBrs: " << numTakenBrs
     << ";  numExedSymBrs: " << numExedSymBrs
     << ";  numTakenSymBrs: " << numTakenSymBrs
-    << ". StaticExed/Static Instrs: " << stat->sizeOfExedStaticInstrs() 
-    << "/" << stat->sizeOfStaticInstrs()
-    << ".\n\n\n";
+    << "; StaticExed/Static Instrs: " << stat->sizeOfExedStaticInstrs() << "/" << stat->sizeOfStaticInstrs()
+    << ";  numTakenExtCalls/numExedExtCalls: " << numTakenExtCalls << "/" << numExedExtCalls
+    << ";\n\n\n";
 
   stat->printExternalCalls();
 }

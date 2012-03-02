@@ -1,6 +1,9 @@
 #ifndef __TERN_PATH_SLICER_MACROS_H
 #define __TERN_PATH_SLICER_MACROS_H
 
+#include <time.h>
+#include <sys/time.h>
+
 #define DBG0 0 /* No dbg print. */
 #define DBG1 1 /* Dbg print everything. */
 #define DBG2 2 /* Dbg print only some important events. */

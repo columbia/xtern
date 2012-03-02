@@ -176,11 +176,14 @@ void PathSlicer::enforceRacyEdges() {
   // TBD: enforce all racy edges, and split new regions.
 }
 
-void PathSlicer::runPathSlicer(void *pathId, set<BranchInst *> &rmBrs) {  
+void PathSlicer::runPathSlicer(void *pathId, set<BranchInst *> &rmBrs,
+  set<CallInst *> &rmCalls) {  
   // Get trace of current path and do some pre-processing.
   if (!DM_IN(pathId, allPathTraces))
     return;
+  BEGINTIME(stat.intraSlicingSt);
   DynInstrVector *trace = allPathTraces[pathId];
+  fprintf(stderr, "PathSlicer::runPathSlicer pathId %p, size " SZ "\n", pathId, trace->size());
   if (trace->size() == 0)
     goto finish;
   traceUtil->preProcess(trace);
@@ -216,7 +219,7 @@ void PathSlicer::runPathSlicer(void *pathId, set<BranchInst *> &rmBrs) {
   } while (0);
   
   // Calculate stat results.
-  calStat(rmBrs);
+  calStat(rmBrs, rmCalls);
 
   // Free the trace along current path. 
   traceUtil->postProcess(trace);
@@ -225,12 +228,14 @@ finish:
   tgtMgr.clearTargets(pathId);
   allPathTraces.erase(pathId);
   delete trace;
+  ENDTIME(stat.intraSlicingTime, stat.intraSlicingSt, stat.intraSlicingEnd);
 }
 
-void PathSlicer::calStat(set<BranchInst *> &rmBrs) {
-  interSlicer.calStat();
+void PathSlicer::calStat(set<BranchInst *> &rmBrs, set<CallInst *> &rmCalls) {
   errs() << BAN;
-  intraSlicer.calStat(rmBrs);
+  interSlicer.calStat();
+  intraSlicer.calStat(rmBrs, rmCalls);
+  stat.printStat("PathSlicer::calStat TIME");
   errs() << BAN;
 }
 
@@ -250,7 +255,7 @@ void PathSlicer::record(void *pathId, void *instr, void *state, void *f) {
 }
 
 void PathSlicer::copyTrace(void *newPathId, void *curPathId) {
-  //fprintf(stderr, "PathSlicer::copyTrace new %p, cur %p\n", (void *)newPathId, (void *)curPathId);
+  fprintf(stderr, "PathSlicer::copyTrace new %p, cur %p\n", (void *)newPathId, (void *)curPathId);
   assert (!DM_IN(newPathId, allPathTraces));
   if (!DM_IN(curPathId, allPathTraces))
     return;
@@ -295,4 +300,19 @@ bool PathSlicer::getStartRecord(void *instr) {
   }
   return false;
 }
+
+bool PathSlicer::isInternalInstr(llvm::Instruction *instr) {
+  return (idMgr.getOrigInstrId(instr) != -1);
+}
+
+Instruction *PathSlicer::getLatestInstr(void *pathId) {
+  if (!DM_IN(pathId, allPathTraces))
+    return NULL;
+  DynInstrVector *trace = allPathTraces[pathId];
+  if (trace->size() == 0)
+    return NULL;
+  return idMgr.getOrigInstr(trace->back());
+}
+
+
 

@@ -85,7 +85,7 @@ namespace tern {
     A challenge is if we enforce partial order of racy edge, how to adjust the logical clock 
     for these regions, given the logical clocks are based on start/end totol order of synch op index. */
     void enforceRacyEdges();
-    void calStat(std::set<llvm::BranchInst *> &rmBrs);
+    void calStat(std::set<llvm::BranchInst *> &rmBrs, std::set<llvm::CallInst *> &rmCalls);
     llvm::Module *loadModule(const char *path);
 
     /* Filter out instructions before the first instruction in main(), such as C++ ctor and klee_range(). */
@@ -107,7 +107,8 @@ namespace tern {
 
 
     /* The key function called by other modules (such as KLEE) to get relevant branches. */
-    void runPathSlicer(void *pathId, std::set<llvm::BranchInst *> &brInstrs);
+    void runPathSlicer(void *pathId, std::set<llvm::BranchInst *> &rmBrs,
+      std::set<llvm::CallInst *> &rmCalls);
 
     /* Copy recorded instructions from current path to a new branched path. */
     void copyTrace(void *newPathId, void *curPathId);
@@ -118,6 +119,12 @@ namespace tern {
     (which triggered the error) will also be marked as target. */
     void recordCheckerResult(void *pathId, klee::Checker::Result globalResult,
       klee::Checker::Result localResult);
+
+    /*  */
+    bool isInternalInstr(llvm::Instruction *instr);
+
+    /* Get the latest recorded instruction  */
+    llvm::Instruction *getLatestInstr(void *pathId);
   };
 }
 

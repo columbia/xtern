@@ -24,7 +24,10 @@ void Stat::init(InstrIdMgr *idMgr, CallStackMgr *ctxMgr, FuncSumm *funcSumm) {
 }
 
 void Stat::printStat(const char *tag) {
-  // TBD.
+  errs() << "\n\n" << tag << ": "
+    << "intraSlicingTime: " << intraSlicingTime << ", "
+    // TBD.
+    << "\n";
 }
 
 const char *Stat::printInstr(const llvm::Instruction *instr) {
