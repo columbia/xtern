@@ -16,7 +16,7 @@ timeout=600
 
 #testdir=`date +%F`
 testdir="/tmp/xtern-nightly-test-$build_mode"
-#rm -rf $testdir
+rm -rf $testdir
 mkdir -p $testdir
 cd $testdir
 testdir=$PWD
@@ -26,47 +26,47 @@ export LLVM_ROOT="$testdir/llvm"
 export PATH="$PATH:$LLVM_ROOT/install/bin:$LLVM_ROOT/scripts"
 export XTERN_ROOT="$testdir/xtern"
 
-# # build llvm
-# git clone git@repair.cs.columbia.edu:llvm
-# cd $LLVM_ROOT
-# mkdir -p install
+# build llvm
+git clone git@repair.cs.columbia.edu:llvm
+cd $LLVM_ROOT
+mkdir -p install
 
-# wget http://llvm.org/releases/2.7/llvm-gcc$gccver-$arch-linux.tar.bz2
-# tar xjvf llvm-gcc$gccver-$arch-linux.tar.bz2
-# (cd llvm-gcc$gccver-$arch-linux; tar cf - .) |(cd install; tar xvf -)
+wget http://llvm.org/releases/2.7/llvm-gcc$gccver-$arch-linux.tar.bz2
+tar xjvf llvm-gcc$gccver-$arch-linux.tar.bz2
+(cd llvm-gcc$gccver-$arch-linux; tar cf - .) |(cd install; tar xvf -)
 
-# wget http://llvm.org/releases/$llvmver/llvm-$llvmver.tgz
-# tar xzvf llvm-$llvmver.tgz
-# if test "$llvmver" = "2.7" ; then
-#     cd llvm-$llvmver
-#     patch -p1 < ../fix-cstddef-2.7.patch
-#     cd ../
-# fi
-# mkdir -p llvm-obj
-# cd llvm-obj
-# ../llvm-$llvmver/configure --prefix="$LLVM_ROOT/install" --enable-targets=$arch
-# make $llvm_debug -j2
-# make $llvm_debug install
+wget http://llvm.org/releases/$llvmver/llvm-$llvmver.tgz
+tar xzvf llvm-$llvmver.tgz
+if test "$llvmver" = "2.7" ; then
+    cd llvm-$llvmver
+    patch -p1 < ../fix-cstddef-2.7.patch
+    cd ../
+fi
+mkdir -p llvm-obj
+cd llvm-obj
+../llvm-$llvmver/configure --prefix="$LLVM_ROOT/install" --enable-targets=$arch
+make $llvm_debug -j2
+make $llvm_debug install
 
-# # build llvm/common
-# cd $LLVM_ROOT
-# mkdir common-obj
-# cd common-obj
-# ../common/configure --with-llvmsrc="$LLVM_ROOT/llvm-$llvmver" \
-#                     --with-llvmobj="$LLVM_ROOT/llvm-obj"      \
-#                     --prefix="$LLVM_ROOT/install"
-# make $llvm_debug
-# make $llvm_debug install
+# build llvm/common
+cd $LLVM_ROOT
+mkdir common-obj
+cd common-obj
+../common/configure --with-llvmsrc="$LLVM_ROOT/llvm-$llvmver" \
+                    --with-llvmobj="$LLVM_ROOT/llvm-obj"      \
+                    --prefix="$LLVM_ROOT/install"
+make $llvm_debug
+make $llvm_debug install
 
-# # build xtern
-# cd $testdir
-# git clone git@repair.cs.columbia.edu:xtern
-# cd $XTERN_ROOT
-# mkdir obj
-# cd obj
-# ../configure >> $log
-# make $llvm_debug  >> $log
-# make -C $XTERN_ROOT/dync_hook >> $log
+# build xtern
+cd $testdir
+git clone git@repair.cs.columbia.edu:xtern
+cd $XTERN_ROOT
+mkdir obj
+cd obj
+../configure >> $log
+make $llvm_debug  >> $log
+make -C $XTERN_ROOT/dync_hook >> $log
 
 # test
 cd $XTERN_ROOT/obj
