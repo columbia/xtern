@@ -1,7 +1,7 @@
 all: xternruntime interpose.so
 
 BuildMode := Debug
-ENABLE_OPTMIZED := 0
+ENABLE_OPTIMIZED := 0
 
 INC_DIRS=-I$(TERN_ROOT)/include/ -I$(XTERN_ROOT)/include/ -I$(XTERN_ROOT)/obj/include
 #INC_DIRS=-I$(XTERN_ROOT)/include/
@@ -17,7 +17,7 @@ PREFIX=LD_PRELOAD=$(XTERN_ROOT)/dync_hook/interpose.so
 #PREFIX=
 
 xternruntime: 
-	cd $(XTERN_ROOT)/obj && make ENABLE_OPTIMIZED=$(ENABLE_OPTMIZED)
+	cd $(XTERN_ROOT)/obj && make ENABLE_OPTIMIZED=$(ENABLE_OPTIMIZED)
 
 interpose.so: template.cpp spec_hooks.cpp hook.cpp
 	gcc -fPIC -rdynamic hook.cpp $(CFLAGS) -c -o interpose.o
