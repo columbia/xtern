@@ -31,7 +31,7 @@ namespace tern {
     llvm::DenseSet<const llvm::Instruction *> externalCalls;
 
     /* Path exploration branches frequency, map from instruction to frequency. */
-    //llvm::DenseMap<llvm::Instruction *, int> pathFreq;
+    llvm::DenseMap<llvm::Instruction *, int> pathFreq;
   protected:
     void collectExternalCalls(DynCallInstr *dynCallInstr);
     void collectExedStaticInstrs(DynInstr *dynInstr);
@@ -66,8 +66,8 @@ namespace tern {
     void collectExed(DynInstr *dynInstr);
 
     /* Utility for explored path frequency. */
-    //void collectExplored(llvm::Instruction *instr);
-    //void printExplored();
+    void collectExplored(llvm::Instruction *instr);
+    void printExplored();
   };
 }
 

@@ -60,7 +60,8 @@ PathSlicer::PathSlicer(): ModulePass(&ID) {
 }
 
 PathSlicer::~PathSlicer() {
-  fprintf(stderr, "PathSlicer::~PathSlicer()\n");
+  if (DBG)
+    fprintf(stderr, "PathSlicer::~PathSlicer()\n");
 }
 
 void PathSlicer::getAnalysisUsage(AnalysisUsage &AU) const {
@@ -236,7 +237,7 @@ void PathSlicer::calStat(set<BranchInst *> &rmBrs, set<CallInst *> &rmCalls) {
   interSlicer.calStat();
   intraSlicer.calStat(rmBrs, rmCalls);
   stat.printStat("PathSlicer::calStat TIME");
-  //stat.printExplored();
+  stat.printExplored();
   errs() << BAN;
 }
 
@@ -315,5 +316,7 @@ Instruction *PathSlicer::getLatestInstr(void *pathId) {
   return idMgr.getOrigInstr(trace->back());
 }
 
-
+void PathSlicer::collectExplored(llvm::Instruction *instr) {
+  stat.collectExplored(instr);
+}
 

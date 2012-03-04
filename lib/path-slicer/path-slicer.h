@@ -125,6 +125,10 @@ namespace tern {
 
     /* Get the latest recorded instruction  */
     llvm::Instruction *getLatestInstr(void *pathId);
+
+    /* Collect path exploration stats. */
+    void collectExplored(llvm::Instruction *instr);
+
   };
 }
 

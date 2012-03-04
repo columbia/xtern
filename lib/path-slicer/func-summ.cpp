@@ -12,8 +12,10 @@ FuncSumm::FuncSumm(): ModulePass(&ID) {
 }
 
 FuncSumm::~FuncSumm() {
-  tern::ExtFuncSumm::printAllSumm();  
-  fprintf(stderr, "FuncSumm::~FuncSumm\n");
+  if (DBG) {
+    tern::ExtFuncSumm::printAllSumm();  
+    fprintf(stderr, "FuncSumm::~FuncSumm\n");
+  }
 }
 
 void FuncSumm::getAnalysisUsage(AnalysisUsage &AU) const {
