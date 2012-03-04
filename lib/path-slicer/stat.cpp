@@ -123,6 +123,8 @@ void Stat::collectExplored(llvm::Instruction *instr) {
 }
 
 void Stat::printExplored() {
+  long numInternal = 0;
+  long numExternal = 0;
   DenseMapIterator<Instruction *, int> itr(pathFreq.begin());
   for (; itr != pathFreq.end(); itr++) {
     Instruction *instr = itr->first;
@@ -133,6 +135,12 @@ void Stat::printExplored() {
     errs() << "Stat::printExplored: F (" << property << "): " << f->getNameStr()
       << ": BB: " << bb->getNameStr()
       << ": EXPLORED FREQ: " << itr->second << "\n";
+    if (funcSumm->isInternalFunction(f))
+      numInternal += itr->second;
+    else
+      numExternal += itr->second;      
   }
+  errs() << "TOTAL EXPLORED FREQ: " << "(INTERNAL: " << numInternal
+    << ", EXTERNAL: " << numExternal << ")" << "\n";
 }
 
