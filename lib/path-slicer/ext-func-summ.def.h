@@ -71,16 +71,3 @@ DEF(strtok, ExtStore, ExtLoad)
 DEF(strxfrm, ExtStore, ExtLoad, ExtReadVal)
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-

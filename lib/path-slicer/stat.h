@@ -29,7 +29,9 @@ namespace tern {
 
     /* The set of static external function calls. */
     llvm::DenseSet<const llvm::Instruction *> externalCalls;
-    
+
+    /* Path exploration branches frequency, map from instruction to frequency. */
+    //llvm::DenseMap<llvm::Instruction *, int> pathFreq;
   protected:
     void collectExternalCalls(DynCallInstr *dynCallInstr);
     void collectExedStaticInstrs(DynInstr *dynInstr);
@@ -62,6 +64,10 @@ namespace tern {
 
     /* Collect stat of executed instrutions. */
     void collectExed(DynInstr *dynInstr);
+
+    /* Utility for explored path frequency. */
+    //void collectExplored(llvm::Instruction *instr);
+    //void printExplored();
   };
 }
 

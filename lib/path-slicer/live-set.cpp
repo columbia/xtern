@@ -82,22 +82,31 @@ bool LiveSet::regIn(DynOprd *dynOprd) {
 }
 
 void LiveSet::addUsedRegs(DynInstr *dynInstr) {
+  // Checke whether we need to strip cast for function arguments of external calls.
+  bool oprdStripCast = false;
+  Instruction *instr = idMgr->getOrigInstr(dynInstr);
+  if (Util::isCall(instr) && !funcSumm->isInternalCall(dynInstr))
+    oprdStripCast = true;
+  
   // TBD: DO WE NEED TO CONSIDER SIM CALL CTX HERE?
   CallCtx *intCtx = dynInstr->getCallingCtx();
-  Instruction *instr = idMgr->getOrigInstr(dynInstr);
   if (Util::isCall(instr)) {
     CallSite cs  = CallSite(cast<CallInst>(instr));
     // TBD: Some real function call may be wrapped by bitcast? YES WE SHOULD. 
     // REFER TO EXECUTOR.CPP IN KLEE.
     Function *f = cs.getCalledFunction();   
     if (!f) {
-      Value *calledV = cs.getCalledValue();
-      calledV->dump();  // Debugging.
-      assert(calledV);
-      addReg(intCtx, calledV);
+      Value *calledV = Util::stripCast(cs.getCalledValue()); // We must strip cast here in all circumstances.      
+      if (!isa<Function>(calledV)) {    // After strip, if it is not a function (i.e., a function pointer), we have to add it to reg.
+        errs() << "LiveSet::addUsedRegs called function pointer: ";
+        calledV->dump();  // Debugging.
+        addReg(intCtx, calledV);
+      }
     } else {
-      for (CallSite::arg_iterator ci = cs.arg_begin(), ce = cs.arg_end(); ci != ce; ++ci)
-        addReg(intCtx, *ci);
+      for (CallSite::arg_iterator ci = cs.arg_begin(), ce = cs.arg_end(); ci != ce; ++ci) {
+        Value *arg = oprdStripCast?Util::stripCast(*ci):(*ci);
+        addReg(intCtx, arg);
+      }
     }
   } else {
     for (unsigned i = 0; i < instr->getNumOperands(); i++) {

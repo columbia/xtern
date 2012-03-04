@@ -59,7 +59,6 @@ namespace tern {
     void takeStore(DynInstr *dynInstr, uchar reason);
     void takeBr(DynInstr *dynInstr, uchar reason);
     void takeExternalCall(DynInstr *dynInstr, uchar reason);
-    void takeNonMem(DynInstr *dynInstr, uchar reason = TakenFlags::INTRA_NON_MEM);
     void delRegOverWritten(DynInstr *dynInstr);
     bool regOverWritten(DynInstr *dynInstr);
     bool retRegOverWritten(DynRetInstr *dynRetInstr);

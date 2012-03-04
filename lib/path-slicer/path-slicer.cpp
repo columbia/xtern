@@ -236,6 +236,7 @@ void PathSlicer::calStat(set<BranchInst *> &rmBrs, set<CallInst *> &rmCalls) {
   interSlicer.calStat();
   intraSlicer.calStat(rmBrs, rmCalls);
   stat.printStat("PathSlicer::calStat TIME");
+  //stat.printExplored();
   errs() << BAN;
 }
 

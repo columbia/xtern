@@ -115,3 +115,24 @@ void Stat::collectExed(DynInstr *dynInstr) {
     collectExternalCalls((DynCallInstr *)dynInstr);
 }
 
+#if 0
+void Stat::collectExplored(llvm::Instruction *instr) {
+  /*if (pathFreq.count(instr) == 0)
+    pathFreq[instr] = 1;
+  else
+    pathFreq[instr]++;*/
+}
+
+void Stat::printExplored() {
+  /*DenseMapIterator<Instruction *, int> itr(pathFreq.begin());
+  for (; itr != pathFreq.end(); itr++) {
+    Function *f = Util::getFunction(itr->first);
+    BasicBlock *bb = Util::getBasicBlock(itr->first);
+    std::string property = (funcSumm->isInternalFunction(f))?"INTERNAL":"EXTERNAL";
+    errs() << "Stat::printExplored: F (" << property << "): " << f->getNameStr()
+      << ": BB: " << bb->getNameStr()
+      << ": EXPLORED FREQ: " << itr->second << "\n";
+  }  */
+}
+#endif
+

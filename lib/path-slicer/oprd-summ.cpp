@@ -153,8 +153,8 @@ InstrDenseSet *OprdSumm::getExtCallStoreSumm(DynCallInstr *callInstr,
   unsigned argOffset = 0;
   for (CallSite::arg_iterator ci = cs.arg_begin(), ce = cs.arg_end();
     ci != ce; ++ci, ++argOffset) {
-    Value *arg = Util::stripCast(*ci);
     if (funcSumm->isExtFuncSummStore(instr, argOffset)) {
+      Value *arg = Util::stripCast(*ci);
       SERRS << "OprdSumm::getExtCallStoreSumm ExtStore arg[" << argOffset << "]: "
         << stat->printInstr(instr) << "n";
       bddResults |= aliasMgr->getPointTee(callInstr, arg);

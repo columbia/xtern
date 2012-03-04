@@ -90,12 +90,6 @@ void IntraSlicer::init(ExecutionState *state, OprdSumm *oprdSumm, FuncSumm *func
   live.init(aliasMgr, idMgr, stat, funcSumm);
 }
 
-void IntraSlicer::takeNonMem(DynInstr *dynInstr, uchar reason) {
-  delRegOverWritten(dynInstr);
-  live.addUsedRegs(dynInstr);
-  slice.add(dynInstr, reason);
-}
-
 void IntraSlicer::takeStore(DynInstr *dynInstr, uchar reason) {
   Instruction *instr = idMgr->getOrigInstr(dynInstr);
   DynMemInstr *storeInstr = (DynMemInstr*)dynInstr;
@@ -290,8 +284,11 @@ void IntraSlicer::handleCall(DynInstr *dynInstr) {
 }
 
 void IntraSlicer::handleNonMem(DynInstr *dynInstr) {
-  if (regOverWritten(dynInstr))
-    takeNonMem(dynInstr);
+  if (regOverWritten(dynInstr)) {
+    delRegOverWritten(dynInstr);
+    live.addUsedRegs(dynInstr);
+    slice.add(dynInstr, TakenFlags::INTRA_NON_MEM);
+  }
 }
 
 void IntraSlicer::handleMem(DynInstr *dynInstr) {
