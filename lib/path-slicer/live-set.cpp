@@ -96,8 +96,10 @@ void LiveSet::addUsedRegs(DynInstr *dynInstr) {
     // REFER TO EXECUTOR.CPP IN KLEE.
     Function *f = cs.getCalledFunction();   
     if (!f) {
-      Value *calledV = Util::stripCast(cs.getCalledValue()); // We must strip cast here in all circumstances.      
-      if (!isa<Function>(calledV)) {    // After strip, if it is not a function (i.e., a function pointer), we have to add it to reg.
+      Value *calledV = cs.getCalledValue();
+      /* After strip, if it is not a constant (i.e., a function pointer that can
+      have multiple choices), we have to add it to virtual reg. */
+      if (!isa<Constant>(calledV)) {    
         errs() << "LiveSet::addUsedRegs called function pointer: ";
         calledV->dump();  // Debugging.
         addReg(intCtx, calledV);
