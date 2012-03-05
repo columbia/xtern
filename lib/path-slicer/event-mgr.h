@@ -40,7 +40,7 @@ namespace tern {
     void clean();
 
   public:
-    EventMgr(): llvm::ModulePass(&ID) {}
+    EventMgr();
     ~EventMgr();
     virtual void getAnalysisUsage(llvm::AnalysisUsage &AU) const;
     virtual bool runOnModule(llvm::Module &M);

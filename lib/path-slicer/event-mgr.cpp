@@ -6,11 +6,13 @@ using namespace tern;
 
 #include "common/util.h"
 #include "common/callgraph-fp.h"
+#include "llvm/Support/CommandLine.h"
 using namespace llvm;
 
 using namespace std;
 
 char tern::EventMgr::ID = 0;
+extern cl::opt<std::string> UseOneChecker;
 
 namespace {
   static RegisterPass<tern::EventMgr> X(
@@ -20,12 +22,18 @@ namespace {
     true); // is analysis
 }
 
+EventMgr::EventMgr(): ModulePass(&ID) {
+  fprintf(stderr, "EventMgr::EventMgr UseOneChecker (%s)\n", UseOneChecker.c_str());
+}
+
+
 EventMgr::~EventMgr() {
-  fprintf(stderr, "EventMgr::~EventMgr\n");
+  if (DBG)
+    fprintf(stderr, "EventMgr::~EventMgr\n");
 }
 
 void EventMgr::clean() {
-  fprintf(stderr, "EventMgr::clean\n");
+  //fprintf(stderr, "EventMgr::clean\n");
   CallGraphFP &CG = getAnalysis<CallGraphFP>();
   CG.destroy();
   /* We have to destroy the CallGraph here, since when uclibc is linking in, 
@@ -45,11 +53,11 @@ void EventMgr::setupEvents(Module &M) {
   for (Module::iterator f = M.begin(); f != M.end(); ++f) {
     if (f->hasName()) {
       // Get function list from syncfuncs.h.
-      unsigned nr = tern::syncfunc::getNameID(f->getNameStr().c_str());
+      /*unsigned nr = tern::syncfunc::getNameID(f->getNameStr().c_str());
       if (nr != tern::syncfunc::not_sync) {
         fprintf(stderr, "EventMgr::initEvents sync %s %u\n", f->getNameStr().c_str(), nr);
         eventFuncs.push_back(f);
-      }
+      }*/
 
       // Get function list from event-funcs.h.
       if (tern::EventFuncs::isEventFunc(f->getNameStr().c_str())) {

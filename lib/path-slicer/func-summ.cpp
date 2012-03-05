@@ -125,4 +125,3 @@ bool FuncSumm::extFuncHasSumm(llvm::Instruction *instr) {
   return extFuncHasLoadSumm(instr) || extFuncHasStoreSumm(instr);
 }
 
-

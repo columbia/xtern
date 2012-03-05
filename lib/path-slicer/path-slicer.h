@@ -2,6 +2,7 @@
 #define __TERN_PATH_SLICER_H
 
 #include <list>
+#include <string>
 
 #include "llvm/Function.h"
 #include "llvm/Instructions.h"

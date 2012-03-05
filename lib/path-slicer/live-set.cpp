@@ -97,7 +97,7 @@ void LiveSet::addUsedRegs(DynInstr *dynInstr) {
     Function *f = cs.getCalledFunction();   
     if (!f) {
       Value *calledV = cs.getCalledValue();
-      /* After strip, if it is not a constant (i.e., a function pointer that can
+      /* If the called value is not a constant (i.e., a function pointer that can
       have multiple choices), we have to add it to virtual reg. */
       if (!isa<Constant>(calledV)) {    
         errs() << "LiveSet::addUsedRegs called function pointer: ";
