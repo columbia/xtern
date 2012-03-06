@@ -7,11 +7,23 @@
 
 namespace tern {
 
+//#define _DEBUG_RECORDER
+
 #define ts2ll(x) ((uint64_t) (x).tv_sec * factor + (x).tv_nsec)
 //  at least wait for 1 miliseconds
 #define WAITING_THRESHOLD 1000000
 //  should not delay more than a second
 #define WARNING_THRESHOLD 1000000000
+
+#ifdef _DEBUG_RECORDER
+#  define dprintf(fmt...) do {                   \
+     fprintf(stderr, "[%d] ", _S::self());        \
+     fprintf(stderr, fmt);                       \
+     fflush(stderr);                             \
+  } while(0)
+#else
+#  define dprintf(fmt...)
+#endif
 
 ClockManager::ClockManager(uint64_t init_clock)
 {
@@ -55,8 +67,10 @@ void ClockManager::tick()
   clock_gettime(CLOCK_REALTIME, &now);
   uint64_t rclock = ts2ll(now);
   if (rclock > next_rclock + WARNING_THRESHOLD)
-    fprintf(stderr, "WARNING: delayed more than %d macroseconds\n", 
-      WARNING_THRESHOLD / 1000);
+  {
+    dprintf("WARNING: delayed more than %d macroseconds\n", 
+      (WARNING_THRESHOLD / 1000));
+  }
 
   if (rclock < next_rclock - WAITING_THRESHOLD)
   {
