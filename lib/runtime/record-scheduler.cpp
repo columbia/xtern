@@ -2,6 +2,7 @@
 // Refactored from Heming's Memoizer code
 
 #include "tern/runtime/record-scheduler.h"
+#include "tern/runtime/clockmanager.h"
 #include <iostream>
 #include <fstream>
 #include <iterator>
@@ -757,12 +758,15 @@ void RRScheduler::signal(void *chan, bool all)
 }
 
 extern int idle_done;
+extern ClockManager clockManager;
+
 //@before with turn
 //@after with turn
 unsigned RRScheduler::incTurnCount(void)
 {
   unsigned ret = turnCount++;
   fireTimeouts();
+  clockManager.tick();
   return idle_done ? (1 << 30) : ret;
 }
 

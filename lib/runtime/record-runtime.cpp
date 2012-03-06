@@ -37,6 +37,7 @@
 #include <time.h>
 #include <string.h>
 #include <errno.h>
+#include "tern/runtime/clockmanager.h"
 #include "tern/runtime/record-log.h"
 #include "tern/runtime/record-runtime.h"
 #include "tern/runtime/record-scheduler.h"
@@ -1503,13 +1504,19 @@ int RecorderRT<RecordSerializer>::nanosleep(unsigned ins, int &error,
   return _P::nanosleep(ins, error, req, rem);
 }
 
+/// clockmanager
+ClockManager clockManager;
+
 template <typename _S>
 time_t RecorderRT<_S>::__time(unsigned ins, int &error, time_t *t)
 {
-  if (!options::epoch_mode)
+  if (!options::epoch_mode || options::runtime_type != "RR")
     return Runtime::__time(ins, error, t);
   errno = error;
-  time_t ret = ::time(t);
+  time_t ret;
+  uint64_t c = clockManager.clock;
+  ClockManager::getClock(ret, c);
+  if (t) *t = ret;
   error = errno;
   return ret;
 }
@@ -1517,29 +1524,39 @@ time_t RecorderRT<_S>::__time(unsigned ins, int &error, time_t *t)
 template <typename _S>
 int RecorderRT<_S>::__clock_getres(unsigned ins, int &error, clockid_t clk_id, struct timespec *res)
 {
-  if (!options::epoch_mode)
+  if (!options::epoch_mode || options::runtime_type != "RR")
     return Runtime::__clock_getres(ins, error, clk_id, res);
   errno = error;
-  int ret = ::clock_getres(clk_id, res);
+  //int ret = ::clock_getres(clk_id, res);
+  if (res)
+  {
+    //  the worst precision (resolution) is as much as epoch length
+    uint64_t c = clockManager.epochLength;
+    ClockManager::getClock(*res, c);
+  }
   error = errno;
-  return ret;
+  return 0;
 }
 
 template <typename _S>
 int RecorderRT<_S>::__clock_gettime(unsigned ins, int &error, clockid_t clk_id, struct timespec *tp)
 {
-  if (!options::epoch_mode)
+  if (!options::epoch_mode || options::runtime_type != "RR")
     return Runtime::__clock_gettime(ins, error, clk_id, tp);
   errno = error;
-  int ret = ::clock_gettime(clk_id, tp);
+  if (tp)
+  {
+    uint64_t c = clockManager.clock;
+    ClockManager::getClock(*tp, c);
+  }
   error = errno;
-  return ret;
+  return 0;
 }
 
 template <typename _S>
 int RecorderRT<_S>::__clock_settime(unsigned ins, int &error, clockid_t clk_id, const struct timespec *tp)
 {
-  if (!options::epoch_mode)
+  if (!options::epoch_mode || options::runtime_type != "RR")
     return Runtime::__clock_settime(ins, error, clk_id, tp);
   assert(0 && "clock_settime is not allowd in epoch mode");
   errno = error;
@@ -1551,18 +1568,23 @@ int RecorderRT<_S>::__clock_settime(unsigned ins, int &error, clockid_t clk_id, 
 template <typename _S>
 int RecorderRT<_S>::__gettimeofday(unsigned ins, int &error, struct timeval *tv, struct timezone *tz)
 {
-  if (!options::epoch_mode)
+  if (!options::epoch_mode || options::runtime_type != "RR")
     return Runtime::__gettimeofday(ins, error, tv, tz);
   errno = error;
-  int ret = ::gettimeofday(tv, tz);
+  gettimeofday(tv, tz); //  call native function to obtain tz
+  if (tv)
+  {
+    uint64_t c = clockManager.clock;
+    ClockManager::getClock(*tv, c);
+  }
   error = errno;
-  return ret;
+  return 0;
 }
 
 template <typename _S>
 int RecorderRT<_S>::__settimeofday(unsigned ins, int &error, const struct timeval *tv, const struct timezone *tz)
 {
-  if (!options::epoch_mode)
+  if (!options::epoch_mode || options::runtime_type != "RR")
     return Runtime::__settimeofday(ins, error, tv, tz);
   assert(0 && "settimeofday is not allowd in epoch mode");
   errno = error;
