@@ -33,6 +33,14 @@ ClockManager::ClockManager(uint64_t init_clock)
     Space::exitSys();
 }
 
+void ClockManager::reset_rclock()
+{
+  struct timespec now; 
+  clock_gettime(CLOCK_REALTIME, &now);
+  //init_rclock = ts2ll(now);
+  next_rclock = ts2ll(now) + epochLength;
+}
+
 void ClockManager::tick()
 {
   ++tickCount;
@@ -50,10 +58,14 @@ void ClockManager::tick()
     fprintf(stderr, "WARNING: delayed more than %d macroseconds\n", 
       WARNING_THRESHOLD / 1000);
 
-  struct timespec next;
-  getClock(next, next_rclock);
   if (rclock < next_rclock - WAITING_THRESHOLD)
+  {
+    struct timespec next;
+    getClock(next, next_rclock - rclock);
     ::nanosleep(&next, NULL);
+  }
+
+  next_rclock += epochLength;
 }
 
 void ClockManager::getClock(time_t &t, uint64_t clock)

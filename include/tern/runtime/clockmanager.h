@@ -20,6 +20,8 @@ struct ClockManager {
   static void getClock(timespec &t, uint64_t clock);
   static void getClock(timeval &t, uint64_t clock);
 
+  void reset_rclock();
+
   uint64_t epochLength;     //  measured in nanosecond
   uint64_t tickCount;       //  number of calls to tick()
   uint64_t clock;           //  equal to init_clock + tick * epochLen
