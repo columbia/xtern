@@ -72,6 +72,9 @@
 
 using namespace std;
 
+/// clockmanager
+tern::ClockManager clockManager;
+
 namespace tern {
 
 static __thread timespec my_time;
@@ -169,11 +172,12 @@ void RecorderRT<_S>::idle_sleep(void) {
     if (_S::wakeup_flag)
       _S::check_wakeup();
     else
-      ::usleep(100);
+      ::usleep(1);
   }
   if (_S::runq.size() == 1)
   {
-    ::usleep(100);
+    if (!options::epoch_mode)
+      ::usleep(1);  //  in epoch_mode, delay is added by clockManager
     _S::incTurnCount();  //  TODO fix the convertion rate
   }
   _S::putTurn();
