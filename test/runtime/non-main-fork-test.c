@@ -1,7 +1,8 @@
 // RUN: %srcroot/test/runtime/run-scheduler-test.py %s -gxx "%gxx" -llvmgcc "%llvmgcc" -projbindir "%projbindir" -ternruntime "%ternruntime"  -ternbcruntime "%ternbcruntime" -nondet
 
-// NOTE: occasionally the child process hangs in pthread_join of the idle
-// thread
+// NOTE: theoretically fork() should not be mixed with threads.  However,
+// in practice some real applications such as Apache do this, so we have
+// to make it work ...
 
 #include <pthread.h>
 #include <unistd.h>

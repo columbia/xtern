@@ -1,20 +1,23 @@
-all: xternruntime interpose.so 
+all: xternruntime interpose.so
+
+BuildMode := Debug
+ENABLE_OPTIMIZED := 0
 
 INC_DIRS=-I$(TERN_ROOT)/include/ -I$(XTERN_ROOT)/include/ -I$(XTERN_ROOT)/obj/include
 #INC_DIRS=-I$(XTERN_ROOT)/include/
 STD_LIBS=-lsupc++ -lpthread -lstdc++ -lrt
 FLAG=`date +%F\#%T`
-#TERN_LIBS=-L$(XTERN_ROOT)/obj/Debug/lib/  -lanalysis -linstr -lruntime
-TERN_LIBS=-L$(XTERN_ROOT)/obj/Debug/lib/ -lruntime -lcommon 
+#TERN_LIBS=-L$(XTERN_ROOT)/obj/$(BuildMode)/lib/  -lanalysis -linstr -lruntime
+TERN_LIBS=-L$(XTERN_ROOT)/obj/$(BuildMode)/lib/ -lruntime -lcommon 
 #TERN_LIBS=
-#TERN_LIBS=$(XTERN_ROOT)/obj/Debug/lib/libruntime.a
+#TERN_LIBS=$(XTERN_ROOT)/obj/$(BuildMode)/lib/libruntime.a
 CFLAGS= -g $(INC_DIRS)
 CXXFLAGS= -g $(INC_DIRS)
 PREFIX=LD_PRELOAD=$(XTERN_ROOT)/dync_hook/interpose.so
 #PREFIX=
 
 xternruntime: 
-	cd $(XTERN_ROOT)/obj && make ENABLE_OPTIMIZED=0
+	cd $(XTERN_ROOT)/obj && make ENABLE_OPTIMIZED=$(ENABLE_OPTIMIZED)
 
 interpose.so: template.cpp spec_hooks.cpp hook.cpp
 	gcc -fPIC -rdynamic hook.cpp $(CFLAGS) -c -o interpose.o

@@ -137,18 +137,29 @@ int RecorderRT<_S>::absTimeToTurn(const struct timespec *abstime)
 template <typename _S>
 int RecorderRT<_S>::relTimeToTurn(const struct timespec *reltime)
 {
-  // TODO: convert physical time to logical time (number of turns)
   if (!reltime) return 0;
-  uint64_t ns = reltime->tv_sec;
-  ns = ns * 1000000000 + reltime->tv_nsec;
-  int64_t ret64 = (ns / 1000 / options::nanosec_per_turn + 1) * _S::nthread;
-  const int MAX_REL = 100000;
-  int ret =  (ret64 > MAX_REL) ? MAX_REL : (int) ret64;
+
+  const int MAX_REL = (10^5); // maximum number of turns to wait
+
+  int ret;
+  int64_t ns, ret64;
+
+  ns = reltime->tv_sec;
+  ns = ns * (10^9) + reltime->tv_nsec;
+  ret64 = (ns / 1000 / options::nanosec_per_turn + 1) * _S::nthread;
+
+  // if result too large, return MAX_REL
+  ret = (ret64 > MAX_REL) ? MAX_REL : (int) ret64;
+
+  // if result too small or negative, return only (5 * nthread + 1)
   ret = ret < 5 * _S::nthread + 1 ? 5 * _S::nthread + 1 : ret;
-  //int tmp = rand() % 100 * _S::nthread;
+
+  // these are obsolete
+  // int tmp = rand() % 100 * _S::nthread;
+  // return tmp;
+  // return MAX_REL;
+
   dprintf("computed turn = %d\n", ret);
-  //return tmp;
-  //return 100000;
   return ret;
 }
 
@@ -450,7 +461,7 @@ int RecorderRT<_S>::pthreadMutexTimedLock(unsigned ins, int &error, pthread_mute
     return pthreadMutexLock(ins, error, mu);
 
   timespec cur_time, rel_time;
-  clock_gettime(CLOCK_MONOTONIC_RAW , &cur_time);
+  clock_gettime(CLOCK_REALTIME , &cur_time);
   rel_time = time_diff(cur_time, *abstime);
 
   SCHED_TIMER_START;
@@ -471,9 +482,6 @@ int RecorderRT<_S>::pthreadMutexUnlock(unsigned ins, int &error, pthread_mutex_t
   errno = error;
   ret = pthread_mutex_unlock(mu);
   error = errno;
-if(ret!=0) {
-  fprintf(stderr, "unlock failed: %s\n", strerror(ret));
-}
   assert(!ret && "failed sync calls are not yet supported!");
   signal(mu);
  
@@ -838,7 +846,7 @@ int RecorderRT<_S>::pthreadCondTimedWait(unsigned ins, int &error,
     return pthreadCondWait(ins, error, cv, mu);
 
   timespec cur_time, rel_time;
-  clock_gettime(CLOCK_MONOTONIC_RAW , &cur_time);
+  clock_gettime(CLOCK_REALTIME , &cur_time);
   rel_time = time_diff(cur_time, *abstime);
 
   int ret;
@@ -917,7 +925,7 @@ int RecorderRT<_S>::semTimedWait(unsigned ins, int &error, sem_t *sem,
     return semWait(ins, error, sem);
 
   timespec cur_time, rel_time;
-  clock_gettime(CLOCK_MONOTONIC_RAW , &cur_time);
+  clock_gettime(CLOCK_REALTIME , &cur_time);
   rel_time = time_diff(cur_time, *abstime);
   
   int ret;

@@ -1,5 +1,9 @@
 // RUN: %srcroot/test/runtime/run-scheduler-test.py %s -gxx "%gxx" -llvmgcc "%llvmgcc" -projbindir "%projbindir" -ternruntime "%ternruntime"  -ternbcruntime "%ternbcruntime" -nondet
 
+// NOTE: theoretically fork() should not be mixed with threads.  However,
+// in practice some real applications such as Apache do this, so we have
+// to make it work ...
+
 #include <pthread.h>
 #include <unistd.h>
 #include <sys/types.h>
@@ -10,7 +14,6 @@ pthread_mutex_t mutex;
 
 void *myfunc(void *arg)
 {
-  pthread_mutex_init(&mutex, NULL);
   pthread_mutex_lock(&mutex);
   pthread_mutex_unlock(&mutex);
   return NULL;
@@ -25,6 +28,7 @@ int main()
     wait(NULL);
     return 0;
   }
+  pthread_mutex_init(&mutex, NULL);
   pthread_mutex_lock(&mutex);
   pthread_mutex_unlock(&mutex);
   printf("test done\n");
