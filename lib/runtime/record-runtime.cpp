@@ -70,10 +70,12 @@
 
 //#define __TIME_MEASURE 1
 
+#define ts2ll(x) ((uint64_t) (x).tv_sec * factor + (x).tv_nsec)
+
 using namespace std;
 
 /// clockmanager
-tern::ClockManager clockManager;
+tern::ClockManager clockManager(time(NULL) * (uint64_t)1000000000);
 
 namespace tern {
 
@@ -139,20 +141,20 @@ int RecorderRT<_S>::relTimeToTurn(const struct timespec *reltime)
 {
   if (!reltime) return 0;
 
-  const int MAX_REL = (10^5); // maximum number of turns to wait
+  const int MAX_REL = (100000); // maximum number of turns to wait
 
   int ret;
   int64_t ns, ret64;
 
   ns = reltime->tv_sec;
-  ns = ns * (10^9) + reltime->tv_nsec;
-  ret64 = (ns / 1000 / options::nanosec_per_turn + 1) * _S::nthread;
+  ns = ns * (1000000000) + reltime->tv_nsec;
+  ret64 = ns / options::nanosec_per_turn;
 
   // if result too large, return MAX_REL
   ret = (ret64 > MAX_REL) ? MAX_REL : (int) ret64;
 
   // if result too small or negative, return only (5 * nthread + 1)
-  ret = ret < 5 * _S::nthread + 1 ? 5 * _S::nthread + 1 : ret;
+  ret = (ret < 5 * _S::nthread + 1) ? (5 * _S::nthread + 1) : ret;
 
   // these are obsolete
   // int tmp = rand() % 100 * _S::nthread;
@@ -181,8 +183,10 @@ void RecorderRT<_S>::idle_sleep(void) {
   while (_S::runq.size() == 1 && _S::waitq.empty())
   {
     if (_S::wakeup_flag)
+    {
       _S::check_wakeup();
-    else
+      clockManager.reset_rclock();
+    } else
       ::usleep(1);
   }
   if (_S::runq.size() == 1)
@@ -461,7 +465,10 @@ int RecorderRT<_S>::pthreadMutexTimedLock(unsigned ins, int &error, pthread_mute
     return pthreadMutexLock(ins, error, mu);
 
   timespec cur_time, rel_time;
-  clock_gettime(CLOCK_REALTIME , &cur_time);
+  if (options::epoch_mode)
+    ClockManager::getClock(cur_time, clockManager.clock);
+  else
+    clock_gettime(CLOCK_REALTIME , &cur_time);
   rel_time = time_diff(cur_time, *abstime);
 
   SCHED_TIMER_START;
@@ -846,7 +853,10 @@ int RecorderRT<_S>::pthreadCondTimedWait(unsigned ins, int &error,
     return pthreadCondWait(ins, error, cv, mu);
 
   timespec cur_time, rel_time;
-  clock_gettime(CLOCK_REALTIME , &cur_time);
+  if (options::epoch_mode)
+    ClockManager::getClock(cur_time, clockManager.clock);
+  else
+    clock_gettime(CLOCK_REALTIME , &cur_time);
   rel_time = time_diff(cur_time, *abstime);
 
   int ret;
@@ -925,7 +935,10 @@ int RecorderRT<_S>::semTimedWait(unsigned ins, int &error, sem_t *sem,
     return semWait(ins, error, sem);
 
   timespec cur_time, rel_time;
-  clock_gettime(CLOCK_REALTIME , &cur_time);
+  if (options::epoch_mode)
+    ClockManager::getClock(cur_time, clockManager.clock);
+  else
+    clock_gettime(CLOCK_REALTIME , &cur_time);
   rel_time = time_diff(cur_time, *abstime);
   
   int ret;
@@ -1515,9 +1528,6 @@ int RecorderRT<RecordSerializer>::nanosleep(unsigned ins, int &error,
   typedef Runtime _P;
   return _P::nanosleep(ins, error, req, rem);
 }
-
-/// clockmanager
-ClockManager clockManager;
 
 template <typename _S>
 time_t RecorderRT<_S>::__time(unsigned ins, int &error, time_t *t)
