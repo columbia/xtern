@@ -183,13 +183,16 @@ bool IntraSlicer::mayCallEvent(DynRetInstr *dynRetInstr) {
 }
 
 void IntraSlicer::handleCheckerTarget(DynInstr *dynInstr) {
+  BEGINTIME(stat->intraChkTgtSt);
   if (regOverWritten(dynInstr))
     delRegOverWritten(dynInstr);
   live.addUsedRegs(dynInstr);
   slice.add(dynInstr, dynInstr->getTakenFlag());
+  ENDTIME(stat->intraChkTgtTime, stat->intraChkTgtSt, stat->intraChkTgtEnd);
 }
 
 void IntraSlicer::handlePHI(DynInstr *dynInstr) {
+  BEGINTIME(stat->intraPhiSt);
   DynPHIInstr *phiInstr = (DynPHIInstr*)dynInstr;
   if (regOverWritten(phiInstr)) {
     delRegOverWritten(phiInstr);
@@ -204,9 +207,11 @@ void IntraSlicer::handlePHI(DynInstr *dynInstr) {
     }
     slice.add(phiInstr, TakenFlags::INTRA_PHI);
   }
+  ENDTIME(stat->intraPhiTime, stat->intraPhiSt, stat->intraPhiEnd);
 }
 
 void IntraSlicer::handleBranch(DynInstr *dynInstr) {
+  BEGINTIME(stat->intraBrSt);
   DynBrInstr *brInstr = (DynBrInstr*)dynInstr;
   /* A branch can be taken already by considering control dependency in 
   handling phi instructions, or taken already by considering br-br may race in 
@@ -217,17 +222,20 @@ void IntraSlicer::handleBranch(DynInstr *dynInstr) {
     DynInstr *head = slice.getHead();
     if (!postDominate(head, brInstr)) {
       takeBr(brInstr, TakenFlags::INTRA_BR_N_POSTDOM);
-      return;
+      goto finish;
     }
     if (eventBetween(brInstr, head)) {
       takeBr(brInstr, TakenFlags::INTRA_BR_EVENT_BETWEEN);
-      return;
+      goto finish;
     }
     if (writtenBetween(brInstr, head)) {
       takeBr(brInstr, TakenFlags::INTRA_BR_WR_BETWEEN);
-      return;
+      goto finish;
     }
    }
+
+finish:
+  ENDTIME(stat->intraBrTime, stat->intraBrSt, stat->intraBrEnd);
 }
 
 void IntraSlicer::handleRet(DynInstr *dynInstr) {
@@ -239,6 +247,7 @@ void IntraSlicer::handleRet(DynInstr *dynInstr) {
   simply return. */
   if (!retInstr->getDynCallInstr())
     return;
+  BEGINTIME(stat->intraRetSt);
   if (retRegOverWritten(retInstr)) {
     delRegOverWritten(retInstr);
     live.addUsedRegs(retInstr);
@@ -257,9 +266,11 @@ void IntraSlicer::handleRet(DynInstr *dynInstr) {
     else
       removeRange(retInstr);
   }
+  ENDTIME(stat->intraRetTime, stat->intraRetSt, stat->intraRetEnd);
 }
 
 void IntraSlicer::handleCall(DynInstr *dynInstr) {
+  BEGINTIME(stat->intraCallSt);
   DynCallInstr *callInstr = (DynCallInstr*)dynInstr;
   if (funcSumm->isInternalCall(callInstr)) {
     if (regOverWritten(dynInstr))
@@ -281,17 +292,21 @@ void IntraSlicer::handleCall(DynInstr *dynInstr) {
       }
     }
   }
+  ENDTIME(stat->intraCallTime, stat->intraCallSt, stat->intraCallEnd);
 }
 
 void IntraSlicer::handleNonMem(DynInstr *dynInstr) {
+  BEGINTIME(stat->intraNonMemSt);
   if (regOverWritten(dynInstr)) {
     delRegOverWritten(dynInstr);
     live.addUsedRegs(dynInstr);
     slice.add(dynInstr, TakenFlags::INTRA_NON_MEM);
   }
+  ENDTIME(stat->intraNonMemTime, stat->intraNonMemSt, stat->intraNonMemEnd);
 }
 
 void IntraSlicer::handleMem(DynInstr *dynInstr) {
+  BEGINTIME(stat->intraMemSt);
   Instruction *instr = idMgr->getOrigInstr(dynInstr);
   if (Util::isLoad(instr)) {
     DynMemInstr *loadInstr = (DynMemInstr*)dynInstr;
@@ -339,6 +354,7 @@ void IntraSlicer::handleMem(DynInstr *dynInstr) {
     if ((aliasMgr->getPointTee(&storePtrOprd) & live.getExtCallLoadMem()) != bddfalse)
       takeStore(dynInstr, TakenFlags::INTRA_STORE_ALIAS_EXT_CALL);
   }
+  ENDTIME(stat->intraMemTime, stat->intraMemSt, stat->intraMemEnd);
 }
 
 bool IntraSlicer::mustAlias(DynOprd *oprd1, DynOprd *oprd2) {

@@ -45,6 +45,37 @@ namespace tern {
     struct timeval intraSlicingEnd;
     double intraSlicingTime;
 
+    struct timeval intraChkTgtSt;
+    struct timeval intraChkTgtEnd;
+    double intraChkTgtTime;
+
+    struct timeval intraPhiSt;
+    struct timeval intraPhiEnd;
+    double intraPhiTime;
+
+    struct timeval intraBrSt;
+    struct timeval intraBrEnd;
+    double intraBrTime;
+
+    struct timeval intraRetSt;
+    struct timeval intraRetEnd;
+    double intraRetTime;
+
+    struct timeval intraCallSt;
+    struct timeval intraCallEnd;
+    double intraCallTime;
+
+    struct timeval intraMemSt;
+    struct timeval intraMemEnd;
+    double intraMemTime;
+
+    struct timeval intraNonMemSt;
+    struct timeval intraNonMemEnd;
+    double intraNonMemTime;
+
+
+
+    
     Stat();
     ~Stat();
     void init(InstrIdMgr *idMgr, CallStackMgr *ctxMgr, FuncSumm *funcSumm);

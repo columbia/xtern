@@ -11,6 +11,13 @@ using namespace llvm;
 Stat::Stat() {
   interSlicingTime = 0;
   intraSlicingTime = 0;
+  intraChkTgtTime = 0;
+  intraPhiTime = 0;
+  intraBrTime = 0;
+  intraRetTime = 0;
+  intraCallTime = 0;
+  intraMemTime = 0;
+  intraNonMemTime = 0;
 }
 
 Stat::~Stat() {
@@ -26,6 +33,15 @@ void Stat::init(InstrIdMgr *idMgr, CallStackMgr *ctxMgr, FuncSumm *funcSumm) {
 void Stat::printStat(const char *tag) {
   errs() << "\n\n" << tag << ": "
     << "intraSlicingTime: " << intraSlicingTime << ", "
+    
+    << "intraChkTgtTime: " << intraChkTgtTime << ", "
+    << "intraPhiTime: " << intraPhiTime << ", "
+    << "intraBrTime: " << intraBrTime << ", "
+    << "intraRetTime: " << intraRetTime << ", "
+    << "intraCallTime: " << intraCallTime << ", "
+    << "intraMemTime: " << intraMemTime << ", "
+    << "intraNonMemTime: " << intraNonMemTime << ", "
+    
     // TBD.
     << "\n";
 }

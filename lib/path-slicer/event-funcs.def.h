@@ -13,8 +13,14 @@ DEF(fclose,          OpenClose,           int,                 FILE * stream)
 //char * fgets ( char * str, int num, FILE * stream );
 //DEF(fgets,           FileOp,            char *,           char * str, int num, FILE * stream)
 
+
+
+
 //void __assert_fail(const char * assertion, const char * file, unsigned int line, const char * function);
-//DEF(__assert_fail,          Assert,         void,                   const char * assertion, const char * file, unsigned int line, const char * function)
+DEF(__assert_fail,          Assert,         void,                   const char * assertion, const char * file, unsigned int line, const char * function)
+
+
+
 
 //DEF(pthread_mutex_init,     Lock, int, pthread_mutex_t *mutex, const  pthread_mutexattr_t *mutexattr)
 
