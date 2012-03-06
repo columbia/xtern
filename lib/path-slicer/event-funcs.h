@@ -16,13 +16,14 @@ enum {
   first_event = 1
 };
 
-enum {FileOp /* More types of events are to be added. */};
+enum {OpenClose, Assert, Lock /* More types of checker events are to be added. */};
 
 extern const char* eventName[];
+extern const int eventType[];
 
 // Internal functions of EventFuncs.
 static inline const char* getName(unsigned nr) {
-  assert(first_event <= nr && nr < num_events);
+  //assert(first_event <= nr && nr < num_events);
   return eventName[nr];
 }
 
@@ -30,6 +31,10 @@ static inline const char* getName(unsigned nr) {
 extern unsigned getNameID(const char* name);
 extern bool isEventFunc(const char *name);
 
+// Each type of function/event has a function.
+extern bool isOpenCloseFunc(const char *name);
+extern bool isAssertFunc(const char *name);
+extern bool isLockFunc(const char *name);
 
 }
 

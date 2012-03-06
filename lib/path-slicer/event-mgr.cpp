@@ -50,6 +50,21 @@ void EventMgr::getAnalysisUsage(AnalysisUsage &AU) const {
 }
 
 void EventMgr::setupEvents(Module &M) {
+  bool includeAllEvents = false;
+  // Checker checker = NULL;
+  if (UseOneChecker == "") {
+    includeAllEvents = true;
+  } else {
+    if (UseOneChecker == "Assert") {
+      // checker = new AssertChecker(NULL);
+    } else if (UseOneChecker == "OpenClose") {
+      // checker = new OpenCloseChecker(NULL);
+    } else if (UseOneChecker == "Lock") {
+      // checker = new LockChecker(NULL);
+    } else
+      assert(false && "UseOneChecker must be Assert, OpenClose, Lock, or File.");
+  }
+  
   for (Module::iterator f = M.begin(); f != M.end(); ++f) {
     if (f->hasName()) {
       // Get function list from syncfuncs.h.
@@ -61,11 +76,16 @@ void EventMgr::setupEvents(Module &M) {
 
       // Get function list from event-funcs.h.
       if (tern::EventFuncs::isEventFunc(f->getNameStr().c_str())) {
-        fprintf(stderr, "EventMgr::initEvents event %s\n", f->getNameStr().c_str());
-        eventFuncs.push_back(f);
+        //if (checker->isImportant(f->getNameStr())) {
+          fprintf(stderr, "EventMgr::initEvents event %s\n", f->getNameStr().c_str());
+          eventFuncs.push_back(f);
+        //}
       }
     }
   }
+
+  //if (checker)
+    //delete checker;
 }
 
 // TODO: search in vector may be slow
