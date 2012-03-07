@@ -9,6 +9,9 @@ using namespace tern;
 #include "llvm/Support/CommandLine.h"
 using namespace llvm;
 
+#include "klee/BasicCheckers.h"
+using namespace klee;
+
 using namespace std;
 
 char tern::EventMgr::ID = 0;
@@ -50,42 +53,45 @@ void EventMgr::getAnalysisUsage(AnalysisUsage &AU) const {
 }
 
 void EventMgr::setupEvents(Module &M) {
-  bool includeAllEvents = false;
-  // Checker checker = NULL;
+  Checker *checker = NULL;
   if (UseOneChecker == "") {
-    includeAllEvents = true;
+    // NOP.
   } else {
     if (UseOneChecker == "Assert") {
-      // checker = new AssertChecker(NULL);
+      checker = new AssertChecker(NULL);
+      errs() << "EventMgr::setupEvents::AssertChecker\n";
     } else if (UseOneChecker == "OpenClose") {
-      // checker = new OpenCloseChecker(NULL);
+      checker = new OpenCloseChecker(NULL);
+      errs() << "EventMgr::setupEvents::OpenCloseChecker\n";
     } else if (UseOneChecker == "Lock") {
-      // checker = new LockChecker(NULL);
+      checker = new LockChecker(NULL);
+      errs() << "EventMgr::setupEvents::LockChecker\n";
+    } else if (UseOneChecker == "File") {
+      checker = new FileChecker(NULL);
+      errs() << "EventMgr::setupEvents::FileChecker\n";
+    } else if (UseOneChecker == "DataLoss") {
+      checker = new DataLossChecker(NULL);
+      errs() << "EventMgr::setupEvents::DataLossChecker\n";
     } else
-      assert(false && "UseOneChecker must be Assert, OpenClose, Lock, or File.");
+      assert(false && "UseOneChecker must be Assert, OpenClose, Lock, File, or DataLoss.");
   }
   
   for (Module::iterator f = M.begin(); f != M.end(); ++f) {
     if (f->hasName()) {
-      // Get function list from syncfuncs.h.
-      /*unsigned nr = tern::syncfunc::getNameID(f->getNameStr().c_str());
-      if (nr != tern::syncfunc::not_sync) {
-        fprintf(stderr, "EventMgr::initEvents sync %s %u\n", f->getNameStr().c_str(), nr);
-        eventFuncs.push_back(f);
-      }*/
-
       // Get function list from event-funcs.h.
       if (tern::EventFuncs::isEventFunc(f->getNameStr().c_str())) {
-        //if (checker->isImportant(f->getNameStr())) {
+        if (!checker) {
+          eventFuncs.push_back(f);
+        } else if (checker->isImportant(f->getNameStr())) {
           fprintf(stderr, "EventMgr::initEvents event %s\n", f->getNameStr().c_str());
           eventFuncs.push_back(f);
-        //}
+        }
       }
     }
   }
 
-  //if (checker)
-    //delete checker;
+  if (checker)
+    delete checker;
 }
 
 // TODO: search in vector may be slow
