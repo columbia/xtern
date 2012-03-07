@@ -32,24 +32,6 @@ bool isEventFunc(const char *name) {
   return getNameID(name) != not_event;
 }
 
-bool isOpenCloseFunc(const char *name) {
-  unsigned nr = getNameID(name);
-  //assert(first_event <= nr && nr < num_events); // Must be an event.
-  return eventType[nr] == OpenClose;
-}
-
-extern bool isAssertFunc(const char *name) {
-  unsigned nr = getNameID(name);
-  //assert(first_event <= nr && nr < num_events); // Must be an event.
-  return eventType[nr] == Assert;
-}
-
-extern bool isLockFunc(const char *name) {
-  unsigned nr = getNameID(name);
-  //assert(first_event <= nr && nr < num_events); // Must be an event.
-  return eventType[nr] == Lock;
-}
-
 }
 }
 

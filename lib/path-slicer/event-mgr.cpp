@@ -82,7 +82,7 @@ void EventMgr::setupEvents(Module &M) {
       if (tern::EventFuncs::isEventFunc(f->getNameStr().c_str())) {
         if (!checker) {
           eventFuncs.push_back(f);
-        } else if (checker->isImportant(f->getNameStr())) {
+        } else if (checker->isImportant(f->getNameStr())) { // Select events based on the checker.
           fprintf(stderr, "EventMgr::initEvents event %s\n", f->getNameStr().c_str());
           eventFuncs.push_back(f);
         }

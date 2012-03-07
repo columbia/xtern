@@ -35,6 +35,7 @@ namespace tern {
   protected:
     void collectExternalCalls(DynCallInstr *dynCallInstr);
     void collectExedStaticInstrs(DynInstr *dynInstr);
+    void printFileLoc(llvm::raw_ostream &S, const llvm::Instruction *instr);
 
   public:
     struct timeval interSlicingSt;
@@ -80,9 +81,11 @@ namespace tern {
     ~Stat();
     void init(InstrIdMgr *idMgr, CallStackMgr *ctxMgr, FuncSumm *funcSumm);
     void printStat(const char *tag);
-    const char *printInstr(const llvm::Instruction *instr);    
-    void printDynInstr(DynInstr *dynInstr, const char *tag);
-    void printDynInstr(llvm::raw_ostream &S, DynInstr *dynInstr, const char *tag);
+    const char *printInstr(const llvm::Instruction *instr, bool withFileLoc = false);    
+    void printDynInstr(DynInstr *dynInstr, const char *tag,
+      bool withFileLoc = false);
+    void printDynInstr(llvm::raw_ostream &S, DynInstr *dynInstr, const char *tag,
+      bool withFileLoc = false);
 
     /* Collect statistics on the set of all static instructions and 
     the set of all executed instructions. */

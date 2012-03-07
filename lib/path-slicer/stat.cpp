@@ -6,6 +6,8 @@
 #include "func-summ.h"
 using namespace tern;
 
+#include "llvm/Metadata.h"
+#include "llvm/Analysis/DebugInfo.h"
 using namespace llvm;
 
 Stat::Stat() {
@@ -46,12 +48,14 @@ void Stat::printStat(const char *tag) {
     << "\n";
 }
 
-const char *Stat::printInstr(const llvm::Instruction *instr) {
+const char *Stat::printInstr(const llvm::Instruction *instr, bool withFileLoc) {
   if (DM_IN(instr, buf)) {
     return buf[instr]->str().c_str();
   } else {
     std::string *str = new std::string;
     llvm::raw_string_ostream *newStream = new llvm::raw_string_ostream(*str);
+    if (withFileLoc)
+      printFileLoc(*newStream, instr);
     (*newStream) << "F: " << Util::getFunction(instr)->getNameStr()
       << ": BB: " << Util::getBasicBlock(instr)->getNameStr() << ": ";
     instr->print(*newStream);
@@ -61,18 +65,28 @@ const char *Stat::printInstr(const llvm::Instruction *instr) {
   }
 }
 
-void Stat::printDynInstr(DynInstr *dynInstr, const char *tag) {
-  printDynInstr(errs(), dynInstr, tag);
+void Stat::printFileLoc(raw_ostream &S, const Instruction *instr) {
+  if (MDNode *N = instr->getMetadata("dbg")) {
+    DILocation Loc(N);                      // DILocation is in DebugInfo.h
+    unsigned Line = Loc.getLineNumber();
+    StringRef File = Loc.getFilename();
+    StringRef Dir = Loc.getDirectory();
+    S << "Location: " <<Dir << "/" << File << ":" << Line << ": ";
+  }
 }
 
-void Stat::printDynInstr(raw_ostream &S, DynInstr *dynInstr, const char *tag) {
+void Stat::printDynInstr(DynInstr *dynInstr, const char *tag, bool withFileLoc) {
+  printDynInstr(errs(), dynInstr, tag, withFileLoc);
+}
+
+void Stat::printDynInstr(raw_ostream &S, DynInstr *dynInstr, const char *tag, bool withFileLoc) {
   Instruction *instr = idMgr->getOrigInstr(dynInstr);
   S << tag
     << ": IDX: " << dynInstr->getIndex()
     << ": TID: " << (int)dynInstr->getTid()
     << ": INSTRID: " << dynInstr->getOrigInstrId()
     << ": TAKEN: " << dynInstr->takenReason()
-    << ": INSTR: " << printInstr(instr)
+    << ": INSTR: " << printInstr(instr, withFileLoc)
     << "\n\n";
 
   // Print the condition if this is a symbolic branch.
@@ -159,4 +173,5 @@ void Stat::printExplored() {
   errs() << "TOTAL EXPLORED FREQ: " << "(INTERNAL: " << numInternal
     << ", EXTERNAL: " << numExternal << ")" << "\n";
 }
+
 

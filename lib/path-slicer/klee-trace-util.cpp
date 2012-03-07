@@ -41,7 +41,7 @@ void KleeTraceUtil::store(void *pathId, DynInstrVector *trace) {
   std::string ErrorInfo;
   raw_fd_ostream OS(path, ErrorInfo, raw_fd_ostream::F_Append);
   for (size_t i = 0; i < trace->size(); i++)
-    stat->printDynInstr(OS, trace->at(i), __func__);
+    stat->printDynInstr(OS, trace->at(i), "", true);
   OS.flush();
   OS.close();
 }
