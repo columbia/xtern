@@ -1534,12 +1534,14 @@ time_t RecorderRT<_S>::__time(unsigned ins, int &error, time_t *t)
 {
   if (!options::epoch_mode || options::runtime_type != "RR")
     return Runtime::__time(ins, error, t);
+  _S::getTurn();
   errno = error;
   time_t ret;
   uint64_t c = clockManager.clock;
   ClockManager::getClock(ret, c);
   if (t) *t = ret;
   error = errno;
+  _S::putTurn();
   return ret;
 }
 
@@ -1565,6 +1567,7 @@ int RecorderRT<_S>::__clock_gettime(unsigned ins, int &error, clockid_t clk_id, 
 {
   if (!options::epoch_mode || options::runtime_type != "RR")
     return Runtime::__clock_gettime(ins, error, clk_id, tp);
+  _S::getTurn();
   errno = error;
   if (tp)
   {
@@ -1572,6 +1575,7 @@ int RecorderRT<_S>::__clock_gettime(unsigned ins, int &error, clockid_t clk_id, 
     ClockManager::getClock(*tp, c);
   }
   error = errno;
+  _S::putTurn();
   return 0;
 }
 
@@ -1592,6 +1596,7 @@ int RecorderRT<_S>::__gettimeofday(unsigned ins, int &error, struct timeval *tv,
 {
   if (!options::epoch_mode || options::runtime_type != "RR")
     return Runtime::__gettimeofday(ins, error, tv, tz);
+  _S::getTurn();
   errno = error;
   gettimeofday(tv, tz); //  call native function to obtain tz
   if (tv)
@@ -1600,6 +1605,7 @@ int RecorderRT<_S>::__gettimeofday(unsigned ins, int &error, struct timeval *tv,
     ClockManager::getClock(*tv, c);
   }
   error = errno;
+  _S::putTurn();
   return 0;
 }
 
