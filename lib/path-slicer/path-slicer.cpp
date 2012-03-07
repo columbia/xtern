@@ -271,7 +271,7 @@ void PathSlicer::copyTrace(void *newPathId, void *curPathId) {
 void PathSlicer::recordCheckerResult(void *pathId, Checker::Result globalResult,
   Checker::Result localResult) {
   assert(globalResult == Checker::OK);
-  if (localResult == Checker::IMPORTANT || localResult == Checker::IMPORTANT) {
+  if (localResult == Checker::IMPORTANT || localResult == Checker::ERROR) {
     DynInstrVector *trace = allPathTraces[pathId];
     assert(trace);
     assert(trace->size() > 0);
