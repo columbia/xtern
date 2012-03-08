@@ -12,7 +12,8 @@ done
 llvmver="2.7"
 gccver="4.2-$llvmver"
 arch=`uname -m`
-timeout=600
+timeout=1200
+sendmail="/usr/sbin/sendmail"
 
 #testdir=`date +%F`
 testdir="/tmp/xtern-nightly-test-$build_mode"
@@ -26,7 +27,7 @@ export LLVM_ROOT="$testdir/llvm"
 export PATH="$PATH:$LLVM_ROOT/install/bin:$LLVM_ROOT/scripts"
 export XTERN_ROOT="$testdir/xtern"
 
-# build llvm
+# # build llvm
 git clone git@repair.cs.columbia.edu:llvm
 cd $LLVM_ROOT
 mkdir -p install
@@ -66,11 +67,11 @@ mkdir obj
 cd obj
 ../configure >> $log
 make $llvm_debug  >> $log
-make -C $XTERN_ROOT/dync_hook >> $log
+make -C $XTERN_ROOT/dync_hook $llvm_debug BuildMode=$build_mode >> $log
 
 # test
 cd $XTERN_ROOT/obj
-setsid make $llvm_debug BuildMode=$build_mode check >> $log 2>&1 &
+setsid make $llvm_debug check >> $log 2>&1 &
 pid=$!
 (
     sleep $timeout;
@@ -85,7 +86,8 @@ if test $status != 0 ; then
         echo "SUBJECT: xtern nightly test failed with status $status";
         cat $log;
         echo "."
-    ) > email.txt
-    sendmail junfeng@cs.columbia.edu < email.txt
-#    sendmail huayang@cs.columbia.edu < email.txt
+    ) | $sendmail dmt-dev@lists.cs.columbia.edu
+# > $testdir/email.txt
+#    $sendmail junfeng@cs.columbia.edu < $testdir/email.txt
+#    $sendmail huayang@cs.columbia.edu < $testdir/email.txt
 fi

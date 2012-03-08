@@ -103,9 +103,9 @@ def normalize_schedule(schedule):
     os.rename(fo.name, fi.name)
 
 def check_deterministic(cmd, prog):
-    m = re.search('output_dir=([^\s]+)\s+', cmd)
+    m = re.search('output_dir=([^\s:]+)[\s:]', cmd)
     assert m != None
-    # print 'output directory is %s' % m.group(1)
+    print 'output directory is %s' % m.group(1)
     output_dir = m.group(1)
 
     # generate schedule
