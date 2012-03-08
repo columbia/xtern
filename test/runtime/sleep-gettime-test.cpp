@@ -69,7 +69,7 @@ void* thread_func(void*) {
   pthread_mutex_lock(&mu);
 
   check_time();
-  usleep(10);
+  usleep(10000);
 
   pthread_mutex_unlock(&mu);
 }
