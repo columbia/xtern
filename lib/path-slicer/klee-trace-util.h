@@ -20,6 +20,7 @@ namespace tern {
     klee::KModule *kmodule;
     InstrIdMgr *idMgr;
     Stat *stat;
+    std::string outputDir;
 
   protected:
     /* Record routines. */
@@ -53,7 +54,7 @@ namespace tern {
     void initKModule(klee::KModule *kmodule);
 
     virtual void load(const char *tracePath, DynInstrVector *trace);
-    virtual void store(void *pathId, DynInstrVector *trace);
+    virtual void store(unsigned testCaseId, const char *outputDir, DynInstrVector *trace);
     
     /* This is the key function inserted to KLEE interpreter to record each instruction
     (at the place before they are executed). */

@@ -78,6 +78,8 @@ namespace tern {
 
     bool startRecord;
 
+    std::string outputDir;
+
   protected:
     /* Init all sub-components of the path-slicer. */
     void init(llvm::Module &M);
@@ -102,6 +104,7 @@ namespace tern {
     virtual void getAnalysisUsage(llvm::AnalysisUsage &AU) const;
 
     void initKModule(klee::KModule *kmodule);
+    void initOutputDir(std::string dir);
 
     /* The uniformed recording interface to record an in-memory execution trace. */
     void record(void *pathId, void *instr, void *state, void *f);
@@ -118,8 +121,8 @@ namespace tern {
     path as CHECKER_TARGET. This "latest" assumes executor of KLEE interpretes each instruction
     atomically (once for each instruction). For each a checker error, the last recorded instruction 
     (which triggered the error) will also be marked as target. */
-    void recordCheckerResult(void *pathId, klee::Checker::Result globalResult,
-      klee::Checker::Result localResult);
+    void recordCheckerResult(void *pathId, 
+      klee::Checker::Result globalResult, klee::Checker::Result localResult, unsigned numTests);
 
     /*  */
     bool isInternalInstr(llvm::Instruction *instr);

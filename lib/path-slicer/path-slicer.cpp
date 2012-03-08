@@ -248,6 +248,12 @@ void PathSlicer::initKModule(KModule *kmodule) {
     assert(false);
 }
 
+void PathSlicer::initOutputDir(std::string dir) {
+  fprintf(stderr, "PathSlicer::initOutputDir %s\n", dir.c_str());
+  outputDir = dir;
+}
+
+
 void PathSlicer::record(void *pathId, void *instr, void *state, void *f) {
   if (!getStartRecord(instr))
     return;
@@ -269,7 +275,7 @@ void PathSlicer::copyTrace(void *newPathId, void *curPathId) {
 }
 
 void PathSlicer::recordCheckerResult(void *pathId, Checker::Result globalResult,
-  Checker::Result localResult) {
+    Checker::Result localResult, unsigned numTests) {
   assert(globalResult == Checker::OK);
   if (localResult == Checker::IMPORTANT || localResult == Checker::ERROR) {
     DynInstrVector *trace = allPathTraces[pathId];
@@ -282,7 +288,7 @@ void PathSlicer::recordCheckerResult(void *pathId, Checker::Result globalResult,
         stat.printDynInstr(dynInstr, "PathSlicer::recordCheckerResult Checker::IMPORTANT");
     } else {
       tgtMgr.markTarget(pathId, dynInstr, TakenFlags::CHECKER_ERROR);
-      traceUtil->store(pathId, trace);
+      traceUtil->store(numTests+1, outputDir.c_str(), trace);
       if (DBG)
         stat.printDynInstr(dynInstr, "PathSlicer::recordCheckerResult Checker::ERROR");
     }

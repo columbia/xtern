@@ -13,7 +13,7 @@ void XTernTraceUtil::load(const char *tracePath, DynInstrVector *trace) {
 
 }
 
-void XTernTraceUtil::store(void *pathId, DynInstrVector *trace) {
+void XTernTraceUtil::store(unsigned testCaseId, const char *outputDir, DynInstrVector *trace) {
 
 }
 

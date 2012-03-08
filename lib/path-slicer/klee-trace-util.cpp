@@ -13,6 +13,8 @@ using namespace klee;
 
 using namespace llvm;
 
+std::string outputDir;
+
 KleeTraceUtil::KleeTraceUtil() {
   kmodule = NULL;
 }
@@ -34,10 +36,13 @@ void KleeTraceUtil::load(const char *tracePath, DynInstrVector *trace) {
   //NOP.
 }
 
-void KleeTraceUtil::store(void *pathId, DynInstrVector *trace) {
+void KleeTraceUtil::store(unsigned testCaseId, const char *outputDir, DynInstrVector *trace) {
   char path[BUF_SIZE];
   memset(path, 0, BUF_SIZE);
-  snprintf(path, BUF_SIZE, "./error-%p.txt", pathId);
+  /* This format string had better be the same as the one in getTestFilename() 
+  in main.cpp in klee so that the trace and err files are "ls" closed to each other. */
+  snprintf(path, BUF_SIZE, "%s/test%06d.trace", outputDir, (int)testCaseId);
+  fprintf(stderr, "Path %s\n", path);
   std::string ErrorInfo;
   raw_fd_ostream OS(path, ErrorInfo, raw_fd_ostream::F_Append);
   for (size_t i = 0; i < trace->size(); i++)
