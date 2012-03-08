@@ -244,7 +244,7 @@ void KleeTraceUtil::preProcess(DynInstrVector *trace) {
     stat->collectExed(dynInstr);
 
     if (DBG)
-      stat->printDynInstr(dynInstr, __func__);
+      stat->printDynInstr(dynInstr, __func__, true);
   }
 }
 
