@@ -220,15 +220,24 @@ void IntraSlicer::handleBranch(DynInstr *dynInstr) {
     takeBr(brInstr, brInstr->getTakenFlag());
   } else {
     DynInstr *head = slice.getHead();
-    if (!postDominate(head, brInstr)) {
+    BEGINTIME(stat->intraBrDomSt);
+    bool result1 = !postDominate(head, brInstr);
+    ENDTIME(stat->intraBrDomTime, stat->intraBrDomSt, stat->intraBrDomEnd);
+    if (result1) {
       takeBr(brInstr, TakenFlags::INTRA_BR_N_POSTDOM);
       goto finish;
     }
-    if (eventBetween(brInstr, head)) {
+    BEGINTIME(stat->intraBrEvBetSt);
+    bool result2 = eventBetween(brInstr, head);
+    ENDTIME(stat->intraBrEvBetTime, stat->intraBrEvBetSt, stat->intraBrEvBetEnd);
+    if (result2) {
       takeBr(brInstr, TakenFlags::INTRA_BR_EVENT_BETWEEN);
       goto finish;
     }
-    if (writtenBetween(brInstr, head)) {
+    BEGINTIME(stat->intraBrWrBetSt);
+    bool result3 = writtenBetween(brInstr, head);
+    ENDTIME(stat->intraBrWrBetTime, stat->intraBrWrBetSt, stat->intraBrWrBetEnd);
+    if (result3) {
       takeBr(brInstr, TakenFlags::INTRA_BR_WR_BETWEEN);
       goto finish;
     }

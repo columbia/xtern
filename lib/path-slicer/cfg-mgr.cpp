@@ -45,7 +45,7 @@ bool CfgMgr::postDominate(Instruction *prevInstr, Instruction *postInstr) {
   bool result = false;
   
   // Query cache.
-  if (postDomCache.in(0, (long)postInstr, 0, (long)prevInstr, result))
+  if (postDomCache.in((void *)postInstr, (void *)prevInstr, result))
     return result;
 
   // Query PostDominatorTree.
@@ -56,7 +56,7 @@ bool CfgMgr::postDominate(Instruction *prevInstr, Instruction *postInstr) {
   result = PDT.dominates(postBB, prevBB);
 
   // Update cache.
-  postDomCache.add(0, (long)postInstr, 0, (long)prevInstr, result);
+  postDomCache.add((void *)postInstr, (void *)prevInstr, result);
   
   return result;
 }

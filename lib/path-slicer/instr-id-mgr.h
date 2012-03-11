@@ -50,25 +50,25 @@ namespace tern {
       for alias first, and then query the simplified bc. */
       
     /* Map from a dynamic instr to its instr id in max sliced module. */
-    HMAP<LongLongPair, int> mxMap;
+    llvm::DenseMap<PtrPairPair, int> mxMap;
 
     /* Map from a dynamic max sliced instr id to it original instr id. */
-    HMAP<int, int> revMxMap;                 
+    llvm::DenseMap<int, int> revMxMap;                 
 
     /* Map from a dynamic instr to its instr id in simplified module. */
-    HMAP<LongLongPair, std::set<int> *> simMap;   
+    llvm::DenseMap<PtrPairPair, std::set<int> *> simMap;   
 
     /* Map from a dynamic simplified instr id to it original instr id. */
-    HMAP<int, int> revSimMap;               
+    llvm::DenseMap<int, int> revSimMap;               
     
     /* Map from a dynamic simplified instr id to it original instr. */
-    HMAP<LongLongPair, std::set<Instruction *> *> simInstrMap; 
+    llvm::DenseMap<PtrPairPair, std::set<Instruction *> *> simInstrMap; 
 
     std::string lmTracePath;
 
   protected:
     /* Generate a long long pair key for a dynamic instr. */
-    LongLongPair genKey(DynInstr *dynInstr);
+    PtrPairPair genKey(DynInstr *dynInstr);
 
     /* Internal debugging utilities. */
     bool isOrigBcInstr(const llvm::Instruction *instr);

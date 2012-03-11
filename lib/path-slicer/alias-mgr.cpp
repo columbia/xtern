@@ -110,7 +110,7 @@ bool AliasMgr::mayAlias(DynOprd *dynOprd1, DynOprd *dynOprd2) {
   }
 
   // Query cache first.
-  if (aliasCache.in((long)ctx1, instrId1, (long)ctx2, instrId2, result))
+  if (aliasCache.in((void *)ctx1, (void *)instrId1, (void *)ctx2, (void *)instrId2, result))
     return result;
 
   // Query bdd.
@@ -129,7 +129,7 @@ bool AliasMgr::mayAlias(DynOprd *dynOprd1, DynOprd *dynOprd2) {
     result = origAaol->aliasQuery(instrId1, opIndex1, instrId2, opIndex2);
 
   // Update cache.
-  aliasCache.add((long)ctx1, instrId1, (long)ctx2, instrId2, result);
+  aliasCache.add((void *)ctx1, (void *)instrId1, (void *)ctx2, (void *)instrId2, result);
   
   return result;
 }

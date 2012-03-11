@@ -74,8 +74,18 @@ namespace tern {
     struct timeval intraNonMemEnd;
     double intraNonMemTime;
 
+    struct timeval intraBrDomSt;
+    struct timeval intraBrDomEnd;
+    double intraBrDomTime;
 
+    struct timeval intraBrEvBetSt;
+    struct timeval intraBrEvBetEnd;
+    double intraBrEvBetTime;
 
+    struct timeval intraBrWrBetSt;
+    struct timeval intraBrWrBetEnd;
+    double intraBrWrBetTime;
+    
     
     Stat();
     ~Stat();
