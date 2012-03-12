@@ -179,12 +179,17 @@ void PathSlicer::enforceRacyEdges() {
 
 void PathSlicer::runPathSlicer(void *pathId, set<BranchInst *> &rmBrs,
   set<CallInst *> &rmCalls) {  
+  // Collect states stat.
+  bool isPruned = collectStatesStat(pathId);
+
   // Get trace of current path and do some pre-processing.
   if (!DM_IN(pathId, allPathTraces))
     return;
   BEGINTIME(stat.intraSlicingSt);
   DynInstrVector *trace = allPathTraces[pathId];
   fprintf(stderr, "PathSlicer::runPathSlicer pathId %p, size " SZ "\n", pathId, trace->size());
+  if (isPruned)
+    goto finish;
   if (trace->size() == 0)
     goto finish;
   traceUtil->preProcess(trace);
@@ -236,7 +241,7 @@ void PathSlicer::calStat(set<BranchInst *> &rmBrs, set<CallInst *> &rmCalls) {
   errs() << BAN;
   interSlicer.calStat();
   intraSlicer.calStat(rmBrs, rmCalls);
-  stat.printStat("PathSlicer::calStat TIME");
+  stat.printStat("PathSlicer::calStat");
   stat.printExplored();
   errs() << BAN;
 }
@@ -326,5 +331,16 @@ Instruction *PathSlicer::getLatestInstr(void *pathId) {
 
 void PathSlicer::collectExplored(llvm::Instruction *instr) {
   stat.collectExplored(instr);
+}
+
+bool PathSlicer::collectStatesStat(void *pathId) {
+  assert(pathId);
+  ExecutionState *state = (ExecutionState *)pathId;
+  stat.numStates++;
+  if (state->isPruned) {
+    stat.numPrunedStates++;
+    return true;
+  } else
+    return false;
 }
 

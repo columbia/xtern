@@ -11,6 +11,8 @@ using namespace tern;
 using namespace llvm;
 
 Stat::Stat() {
+  numPrunedStates = 0;
+  numStates = 0;
   interSlicingTime = 0;
   intraSlicingTime = 0;
   intraChkTgtTime = 0;
@@ -38,7 +40,6 @@ void Stat::init(InstrIdMgr *idMgr, CallStackMgr *ctxMgr, FuncSumm *funcSumm) {
 void Stat::printStat(const char *tag) {
   errs() << "\n\n" << tag << ": "
     << "intraSlicingTime: " << intraSlicingTime << ", "
-    
     << "intraChkTgtTime: " << intraChkTgtTime << ", "
     << "intraPhiTime: " << intraPhiTime << ", "
     << "intraBrTime: " << intraBrTime << " ("
@@ -47,6 +48,7 @@ void Stat::printStat(const char *tag) {
     << "intraCallTime: " << intraCallTime << ", "
     << "intraMemTime: " << intraMemTime << ", "
     << "intraNonMemTime: " << intraNonMemTime << ", "
+    << "numPrunedStates/numStates: " << numPrunedStates << "/" << numStates << ", "
     
     // TBD.
     << "\n";

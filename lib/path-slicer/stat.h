@@ -38,6 +38,9 @@ namespace tern {
     void printFileLoc(llvm::raw_ostream &S, const llvm::Instruction *instr);
 
   public:
+    long numPrunedStates;
+    long numStates;
+    
     struct timeval interSlicingSt;
     struct timeval interSlicingEnd;
     double interSlicingTime;
