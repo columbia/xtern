@@ -274,19 +274,21 @@ void PathSlicer::copyTrace(void *newPathId, void *curPathId) {
   tgtMgr.copyTargets(newPathId, curPathId);
 }
 
+/* The assertions in this function indicate we only support one checker at one run. */
 void PathSlicer::recordCheckerResult(void *pathId, Checker::Result globalResult,
     Checker::Result localResult, unsigned numTests) {
-  assert(globalResult == Checker::OK);
-  if (localResult == Checker::IMPORTANT || localResult == Checker::ERROR) {
+  if (globalResult != Checker::OK || localResult != Checker::OK) {
     DynInstrVector *trace = allPathTraces[pathId];
     assert(trace);
     assert(trace->size() > 0);
     DynInstr *dynInstr = trace->back();
-    if (localResult == Checker::IMPORTANT) {
+    if (globalResult == Checker::IMPORTANT || localResult == Checker::IMPORTANT) {
+      assert(globalResult != Checker::ERROR && localResult != Checker::ERROR);
       tgtMgr.markTarget(pathId, dynInstr, TakenFlags::CHECKER_IMPORTANT);
       if (DBG)
         stat.printDynInstr(dynInstr, "PathSlicer::recordCheckerResult Checker::IMPORTANT");
     } else {
+      assert(globalResult != Checker::IMPORTANT && localResult != Checker::IMPORTANT);
       tgtMgr.markTarget(pathId, dynInstr, TakenFlags::CHECKER_ERROR);
       traceUtil->store(numTests+1, outputDir.c_str(), trace);
       if (DBG)
