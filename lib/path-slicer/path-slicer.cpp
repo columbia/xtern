@@ -60,6 +60,7 @@ PathSlicer::PathSlicer(): ModulePass(&ID) {
 }
 
 PathSlicer::~PathSlicer() {
+  stat.printStat("PathSlicer::calStat FINAL");
   if (DBG)
     fprintf(stderr, "PathSlicer::~PathSlicer()\n");
 }
