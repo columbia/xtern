@@ -89,6 +89,7 @@ void KleeTraceUtil::recordPHI(DynInstrVector *trace, klee::KInstruction *kInstr,
   phi->setTid((uchar)state->id);
   phi->setOrigInstrId(idMgr->getOrigInstrId(kInstr->inst));
   trace->push_back(phi);
+  stat->collectExed(phi);
 }
 
 void KleeTraceUtil::recordBr(DynInstrVector *trace, klee::KInstruction *kInstr,
@@ -102,6 +103,7 @@ void KleeTraceUtil::recordBr(DynInstrVector *trace, klee::KInstruction *kInstr,
   if (!Util::isUniCondBr(instr))
     br->setBrCondition(eval(kInstr, 0, *state).value);  // The condition can be either symbolic or concrete. 
   trace->push_back(br);
+  stat->collectExed(br);
 }
 
 void KleeTraceUtil::recordRet(DynInstrVector *trace, klee::KInstruction *kInstr,
@@ -111,6 +113,7 @@ void KleeTraceUtil::recordRet(DynInstrVector *trace, klee::KInstruction *kInstr,
   ret->setTid((uchar)state->id);
   ret->setOrigInstrId(idMgr->getOrigInstrId(kInstr->inst));
   trace->push_back(ret);
+  stat->collectExed(ret);
 }
 
 void KleeTraceUtil::recordCall(DynInstrVector *trace, klee::KInstruction *kInstr,
@@ -121,6 +124,7 @@ void KleeTraceUtil::recordCall(DynInstrVector *trace, klee::KInstruction *kInstr
   call->setOrigInstrId(idMgr->getOrigInstrId(kInstr->inst));
   call->setCalledFunc(f);
   trace->push_back(call);
+  stat->collectExed(call);
 }
 
 void KleeTraceUtil::recordNonMem(DynInstrVector *trace, KInstruction *kInstr,
@@ -129,7 +133,8 @@ void KleeTraceUtil::recordNonMem(DynInstrVector *trace, KInstruction *kInstr,
   instr->setIndex(trace->size());
   instr->setTid((uchar)state->id);
   instr->setOrigInstrId(idMgr->getOrigInstrId(kInstr->inst));
-  trace->push_back(instr);  
+  trace->push_back(instr);
+  stat->collectExed(instr);
 }
 
 void KleeTraceUtil::recordLoad(DynInstrVector *trace, KInstruction *kInstr,
@@ -139,7 +144,8 @@ void KleeTraceUtil::recordLoad(DynInstrVector *trace, KInstruction *kInstr,
   load->setTid((uchar)state->id);
   load->setOrigInstrId(idMgr->getOrigInstrId(kInstr->inst));
   load->setAddr(eval(kInstr, 0, *state).value);
-  trace->push_back(load);    
+  trace->push_back(load);
+  stat->collectExed(load);
 }
 
 void KleeTraceUtil::recordStore(DynInstrVector *trace, KInstruction *kInstr,
@@ -149,7 +155,8 @@ void KleeTraceUtil::recordStore(DynInstrVector *trace, KInstruction *kInstr,
   store->setTid((uchar)state->id);
   store->setOrigInstrId(idMgr->getOrigInstrId(kInstr->inst));
   store->setAddr(eval(kInstr, 1, *state).value);
-  trace->push_back(store);      
+  trace->push_back(store);    
+  stat->collectExed(store);
 }
 
 /* Borrowed from the Executor.cpp in klee. */
@@ -239,9 +246,6 @@ void KleeTraceUtil::preProcess(DynInstrVector *trace) {
     // (6) Update per-tid callstack. This must happen after (3), which calls getCallOfRet().
     if (Util::isCall(instr) || Util::isRet(instr))
       ctxMgr->updateCallStack(dynInstr);
-
-    // (7) Update stat of executed instructions.
-    stat->collectExed(dynInstr);
 
     if (DBG)
       stat->printDynInstr(dynInstr, __func__, true);

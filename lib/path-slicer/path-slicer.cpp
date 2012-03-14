@@ -310,7 +310,7 @@ bool PathSlicer::getStartRecord(void *instr) {
     KInstruction *kInstr = (KInstruction *)instr;
     if (cfgMgr.getFirstInstr() == kInstr->inst) {
       startRecord = true;
-      //SERRS << stat.printInstr(kInstr->inst, "PathSlicer::getStartRecord") << "\n";
+      SERRS << "PathSlicer::getStartRecord: " << stat.printInstr(kInstr->inst) << "\n";
       return true;
     }
   }
