@@ -93,6 +93,9 @@ namespace tern {
 
     /* Collect KLEE execution states stat, if a state is pruned, it returns true and we can skip slicing. */
     bool collectStatesStat(void *pathId);
+
+    /* Filter out instructions before the first instruction in main(), such as C++ ctor and klee_range(). */
+    bool getStartRecord(void *instr);
     
   public:
         static char ID;
@@ -133,8 +136,8 @@ namespace tern {
     /* Collect path exploration stats. */
     void collectExplored(llvm::Instruction *instr);
 
-    /* Filter out instructions before the first instruction in main(), such as C++ ctor and klee_range(). */
-    bool getStartRecord(void *instr);
+    bool isInternalFunction(llvm::Function *f);
+
   };
 }
 

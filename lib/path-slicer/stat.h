@@ -22,6 +22,7 @@ namespace tern {
     CallStackMgr *ctxMgr;
     FuncSumm *funcSumm;
     llvm::DenseMap<const llvm::Instruction *, llvm::raw_string_ostream * > buf;
+    llvm::Module *origModule;
 
     /* The set of static instructions and executed instructions in a module. */
     llvm::DenseSet<const llvm::Instruction *> staticInstrs;
@@ -115,6 +116,8 @@ namespace tern {
     /* Utility for explored path frequency. */
     void collectExplored(llvm::Instruction *instr);
     void printExplored();
+
+    void printModule(std::string outputDir);
   };
 }
 

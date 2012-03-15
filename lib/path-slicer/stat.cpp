@@ -107,6 +107,7 @@ void Stat::printDynInstr(raw_ostream &S, DynInstr *dynInstr, const char *tag, bo
 }
 
 void Stat::collectStaticInstrs(llvm::Module &M) {
+  this->origModule = &M;
   for (Module::iterator f = M.begin(); f != M.end(); ++f)
     for (Function::iterator b = f->begin(), be = f->end(); b != be; ++b)
       for (BasicBlock::iterator i = b->begin(), ie = b->end(); i != ie; ++i) {
@@ -180,4 +181,39 @@ void Stat::printExplored() {
     << ", EXTERNAL: " << numExternal << ")" << "\n";
 }
 
+void Stat::printModule(std::string outputDir) {
+  if (!DBG)
+    return;
+  static const char *moduleFile = "module.stat";
+  static const char *instrSep = "        ";
+  static const char *coveredTag = "[COVERED]";
+  
+  char path[BUF_SIZE];
+  memset(path, 0, BUF_SIZE);
+  snprintf(path, BUF_SIZE, "%s/%s", outputDir.c_str(), moduleFile);
+  std::string ErrorInfo;
+  raw_fd_ostream OS(path, ErrorInfo, raw_fd_ostream::F_Append);
+  
+  for (Module::iterator f = origModule->begin(); f != origModule->end(); ++f) {
+    OS << "\nFunction: " << f->getNameStr() << "(...) {\n";
+    for (Function::iterator b = f->begin(), be = f->end(); b != be; ++b) {
+      OS << "BB: " << b->getNameStr() << ":\n";
+      for (BasicBlock::iterator i = b->begin(), ie = b->end(); i != ie; ++i) {
+        if (Util::isIntrinsicCall(i)) // Ignore intrinsic calls.
+          continue;
+        if (idMgr->getOrigInstrId(i) != -1) {
+          OS << printInstr(i) << instrSep;
+          if (DM_IN(i, exedStaticInstrs))
+            OS << coveredTag;
+          OS << "\n";
+        }
+      }
+      OS << "\n";
+    }
+    OS << "}\n\n";
+  }
+
+  OS.flush();
+  OS.close();
+}
 

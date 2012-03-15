@@ -60,6 +60,7 @@ PathSlicer::PathSlicer(): ModulePass(&ID) {
 }
 
 PathSlicer::~PathSlicer() {
+  stat.printModule(this->outputDir);
   stat.printStat("PathSlicer::calStat FINAL");
   if (DBG)
     fprintf(stderr, "PathSlicer::~PathSlicer()\n");
@@ -343,5 +344,10 @@ bool PathSlicer::collectStatesStat(void *pathId) {
     return true;
   } else
     return false;
+}
+
+bool PathSlicer::isInternalFunction(llvm::Function *f) {
+  assert(f);
+  return funcSumm.isInternalFunction(f);
 }
 
