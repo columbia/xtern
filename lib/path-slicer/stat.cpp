@@ -220,9 +220,9 @@ void Stat::printModule(std::string outputDir) {
       if (!DBG) {
         BasicBlock::iterator i = b->begin();
         if (DM_IN(i, exedStaticInstrs))
-          OS << coveredTag << "\n";
+          OS << "  " << coveredTag << "\n";
         else
-          OS << uncoveredTag << "\n";
+          OS << "  " << uncoveredTag << "\n";
       }
       OS << "\n";
     }
