@@ -60,8 +60,8 @@ const char *Stat::printInstr(const llvm::Instruction *instr, bool withFileLoc) {
   } else {
     std::string *str = new std::string;
     llvm::raw_string_ostream *newStream = new llvm::raw_string_ostream(*str);
-    if (withFileLoc)
-      printFileLoc(*newStream, instr);
+    //if (withFileLoc)
+      //printFileLoc(*newStream, instr);
     (*newStream) << "F: " << Util::getFunction(instr)->getNameStr()
       << ": BB: " << Util::getBasicBlock(instr)->getNameStr() << ": ";
     instr->print(*newStream);
@@ -195,6 +195,8 @@ void Stat::printModule(std::string outputDir) {
   raw_fd_ostream OS(path, ErrorInfo, raw_fd_ostream::F_Append);
   
   for (Module::iterator f = origModule->begin(); f != origModule->end(); ++f) {
+    if (!funcSumm->isInternalFunction(f))
+      continue;
     OS << "\nFunction: " << f->getNameStr() << "(...) {\n";
     for (Function::iterator b = f->begin(), be = f->end(); b != be; ++b) {
       OS << "BB: " << b->getNameStr() << ":\n";
