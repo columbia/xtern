@@ -182,11 +182,10 @@ void Stat::printExplored() {
 }
 
 void Stat::printModule(std::string outputDir) {
-  if (!DBG)
-    return;
   static const char *moduleFile = "module.stat";
   static const char *instrSep = "        ";
   static const char *coveredTag = "[COVERED]";
+  static const char *uncoveredTag = "[UN-COVERED]";
   
   char path[BUF_SIZE];
   memset(path, 0, BUF_SIZE);
@@ -207,13 +206,23 @@ void Stat::printModule(std::string outputDir) {
           continue;
         if (idMgr->getOrigInstrId(i) != -1) {
           numInstrs++;
-          OS << printInstr(i) << instrSep;
+          if (DBG)
+            OS << printInstr(i) << instrSep;
           if (DM_IN(i, exedStaticInstrs)) {
             numCoveredInstrs++;
-            OS << coveredTag;
+            if (DBG)
+              OS << coveredTag;
           }
-          OS << "\n";
+          if (DBG)
+            OS << "\n";
         }
+      }
+      if (!DBG) {
+        BasicBlock::iterator i = b->begin();
+        if (DM_IN(i, exedStaticInstrs))
+          OS << coveredTag << "\n";
+        else
+          OS << uncoveredTag << "\n";
       }
       OS << "\n";
     }
