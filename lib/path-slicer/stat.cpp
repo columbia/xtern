@@ -197,6 +197,8 @@ void Stat::printModule(std::string outputDir) {
   for (Module::iterator f = origModule->begin(); f != origModule->end(); ++f) {
     if (!funcSumm->isInternalFunction(f))
       continue;
+    unsigned numInstrs = 0;
+    unsigned numCoveredInstrs = 0;
     OS << "\nFunction: " << f->getNameStr() << "(...) {\n";
     for (Function::iterator b = f->begin(), be = f->end(); b != be; ++b) {
       OS << "BB: " << b->getNameStr() << ":\n";
@@ -204,15 +206,19 @@ void Stat::printModule(std::string outputDir) {
         if (Util::isIntrinsicCall(i)) // Ignore intrinsic calls.
           continue;
         if (idMgr->getOrigInstrId(i) != -1) {
+          numInstrs++;
           OS << printInstr(i) << instrSep;
-          if (DM_IN(i, exedStaticInstrs))
+          if (DM_IN(i, exedStaticInstrs)) {
+            numCoveredInstrs++;
             OS << coveredTag;
+          }
           OS << "\n";
         }
       }
       OS << "\n";
     }
-    OS << "}\n\n";
+    OS << "} " << f->getNameStr() << " " << coveredTag 
+      << " " << numCoveredInstrs << "/" << numInstrs << "\n\n";
   }
 
   OS.flush();
