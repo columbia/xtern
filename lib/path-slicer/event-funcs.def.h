@@ -25,7 +25,6 @@ DEF(fprintf,        FileOp,              int,               FILE * stream, const
 DEF(fread,                    FileOp,         size_t,                void * ptr, size_t size, size_t count, FILE * stream )
 DEF(fread_unlocked,                    FileOp,         size_t,                void * ptr, size_t size, size_t count, FILE * stream )
 
-
 //size_t fwrite ( const void * ptr, size_t size, size_t count, FILE * stream );
 DEF(fwrite,               FileOp,               size_t,                  const void * ptr, size_t size, size_t count, FILE * stream )
 DEF(fwrite_unlocked,               FileOp,               size_t,                  const void * ptr, size_t size, size_t count, FILE * stream )
@@ -43,6 +42,20 @@ DEF(fileno_unlocked,         FileOp,             int,              FILE *stream)
 
 //int rename(const char *old, const char *new);
 DEF(rename,             FileOp,                int,          const char *old, const char *new)
+
+//int ferror ( FILE * stream );
+DEF(ferror,                 FileOp,                 int,              FILE * stream )
+DEF(ferror_unlocked,      FileOp,              int,             FILE * stream )
+
+//int open(const char *path, int oflag, ... );
+DEF(open,           FileOp,                             int,         const char *path, int oflag, ... )
+
+//int open64(const char *pathname, int oflag,...);
+DEF(open64,       FileOp,                             int,          const char *path, int oflag, ... )
+
+//int close(int fd);
+DEF(close,                    FileOp,               int,     int fd)
+
 
 
 
