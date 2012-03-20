@@ -44,6 +44,8 @@ namespace tern {
     const klee::Cell& eval(klee::KInstruction *ki, unsigned index, 
       klee::ThreadState &state) const;
 
+    void storeBr(unsigned testCaseId, const char *outputDir, DynInstrVector *trace);
+
   public:
     KleeTraceUtil();
     ~KleeTraceUtil();

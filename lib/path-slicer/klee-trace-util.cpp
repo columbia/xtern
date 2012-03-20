@@ -49,6 +49,33 @@ void KleeTraceUtil::store(unsigned testCaseId, const char *outputDir, DynInstrVe
     stat->printDynInstr(OS, trace->at(i), "", true);
   OS.flush();
   OS.close();
+
+  storeBr(testCaseId, outputDir, trace);
+}
+
+void KleeTraceUtil::storeBr(unsigned testCaseId, const char *outputDir, DynInstrVector *trace) {
+  const static char *DSYM_TAG = "DIRECT_SYM";
+  char path[BUF_SIZE];
+  memset(path, 0, BUF_SIZE);
+  /* This format string had better be the same as the one in getTestFilename() 
+  in main.cpp in klee so that the trace and err files are "ls" closed to each other. */
+  snprintf(path, BUF_SIZE, "%s/test%06d.trace.br", outputDir, (int)testCaseId);
+  fprintf(stderr, "Path %s\n", path);
+  std::string ErrorInfo;
+  raw_fd_ostream OS(path, ErrorInfo, raw_fd_ostream::F_Append);
+  bool newBr = false;
+  for (size_t i = 0; i < trace->size(); i++) {
+    DynInstr *dynInstr = trace->at(i);
+    Instruction *instr = idMgr->getOrigInstr(dynInstr);
+    if (!Util::isPHI(instr) && newBr) {
+      OS << DSYM_TAG <<"-BR: INSTR-ID: " << dynInstr->getOrigInstrId() << "\n";
+      newBr = false;
+    }
+    if (Util::isBr(instr))
+      newBr = true;
+  }
+  OS.flush();
+  OS.close();
 }
 
 void KleeTraceUtil::record(DynInstrVector *trace, void *instr, void *state, void *f) {
