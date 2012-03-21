@@ -104,8 +104,7 @@ bool AliasMgr::mayAlias(DynOprd *dynOprd1, DynOprd *dynOprd2) {
     /* TBD: NOT SURE ABOUT THE NEW CALL CONTEXT OF ADV ALIAS.
         There could be multiple simplified calling context with respected to 
         each orig calling context, and multiple simplified instructions with 
-        respected to each original instruction.
-    */
+        respected to each original instruction. */
     assert(false);
   }
 
