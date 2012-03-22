@@ -19,6 +19,8 @@
 using namespace std;
 using namespace tern;
 
+bool compute_signature = 0;
+
 struct op_t 
 {
   record_t rec;
@@ -85,6 +87,12 @@ int getdir (string dir, vector<string> &files)
 
 bool compare_by_turn( const op_t &x, const op_t &y)
 {
+  if (x.rec.turn == y.rec.turn)
+  {
+    if (x.pid != y.pid)
+      return x.pid < y.pid;
+    return x.rec.tid > y.rec.tid;
+  }
   return x.rec.turn < y.rec.turn;
 }
 
@@ -233,6 +241,7 @@ void build_create_hb(vector<op_t> &ops, vector<vector<int> > &hb_arrow)
     case syncfunc::pthread_create:
     {
       tid_pair child = make_pair(ops[i].pid, ops[i].get_int64(0));
+//      cerr << "create (" << child.first << ", " << child.second << ")" << endl;
       assert(create_op.find(child)  == create_op.end());
       create_op[child] = i;
       break;
@@ -240,6 +249,7 @@ void build_create_hb(vector<op_t> &ops, vector<vector<int> > &hb_arrow)
     case syncfunc::pthread_join:
     {
       tid_pair child = make_pair(ops[i].pid, ops[i].get_int64(0));
+//      cerr << "join (" << child.first << ", " << child.second << ")" << endl;
       assert(end_op.find(child)  != end_op.end());
       hb_arrow[i].push_back(end_op[child]);
       end_op.erase(child);
@@ -248,6 +258,7 @@ void build_create_hb(vector<op_t> &ops, vector<vector<int> > &hb_arrow)
     case syncfunc::tern_thread_end:
     {
       tid_pair me = make_pair(ops[i].pid, ops[i].get_int64(0));
+//      cerr << "end (" << me.first << ", " << me.second << ")" << endl;
       assert(end_op.find(me) == end_op.end());
       end_op[me] = i;
       break;
@@ -255,9 +266,10 @@ void build_create_hb(vector<op_t> &ops, vector<vector<int> > &hb_arrow)
     case syncfunc::tern_thread_begin:
     {
       tid_pair me = make_pair(ops[i].pid, ops[i].get_int64(0));
+//      cerr << "begin (" << me.first << ", " << me.second << ")" << endl;
       if (main_thread.find(ops[i].pid) != main_thread.end())
       {
-        assert(create_op.find(me) != create_op.end());
+        //assert(create_op.find(me) != create_op.end());
         hb_arrow[i].push_back(create_op[me]);
         create_op.erase(me);
       } else
@@ -558,7 +570,7 @@ void build_sem_hb(vector<op_t> &ops, vector<vector<int> > &hb_arrow)
   }
 }
 
-#define OUF stderr
+#define OUF stdout
 #include "printer.xx"
 #undef OUF
   struct timerec
@@ -691,7 +703,10 @@ void analyze(vector<op_t> &ops)
   build_mutex_hb(ops, hb_arrow);
   build_sem_hb(ops, hb_arrow);
 
-  print_trace(ops, hb_arrow);
+  if (!compute_signature)
+    print_trace(ops, hb_arrow);
+  else
+    print_signature(ops, hb_arrow);
 }
 
 int main(int argc, char *argv[])
@@ -752,11 +767,17 @@ int main(int argc, char *argv[])
       printf("process %d: detected %d threads\n", it->first, (int) it->second.size());
 
     for (int i = 1; i < argc; ++i)
+    {
       if (!strcmp(argv[i], "-t"))
       {
         analyze_time(ops);
         return 0;
       }
+      if (!strcmp(argv[i], "-c"))
+      {
+        compute_signature = 1;
+      }
+    }
 
     analyze(ops);
 

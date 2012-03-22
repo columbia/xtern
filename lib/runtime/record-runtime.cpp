@@ -49,6 +49,7 @@
 #include <fstream>
 #include <map>
 #include <sys/types.h>
+#include <sys/stat.h>
 
 // FIXME: these should be in tern/config.h
 #if !defined(_POSIX_C_SOURCE) || (_POSIX_C_SOURCE<199309L)
@@ -204,20 +205,25 @@ void RecorderRT<RecordSerializer>::idle_sleep(void) {
 }
 
 #define BLOCK_TIMER_START \
-  timespec app_time = update_time(); \
-  _S::block(); \
-  timespec sched_block_time = update_time();
+  timespec app_time, sched_block_time, syscall_time; \
+  if (options::schedule_network) { \
+    app_time = update_time(); \
+    _S::block(); \
+    sched_block_time = update_time(); \
+  }
 
 #define BLOCK_TIMER_END(syncop, ...) \
   int backup_errno = errno; \
-  timespec syscall_time = update_time(); \
-  _S::wakeup(); \
-  timespec sched_wakeup_time = update_time(); \
-  timespec sched_time = { \
-    sched_wakeup_time.tv_sec + sched_block_time.tv_sec, \
-    sched_wakeup_time.tv_nsec + sched_block_time.tv_nsec \
-    }; \
-  Logger::the->logSync(ins, (syncop), _S::getTurnCount(), app_time, syscall_time, sched_time, true, __VA_ARGS__); \
+  if (options::schedule_network) { \
+    syscall_time = update_time(); \
+    _S::wakeup(); \
+    timespec sched_wakeup_time = update_time(); \
+    timespec sched_time = { \
+      sched_wakeup_time.tv_sec + sched_block_time.tv_sec, \
+      sched_wakeup_time.tv_nsec + sched_block_time.tv_nsec \
+      }; \
+    Logger::the->logSync(ins, (syncop), _S::getTurnCount(), app_time, syscall_time, sched_time, true, __VA_ARGS__); \
+  } \
   errno = backup_errno; 
 
 #define SCHED_TIMER_START \
@@ -1311,6 +1317,20 @@ ssize_t RecorderRT<_S>::__recvmsg(unsigned ins, int &error, int sockfd, struct m
 template <typename _S>
 ssize_t RecorderRT<_S>::__read(unsigned ins, int &error, int fd, void *buf, size_t count)
 {
+  bool ignore = false;
+  if (options::RR_ignore_rw_regular_file)
+  {
+    struct stat st;
+    fstat(fd, &st);
+//    printf("st.st_mode = %x\n", (unsigned) st.st_mode);
+//    printf("st.st_mode & S_IFMT = %x\n", (unsigned) (st.st_mode & S_IFMT));
+//    printf("S_IFSOCK = %x\n", (unsigned) S_IFSOCK);
+    if (S_IFREG == (st.st_mode & S_IFMT))
+      ignore = true;
+  }
+  if (ignore)
+    return Runtime::__read(ins, error, fd, buf, count);
+
   BLOCK_TIMER_START;
   ssize_t ret = Runtime::__read(ins, error, fd, buf, count);
   uint64_t sig = hash((char*)buf, count); 
@@ -1321,6 +1341,18 @@ ssize_t RecorderRT<_S>::__read(unsigned ins, int &error, int fd, void *buf, size
 template <typename _S>
 ssize_t RecorderRT<_S>::__write(unsigned ins, int &error, int fd, const void *buf, size_t count)
 {
+  bool ignore = false;
+  if (options::RR_ignore_rw_regular_file)
+  {
+    struct stat st;
+    fstat(fd, &st);
+    if (S_IFREG == (st.st_mode & S_IFMT))
+      ignore = true;
+  }
+
+  if (ignore)
+    return Runtime::__write(ins, error, fd, buf, count);
+
   if (options::schedule_write)
   {
     BLOCK_TIMER_START;

@@ -13,6 +13,61 @@ void print_item(const char *st, int len = 20)
   fprintf(OUF, "%s", string((len - l + 1) / 2, ' ').c_str());
 }
 
+bool is_sched_op(unsigned op)
+{
+  switch (op) {
+  case (syncfunc::pthread_create):
+  case (syncfunc::pthread_join):
+  case (syncfunc::pthread_cancel):
+  case (syncfunc::pthread_exit):
+  case (syncfunc::pthread_mutex_init):
+  case (syncfunc::pthread_mutex_lock):
+  case (syncfunc::pthread_mutex_unlock):
+  case (syncfunc::pthread_mutex_trylock):
+  case (syncfunc::pthread_mutex_timedlock):
+  case (syncfunc::pthread_mutex_destroy):
+  // case (syncfunc::pthread_cond_init):
+  case (syncfunc::pthread_cond_wait):
+  case (syncfunc::pthread_cond_timedwait):
+  case (syncfunc::pthread_cond_broadcast):
+  case (syncfunc::pthread_cond_signal):
+  // case (syncfunc::pthread_cond_destroy):
+  case (syncfunc::pthread_barrier_init):
+  case (syncfunc::pthread_barrier_wait):
+  case (syncfunc::pthread_barrier_destroy):
+  // case (syncfunc::sem_init):
+  case (syncfunc::sem_post):
+  case (syncfunc::sem_wait):
+  case (syncfunc::sem_trywait):
+  case (syncfunc::sem_timedwait):
+    return true;
+  default:
+    return false;
+  }
+}
+
+#define hashit(x) sig = sig * 1000003 + (sig >> 40) + (x)
+
+void print_signature(vector<op_t> &ops, vector<vector<int> > &hb_arrow)
+{
+  uint64_t sig = 0;
+  int n = ops.size();
+  for (int i = 0; i < n; ++i)
+  {
+    if (!is_sched_op(ops[i].rec.op)) continue;
+
+    hashit(ops[i].tid * 100);
+    fprintf(OUF, "%d: pid = %d, tid = %d, turn = %d\n", 
+      i, ops[i].pid, ops[i].rec.tid, ops[i].rec.turn);
+    continue;
+    hashit(ops[i].rec.op * 100000);
+    vector<int> &prefix = hb_arrow[i];
+    for (vector<int>::iterator it = prefix.begin(); it != prefix.end(); ++it)
+      hashit(*it);
+  }
+  fprintf(OUF, "signature: %lx\n", sig);
+}
+
 void print_trace(vector<op_t> &ops, vector<vector<int> > &hb_arrow)
 {
   int n = ops.size();
