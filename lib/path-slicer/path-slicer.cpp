@@ -216,7 +216,7 @@ void PathSlicer::runPathSlicer(void *pathId, set<BranchInst *> &rmBrs,
     /* (3) Init slicing sub modules. This function will also clean live set and 
       slice set in the intra-thread slicer. */
     intraSlicer.init((ExecutionState *)pathId, &oprdSumm, &funcSumm,
-      &aliasMgr, &idMgr, &cfgMgr, &stat, &ctxMgr, trace, startIndex);
+      &aliasMgr, &idMgr, &cfgMgr, &ctxMgr, &stat, trace, startIndex);
 
     // If it is in testing mode, take the last instruction in trace as test target.
     if (INTRA_SLICING_FOR_TEST)
