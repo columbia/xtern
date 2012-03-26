@@ -403,11 +403,11 @@ bool IntraSlicer::postDominate(DynInstr *dynPostInstr, DynBrInstr *dynPrevInstr)
   bool result = cfgMgr->postDominate(prevInstr, postInstr);
 
   if (Util::getFunction(prevInstr) != Util::getFunction(postInstr)) {
-    errs() << "IntraSlicer::postDominate PREV: " << stat->printInstr(prevInstr) << "\n";
-    errs() << "IntraSlicer::postDominate POST: " << stat->printInstr(postInstr) << "\n";
+    stat->printDynInst(dynPrevInstr, "IntraSlicer::postDominate PREV");
+    stat->printDynInst(dynPostInstr, "IntraSlicer::postDominate POST");
     fprintf(stderr, "Please examine the trace to make sure whether prev and \
       post instructions are within the same function\n");
-    dump("IntraSlicer::postDominate");
+    dump("IntraSlicer::postDominate function mismatch");
     exit(1);
   }
 
@@ -427,7 +427,11 @@ void IntraSlicer::removeRange(DynRetInstr *dynRetInstr) {
   assert(call);
   /* Directly sets the current slicing index to be the previous one of the call instr. */
   curIndex = call->getIndex() - 1;
-  assert(!empty()); 
+  assert(!empty());
+  if (DBG) {
+    stat->printDynInstr(dynRetInstr, "IntraSlicer::removeRange dynRetInstr");
+    stat->printDynInstr(call, "IntraSlicer::removeRange call");
+  }
 }
 
 void IntraSlicer::addMemAddrEqConstr(DynMemInstr *loadInstr,
