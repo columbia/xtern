@@ -403,8 +403,8 @@ bool IntraSlicer::postDominate(DynInstr *dynPostInstr, DynBrInstr *dynPrevInstr)
   bool result = cfgMgr->postDominate(prevInstr, postInstr);
 
   if (Util::getFunction(prevInstr) != Util::getFunction(postInstr)) {
-    stat->printDynInst(dynPrevInstr, "IntraSlicer::postDominate PREV");
-    stat->printDynInst(dynPostInstr, "IntraSlicer::postDominate POST");
+    stat->printDynInstr(dynPrevInstr, "IntraSlicer::postDominate PREV");
+    stat->printDynInstr(dynPostInstr, "IntraSlicer::postDominate POST");
     fprintf(stderr, "Please examine the trace to make sure whether prev and \
       post instructions are within the same function\n");
     dump("IntraSlicer::postDominate function mismatch");
