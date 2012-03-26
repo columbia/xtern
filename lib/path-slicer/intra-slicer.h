@@ -20,6 +20,7 @@
 #include "cfg-mgr.h"
 #include "func-summ.h"
 #include "oprd-summ.h"
+#include "callstack-mgr.h"
 
 namespace tern {
   /* Note:
@@ -37,6 +38,7 @@ namespace tern {
     InstrIdMgr *idMgr;
     AliasMgr *aliasMgr;
     CfgMgr *cfgMgr;
+    CallStackMgr *ctxMgr;
     const DynInstrVector *trace;
     size_t curIndex;
 
@@ -80,7 +82,7 @@ namespace tern {
     IntraSlicer();
     ~IntraSlicer();
     void init(klee::ExecutionState *state, OprdSumm *oprdSumm, FuncSumm *funcSumm,
-      AliasMgr *aliasMgr, InstrIdMgr *idMgr, CfgMgr *cfgMgr, Stat *stat,
+      AliasMgr *aliasMgr, InstrIdMgr *idMgr, CfgMgr *cfgMgr, CallStackMgr *ctxMgr, Stat *stat,
       const DynInstrVector *trace, size_t startIndex);
 
     /* The function to run the intra-thread slicing. */

@@ -74,7 +74,7 @@ DynInstr *IntraSlicer::delTraceTail(uchar tid) {
 }
 
 void IntraSlicer::init(ExecutionState *state, OprdSumm *oprdSumm, FuncSumm *funcSumm,
-      AliasMgr *aliasMgr, InstrIdMgr *idMgr, CfgMgr *cfgMgr, Stat *stat,
+      AliasMgr *aliasMgr, InstrIdMgr *idMgr, CfgMgr *cfgMgr, CallStackMgr *ctxMgr, Stat *stat,
       const DynInstrVector *trace, size_t startIndex) {
   this->state = state;
   this->oprdSumm = oprdSumm;
@@ -82,6 +82,7 @@ void IntraSlicer::init(ExecutionState *state, OprdSumm *oprdSumm, FuncSumm *func
   this->aliasMgr = aliasMgr;
   this->idMgr = idMgr;
   this->cfgMgr = cfgMgr;
+  this->ctxMgr = ctxMgr;
   this->stat = stat;
   this->trace = trace;
   curIndex = startIndex;
@@ -254,8 +255,13 @@ void IntraSlicer::handleRet(DynInstr *dynInstr) {
   taken by handle*Target(); if it is not target, it should not be taken, but we 
   still should not remove the instruction range for current funcion, we just 
   simply return. */
-  if (!retInstr->getDynCallInstr())
+  if (DBG)
+    stat->printDynInstr(retInstr, "IntraSlicer::handleRet");
+  if (!retInstr->getDynCallInstr()) {
+    if (DBG)
+      stat->printDynInstr(retInstr, "IntraSlicer::handleRet NO CALL, MUT AT MAIN()");
     return;
+  }
   BEGINTIME(stat->intraRetSt);
   if (retRegOverWritten(retInstr)) {
     delRegOverWritten(retInstr);
@@ -417,8 +423,10 @@ bool IntraSlicer::postDominate(DynInstr *dynPostInstr, DynBrInstr *dynPrevInstr)
 void IntraSlicer::dump(const char *tag) {
   assert(trace);
   errs() << BAN;
-  for (size_t i = 0; i < trace->size(); i++)
+  for (size_t i = 0; i < trace->size(); i++) {
     stat->printDynInstr(trace->at(i), tag);
+    ctxMgr->printCallStack(trace->at(i));
+  }
   errs() << BAN;
 }
 
