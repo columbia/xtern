@@ -99,7 +99,6 @@ void TxtLogger::logSync(unsigned insid, unsigned short sync,
     // log nothing, mostly for sched point. 
   case syncfunc::accept:
   case syncfunc::accept4:
-  case syncfunc::connect:
   case syncfunc::recv:
   case syncfunc::recvfrom:
   case syncfunc::recvmsg:
@@ -125,8 +124,8 @@ void TxtLogger::logSync(unsigned insid, unsigned short sync,
   case syncfunc::sleep:
   case syncfunc::usleep:
   case syncfunc::nanosleep:
-  case syncfunc::read:
-  case syncfunc::write:
+  case syncfunc::pthread_rwlock_rdlock:
+  case syncfunc::pthread_rwlock_wrlock:
     ouf << hex << " 0x" << va_arg(args, uint64_t) << dec;
     break;
 
@@ -138,6 +137,10 @@ void TxtLogger::logSync(unsigned insid, unsigned short sync,
   case syncfunc::pthread_mutex_trylock:
   case syncfunc::sem_trywait:
   case syncfunc::sem_timedwait:
+  case syncfunc::connect: //  fd, ret
+  case syncfunc::pthread_rwlock_tryrdlock:  //  rwlock, ret
+  case syncfunc::pthread_rwlock_trywrlock:
+  case syncfunc::pthread_rwlock_unlock:  //  rwlock, ret
     {
       //  notice "<<" operator is expanded from right to left.
       uint64_t a = va_arg(args, uint64_t);
@@ -151,6 +154,8 @@ void TxtLogger::logSync(unsigned insid, unsigned short sync,
     break;
     // log three sync vars
   case syncfunc::pthread_cond_timedwait:
+  case syncfunc::read:  //  sig, fd, ret
+  case syncfunc::write: //  sig, fd, ret
     {
       //  notice "<<" operator is explained from right to left.
       uint64_t a = va_arg(args, uint64_t);
