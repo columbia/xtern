@@ -60,8 +60,10 @@ PathSlicer::PathSlicer(): ModulePass(&ID) {
 }
 
 PathSlicer::~PathSlicer() {
+  ENDTIME(stat.pathSlicerTime, stat.pathSlicerSt, stat.pathSlicerEnd);
   stat.printModule(this->outputDir);
   stat.printStat("PathSlicer::calStat FINAL");
+  stat.printFinalFormatResults();
   if (DBG)
     fprintf(stderr, "PathSlicer::~PathSlicer()\n");
 }
@@ -73,6 +75,7 @@ void PathSlicer::getAnalysisUsage(AnalysisUsage &AU) const {
 
 bool PathSlicer::runOnModule(Module &M) {
   init(M);
+  BEGINTIME(stat.pathSlicerSt);
   return false;
 }
 
@@ -349,5 +352,10 @@ bool PathSlicer::collectStatesStat(void *pathId) {
 bool PathSlicer::isInternalFunction(llvm::Function *f) {
   assert(f);
   return funcSumm.isInternalFunction(f);
+}
+
+void PathSlicer::getKLEEFinalStat(unsigned numInstrs, unsigned numCoveredInstrs,
+      unsigned numUnCoveredInstrs, unsigned numPaths, unsigned numTests) {
+  stat.getKLEEFinalStat(numInstrs, numCoveredInstrs, numUnCoveredInstrs, numPaths, numTests);
 }
 

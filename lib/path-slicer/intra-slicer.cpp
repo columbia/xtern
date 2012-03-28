@@ -255,13 +255,8 @@ void IntraSlicer::handleRet(DynInstr *dynInstr) {
   taken by handle*Target(); if it is not target, it should not be taken, but we 
   still should not remove the instruction range for current funcion, we just 
   simply return. */
-  if (DBG)
-    stat->printDynInstr(retInstr, "IntraSlicer::handleRet");
-  if (!retInstr->getDynCallInstr()) {
-    if (DBG)
-      stat->printDynInstr(retInstr, "IntraSlicer::handleRet NO CALL, MUT AT MAIN()");
+  if (!retInstr->getDynCallInstr())
     return;
-  }
   BEGINTIME(stat->intraRetSt);
   if (retRegOverWritten(retInstr)) {
     delRegOverWritten(retInstr);
@@ -425,7 +420,7 @@ void IntraSlicer::dump(const char *tag) {
   errs() << BAN;
   for (size_t i = 0; i < trace->size(); i++) {
     stat->printDynInstr(trace->at(i), tag);
-    ctxMgr->printCallStack(trace->at(i));
+    ctxMgr->printCallStack(trace->at(i));  // Print ctx of each instr so we can easily see which one is wrong.
   }
   errs() << BAN;
 }

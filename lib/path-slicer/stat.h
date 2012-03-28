@@ -41,6 +41,15 @@ namespace tern {
   public:
     long numPrunedStates;
     long numStates;
+    unsigned numInstrs;
+    unsigned numCoveredInstrs;
+    unsigned numUnCoveredInstrs;
+    unsigned numPaths;
+    unsigned numTests;
+
+    struct timeval pathSlicerSt;
+    struct timeval pathSlicerEnd;
+    double pathSlicerTime;
     
     struct timeval interSlicingSt;
     struct timeval interSlicingEnd;
@@ -118,6 +127,11 @@ namespace tern {
     void printExplored();
 
     void printModule(std::string outputDir);
+
+    void getKLEEFinalStat(unsigned numInstrs, unsigned numCoveredInstrs,
+      unsigned numUnCoveredInstrs, unsigned numPaths, unsigned numTests);
+
+    void printFinalFormatResults();
   };
 }
 

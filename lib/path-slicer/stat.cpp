@@ -8,11 +8,25 @@ using namespace tern;
 
 #include "llvm/Metadata.h"
 #include "llvm/Analysis/DebugInfo.h"
+#include "llvm/Support/CommandLine.h"
 using namespace llvm;
+
+#include "klee/Statistic.h"
+using namespace klee;
+
+extern cl::opt<std::string> UseOneChecker;
+extern cl::opt<bool> MarkPrunedOnly;
 
 Stat::Stat() {
   numPrunedStates = 0;
   numStates = 0;
+  numInstrs = 0;
+  numCoveredInstrs = 0;
+  numUnCoveredInstrs = 0;
+  numPaths = 0;
+  numTests = 0;
+
+  pathSlicerTime = 0;
   interSlicingTime = 0;
   intraSlicingTime = 0;
   intraChkTgtTime = 0;
@@ -48,10 +62,34 @@ void Stat::printStat(const char *tag) {
     << "intraCallTime: " << intraCallTime << ", "
     << "intraMemTime: " << intraMemTime << ", "
     << "intraNonMemTime: " << intraNonMemTime << ", "
+    << "StaticExed/Static Instrs: " << sizeOfExedStaticInstrs() << "/" << sizeOfStaticInstrs() << ", "
     << "numPrunedStates/numStates: " << numPrunedStates << "/" << numStates << ", "
     
     // TBD.
     << "\n";
+}
+
+void Stat::printFinalFormatResults() {
+  // Print FORMAT.
+  std::string pruneType = MarkPrunedOnly?"Mark":"Real";
+  errs() << "\n\n" << "FORMAT ITEMS:    "
+    << "|| Checker || Max time (sec) || Path slicer time || Mark/Real prune || Pruned states || All states (paths) || "
+    << "|| # Tests || # Instructions exed || # Static Instructions exed || # Static instructions ||\n"
+    
+    << "FORMAT RESULTS:    "
+    << "| " << UseOneChecker
+    << " | " << pathSlicerTime
+    << " | " << intraSlicingTime
+    << " | " << pruneType
+    << " | " << numPrunedStates 
+    << " | " << numStates
+    << " | " << numTests
+    << " | " << numInstrs
+    << " | " << sizeOfExedStaticInstrs()
+    << " | " << sizeOfStaticInstrs()
+    // TBA.
+    << " |\n\n\n";
+
 }
 
 const char *Stat::printInstr(const llvm::Instruction *instr, bool withFileLoc) {
@@ -94,6 +132,13 @@ void Stat::printDynInstr(raw_ostream &S, DynInstr *dynInstr, const char *tag, bo
     << ": TAKEN: " << dynInstr->takenReason()
     << ": INSTR: " << printInstr(instr, withFileLoc)
     << "\n\n";
+
+  // Print the recorded real called function (including resolving of function pointers).
+  if (DBG && Util::isCall(instr)) {
+    DynCallInstr *call = (DynCallInstr *)dynInstr;
+    Function *f = call->getCalledFunc();
+    fprintf(stderr, "REAL CALLED: %s\n\n", f?f->getNameStr().c_str():"NIL");
+  }
 
   // Print the condition if this is a symbolic branch.
   if (DBG && Util::isBr(instr) && !Util::isUniCondBr(instr)) {
@@ -233,4 +278,14 @@ void Stat::printModule(std::string outputDir) {
   OS.flush();
   OS.close();
 }
+
+void Stat::getKLEEFinalStat(unsigned numInstrs, unsigned numCoveredInstrs,
+      unsigned numUnCoveredInstrs, unsigned numPaths, unsigned numTests) {
+  this->numInstrs = numInstrs;
+  this->numCoveredInstrs = numCoveredInstrs;
+  this->numUnCoveredInstrs = numUnCoveredInstrs;
+  this->numPaths = numPaths;
+  this->numTests = numTests;
+}
+
 

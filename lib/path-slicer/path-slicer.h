@@ -11,7 +11,7 @@
 #include "llvm/ADT/DenseSet.h"
 
 #include "klee/Internal/Module/KModule.h"
-#include "klee/Checker.h"
+#include "klee/Checker.h" 
 
 #include "stat.h"
 #include "dyn-instrs.h"
@@ -137,6 +137,9 @@ namespace tern {
     void collectExplored(llvm::Instruction *instr);
 
     bool isInternalFunction(llvm::Function *f);
+
+    void getKLEEFinalStat(unsigned numInstrs, unsigned numCoveredInstrs,
+      unsigned numUnCoveredInstrs, unsigned numPaths, unsigned numTests);
 
   };
 }
