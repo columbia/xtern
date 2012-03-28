@@ -20,14 +20,14 @@ void* thread_func(void*) {
   struct timeval now;
 
   gettimeofday(&now, NULL);
-  ts.tv_sec = now.tv_sec;
-  ts.tv_nsec = now.tv_usec * 1000 + 1000;
+  ts.tv_sec = now.tv_sec + 1;
+  ts.tv_nsec = now.tv_usec * 1000; 
   ret = sem_timedwait(&sem, &ts);
   assert(ret == -1 && errno == ETIMEDOUT);
 
   gettimeofday(&now, NULL);
-  ts.tv_sec = now.tv_sec;
-  ts.tv_nsec = now.tv_usec * 1000 + 1000;
+  ts.tv_sec = now.tv_sec + 1;
+  ts.tv_nsec = now.tv_usec * 1000;
   ret = pthread_mutex_timedlock(&mu, &ts);
   assert(ret == ETIMEDOUT);
 }
@@ -47,8 +47,8 @@ int main(int argc, char *argv[], char *env[]) {
   assert(!ret && "pthread_create() failed!");
 
   gettimeofday(&now, NULL);
-  ts.tv_sec = now.tv_sec;
-  ts.tv_nsec = now.tv_usec * 1000 + 1000;
+  ts.tv_sec = now.tv_sec + 1;
+  ts.tv_nsec = now.tv_usec * 1000;
   ret = sem_timedwait(&sem, &ts);
   assert(ret == -1 && errno == ETIMEDOUT);
 
@@ -56,8 +56,8 @@ int main(int argc, char *argv[], char *env[]) {
   assert(!ret && "pthread_join() failed!");
 
   gettimeofday(&now, NULL);
-  ts.tv_sec = now.tv_sec;
-  ts.tv_nsec = now.tv_usec * 1000 + 1000;
+  ts.tv_sec = now.tv_sec + 1;
+  ts.tv_nsec = now.tv_usec * 1000;
   ret = pthread_cond_timedwait(&cv, &mu, &ts);
   assert(ret == ETIMEDOUT);
 

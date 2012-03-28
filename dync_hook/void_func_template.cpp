@@ -1,41 +1,41 @@
 #ifndef __SPEC_HOOK_FUNC_NAME
 extern "C" void FUNC_NAME(ARGS_WITH_NAME){
-	typedef int (*orig_func_type)(ARGS_WITHOUT_NAME);
+  typedef int (*orig_func_type)(ARGS_WITHOUT_NAME);
 
-	orig_func_type orig_func;
+  orig_func_type orig_func;
 
-	void * handle;
+  void * handle;
 
-	if(!(handle=dlopen("LIB_PATH", RTLD_LAZY))) {
-		perror("dlopen");
-		puts("here dlopen");
-		abort();
-	}
+  if(!(handle=dlopen("LIB_PATH", RTLD_LAZY))) {
+    perror("dlopen");
+    puts("here dlopen");
+    abort();
+  }
 
-	orig_func = (orig_func_type) dlsym(handle, "FUNC_NAME");
+  orig_func = (orig_func_type) dlsym(handle, "FUNC_NAME");
 
-	if(dlerror()) {
-		perror("dlsym");
-		puts("here dlsym");
-		abort();
-	}
+  if(dlerror()) {
+    perror("dlsym");
+    puts("here dlsym");
+    abort();
+  }
 
-	dlclose(handle);
+  dlclose(handle);
 
 #ifdef __USE_TERN_RUNTIME
-	if (Space::isApp()) {
+  if (Space::isApp() && options::DMT) {
 
 #ifdef __NEED_INPUT_INSID
     Space::enterSys();
     void *eip = options::dync_geteip ? get_eip() : 0;
     Space::exitSys();
-  	tern_FUNC_NAME((unsigned)(uint64_t) eip, ARGS_ONLY_NAME);
+    tern_FUNC_NAME((unsigned)(uint64_t) eip, ARGS_ONLY_NAME);
 #else
-  	tern_FUNC_NAME(ARGS_ONLY_NAME);
+    tern_FUNC_NAME(ARGS_ONLY_NAME);
 #endif
 
 #ifdef PRINT_DEBUG
-	  fprintf(stdout, "%04d: FUNC_NAME is hooked.\n", (int) pthread_self());
+    fprintf(stdout, "%04d: FUNC_NAME is hooked.\n", (int) pthread_self());
 #endif
     return; 
   }

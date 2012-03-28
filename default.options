@@ -29,7 +29,7 @@ log_type = txt
 output_dir = ./out 
 
 # if turned on, RR scheduler will skip thread which is blocked.
-RR_skip_zombie = 1
+RR_skip_zombie = 0
 
 # define the timeout threshold to skip as zombie thread in RR, in ms
 RR_skip_threshold = 100
@@ -37,5 +37,33 @@ RR_skip_threshold = 100
 # if turned on, dynamic library will obtain eip
 dync_geteip = 1
 
+# if turned on, dynamic library will use signature of the whole stack instead of eip, DEPTH_LIMIT=20
+whole_stack_eip_signature = 0
+
 # if turned on, record-schedule will do sleep, otherwise simple bypass sleep.
-exec_sleep = 1
+exec_sleep = 0
+
+# if turned on, mutex_init will automatically set attr to PTHREAD_MUTEX_ERRORCHECK
+set_mutex_errorcheck = 0
+
+# this number set the conversion between physical time and turn number. 
+# notice better to set this number of a 32-bit integer.
+nanosec_per_turn = 100000
+
+# this number set the length of idle_thread sleep loop, in microsecond
+idle_sleep_length = 1000
+
+# whether we schedule on output operations like write, send and so. 
+schedule_write = 0
+
+# determine whether we start an idle thread to avoid empty runq 
+launch_idle_thread = 1
+
+# whether or not to use pthread_tryjoin_np to join a thread
+pthread_tryjoin = 1
+
+# whether to turn on epoch approach, only supported for RR scheduler.
+epoch_mode = 0
+
+# set epoch length, measured in microsecond = 1e-6 second
+epoch_length = 100

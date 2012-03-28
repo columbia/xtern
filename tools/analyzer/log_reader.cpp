@@ -98,6 +98,9 @@ void txt_log_reader::next()
     if (*it == "insid") is >> hex >> cur_rec.insid >> dec; else 
     if (*it == "turn") is >> cur_rec.turn; else
     if (*it == "tid") is >> cur_rec.tid; else
+    if (*it == "app_time")      is >> cur_rec.app_time; else
+    if (*it == "syscall_time")  is >> cur_rec.syscall_time; else
+    if (*it == "sched_time")    is >> cur_rec.sched_time; else
     if (true) is >> st; //  bypass this arg
   }
 }
@@ -129,9 +132,9 @@ int64_t txt_log_reader::get_int64(int idx)
 {
   if (idx >= 0 && idx < (int) cur_rec.args.size())
   {
-    int64_t x;
-    sscanf(cur_rec.args[idx].c_str(), "%lx", &x);
-    return x; 
+    unsigned long long x;
+    sscanf(cur_rec.args[idx].c_str(), "%llx", &x);
+    return (int64_t) x; 
   }
   else
     return -1;
@@ -141,9 +144,9 @@ int txt_log_reader::get_int(int idx)
 {
   if (idx >= 0 && idx < (int) cur_rec.args.size())
   {
-    int x;
+    unsigned x;
     sscanf(cur_rec.args[idx].c_str(), "%x", &x);
-    return x; 
+    return (int)x; 
   }
   else
     return -1;

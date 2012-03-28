@@ -35,6 +35,9 @@ void TxtLogger::print_header()
   ouf << "op"
     << ' ' << "insid"
     << ' ' << "turn"
+    << ' ' << "app_time"
+    << ' ' << "syscall_time"
+    << ' ' << "sched_time"
     << ' ' << "tid"
     << ' ' << "args"
     << endl;
@@ -43,13 +46,13 @@ void TxtLogger::print_header()
 void TxtLogger::logSync(unsigned insid, unsigned short sync,
                         unsigned turn, 
                         timespec time1, 
-                        timespec time2, 
+                        timespec time2, timespec sched_time, 
                         bool after, ...) {
   assert(sync >= syncfunc::first_sync && sync < syncfunc::num_syncs
     && "trying to log unknown synchronization operation!");
 
-  if(!syncfunc::isSync(sync))
-  {
+//  if(!syncfunc::isSync(sync))
+//  {
     if (sync == syncfunc::tern_thread_begin
       || sync == syncfunc::tern_thread_end)    //  for tests, i need to know the thread_mapping
     {
@@ -62,14 +65,17 @@ void TxtLogger::logSync(unsigned insid, unsigned short sync,
           << setfill('0') << setw(9) << time1.tv_nsec
           << " " << dec << time2.tv_sec << ":"
           << setfill('0') << setw(9) << time2.tv_nsec
+          << " " << dec << sched_time.tv_sec << ":"
+          << setfill('0') << setw(9) << sched_time.tv_nsec
           << ' ' << tid
           << hex << " 0x" << va_arg(args, uint64_t) << dec;
       va_end(args);
       ouf << "\n";
       ouf.flush();
+      return;
     }
-    return;
-  }
+//    return;
+//  }
   // YJF: why ignore prog_begin/end and thread_begin/end?
   const char *suffix = "";
   if(NumRecordsForSync(sync) == 2)
@@ -82,13 +88,31 @@ void TxtLogger::logSync(unsigned insid, unsigned short sync,
       << setfill('0') << setw(9) << time1.tv_nsec
       << " " << dec << time2.tv_sec << ":"
       << setfill('0') << setw(9) << time2.tv_nsec
+      << " " << dec << sched_time.tv_sec << ":"
+      << setfill('0') << setw(9) << sched_time.tv_nsec
       << ' ' << tid;
 
   va_list args;
   va_start(args, after);
 
   switch(sync) {
+    // log nothing, mostly for sched point. 
+  case syncfunc::accept:
+  case syncfunc::accept4:
+  case syncfunc::connect:
+  case syncfunc::recv:
+  case syncfunc::recvfrom:
+  case syncfunc::recvmsg:
+  case syncfunc::select:
+  case syncfunc::epoll_wait:
+  case syncfunc::sigwait:
+  case syncfunc::fgets:
+  case syncfunc::fork:
+  case syncfunc::wait:
+    break;
     // log one sync var (common case)
+  case syncfunc::pthread_mutex_init:
+  case syncfunc::pthread_mutex_destroy:
   case syncfunc::pthread_mutex_lock:
   case syncfunc::pthread_mutex_unlock:
   case syncfunc::pthread_barrier_wait:
@@ -98,6 +122,11 @@ void TxtLogger::logSync(unsigned insid, unsigned short sync,
   case syncfunc::sem_wait:
   case syncfunc::sem_post:
   case syncfunc::pthread_join:
+  case syncfunc::sleep:
+  case syncfunc::usleep:
+  case syncfunc::nanosleep:
+  case syncfunc::read:
+  case syncfunc::write:
     ouf << hex << " 0x" << va_arg(args, uint64_t) << dec;
     break;
 
@@ -137,7 +166,8 @@ void TxtLogger::logSync(unsigned insid, unsigned short sync,
     break;
 
   default:
-    assert(0 && "sync not handled");
+    cerr << "sync " << syncfunc::getName(sync) << " is not yet handled!\n";
+    assert(0);
   }
 
   va_end(args);
@@ -293,7 +323,7 @@ void BinLogger::logRet(uint8_t flags, unsigned insid,
 void BinLogger::logSync(unsigned insid, unsigned short sync,
                      unsigned turn, 
                      timespec time1, 
-                     timespec time2, 
+                     timespec time2, timespec sched_time, 
                      bool after, ...) {
   checkAndGrowLogSize();
   assert(sync >= syncfunc::first_sync && sync < syncfunc::num_syncs
@@ -366,7 +396,7 @@ void BinLogger::mapLogTrunk(void) {
 void TestLogger::logSync(unsigned insid, unsigned short sync,
                         unsigned turn, 
                        timespec time1, 
-                       timespec time2, 
+                       timespec time2, timespec sched_time, 
                         bool after, ...) {
   assert(sync >= syncfunc::first_sync && sync < syncfunc::num_syncs
     && "trying to log unknown synchronization operation!");
@@ -380,11 +410,25 @@ void TestLogger::logSync(unsigned insid, unsigned short sync,
       << ' ' << tid;
 
   va_list args;
-  uint64_t a, b, c;
 
   va_start(args, after);
   switch(sync) {
-    // log one arg (common case)
+    // log nothing, mostly for sched point. 
+  case syncfunc::accept:
+  case syncfunc::accept4:
+  case syncfunc::connect:
+  case syncfunc::recv:
+  case syncfunc::recvfrom:
+  case syncfunc::recvmsg:
+  case syncfunc::select:
+  case syncfunc::epoll_wait:
+  case syncfunc::sigwait:
+  case syncfunc::fork:
+  case syncfunc::wait:
+    break;
+    // log one sync var (common case)
+  case syncfunc::pthread_mutex_init:
+  case syncfunc::pthread_mutex_destroy:
   case syncfunc::pthread_mutex_lock:
   case syncfunc::pthread_mutex_unlock:
   case syncfunc::pthread_barrier_wait:
@@ -394,47 +438,64 @@ void TestLogger::logSync(unsigned insid, unsigned short sync,
   case syncfunc::sem_wait:
   case syncfunc::sem_post:
   case syncfunc::pthread_join:
+  case syncfunc::sleep:
+  case syncfunc::usleep:
+  case syncfunc::nanosleep:
+  case syncfunc::read:
+  case syncfunc::write:
   case syncfunc::tern_thread_begin:
   case syncfunc::tern_thread_end:
-    a = va_arg(args, uint64_t);
-    ouf << hex << " 0x" << a << dec;
-    break;
+    {
+      uint64_t a = va_arg(args, uint64_t);
+      ouf << hex << " 0x" << a << dec;
+      break;
+    }
 
-    // log two args
+    // log two sync vars for cond_*wait
+  case syncfunc::pthread_mutex_timedlock:
   case syncfunc::pthread_cond_wait:
   case syncfunc::pthread_barrier_init:
   case syncfunc::pthread_create:
   case syncfunc::pthread_mutex_trylock:
-  case syncfunc::pthread_mutex_timedlock:
   case syncfunc::sem_trywait:
   case syncfunc::sem_timedwait:
-    a = va_arg(args, uint64_t);
-    b = va_arg(args, uint64_t);
+    {
+      //  notice "<<" operator is expanded from right to left.
+      uint64_t a = va_arg(args, uint64_t);
+      uint64_t b = va_arg(args, uint64_t);
+
     ouf << hex
         << " 0x" << a
         << " 0x" << b
         << dec;
+    }
     break;
-
-    // log three args
+    // log three sync vars
   case syncfunc::pthread_cond_timedwait:
-    a = va_arg(args, uint64_t);
-    b = va_arg(args, uint64_t);
-    if(after)
-      c = va_arg(args, uint64_t);
+    {
+      //  notice "<<" operator is explained from right to left.
+      uint64_t a = va_arg(args, uint64_t);
+      uint64_t b = va_arg(args, uint64_t);
+      uint64_t c = va_arg(args, uint64_t);
+
     ouf << hex
         << " 0x" << a
-        << " 0x" << b;
-    if(after)
-      ouf << " 0x" << c;
-    ouf << dec;
+        << " 0x" << b
+        << " 0x" << c
+        << dec;
+    }
     break;
 
   default:
+    cerr << syncfunc::getName(sync) << "\n";
     assert(0 && "sync not handled");
   }
   va_end(args);
   ouf << "\n";
+}
+
+void TestLogger::flush() {
+  ouf.flush();
 }
 
 TestLogger::TestLogger(int thid) {

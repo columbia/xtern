@@ -43,6 +43,7 @@ DEF(sem_timedwait,          Synchronization, int, sem_t *sem, const struct times
 DEF(socket, Synchronization, int, int domain, int type, int protocol)
 DEF(listen, Synchronization, int, int sockfd, int backlog)
 DEF(accept, Synchronization, int, int sockfd, struct sockaddr *cliaddr, socklen_t *addrlen)
+DEF(accept4, Synchronization, int, int sockfd, struct sockaddr *cliaddr, socklen_t *addrlen, int flags)
 DEF(connect, Synchronization, int, int sockfd, const struct sockaddr *serv_addr, socklen_t addrlen)
 //DEF(gethostbyname, Synchronization, struct hostent*, const char *name)
 //DEF(gethostbyaddr, Synchronization, struct hostent*, const void *addr, int len, int type)
@@ -62,8 +63,18 @@ DEF(read, Synchronization, ssize_t, int fd, void *buf, size_t count)
 DEF(write, Synchronization, ssize_t, int fd, const void *buf, size_t count)
 DEF(select, Synchronization, int, int nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds, struct timeval *timeout)
 //DEF(poll, Synchronization, int, struct pollfd *fds, nfds_t nfds, int timeout)
+DEF(fork, Synchronization, pid_t)
+DEF(wait, Synchronization, pid_t, int *status)
 
-// file operations not handled not. 
+//  real time functions
+DEF(time, Synchronization, time_t, time_t *t)
+DEF(clock_getres, Synchronization, int, clockid_t clk_id, struct timespec *res)
+DEF(clock_gettime, Synchronization, int, clockid_t clk_id, struct timespec *tp)
+DEF(clock_settime, Synchronization, int, clockid_t clk_id, const struct timespec *tp)
+DEF(gettimeofday, Synchronization, int, struct timeval *tv, struct timezone *tz)
+DEF(settimeofday, Synchronization, int, const struct timeval *tv, const struct timezone *tz)
+
+// file operations not handled not.
 //DEF(open, Synchronization, int, const char *pathname, int flags)
 //DEF(open, Synchronization, int, const char *pathname, int flags, mode_t mode)
 //DEF(creat, Synchronization, int, const char *pathname, mode_t mode)
@@ -86,6 +97,7 @@ DEF(nanosleep,              BlockingSyscall, int, const struct timespec *req, st
 //socket DEF(select,                 BlockingSyscall, int, int nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds, struct timeval *timeout)
 DEF(epoll_wait,             BlockingSyscall, int, int epfd, struct epoll_event *events, int maxevents, int timeout)
 DEF(sigwait,                BlockingSyscall, int, const sigset_t *set, int *sig)
+DEF(fgets,                  BlockingSyscall, char*, char* s, int size, FILE *stream)
 /* should include sched_yield */
 
 /* We don't consider exit a sync event because our instrumentation code

@@ -3,6 +3,7 @@
 #ifndef __TERN_COMMON_INSTRUTIL_H
 #define __TERN_COMMON_INSTRUTIL_H
 
+#include <stddef.h>
 #include "llvm/Instruction.h"
 #include "llvm/Target/TargetData.h"
 #include "common/IDManager.h"

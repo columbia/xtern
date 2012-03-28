@@ -89,8 +89,10 @@ void SyncInstr::initFuncTypes(Module &M) {
   }
   for(unsigned i=syncfunc::first_sync; i<syncfunc::num_syncs; ++i) {
     if(!syncfunc::isTernAuto(i)) {
-      assert(functypes.find(i) != functypes.end()
-             && "can't find type for sync function!");
+      if(functypes.find(i) == functypes.end()) {
+        errs() << "can't find type for " << syncfunc::getName(i) << "\n";
+        assert(0);
+      }
     }
   }
   delete tmp;

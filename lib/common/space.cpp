@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <stdio.h>
 #include "tern/space.h"
 
 namespace tern{
@@ -6,7 +7,7 @@ namespace Space {
 
 enum {Sys = false, App = true};
 
-static __thread bool current_space= Sys; // always start in Sys space
+static __thread bool current_space = Sys; // always start in Sys space
 
 /// cross from one space to another
 static void cross(void) {

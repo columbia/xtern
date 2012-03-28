@@ -13,9 +13,13 @@
 #include <time.h>
 #include <unistd.h>
 #include <sys/types.h>
+#define _GNU_SOURCE // for accept4
 #include <sys/socket.h>
 #include <signal.h>
 #include <sys/epoll.h>
+#include <stdio.h>
+#include <sys/types.h>
+#include <sys/wait.h>
 
 #include "tern/hooks.h"
 

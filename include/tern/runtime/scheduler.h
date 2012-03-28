@@ -73,7 +73,10 @@ struct TidMap {
   static int self() { return self_tid; }
   static __thread int self_tid;
 
-  TidMap(pthread_t main_th) {
+  TidMap(pthread_t main_th) { init(main_th); }
+
+  /// initialize state
+  void init(pthread_t main_th) {
     nthread = 0;
     // add tid mappings for main thread
     create(main_th);
@@ -82,6 +85,17 @@ struct TidMap {
     // @self(pthread_self()) again to set @self_tid, but this assignment
     // is idempotent, so it doesn't matter
     self(main_th);
+  }
+
+protected:
+
+  /// reset internal state to initial state
+  void reset(pthread_t main_th) {
+    p_t_map.clear();
+    t_p_map.clear();
+    zombies.clear();
+
+    init(main_th);
   }
 
   pthread_to_tern_map p_t_map;
@@ -120,6 +134,9 @@ struct Serializer: public TidMap {
   /// inform the serializer that thread @th just joined; must call with
   /// turn held
   void join(pthread_t th) { TidMap::reap(th); }
+
+  /// child process begins
+  void childForkReturn() { TidMap::reset(pthread_self()); }
 
   /// NOTE: RecordSerializer needs this method to implement
   /// pthread_cond_*wait
@@ -180,6 +197,13 @@ struct Scheduler: public Serializer {
     assert(self() == runq.front());
     TidMap::create(new_th);
     runq.push_back(getTid(new_th));
+  }
+
+  void childForkReturn() {
+    TidMap::reset(pthread_self());
+    waitq.clear();
+    runq.clear();
+    runq.push_back(MainThreadTid);
   }
 
   std::list<int>  runq;

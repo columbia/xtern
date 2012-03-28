@@ -29,6 +29,8 @@ parser.add_argument('-ternruntime', dest='ternruntime', required=True,
                     help='tern x86 runtime')
 parser.add_argument('-ternbcruntime', dest='ternbcruntime', required=True,
                     help='tern bc runtime')
+parser.add_argument('-nondet', dest='nondet', default=False, action='store_true',
+                    help='skip checking of determinism')
 parser.add_argument('-gen', dest='gen', default=False, action='store_true',
                     help='generate expected outputs instead of testing them')
 
@@ -68,6 +70,20 @@ def gen(cmd, prog):
     os.rename(fo.name, fi.name)
     return True
 
+class ptrmap:
+    def __init__(self):
+        self.map = dict()
+        self.num = 0
+    def get(self, k, create=0):
+        if k not in self.map:
+            if not create:
+                return None
+            self.map[k] = 'ptr' + str(self.num)
+            self.num += 1
+        return self.map[k]
+    def rem(self, k):
+        del self.map[k]
+
 def normalize_ptr(kvmap, m):
     k = int(m.group(), 16)
     limit = 10
@@ -75,11 +91,25 @@ def normalize_ptr(kvmap, m):
         return str(k)
     if k == errno.ETIMEDOUT or k == errno.EBUSY:
         return str(k)
-    if k not in kvmap:
-        kvmap[k] = 'ptr' + str(len(kvmap))
-    return str(kvmap[k])
+    return kvmap.get(k, create=1)
 
-curry = lambda func, *args, **kw:\
+def remove_destroyed(kvmap, l):
+    destroy_list = ["pthread_join",
+                    "pthread_mutex_destroy",
+                    "pthread_barrier_destroy",
+                    "pthread_cond_destroy",
+                    "sem_destroy"]
+    for s in destroy_list:
+        if s not in l:
+            continue
+        m = re.search('0x[\dA-Fa-f]+', l)
+        if m == None:
+            continue
+        k = int(m.group(), 16)
+        if kvmap.get(k) != None:
+            kvmap.rem(k)
+
+curry = lambda func, *args, **kw: \
     lambda *p, **n: func(*args + p, **dict(kw.items() + n.items()))
 
 def check_schedule(schedule):
@@ -89,21 +119,22 @@ def check_schedule(schedule):
     # TODO: check that semaphore count is always non-negative
 
 def normalize_schedule(schedule):
-    kvmap = dict()
+    kvmap = ptrmap()
     pat = re.compile('0x[\dA-Fa-f]+')
     fi = open(schedule, 'r')
     fo = open(schedule + '~', 'w')
     for l in fi:
         lo = pat.sub(curry(normalize_ptr, kvmap), l)
+        remove_destroyed(kvmap, l)
         fo.write(lo)
     fo.close()
     fi.close()
     os.rename(fo.name, fi.name)
 
 def check_deterministic(cmd, prog):
-    m = re.search('output_dir=([^\s]+)\s+', cmd)
+    m = re.search('output_dir=([^\s:]+)[\s:]', cmd)
     assert m != None
-    # print 'output directory is %s' % m.group(1)
+    print 'output directory is %s' % m.group(1)
     output_dir = m.group(1)
 
     # generate schedule
@@ -121,7 +152,10 @@ def check_deterministic(cmd, prog):
         os.system(cmd)
         os.system('sort -k 2 -n %s/*.txt > %s' % (output_dir, new_schedule))
         normalize_schedule(new_schedule)
-        assert filecmp.cmp(schedule, new_schedule)
+        if not filecmp.cmp(schedule, new_schedule):
+            print 'schedule %s and %s differ!' % (schedule, new_schedule)
+            os.system('diff %s %s' % (schedule, new_schedule))
+            exit(1)
     return
 
 def run(cmd, map):
@@ -135,7 +169,7 @@ def run(cmd, map):
             cmd = cmd.replace('%'+key, val)
     if args['gen'] and gen(cmd, prog):
         return
-    if cmd.endswith('ScheduleCheck'):
+    if (not args['nondet']) and cmd.endswith('ScheduleCheck'):
         cmd = cmd.split('ScheduleCheck')[0]
         check_deterministic(cmd, prog)
         return
@@ -159,11 +193,14 @@ cmds = '''
 // RUN: llc -o %t2.s %t2-record.bc
 // RUN: %gxx -o %t2 %t2.s %ternruntime -lpthread -lrt
 // test FCFS scheduler
-// RUN: env TERN_OPTIONS=runtime_type=FCFS ./%t2 | FileCheck %s
+// RUN: env TERN_OPTIONS=runtime_type=FCFS:set_mutex_errorcheck=1 ./%t2 | FileCheck %s
 // test RR scheduler
-// : rm -rf %t2.outdir
-// RUN: env TERN_OPTIONS=runtime_type=RR:RR_skip_zombie=0:log_type=test:output_dir=%t2.outdir ./%t2  | FileCheck %s
-// RUN: env TERN_OPTIONS=runtime_type=RR:RR_skip_zombie=0:log_type=test:output_dir=%t2.outdir ./%t2  ScheduleCheck
+// RUN: env TERN_OPTIONS=runtime_type=RR:RR_skip_zombie=0:log_type=test:exec_sleep=0:output_dir=%t2.outdir ./%t2  | FileCheck %s
+// RUN: env TERN_OPTIONS=runtime_type=RR:set_mutex_errorcheck=1:RR_skip_zombie=0:log_type=test:exec_sleep=0:output_dir=%t2.outdir ./%t2  ScheduleCheck
+
+// test SeededRR scheduler
+// RUN: env TERN_OPTIONS=runtime_type=SeededRR:RR_skip_zombie=0:log_type=test:exec_sleep=0:output_dir=%t2.outdir ./%t2  | FileCheck %s
+// RUN: env TERN_OPTIONS=runtime_type=SeededRR:set_mutex_errorcheck=1:RR_skip_zombie=0:log_type=test:exec_sleep=0:output_dir=%t2.outdir ./%t2  ScheduleCheck
 
 // test the LLVM .bc modules
 // XXX: llvm-ld -o %t3 %t2-record.bc %ternbcruntime
@@ -173,9 +210,50 @@ cmds = '''
 // test FCFS scheduler
 // XXX: env TERN_OPTIONS=runtime_type=FCFS ./%t3 | FileCheck %s
 // test RR scheduler
-// : rm -rf %t3.outdir
 // XXX: env TERN_OPTIONS=runtime_type=RR:RR_skip_zombie=0:log_type=test:output_dir=%t3.outdir ./%t3  | FileCheck %s
 // XXX: env TERN_OPTIONS=runtime_type=RR:RR_skip_zombie=0:log_type=test:output_dir=%t3.outdir ./%t3  ScheduleCheck
+
+// test dynamic hooking
+// RUN: %gxx -o %t4 %s -lpthread -lrt
+// test FCFS scheduler
+// NOTE: do not use dync_geteip as the lock used by backtrace() may cause
+// a deadlock
+// RUN: env TERN_OPTIONS=runtime_type=FCFS:set_mutex_errorcheck=1:dync_geteip=0 LD_PRELOAD=$XTERN_ROOT/dync_hook/interpose.so ./%t4 | FileCheck %s
+
+// test RR scheduler
+// RUN: env TERN_OPTIONS=runtime_type=RR:set_mutex_errorcheck=1:dync_geteip=0:RR_skip_zombie=0:log_type=test:exec_sleep=0:output_dir=%t2.outdir LD_PRELOAD=$XTERN_ROOT/dync_hook/interpose.so  ./%t4 | FileCheck %s
+// RUN: env TERN_OPTIONS=runtime_type=RR:set_mutex_errorcheck=1:dync_geteip=0:RR_skip_zombie=0:log_type=test:exec_sleep=0:output_dir=%t2.outdir LD_PRELOAD=$XTERN_ROOT/dync_hook/interpose.so  ./%t4 ScheduleCheck
+
+// test RR scheduler in epoch_mode
+// RUN: env TERN_OPTIONS=runtime_type=RR:set_mutex_errorcheck=1:dync_geteip=0:RR_skip_zombie=0:log_type=test:exec_sleep=0:output_dir=%t2.outdir:nanosec_per_turn=100000:epoch_mode=1:epoch_length=100 LD_PRELOAD=$XTERN_ROOT/dync_hook/interpose.so  ./%t4 | FileCheck %s
+// RUN: env TERN_OPTIONS=runtime_type=RR:set_mutex_errorcheck=1:dync_geteip=0:RR_skip_zombie=0:log_type=test:exec_sleep=0:output_dir=%t2.outdir:nanosec_per_turn=100000:epoch_mode=1:epoch_length=100 LD_PRELOAD=$XTERN_ROOT/dync_hook/interpose.so  ./%t4 ScheduleCheck
+
+// test SeededRR scheduler
+// RUN: env TERN_OPTIONS=runtime_type=SeededRR:set_mutex_errorcheck=1:dync_geteip=0:RR_skip_zombie=0:log_type=test:exec_sleep=0:output_dir=%t2.outdir LD_PRELOAD=$XTERN_ROOT/dync_hook/interpose.so  ./%t4 | FileCheck %s
+// RUN: env TERN_OPTIONS=runtime_type=SeededRR:set_mutex_errorcheck=1:dync_geteip=0:RR_skip_zombie=0:log_type=test:exec_sleep=0:output_dir=%t2.outdir LD_PRELOAD=$XTERN_ROOT/dync_hook/interpose.so  ./%t4 ScheduleCheck
 '''
+
+if os.getenv('test_dync_only') != None :
+  cmds = '''
+// test dynamic hooking
+// RUN: %gxx -o %t4 %s -lpthread -lrt
+// test FCFS scheduler
+// NOTE: do not use dync_geteip as the lock used by backtrace() may cause
+// a deadlock
+// RUN: env TERN_OPTIONS=runtime_type=FCFS:set_mutex_errorcheck=1:dync_geteip=0 LD_PRELOAD=$XTERN_ROOT/dync_hook/interpose.so ./%t4 | FileCheck %s
+
+// test RR scheduler in epoch_mode
+// RUN: env TERN_OPTIONS=runtime_type=RR:set_mutex_errorcheck=1:dync_geteip=0:RR_skip_zombie=0:log_type=test:exec_sleep=0:output_dir=%t2.outdir:nanosec_per_turn=100000:epoch_mode=1:epoch_length=100 LD_PRELOAD=$XTERN_ROOT/dync_hook/interpose.so  ./%t4 | FileCheck %s
+// RUN: env TERN_OPTIONS=runtime_type=RR:set_mutex_errorcheck=1:dync_geteip=0:RR_skip_zombie=0:log_type=test:exec_sleep=0:output_dir=%t2.outdir:nanosec_per_turn=100000:epoch_mode=1:epoch_length=100 LD_PRELOAD=$XTERN_ROOT/dync_hook/interpose.so  ./%t4 ScheduleCheck
+
+// test RR scheduler
+// RUN: env TERN_OPTIONS=runtime_type=RR:set_mutex_errorcheck=1:dync_geteip=0:RR_skip_zombie=0:log_type=test:exec_sleep=0:output_dir=%t2.outdir LD_PRELOAD=$XTERN_ROOT/dync_hook/interpose.so  ./%t4 | FileCheck %s
+// RUN: env TERN_OPTIONS=runtime_type=RR:set_mutex_errorcheck=1:dync_geteip=0:RR_skip_zombie=0:log_type=test:exec_sleep=0:output_dir=%t2.outdir LD_PRELOAD=$XTERN_ROOT/dync_hook/interpose.so  ./%t4 ScheduleCheck
+
+// test SeededRR scheduler
+// RUN: env TERN_OPTIONS=runtime_type=SeededRR:set_mutex_errorcheck=1:dync_geteip=0:RR_skip_zombie=0:log_type=test:exec_sleep=0:output_dir=%t2.outdir LD_PRELOAD=$XTERN_ROOT/dync_hook/interpose.so  ./%t4 | FileCheck %s
+// RUN: env TERN_OPTIONS=runtime_type=SeededRR:set_mutex_errorcheck=1:dync_geteip=0:RR_skip_zombie=0:log_type=test:exec_sleep=0:output_dir=%t2.outdir LD_PRELOAD=$XTERN_ROOT/dync_hook/interpose.so  ./%t4 ScheduleCheck
+'''
+
 for cmd in cmds.splitlines():
     run(cmd, args)

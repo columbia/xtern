@@ -1,4 +1,4 @@
-
+#if 0
 #include <errno.h>
 #include "tern/runtime/record-log.h"
 #include "tern/runtime/record-runtime.h"
@@ -488,6 +488,14 @@ int RRuntime::__accept(unsigned ins, int sockfd, struct sockaddr *cliaddr, sockl
   return ret;
 }
 
+int RRuntime::__accept4(unsigned ins, int sockfd, struct sockaddr *cliaddr, socklen_t *addrlen, int flags)
+{
+  block();
+  int ret = Runtime::__accept4(ins, sockfd, cliaddr, addrlen, flags);
+  wakeup();
+  return ret;
+}
+
 int RRuntime::__connect(unsigned ins, int sockfd, const struct sockaddr *serv_addr, socklen_t addrlen)
 {
   block();
@@ -598,4 +606,4 @@ int RRuntime::__select(unsigned ins, int nfds, fd_set *readfds, fd_set *writefds
 
 
 
-
+#endif

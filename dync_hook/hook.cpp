@@ -1,6 +1,7 @@
 #include <pthread.h>
 #include <stdio.h>
 #include <dlfcn.h>
+#include <errno.h>
 #include <stdlib.h>
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -16,7 +17,7 @@ using namespace tern;
 
 #define __NEED_INPUT_INSID
 #define __USE_TERN_RUNTIME
-#define PRINT_DEBUG
+//#define PRINT_DEBUG
 
 /*
 #ifdef __USE_TERN_RUNTIME
@@ -67,21 +68,33 @@ static void print_stack()
 
 void *get_eip()
 {
-  void *tracePtrs[3];
-  int count = backtrace(tracePtrs, 3);
+  void *tracePtrs[20];
+  int i;
+  uint64_t ret = 0; 
+  int count = backtrace(tracePtrs, 20);
 
-  //std::cout << std::hex << tracePtrs[2] << std::dec << std::endl;
-  //char** funcNames = backtrace_symbols( tracePtrs, count );
-  //printf( "%s\n", funcNames[2] );
-  //printf(stderr, "reteip: %p\n", tracePtrs[1]);
-
-  return tracePtrs[2];  //  this is ret_eip of my caller
+  if (options::whole_stack_eip_signature)
+  {
+    ret = 0;
+    for (i = 0; i < count; ++i)
+      ret = ret * 97 + (uint64_t) tracePtrs[i];
+    return (void*) ret;
+    //std::cout << std::hex << tracePtrs[2] << std::dec << std::endl;
+    //char** funcNames = backtrace_symbols( tracePtrs, count );
+    //printf( "%s\n", funcNames[2] );
+    //printf(stderr, "reteip: %p\n", tracePtrs[1]);
+  } else
+    return tracePtrs[2];  //  this is ret_eip of my caller
 }
 
 #define HOOK_MUTEX_COND
 #define HOOK_BARRIER
 #define HOOK_SEMAPHORE
 #define HOOK_BLOCKING_FUNCS
+
+//  notice we have not implemented tern_fork yet. so the
+//  hooking code is disabled. 
+//#define __SPEC_HOOK_fork
 
 #ifndef HOOK_MUTEX_COND
 #define __SPEC_HOOK_pthread_mutex_init
@@ -112,6 +125,7 @@ void *get_eip()
 #define __SPEC_HOOK_recv
 #define __SPEC_HOOK_connect
 #define __SPEC_HOOK_accept
+#define __SPEC_HOOK_accept4
 #define __SPEC_HOOK_read
 #define __SPEC_HOOK_write
 #define __SPEC_HOOK_sigwait

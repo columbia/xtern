@@ -2,6 +2,7 @@
 // Refactored from Heming's Memoizer code
 
 #include "tern/runtime/record-scheduler.h"
+#include "tern/runtime/clockmanager.h"
 #include <iostream>
 #include <fstream>
 #include <iterator>
@@ -18,7 +19,11 @@ using namespace tern;
 
 #ifdef _DEBUG_RECORDER
 #  define SELFCHECK  dump(cerr); selfcheck()
-#  define dprintf(fmt...) fprintf(stderr, fmt); fflush(stderr);
+#  define dprintf(fmt...) do {                   \
+     fprintf(stderr, "[%d] ", self());            \
+     fprintf(stderr, fmt);                       \
+     fflush(stderr);                             \
+   } while(0)
 #else
 #  define SELFCHECK
 #  define dprintf(fmt...) ;
@@ -26,10 +31,11 @@ using namespace tern;
 
 #if 1
 #define RRSchedulerCV RRScheduler
+extern int idle_done;
 static void *monitor(void *arg)
 {
   RRSchedulerCV * sched = (RRSchedulerCV*) arg;
-  while (true)
+  while (!idle_done)
   {
     usleep(options::RR_skip_threshold * 1000);
     //dprintf( "checking zombie\n");
@@ -432,13 +438,10 @@ void RRSchedulerCV::block()
   fflush(log);
 
   //  like putTurn
-  pthread_mutex_lock(&lock);
   // I'm blocked! Don't push me into the queue!
   //runq.push_back(self());
   next();
   SELFCHECK;
-
-  pthread_mutex_unlock(&lock);
 }
 
 void RRSchedulerCV::wakeup()
@@ -514,19 +517,20 @@ void SeededRRScheduler::setSeed(unsigned seed)
 
 void SeededRRScheduler::reorderRunq(void)
 {
-  if(runq.empty())
-    return;
-
   // find next thread using @rand.  complexity is O(runq.size()), but
   // shouldn't matter much anyway as the number of threads is small
+  assert(!runq.empty());
   int i = rand.rand(runq.size()-1);
+  assert(i >=0 && i < (int)runq.size() && "rand.rand() off bound");
   dprintf("SeededRRScheduler: reorder runq so %d is the front (size %d)\n",
           i, (int)runq.size());
   list<int>::iterator it = runq.begin();
   while(i--) ++it;
   assert(it != runq.end());
-  runq.erase(it);
-  runq.push_front(*it);
+  int tid = *it;
+  assert(tid >=0 && tid < Scheduler::nthread);
+  runq.erase(it); // NOTE: this invalidates iterator @it!
+  runq.push_front(tid);
 }
 
 //@before with turn
@@ -568,12 +572,29 @@ int RRScheduler::fireTimeouts()
   return timedout;
 }
 
+void RRScheduler::check_wakeup()
+{
+  if (wakeup_flag)
+  {
+    pthread_mutex_lock(&wakeup_mutex);
+    //sort(wakeup_queue.begin(), wakeup_queue.end()); //  TODO
+    for (int i = 0; i < (int) wakeup_queue.size(); ++i)
+      runq.push_back(wakeup_queue[i]);
+    wakeup_queue.clear();
+    wakeup_flag = false;
+    pthread_mutex_unlock(&wakeup_mutex);
+  }
+}
+
 //@before with turn
 //@after with turn
 void RRScheduler::next(bool at_thread_end)
 {
   int next_tid;
   runq.pop_front(); // remove self from runq
+
+  check_wakeup();
+
   if(runq.empty()) {
     // if there are any timed-waiting threads, we can fast forward the
     // turn to wake up these threads
@@ -594,6 +615,7 @@ void RRScheduler::next(bool at_thread_end)
     }
   }
 
+  assert(!runq.empty());
   reorderRunq();
 
   next_tid = runq.front();
@@ -613,6 +635,55 @@ void RRScheduler::getTurn()
   sem_wait(&waits[tid].sem);
   dprintf("RRScheduler: %d gets turn\n", self());
   SELFCHECK;
+}
+
+void RRScheduler::block()
+{
+  getTurn();
+  int tid = self();
+  assert(tid>=0 && tid < Scheduler::nthread);
+  assert(tid == runq.front());
+  dprintf("RRScheduler: %d blocks\n", self());
+  next();
+}
+
+void RRScheduler::wakeup()
+{
+  pthread_mutex_lock(&wakeup_mutex);
+  wakeup_queue.push_back(self());
+  wakeup_flag = true;
+  pthread_mutex_unlock(&wakeup_mutex);
+#if 0
+  int tid = -1;
+  dprintf("thread %d, wakeup start at turn %d\n", self(), getTurnCount());
+
+  while (tid < 0)
+  {
+#if 0
+  //  the first solution is to check the list front, which is not thread safe,
+  //  but is efficient.
+  if (runq.size() && !sem_trywait(&waits[runq.front()].sem))
+    tid = runq.front();
+#else
+  //  the second solution is to check all semaphore and grab the global token 
+  //  if possible.
+  int nt = nthread;
+  for (int i = 0; i < nt; ++i)
+    if (!sem_trywait(&waits[i].sem))
+    {
+      tid = i;
+      break;
+    }
+#endif
+  }
+  dprintf("thread %d, wakeup returned at turn %d\n", self(), getTurnCount());
+  
+  dprintf("RRScheduler: %d wakes up by stealing %d's turn\n", self(), tid);
+  runq.push_back(self());
+  timemark[self()] = timer;
+  runq.push_front(self());  //  hack code
+  next();
+#endif
 }
 
 //@before with turn
@@ -686,13 +757,28 @@ void RRScheduler::signal(void *chan, bool all)
   SELFCHECK;
 }
 
+extern int idle_done;
+extern ClockManager clockManager;
+
 //@before with turn
 //@after with turn
 unsigned RRScheduler::incTurnCount(void)
 {
   unsigned ret = turnCount++;
   fireTimeouts();
-  return ret;
+  clockManager.tick();
+  return idle_done ? (1 << 30) : ret;
+}
+
+unsigned RRScheduler::getTurnCount(void)
+{
+  return idle_done ? (1 << 30) : turnCount;
+}
+
+void RRScheduler::childForkReturn() {
+  Parent::childForkReturn();
+  for(int i=0; i<MaxThreads; ++i)
+    waits[i].reset();
 }
 
 
@@ -706,6 +792,10 @@ RRScheduler::RRScheduler()
   runq.push_back(self());
   sem_post(&waits[MainThreadTid].sem);
 
+  wakeup_queue.clear();
+  wakeup_flag = 0;
+  pthread_mutex_init(&wakeup_mutex, NULL);
+
   if (options::RR_skip_zombie)
   {
     timer = 0;
@@ -713,7 +803,6 @@ RRScheduler::RRScheduler()
     pthread_create(&monitor_th, NULL, monitor, this);
   } else
     monitor_th = 0;
-
 }
 
 void RRScheduler::selfcheck(void)

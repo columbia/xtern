@@ -16,6 +16,9 @@
 extern "C" {
 #endif
 
+  //  used by idle thread to skip empty rounds
+  void tern_idle_sleep();
+
   /// hooks that users insert translate into these
   void tern_symbolic_real(unsigned insid, void *addr,
                           int nbytes, const char *symname);
@@ -44,14 +47,13 @@ extern "C" {
 # undef DEFTERNAUTO
 # undef DEFTERNUSER
 # define DEF(func, kind, rettype, args...) \
-    rettype tern_ ## func (unsigned insid, args);
+    rettype tern_ ## func (unsigned insid, ##args);
 # define DEFTERNAUTO(func)
 # define DEFTERNUSER(func)
 # include "syncfuncs.def.h"
 # undef DEF
 # undef DEFTERNAUTO
 # undef DEFTERNUSER
-
 
 #ifdef __cplusplus
 }

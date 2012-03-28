@@ -1,20 +1,23 @@
-all: xternruntime interpose.so 
+all: xternruntime interpose.so
 
-INC_DIRS=-I$(TERN_ROOT)/include/ -I$(XTERN_ROOT)/include/
+BuildMode := Debug
+ENABLE_OPTIMIZED := 0
+
+INC_DIRS=-I$(TERN_ROOT)/include/ -I$(XTERN_ROOT)/include/ -I$(XTERN_ROOT)/obj/include
 #INC_DIRS=-I$(XTERN_ROOT)/include/
 STD_LIBS=-lsupc++ -lpthread -lstdc++ -lrt
 FLAG=`date +%F\#%T`
-#TERN_LIBS=-L$(XTERN_ROOT)/obj/Debug/lib/  -lanalysis -linstr -lruntime
-TERN_LIBS=-L$(XTERN_ROOT)/obj/Debug/lib/ -lruntime -lcommon 
+#TERN_LIBS=-L$(XTERN_ROOT)/obj/$(BuildMode)/lib/  -lanalysis -linstr -lruntime
+TERN_LIBS=-L$(XTERN_ROOT)/obj/$(BuildMode)/lib/ -lruntime -lcommon 
 #TERN_LIBS=
-#TERN_LIBS=$(XTERN_ROOT)/obj/Debug/lib/libruntime.a
+#TERN_LIBS=$(XTERN_ROOT)/obj/$(BuildMode)/lib/libruntime.a
 CFLAGS= -g $(INC_DIRS)
 CXXFLAGS= -g $(INC_DIRS)
 PREFIX=LD_PRELOAD=$(XTERN_ROOT)/dync_hook/interpose.so
 #PREFIX=
 
 xternruntime: 
-	cd $(XTERN_ROOT)/obj && make ENABLE_OPTIMIZED=0
+	cd $(XTERN_ROOT)/obj && make ENABLE_OPTIMIZED=$(ENABLE_OPTIMIZED)
 
 interpose.so: template.cpp spec_hooks.cpp hook.cpp
 	gcc -fPIC -rdynamic hook.cpp $(CFLAGS) -c -o interpose.o
@@ -76,35 +79,31 @@ EXTENT_PORT=$(shell expr $(PORT_BASE) + 1000)
 prepare_yfs:
 	date +%N > PORT.log
 run_yfs: prepare_yfs
-	cp tests/yfs/lock_server .
-	cp tests/yfs/extent_server .
-	cp tests/yfs/yfs_client .
-	cp tests/yfs/rand_tester .
 	rm -rf out
-	#$(PREFIX) ./lock_server $(PORT_BASE) $(PORT_BASE) > lock_server1.log 2>&1 &
-	./lock_server $(PORT_BASE) $(PORT_BASE) > lock_server1.log 2>&1 &
-	sleep 1
-	#$(PREFIX) ./lock_server $(PORT_BASE) $(shell expr $(PORT_BASE) + 10) > lock_server2.log 2>&1 &
-	./lock_server $(PORT_BASE) $(shell expr $(PORT_BASE) + 10) > lock_server2.log 2>&1 &
-	sleep 1
+	$(PREFIX) ./lock_server $(PORT_BASE) $(PORT_BASE) > lock_server1.log 2>&1 &
+	#./lock_server $(PORT_BASE) $(PORT_BASE) > lock_server1.log 2>&1 &
+	sleep 5
+	$(PREFIX) ./lock_server $(PORT_BASE) $(shell expr $(PORT_BASE) + 10) > lock_server2.log 2>&1 &
+	#./lock_server $(PORT_BASE) $(shell expr $(PORT_BASE) + 10) > lock_server2.log 2>&1 &
+	sleep 5
 	#$(PREFIX) ./lock_server $(PORT_BASE) $(shell expr $(PORT_BASE) + 20) > lock_server3.log 2>&1 &
-	./lock_server $(PORT_BASE) $(shell expr $(PORT_BASE) + 20) > lock_server3.log 2>&1 &
+	#./lock_server $(PORT_BASE) $(shell expr $(PORT_BASE) + 20) > lock_server3.log 2>&1 &
 	sleep 1
-	#$(PREFIX) ./extent_server $(EXTENT_PORT) > extent_server.log 2>&1  &
-	./extent_server $(EXTENT_PORT) > extent_server.log 2>&1  &
-	sleep 1
+	$(PREFIX) ./extent_server $(EXTENT_PORT) > extent_server.log 2>&1  &
+	#./extent_server $(EXTENT_PORT) > extent_server.log 2>&1  &
+	sleep 5
 	mkdir -p yfs1
 	$(PREFIX) ./yfs_client yfs1 $(EXTENT_PORT) $(LOCK_PORT) > yfs_client1.log 2>&1  &
 	#./yfs_client yfs1 $(EXTENT_PORT) $(LOCK_PORT) > yfs_client1.log 2>&1  &
-	sleep 20
+	sleep 10
 	mount > tmp1
 	mkdir -p yfs2
 	$(PREFIX) ./yfs_client yfs2 $(EXTENT_PORT) $(LOCK_PORT) > yfs_client2.log 2>&1  &
 	#./yfs_client yfs2 $(EXTENT_PORT) $(LOCK_PORT) > yfs_client2.log 2>&1  &
-	sleep 20
-	#./rand_tester yfs1 yfs2 &
+	sleep 1000
+	#./rand_tester yfs1 yfs2 & 
 	#./rand_tester yfs1  &
-	sleep 10
+	#sleep 5
 	mount > tmp 
 
 fft:

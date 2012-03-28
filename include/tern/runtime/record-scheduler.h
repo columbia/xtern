@@ -13,6 +13,7 @@
 #define __TERN_RECORDER_SCHEDULER_H
 
 #include <list>
+#include <vector>
 #include <errno.h>
 #include <pthread.h>
 #include <iostream>
@@ -93,10 +94,16 @@ struct RRScheduler: public Scheduler {
 
   void getTurn();
   void putTurn(bool at_thread_end = false);
-  int  wait(void *chan, unsigned timeout = FOREVER);
+  int  wait(void *chan, unsigned timeout = Scheduler::FOREVER);
   void signal(void *chan, bool all=false);
 
+  void block(); 
+  void wakeup();
+
   unsigned incTurnCount(void);
+  unsigned getTurnCount(void);
+
+  void childForkReturn();
 
   RRScheduler();
   ~RRScheduler();
@@ -127,6 +134,12 @@ protected:
   pthread_t monitor_th;
   int timer;
   int timemark[MaxThreads];
+
+  //  for wakeup
+  std::vector<int> wakeup_queue;
+  bool wakeup_flag;
+  pthread_mutex_t wakeup_mutex;
+  void check_wakeup();
 };
 
 

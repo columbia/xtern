@@ -1,30 +1,30 @@
 #ifndef __SPEC_HOOK_FUNC_NAME
 extern "C" FUNC_RET_TYPE FUNC_NAME(ARGS_WITH_NAME){
-	typedef int (*orig_func_type)(ARGS_WITHOUT_NAME);
+  typedef FUNC_RET_TYPE (*orig_func_type)(ARGS_WITHOUT_NAME);
 
-	orig_func_type orig_func;
+  orig_func_type orig_func;
 
-	void * handle;
-	FUNC_RET_TYPE ret;
+  void * handle;
+  FUNC_RET_TYPE ret;
 
-	if(!(handle=dlopen("LIB_PATH", RTLD_LAZY))) {
-		perror("dlopen");
-		puts("here dlopen");
-		abort();
-	}
+  if(!(handle=dlopen("LIB_PATH", RTLD_LAZY))) {
+    perror("dlopen");
+    puts("here dlopen");
+    abort();
+  }
 
-	orig_func = (orig_func_type) dlsym(handle, "FUNC_NAME");
+  orig_func = (orig_func_type) dlsym(handle, "FUNC_NAME");
 
-	if(dlerror()) {
-		perror("dlsym");
-		puts("here dlsym");
-		abort();
-	}
+  if(dlerror()) {
+    perror("dlsym");
+    puts("here dlsym");
+    abort();
+  }
 
-	dlclose(handle);
+  dlclose(handle);
 
 #ifdef __USE_TERN_RUNTIME
-  if (Space::isApp()) {
+  if (Space::isApp() && options::DMT) {
 
 #ifdef PRINT_DEBUG
     fprintf(stdout, "%04d: FUNC_NAME is hooked.\n", (int) pthread_self());
@@ -42,20 +42,20 @@ extern "C" FUNC_RET_TYPE FUNC_NAME(ARGS_WITH_NAME){
 #endif
 
 #ifdef PRINT_DEBUG
-	  fprintf(stdout, "%04d: FUNC_NAME returned.\n", (int) pthread_self());
+    fprintf(stdout, "%04d: FUNC_NAME returned.\n", (int) pthread_self());
     fflush(stdout);
 #endif
     return ret;
   } 
-#else
-#ifdef PRINT_DEBUG
-	fprintf(stdout, "%04d: FUNC_NAME is called.\n", (int) pthread_self());
-  fflush(stdout);
 #endif
+
+#ifdef PRINT_DEBUG
+  fprintf(stdout, "%04d: FUNC_NAME is called.\n", (int) pthread_self());
+  fflush(stdout);
 #endif
   ret = orig_func(ARGS_ONLY_NAME);
 
-	return ret;
+  return ret;
 }
 #endif
 

@@ -6,12 +6,16 @@
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
+#include <unistd.h>
 
 #include "tern/config.h"
 #include "tern/hooks.h"
 #include "tern/runtime/runtime.h"
+#include "tern/space.h"
 #include "helper.h"
 #include "tern/options.h"
+
+using namespace tern;
 
 extern "C" {
 
@@ -54,7 +58,42 @@ int __tern_pthread_create(pthread_t *thread,  const pthread_attr_t *attr,
   return ret;
 }
 
+/*
+    This idle thread is created to avoid empty runq.
+    In the implementation with semaphore, there's a global token that must be 
+    held by some threads. In the case that all threads are executing blocking
+    function calls, the global token can be held by nothing. So we create this
+    idle thread to ensure there's at least one thread in the runq to hold the 
+    global token.
+
+    Another solution is to add a flag in schedule showing if it happens that 
+    runq is empty and the global token is held by no one. And recover the global
+    token when some thread comes back to runq from blocking function call. 
+ */
+volatile int idle_done = 0;
+pthread_t idle_th;
+void *idle_thread(void *)
+{
+  while (!idle_done) {
+    //tern_usleep(0xdeadbeef, options::idle_sleep_length);
+    tern_idle_sleep();
+  }
+  return NULL;
+}
+
+static pthread_t main_thread_th;
+static bool prog_began = false; // sanity
+//  SYS -> SYS
+//  must be called by the main thread
 void __tern_prog_begin(void) {
+  assert(!prog_began && "__tern_prog_begin() already called!");
+  prog_began = true;
+
+  //fprintf(stderr, "%08d calls __tern_prog_begin\n", (int) pthread_self());
+  assert(Space::isSys() && "__tern_prog_begin must start in sys space");
+
+  main_thread_th = pthread_self();
+
   options::read_options("local.options");
   options::read_env_options();
   options::print_options("dump.options");
@@ -66,15 +105,44 @@ void __tern_prog_begin(void) {
   atexit(__tern_prog_end);
 
   tern_prog_begin();
+  assert(Space::isSys());
   tern_thread_begin(); // main thread begins
+  assert(Space::isApp());
+
+  //  use tern_pthread_create because we want to fake the eip
+  if (options::launch_idle_thread)
+    tern_pthread_create(0xdead0000, &idle_th, NULL, idle_thread, NULL);
+  assert(Space::isApp() && "__tern_prog_begin must end in app space");
 }
 
+//  SYS -> SYS
 void __tern_prog_end (void) {
+
+  assert(prog_began && "__tern_prog_begin() not called "\
+         "or __tern_prog_end() already called!");
+  prog_began = false;
+
+  //fprintf(stderr, "%08d calls __tern_prog_end\n", (int) pthread_self());
+  assert(Space::isApp() && "__tern_prog_end must start in app space");
+
+  // terminate the idle thread because it references the runtime which we
+  // are about to free
+  idle_done = 1;
+
+  //  use tern_pthread_join because we want to fake the eip
+  if (options::launch_idle_thread)
+  {
+    assert(pthread_self() != idle_th && "idle_th should never reach __tern_prog_end");
+    tern_pthread_join(0xdeadffff, idle_th, NULL);
+  }
+
   tern_thread_end(-1); // main thread ends
+  assert(Space::isSys());
   tern_prog_end();
 
   delete tern::Runtime::the;
   tern::Runtime::the = NULL;
+  assert(Space::isSys() && "__tern_prog_end must end in system space");
 }
 
 void __tern_symbolic(unsigned insid, void *addr,
