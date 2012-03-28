@@ -86,9 +86,11 @@ void Stat::printFinalFormatResults() {
     << " | " << numTests
     << " | " << numInstrs
     << " | " << sizeOfExedStaticInstrs()
-    << " | " << sizeOfStaticInstrs()
+    << " | " << sizeOfStaticInstrs() << " | "
     // TBA.
-    << " |\n\n\n";
+    << "     (" << numCoveredInstrs
+    << "/" << numCoveredInstrs + numUnCoveredInstrs
+    << ")\n\n\n";
 
 }
 
