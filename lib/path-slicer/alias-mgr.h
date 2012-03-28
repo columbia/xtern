@@ -8,7 +8,7 @@
 
 #include "aaol/aaol_client.h"
 #include "bc2bdd/ext/JavaBDD/buddy/src/bdd.h"
-#include "slicer/adv-alias.h"
+//#include "slicer/adv-alias.h"
 //#include "slicer/solve.h"
 
 #include "dyn-instrs.h"
@@ -23,7 +23,7 @@ namespace tern {
     AAOLClient *origAaol;
     AAOLClient *mxAaol;
     AAOLClient *simAaol;
-    slicer::AdvancedAlias *advAlias;
+    //slicer::AdvancedAlias *advAlias;
     InstrIdMgr *idMgr;
     CacheUtil aliasCache; /* Do we need multiple caches for each slicing mode? orig, mx, simple?
                                           Yes. TBD. */

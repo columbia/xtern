@@ -12,7 +12,7 @@ AliasMgr::AliasMgr() {
   origAaol = NULL;
   mxAaol = NULL;
   simAaol = NULL;
-  advAlias = NULL;
+  //advAlias = NULL;
 }
 
 AliasMgr::~AliasMgr() {

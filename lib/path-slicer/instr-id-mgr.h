@@ -1,14 +1,14 @@
 #ifndef __TERN_PATH_SLICER_INSTR_ID_MGR_H
 #define __TERN_PATH_SLICER_INSTR_ID_MGR_H
 
-#include "slicer/clone-info-manager.h"
-#include "slicer/trace.h"
+//#include "slicer/clone-info-manager.h"
+//#include "slicer/trace.h"
 
 #include "common/IDAssigner.h"
 #include "common/util.h"
-#include "slicer/max-slicing.h"
-#include "slicer/region-manager.h"
-#include "slicer/landmark-trace-record.h"
+//#include "slicer/max-slicing.h"
+//#include "slicer/region-manager.h"
+//#include "slicer/landmark-trace-record.h"
 
 #include "llvm/Instruction.h"
 #include "llvm/Module.h"
@@ -44,7 +44,7 @@ namespace tern {
     /* Simplified instruction ID manager. */
     llvm::IDAssigner *simIda;
 
-    vector<LandmarkTraceRecord *> binLTR;
+    //vector<LandmarkTraceRecord *> binLTR;
 
     /* We need both max sliced and simplified map since in some slicing mode we query max sliced bc
       for alias first, and then query the simplified bc. */

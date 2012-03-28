@@ -15,6 +15,8 @@
 #include "llvm/Transforms/Utils/ValueMapper.h"
 #include "llvm/ADT/DenseSet.h"
 
+#include "common/typedefs.h"
+
 namespace tern {
   struct EventMgr: public llvm::ModulePass {	
   public:
