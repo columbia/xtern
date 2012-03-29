@@ -102,6 +102,11 @@ struct RecorderRT: public Runtime, public _Scheduler {
   unsigned int sleep(unsigned insid, int &error, unsigned int seconds);
   int usleep(unsigned insid, int &error, useconds_t usec);
   int nanosleep(unsigned insid, int &error, const struct timespec *req, struct timespec *rem);
+  int __pthread_rwlock_rdlock(unsigned ins, int &error, pthread_rwlock_t *rwlock);
+  int ___pthread_rwlock_wrlock(unsigned ins, int &error, pthread_rwlock_t *rwlock);
+  int ___pthread_rwlock_tryrdlock(unsigned ins, int &error, pthread_rwlock_t *rwlock);
+  int ___pthread_rwlock_trywrlock(unsigned ins, int &error, pthread_rwlock_t *rwlock);
+  int ___pthread_rwlock_unlock(unsigned ins, int &error, pthread_rwlock_t *rwlock);
 
   RecorderRT(): _Scheduler() {
     int ret;
@@ -119,6 +124,7 @@ protected:
   int relTimeToTurn(const struct timespec *reltime);
 
   int pthreadMutexLockHelper(pthread_mutex_t *mutex, unsigned timeout = Scheduler::FOREVER);
+  int pthreadRWLockHelper(pthread_rwlock_t *rwlock, unsigned timeout = Scheduler::FOREVER);
   
   /// for each pthread barrier, track the count of the number and number
   /// of threads arrived at the barrier

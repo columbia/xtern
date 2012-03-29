@@ -10,6 +10,7 @@
 #include <cstdio>
 #include <stdlib.h>
 #include <cstring>
+#include <algorithm>
 #include "tern/options.h"
 
 using namespace std;
@@ -574,10 +575,32 @@ int RRScheduler::fireTimeouts()
 
 void RRScheduler::check_wakeup()
 {
-  if (wakeup_flag)
+  static int check_count = 0;
+  if (wakeup_flag && 
+    (options::wakeup_period <= 0 || 
+#if 0    
+    turnCount >= options::wakeup_period * check_count
+#else
+    !(turnCount % options::wakeup_period)
+#endif
+    ))
   {
+    check_count = turnCount / options::wakeup_period + 1;
     pthread_mutex_lock(&wakeup_mutex);
-    //sort(wakeup_queue.begin(), wakeup_queue.end()); //  TODO
+    printf("check_wakeup works at turn %d\n", turnCount);
+    dprintf("current runq = ");
+    for (list<int>::iterator it = runq.begin(); it != runq.end(); ++it)
+    {
+      dprintf("%d ", *it);
+    }
+    dprintf("\n");
+    dprintf("wakeup queue = ");
+    for (int i = 0; i < (int) wakeup_queue.size(); ++i)
+    {
+      dprintf("%d ", wakeup_queue[i]);
+    }
+    dprintf("\n");
+    sort(wakeup_queue.begin(), wakeup_queue.end()); //  TODO
     for (int i = 0; i < (int) wakeup_queue.size(); ++i)
       runq.push_back(wakeup_queue[i]);
     wakeup_queue.clear();
@@ -650,6 +673,7 @@ void RRScheduler::block()
 void RRScheduler::wakeup()
 {
   pthread_mutex_lock(&wakeup_mutex);
+  dprintf("thread %d wakes up at turn %d\n", self(), turnCount);
   wakeup_queue.push_back(self());
   wakeup_flag = true;
   pthread_mutex_unlock(&wakeup_mutex);
@@ -766,6 +790,7 @@ unsigned RRScheduler::incTurnCount(void)
 {
   unsigned ret = turnCount++;
   fireTimeouts();
+  check_wakeup();
   clockManager.tick();
   return idle_done ? (1 << 30) : ret;
 }

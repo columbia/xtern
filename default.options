@@ -56,6 +56,9 @@ idle_sleep_length = 1000
 # whether we schedule on output operations like write, send and so. 
 schedule_write = 0
 
+# whether we ignore read/write to regular files
+RR_ignore_rw_regular_file = 1
+
 # determine whether we start an idle thread to avoid empty runq 
 launch_idle_thread = 1
 
@@ -67,3 +70,6 @@ epoch_mode = 0
 
 # set epoch length, measured in microsecond = 1e-6 second
 epoch_length = 100
+
+# blocking threads are added back every (x) turns, only works for RR 
+wakeup_period = 100

@@ -7,6 +7,9 @@
 #include <netinet/in.h>
 #include <pthread.h>
 #include <netdb.h> 
+#include <sys/stat.h>
+#include <unistd.h>
+#include <fcntl.h>
 
 void error(const char *msg)
 {
@@ -67,12 +70,23 @@ int main(int argc, char *argv[])
      char buffer[256];
      struct sockaddr_in serv_addr, cli_addr;
      int n;
+     int fd;
      pthread_t th;
     
      if (argc < 2) {
          fprintf(stderr,"ERROR, no port provided\n");
          exit(1);
      }
+
+     fd = open("test_all.txt", O_WRONLY | O_CREAT);
+     //fprintf(fd, "testing writing to a file\n");
+     write(fd, "test\n", 6);
+     close(fd);
+
+     fd = open("test_all.txt", O_RDONLY);
+     read(fd, buffer, 128);
+     close(fd);
+
      sockfd = socket(AF_INET, SOCK_STREAM, 0);
      if (sockfd < 0) 
         error("ERROR opening socket");

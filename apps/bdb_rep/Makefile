@@ -29,13 +29,13 @@ eval: prepare clean
 	mkdir data2
 	mkdir data3
 	./gen-input | $(EXE_PREFIX) $(MY_PREFIX)  ./rep_mgr_master -M -h data1 -l 127.0.0.1:10001 -r 127.0.0.1:10002 -r 127.0.0.1:10003 > rep1.log 2>&1 &
-	sleep 1
-	./gen-input | $(EXE_PREFIX) $(MY_PREFIX)  ./rep_mgr -C -h data2 -l 127.0.0.1:10002 -r 127.0.0.1:10001 -r 127.0.0.1:10003 > rep2.log 2>&1 &
-	sleep 1
-	./gen-input | $(EXE_PREFIX) $(MY_PREFIX)  ./rep_mgr -C -h data3 -l 127.0.0.1:10003 -r 127.0.0.1:10001 -r 127.0.0.1:10002 > rep3.log 2>&1 &
 	sleep 20
+	./gen-input | $(EXE_PREFIX) $(MY_PREFIX)  ./rep_mgr -C -h data2 -l 127.0.0.1:10002 -r 127.0.0.1:10001 -r 127.0.0.1:10003 > rep2.log 2>&1 &
+	sleep 20
+	./gen-input | $(EXE_PREFIX) $(MY_PREFIX)  ./rep_mgr -C -h data3 -l 127.0.0.1:10003 -r 127.0.0.1:10001 -r 127.0.0.1:10002 > rep3.log 2>&1 &
+	sleep 12
 	killall rep_mgr_master
 	ps -a | grep rep_mgr
-	sleep 20
+	sleep 12
 	killall rep_mgr
 	#$(MY_PREFIX) ./rep_mgr_master -M -h data1 -l 127.0.0.1:10001 -r 127.0.0.1:10002 -r 127.0.0.1:10003 2> rep1.log &
