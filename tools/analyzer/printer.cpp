@@ -1,8 +1,31 @@
 #include <deque>
 #include <cstring>
+#include <set>
+#include <map>
+#include <iostream>
+#include <cstdlib>
+#include <algorithm>
+#include <cmath>
+#include <sys/types.h>
+#include <dirent.h>
+#include <errno.h>
+#include <vector>
+#include <cstdio>
+
+#include "tern/syncfuncs.h"
+#include "analyzer.h"
+
 /*
   topology printer
  */
+
+#define OUF stdout
+
+using namespace std;
+using namespace tern;
+
+extern bool po_signature;
+extern bool bdb_spec;
 
 void print_item(const char *st, int len = 20)
 {
@@ -51,7 +74,37 @@ bool is_sched_op(unsigned op)
 void print_signature(vector<op_t> &ops, vector<vector<int> > &hb_arrow)
 {
   uint64_t sig = 0;
+
   int n = ops.size();
+
+#if 0
+  if (bdb_spec)
+  {
+    //  for Berkeley DB, 
+    fprintf(OUF, "signature: %lx\n", sig);
+  }
+#endif
+
+#if 0
+  vector<op_t> *data = &ops;
+  vector<op_t> nops;
+
+  if (po_signature) 
+  {
+    vector<int> remap;
+    remap.resize(n + 1);
+    for (int i = 0; i < n; ++i)
+    {
+      remap[i] = -1;
+      if (!hb_arrow[i].size()) continue;
+      remap[i] = 1;
+      for (unsigned p = 0; p < hb_arrow[i].size(); ++p)
+        remap[hb_arrow[i][p]] = 1;
+    }
+
+  }
+#endif
+
   for (int i = 0; i < n; ++i)
   {
     if (!is_sched_op(ops[i].rec.op)) continue;

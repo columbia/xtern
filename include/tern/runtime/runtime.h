@@ -154,6 +154,17 @@ struct Runtime {
   virtual int usleep(unsigned insid, int &error, useconds_t usec);
   virtual int nanosleep(unsigned insid, int &error, const struct timespec *req, struct timespec *rem);
 
+#define XDEF(op, sync, ret_type, args...)  \
+  virtual ret_type __ ## op(unsigned insid, int &error, args);
+XDEF(pthread_rwlock_rdlock, Synchronization, int, pthread_rwlock_t *rwlock)
+XDEF(pthread_rwlock_tryrdlock, Synchronization, int, pthread_rwlock_t *rwlock)
+XDEF(pthread_rwlock_trywrlock, Synchronization, int, pthread_rwlock_t *rwlock)
+XDEF(pthread_rwlock_wrlock, Synchronization, int, pthread_rwlock_t *rwlock)
+XDEF(pthread_rwlock_unlock, Synchronization, int, pthread_rwlock_t *rwlock)
+XDEF(pthread_rwlock_destroy, Synchronization, int, pthread_rwlock_t *rwlock)
+XDEF(pthread_rwlock_init, Synchronization, int, pthread_rwlock_t * rwlock, const pthread_rwlockattr_t * attr) 
+#undef XDEF
+
   /// Installs a runtime as @the.  A runtime implementation must
   /// re-implement this function to install itself
   static void install();

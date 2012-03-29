@@ -1,9 +1,7 @@
-#include "log_reader.h"
 #include <sys/types.h>
 #include <dirent.h>
 #include <errno.h>
 #include <vector>
-#include <string>
 #include <cstdio>
 #include <iostream>
 #include <cstdlib>
@@ -15,48 +13,15 @@
 #include <map>
 
 #include "tern/syncfuncs.h"
+#include "analyzer.h"
 
 using namespace std;
 using namespace tern;
 
-struct op_t 
-{
-  record_t rec;
-  int pid;
-  int tid;
-  string get_string(int idx)
-  {
-    if (idx >= 0 && idx < (int) rec.args.size())
-      return rec.args[idx];
-    else
-      return "";
-  }
-#define cur_rec rec
-  int get_int(int idx)
-  {
-    if (idx >= 0 && idx < (int) cur_rec.args.size())
-    {
-      unsigned int x;
-      sscanf(cur_rec.args[idx].c_str(), "%x", &x);
-      return x; 
-    }
-    else
-      return -1;
-  }
-
-  int64_t get_int64(int idx)
-  {
-    if (idx >= 0 && idx < (int) cur_rec.args.size())
-    {
-      uint64_t x;
-      sscanf(cur_rec.args[idx].c_str(), "%lx", &x);
-      return x; 
-    }
-    else
-      return -1;
-  }
-#undef cur_rec
-};
+bool compute_signature = 0;
+bool po_signature = false;
+bool bdb_spec = false;
+uint64_t turn_limit = ((uint64_t) 1) << 60;
 
 int64_t get_time(string &st)
 {
@@ -85,6 +50,12 @@ int getdir (string dir, vector<string> &files)
 
 bool compare_by_turn( const op_t &x, const op_t &y)
 {
+  if (x.rec.turn == y.rec.turn)
+  {
+    if (x.pid != y.pid)
+      return x.pid < y.pid;
+    return x.rec.tid > y.rec.tid;
+  }
   return x.rec.turn < y.rec.turn;
 }
 
@@ -95,6 +66,7 @@ void usage(int argc,  char *argv[])
 }
 
 vector<op_t> ops;
+vector<op_t> ops2;
   struct barrier_logic
   {
     barrier_logic(): round(0) {}
@@ -233,6 +205,7 @@ void build_create_hb(vector<op_t> &ops, vector<vector<int> > &hb_arrow)
     case syncfunc::pthread_create:
     {
       tid_pair child = make_pair(ops[i].pid, ops[i].get_int64(0));
+//      cerr << "create (" << child.first << ", " << child.second << ")" << endl;
       assert(create_op.find(child)  == create_op.end());
       create_op[child] = i;
       break;
@@ -240,6 +213,7 @@ void build_create_hb(vector<op_t> &ops, vector<vector<int> > &hb_arrow)
     case syncfunc::pthread_join:
     {
       tid_pair child = make_pair(ops[i].pid, ops[i].get_int64(0));
+//      cerr << "join (" << child.first << ", " << child.second << ")" << endl;
       assert(end_op.find(child)  != end_op.end());
       hb_arrow[i].push_back(end_op[child]);
       end_op.erase(child);
@@ -248,6 +222,7 @@ void build_create_hb(vector<op_t> &ops, vector<vector<int> > &hb_arrow)
     case syncfunc::tern_thread_end:
     {
       tid_pair me = make_pair(ops[i].pid, ops[i].get_int64(0));
+//      cerr << "end (" << me.first << ", " << me.second << ")" << endl;
       assert(end_op.find(me) == end_op.end());
       end_op[me] = i;
       break;
@@ -255,9 +230,10 @@ void build_create_hb(vector<op_t> &ops, vector<vector<int> > &hb_arrow)
     case syncfunc::tern_thread_begin:
     {
       tid_pair me = make_pair(ops[i].pid, ops[i].get_int64(0));
+//      cerr << "begin (" << me.first << ", " << me.second << ")" << endl;
       if (main_thread.find(ops[i].pid) != main_thread.end())
       {
-        assert(create_op.find(me) != create_op.end());
+        //assert(create_op.find(me) != create_op.end());
         hb_arrow[i].push_back(create_op[me]);
         create_op.erase(me);
       } else
@@ -558,9 +534,11 @@ void build_sem_hb(vector<op_t> &ops, vector<vector<int> > &hb_arrow)
   }
 }
 
-#define OUF stderr
-#include "printer.xx"
-#undef OUF
+extern void print_signature(vector<op_t> &ops, vector<vector<int> > &hb_arrow);
+extern void print_trace(vector<op_t> &ops, vector<vector<int> > &hb_arrow);
+extern void comp_log(
+  vector<op_t> &x, const char *dir1, vector<op_t> &y, const char *dir2);
+
   struct timerec
   {
     unsigned op;
@@ -691,15 +669,14 @@ void analyze(vector<op_t> &ops)
   build_mutex_hb(ops, hb_arrow);
   build_sem_hb(ops, hb_arrow);
 
-  print_trace(ops, hb_arrow);
+  if (!compute_signature)
+    print_trace(ops, hb_arrow);
+  else
+    print_signature(ops, hb_arrow);
 }
 
-int main(int argc, char *argv[])
+void readlog(const char *filename, vector<op_t> &ops)
 {
-  if (argc < 2)
-    usage(argc, argv);
-
-  const char *filename = argv[1];
   printf("Reading log files from directory %s\n", filename);
 
   vector<string> files; 
@@ -741,6 +718,11 @@ int main(int argc, char *argv[])
         ops.back().tid = tid;
         ops.back().rec = reader->get_current_rec();
         reader->next();
+        if (ops.back().rec.turn >= turn_limit)
+          ops.pop_back();
+        else
+        if (syncfunc::isBlockingSyscall(ops.back().rec.op))
+          ops.pop_back(); //  turn # of block syscall is non-det
       }
 
       delete reader;
@@ -750,21 +732,75 @@ int main(int argc, char *argv[])
       (int) ops.size(), (int) pid_set.size(), log_file_count);
     for (map<int, set<int> >::iterator it = tid_set.begin(); it != tid_set.end(); ++it)
       printf("process %d: detected %d threads\n", it->first, (int) it->second.size());
-
-    for (int i = 1; i < argc; ++i)
-      if (!strcmp(argv[i], "-t"))
-      {
-        analyze_time(ops);
-        return 0;
-      }
-
-    analyze(ops);
-
   } else
   {
     fprintf(stderr, "cannot open directory %s\n", filename);
     exit(1);
   }
 
-  return 0;
+ 
+}
+
+int main(int argc, char *argv[])
+{
+  if (argc < 2)
+    usage(argc, argv);
+
+  const char *filename = argv[1];
+  const char *dir2 = NULL;
+  bool comp_dir = false;
+  bool anay_time = false;
+
+  for (int i = 1; i < argc; ++i)
+  {
+    if (!strcmp(argv[i], "-t"))
+    {
+      anay_time = true;
+    } else
+    if (!strcmp(argv[i], "-cmp"))
+    {
+      comp_dir = true;
+      ++i;
+      if (i < argc)
+        dir2 = argv[i];
+    } else
+    if (!strcmp(argv[i], "-bdb"))
+    {
+      bdb_spec = true;
+    } else
+    if (!strcmp(argv[i], "-po"))
+    {
+      po_signature = true;
+    } else
+    if (!strcmp(argv[i], "-tlimit"))
+    {
+      ++i; 
+      if (i < argc)
+        turn_limit = atoi(argv[i]);
+      continue;
+    } else
+    if (!strcmp(argv[i], "-c"))
+    {
+      compute_signature = 1;
+    }
+  }
+  
+  readlog(filename, ops);
+
+  if (anay_time)
+  {
+    analyze_time(ops);
+    return 0;
+  }
+
+  if (comp_dir)
+  {
+    readlog(dir2, ops2);
+    comp_log(ops, filename, ops2, dir2);
+    return 0;
+  }
+
+  analyze(ops);
+
+ return 0;
 }

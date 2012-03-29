@@ -709,6 +709,82 @@ int tern_settimeofday(unsigned ins, const struct timeval *tv, const struct timez
   return ret;
 }
 
+int tern_pthread_rwlock_rdlock(unsigned ins, pthread_rwlock_t *rwlock) 
+{ 
+  int error = errno; 
+  int ret; 
+  Space::enterSys(); 
+  ret = Runtime::the->__pthread_rwlock_rdlock(ins, error, rwlock); 
+  Space::exitSys(); 
+  errno = error; 
+  return ret; 
+}
+
+int tern_pthread_rwlock_tryrdlock(unsigned ins, pthread_rwlock_t *rwlock) 
+{ 
+  int error = errno; 
+  int ret; 
+  Space::enterSys(); 
+  ret = Runtime::the->__pthread_rwlock_tryrdlock(ins, error, rwlock); 
+  Space::exitSys(); 
+  errno = error; 
+  return ret; 
+}
+
+int tern_pthread_rwlock_wrlock(unsigned ins, pthread_rwlock_t *rwlock) 
+{ 
+  int error = errno; 
+  int ret; 
+  Space::enterSys(); 
+  ret = Runtime::the->__pthread_rwlock_wrlock(ins, error, rwlock); 
+  Space::exitSys(); 
+  errno = error; 
+  return ret; 
+}
+
+int tern_pthread_rwlock_trywrlock(unsigned ins, pthread_rwlock_t *rwlock) 
+{ 
+  int error = errno; 
+  int ret; 
+  Space::enterSys(); 
+  ret = Runtime::the->__pthread_rwlock_trywrlock(ins, error, rwlock); 
+  Space::exitSys(); 
+  errno = error; 
+  return ret; 
+}
+
+int tern_pthread_rwlock_unlock(unsigned ins, pthread_rwlock_t *rwlock) 
+{ 
+  int error = errno; 
+  int ret; 
+  Space::enterSys(); 
+  ret = Runtime::the->__pthread_rwlock_unlock(ins, error, rwlock); 
+  Space::exitSys(); 
+  errno = error; 
+  return ret; 
+}
+
+int tern_pthread_rwlock_destroy(unsigned ins, pthread_rwlock_t *rwlock) 
+{ 
+  int error = errno; 
+  int ret; 
+  Space::enterSys(); 
+  ret = Runtime::the->__pthread_rwlock_destroy(ins, error, rwlock); 
+  Space::exitSys(); 
+  errno = error; 
+  return ret; 
+}
+
+int tern_pthread_rwlock_init(unsigned ins, pthread_rwlock_t *rwlock, const pthread_rwlockattr_t * attr) 
+{ 
+  int error = errno; 
+  int ret; 
+  Space::enterSys(); 
+  ret = Runtime::the->__pthread_rwlock_init(ins, error, rwlock, attr); 
+  Space::exitSys(); 
+  errno = error; 
+  return ret; 
+}
 
 /*
 int tern_poll(unsigned ins, struct pollfd *fds, nfds_t nfds, int timeout)

@@ -12,3 +12,27 @@ sleep 1
 echo # print quotes
 sleep 1
 echo # print quotes
+sleep 1
+echo "a 1"
+sleep 1
+echo "b 2"
+sleep 1
+echo "c 3"
+sleep 1
+echo # print quotes
+sleep 1
+echo # print quotes
+sleep 1
+echo # print quotes
+sleep 1
+echo "a 5"
+sleep 1
+echo "b 6"
+sleep 1
+echo "c 7"
+sleep 1
+echo # print quotes
+sleep 1
+echo # print quotes
+sleep 1
+echo # print quotes
