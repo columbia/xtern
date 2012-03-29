@@ -153,7 +153,7 @@ void TxtLogger::logSync(unsigned insid, unsigned short sync,
     }
     break;
     // log three sync vars
-  case syncfunc::pthread_cond_timedwait:
+  case syncfunc::pthread_cond_timedwait:  //  cv, mu, ret
   case syncfunc::read:  //  sig, fd, ret
   case syncfunc::write: //  sig, fd, ret
     {

@@ -1466,9 +1466,11 @@ int RecorderRT<_S>::__sigwait(unsigned ins, int &error, const sigset_t *set, int
 template <typename _S>
 char *RecorderRT<_S>::__fgets(unsigned ins, int &error, char *s, int size, FILE *stream)
 {
+  if (options::RR_ignore_rw_regular_file)
+    return Runtime::__fgets(ins, error, s, size, stream);
   BLOCK_TIMER_START;
   char * ret = Runtime::__fgets(ins, error, s, size, stream);
-  BLOCK_TIMER_END(syncfunc::sigwait, (uint64_t) ret);
+  BLOCK_TIMER_END(syncfunc::fgets, (uint64_t) ret);
   return ret;
 }
 
