@@ -430,6 +430,10 @@ void TestLogger::logSync(unsigned insid, unsigned short sync,
   case syncfunc::sigwait:
   case syncfunc::fork:
   case syncfunc::wait:
+  case syncfunc::send:
+  case syncfunc::sendto:
+  case syncfunc::sendmsg:
+
     break;
     // log one sync var (common case)
   case syncfunc::pthread_mutex_init:

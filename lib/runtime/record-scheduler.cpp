@@ -587,7 +587,7 @@ void RRScheduler::check_wakeup()
   {
     check_count = turnCount / options::wakeup_period + 1;
     pthread_mutex_lock(&wakeup_mutex);
-    printf("check_wakeup works at turn %d\n", turnCount);
+    dprintf("check_wakeup works at turn %d\n", turnCount);
     dprintf("current runq = ");
     for (list<int>::iterator it = runq.begin(); it != runq.end(); ++it)
     {

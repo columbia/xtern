@@ -1305,7 +1305,7 @@ int RecorderRT<_S>::__connect(unsigned ins, int &error, int sockfd, const struct
   BLOCK_TIMER_END(syncfunc::connect, (uint64_t) sockfd, (uint64_t) ret);
   return ret;
 }
-
+/*
 static uint64_t hash(const char *buffer, int len)
 {
   uint64_t ret = 0; 
@@ -1313,6 +1313,68 @@ static uint64_t hash(const char *buffer, int len)
     ret = ret * 103 + (int) buffer[i];
   return ret;
 }
+*/
+///
+/// fastHash is from Paul Hsieh's implements.
+/// http://www.azillionmonkeys.com/qed/hash.html
+/// Under  LGPL 2.1 license
+///
+#undef get16bits
+#if (defined(__GNUC__) && defined(__i386__)) || defined(__WATCOMC__) \
+ || defined(_MSC_VER) || defined (__BORLANDC__) || defined (__TURBOC__)
+#define get16bits(d) (*((const uint16_t *) (d)))
+#endif
+
+#if !defined (get16bits)
+#define get16bits(d) ((((uint32_t)(((const uint8_t *)(d))[1])) << 8)\
+            +(uint32_t)(((const uint8_t *)(d))[0]) )
+#endif
+
+uint32_t fastHash (const char * data, int len) {
+uint32_t hash = len, tmp;
+int rem;
+
+  if (len <= 0 || data == NULL) return 0;
+
+  rem = len & 3;
+  len >>= 2;
+
+  /* Main loop */
+  for (;len > 0; len--) {
+    hash += get16bits (data);
+    tmp  = (get16bits (data+2) << 11) ^ hash;
+    hash  = (hash << 16) ^ tmp;
+    data += 2*sizeof (uint16_t);
+    hash += hash >> 11;
+  }
+
+  /* Handle end cases */
+  switch (rem) {
+    case 3: hash += get16bits (data);
+        hash ^= hash << 16;
+        hash ^= ((signed char)data[sizeof (uint16_t)]) << 18;
+        hash += hash >> 11;
+        break;
+    case 2: hash += get16bits (data);
+        hash ^= hash << 11;
+        hash += hash >> 17;
+        break;
+    case 1: hash += (signed char)*data;
+        hash ^= hash << 10;
+        hash += hash >> 1;
+  }
+
+  /* Force "avalanching" of final 127 bits */
+  hash ^= hash << 3;
+  hash += hash >> 5;
+  hash ^= hash << 4;
+  hash += hash >> 17;
+  hash ^= hash << 25;
+  hash += hash >> 6;
+
+  return hash;
+}
+#undef get16bits
 
 template <typename _S>
 ssize_t RecorderRT<_S>::__send(unsigned ins, int &error, int sockfd, const void *buf, size_t len, int flags)
@@ -1321,7 +1383,7 @@ ssize_t RecorderRT<_S>::__send(unsigned ins, int &error, int sockfd, const void 
   {
     BLOCK_TIMER_START;
     int ret = Runtime::__send(ins, error, sockfd, buf, len, flags);
-    uint64_t sig = hash((char*)buf, len); 
+    uint32_t sig = fastHash((char*)buf, len); 
     BLOCK_TIMER_END(syncfunc::send, (uint64_t) sig, (uint64_t) ret);
     return ret;
   } else
@@ -1335,7 +1397,7 @@ ssize_t RecorderRT<_S>::__sendto(unsigned ins, int &error, int sockfd, const voi
   {
     BLOCK_TIMER_START;
     int ret = Runtime::__sendto(ins, error, sockfd, buf, len, flags, dest_addr, addrlen);
-    uint64_t sig = hash((char*)buf, len); 
+    uint32_t sig = fastHash((char*)buf, len); 
     BLOCK_TIMER_END(syncfunc::sendto, (uint64_t) sig, (uint64_t) ret);
     return ret;
   } else
@@ -1349,7 +1411,7 @@ ssize_t RecorderRT<_S>::__sendmsg(unsigned ins, int &error, int sockfd, const st
   {
     BLOCK_TIMER_START;
     int ret = Runtime::__sendmsg(ins, error, sockfd, msg, flags);
-    uint64_t sig = hash((char*)msg, sizeof(struct msghdr)); 
+    uint32_t sig = fastHash((char*)msg, sizeof(struct msghdr)); 
     BLOCK_TIMER_END(syncfunc::sendmsg, (uint64_t) sig, (uint64_t) ret);
     return ret;
   } else
@@ -1361,7 +1423,7 @@ ssize_t RecorderRT<_S>::__recv(unsigned ins, int &error, int sockfd, void *buf, 
 {
   BLOCK_TIMER_START;
   ssize_t ret = Runtime::__recv(ins, error, sockfd, buf, len, flags);
-  uint64_t sig = hash((char*)buf, len); 
+  uint32_t sig = fastHash((char*)buf, len); 
   BLOCK_TIMER_END(syncfunc::recv, (uint64_t) sig, (uint64_t) ret);
   return ret;
 }
@@ -1371,7 +1433,7 @@ ssize_t RecorderRT<_S>::__recvfrom(unsigned ins, int &error, int sockfd, void *b
 {
   BLOCK_TIMER_START;
   ssize_t ret = Runtime::__recvfrom(ins, error, sockfd, buf, len, flags, src_addr, addrlen);
-  uint64_t sig = hash((char*)buf, len); 
+  uint32_t sig = fastHash((char*)buf, len); 
   BLOCK_TIMER_END(syncfunc::recvfrom, (uint64_t) sig, (uint64_t) ret);
   return ret;
 }
@@ -1381,7 +1443,7 @@ ssize_t RecorderRT<_S>::__recvmsg(unsigned ins, int &error, int sockfd, struct m
 {
   BLOCK_TIMER_START;
   ssize_t ret = Runtime::__recvmsg(ins, error, sockfd, msg, flags);
-  uint64_t sig = hash((char*)msg, sizeof(struct msghdr)); 
+  uint32_t sig = fastHash((char*)msg, sizeof(struct msghdr)); 
   BLOCK_TIMER_END(syncfunc::recvmsg, (uint64_t) sig, (uint64_t) ret);
   return ret;
 }
@@ -1389,7 +1451,6 @@ ssize_t RecorderRT<_S>::__recvmsg(unsigned ins, int &error, int sockfd, struct m
 template <typename _S>
 ssize_t RecorderRT<_S>::__read(unsigned ins, int &error, int fd, void *buf, size_t count)
 {
-  bool ignore = false;
   if (options::RR_ignore_rw_regular_file)
   {
     struct stat st;
@@ -1397,15 +1458,13 @@ ssize_t RecorderRT<_S>::__read(unsigned ins, int &error, int fd, void *buf, size
 //    printf("st.st_mode = %x\n", (unsigned) st.st_mode);
 //    printf("st.st_mode & S_IFMT = %x\n", (unsigned) (st.st_mode & S_IFMT));
 //    printf("S_IFSOCK = %x\n", (unsigned) S_IFSOCK);
-    if (S_IFREG == (st.st_mode & S_IFMT))
-      ignore = true;
+    if (S_ISREG(st.st_mode))
+      return Runtime::__read(ins, error, fd, buf, count);
   }
-  if (ignore)
-    return Runtime::__read(ins, error, fd, buf, count);
 
   BLOCK_TIMER_START;
   ssize_t ret = Runtime::__read(ins, error, fd, buf, count);
-  uint64_t sig = hash((char*)buf, count); 
+  uint32_t sig = fastHash((char*)buf, count); 
   BLOCK_TIMER_END(syncfunc::read, (uint64_t) sig, (uint64_t) fd, (uint64_t) ret);
   return ret;
 }
@@ -1413,23 +1472,19 @@ ssize_t RecorderRT<_S>::__read(unsigned ins, int &error, int fd, void *buf, size
 template <typename _S>
 ssize_t RecorderRT<_S>::__write(unsigned ins, int &error, int fd, const void *buf, size_t count)
 {
-  bool ignore = false;
   if (options::RR_ignore_rw_regular_file)
   {
     struct stat st;
     fstat(fd, &st);
-    if (S_IFREG == (st.st_mode & S_IFMT))
-      ignore = true;
+    if (S_ISREG(st.st_mode))
+      return Runtime::__write(ins, error, fd, buf, count);
   }
-
-  if (ignore)
-    return Runtime::__write(ins, error, fd, buf, count);
 
   if (options::schedule_write)
   {
     BLOCK_TIMER_START;
     ssize_t ret = Runtime::__write(ins, error, fd, buf, count);
-    uint64_t sig = hash((char*)buf, count); 
+    uint32_t sig = fastHash((char*)buf, count); 
     BLOCK_TIMER_END(syncfunc::write, (uint64_t) sig, (uint64_t) fd, (uint64_t) ret);
     return ret;
   } else
