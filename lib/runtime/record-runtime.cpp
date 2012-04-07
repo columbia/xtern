@@ -1472,16 +1472,15 @@ ssize_t RecorderRT<_S>::__read(unsigned ins, int &error, int fd, void *buf, size
 template <typename _S>
 ssize_t RecorderRT<_S>::__write(unsigned ins, int &error, int fd, const void *buf, size_t count)
 {
-  if (options::RR_ignore_rw_regular_file)
-  {
-    struct stat st;
-    fstat(fd, &st);
-    if (S_ISREG(st.st_mode))
-      return Runtime::__write(ins, error, fd, buf, count);
-  }
-
   if (options::schedule_write)
   {
+    if (options::RR_ignore_rw_regular_file)
+    {
+      struct stat st;
+      fstat(fd, &st);
+      if (S_ISREG(st.st_mode))
+        return Runtime::__write(ins, error, fd, buf, count);
+    }
     BLOCK_TIMER_START;
     ssize_t ret = Runtime::__write(ins, error, fd, buf, count);
     uint32_t sig = fastHash((char*)buf, count); 
