@@ -2,10 +2,9 @@
 extern "C" FUNC_RET_TYPE FUNC_NAME(ARGS_WITH_NAME){
   typedef FUNC_RET_TYPE (*orig_func_type)(ARGS_WITHOUT_NAME);
 
-  FUNC_RET_TYPE ret;
-
 #ifdef __USE_TERN_RUNTIME
   if (Space::isApp() && options::DMT) {
+    FUNC_RET_TYPE ret;
 
 #ifdef PRINT_DEBUG
     fprintf(stdout, "%04d: FUNC_NAME is hooked.\n", (int) pthread_self());
@@ -55,9 +54,7 @@ extern "C" FUNC_RET_TYPE FUNC_NAME(ARGS_WITH_NAME){
     dlclose(handle);
   }
 
-  ret = orig_func(ARGS_ONLY_NAME);
-
-  return ret;
+  return orig_func(ARGS_ONLY_NAME);
 }
 #endif
 
