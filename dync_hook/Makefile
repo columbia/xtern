@@ -1,6 +1,6 @@
 all: xternruntime interpose.so
 
-BuildMode := Release
+BuildMode := Debug
 ENABLE_OPTIMIZED := 0
 
 INC_DIRS=-I$(TERN_ROOT)/include/ -I$(XTERN_ROOT)/include/ -I$(XTERN_ROOT)/obj/include

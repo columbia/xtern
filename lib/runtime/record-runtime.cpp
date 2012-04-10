@@ -1464,8 +1464,9 @@ ssize_t RecorderRT<_S>::__read(unsigned ins, int &error, int fd, void *buf, size
 
   BLOCK_TIMER_START;
   ssize_t ret = Runtime::__read(ins, error, fd, buf, count);
-  uint32_t sig = fastHash((char*)buf, count); 
-  BLOCK_TIMER_END(syncfunc::read, (uint64_t) sig, (uint64_t) fd, (uint64_t) ret);
+  //uint32_t sig = fastHash((char*)buf, count); 
+  //BLOCK_TIMER_END(syncfunc::read, (uint64_t) sig, (uint64_t) fd, (uint64_t) ret);
+  BLOCK_TIMER_END(syncfunc::read, (uint64_t) 0, (uint64_t) fd, (uint64_t) ret);
   return ret;
 }
 

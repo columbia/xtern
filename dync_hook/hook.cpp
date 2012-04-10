@@ -66,25 +66,27 @@ static void print_stack()
 #endif
 }
 
-void *get_eip()
+static void *get_eip()
 {
-  void *tracePtrs[20];
   int i;
-  uint64_t ret = 0; 
-  int count = backtrace(tracePtrs, 20);
 
   if (options::whole_stack_eip_signature)
   {
-    ret = 0;
-    for (i = 0; i < count; ++i)
-      ret = ret * 97 + (uint64_t) tracePtrs[i];
+    uint64_t ret;
+    void *tracePtrs[20];
+    int count = backtrace(tracePtrs, 20);
+    for (i = 0, ret = 0; i < count; ++i)
+      ret = ret * 97 + (uintptr_t) tracePtrs[i];
     return (void*) ret;
     //std::cout << std::hex << tracePtrs[2] << std::dec << std::endl;
     //char** funcNames = backtrace_symbols( tracePtrs, count );
     //printf( "%s\n", funcNames[2] );
     //printf(stderr, "reteip: %p\n", tracePtrs[1]);
-  } else
+  } else {
+    void *tracePtrs[3];
+    backtrace(tracePtrs, 3);
     return tracePtrs[2];  //  this is ret_eip of my caller
+  }
 }
 
 #define HOOK_MUTEX_COND
