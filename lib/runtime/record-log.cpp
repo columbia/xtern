@@ -497,6 +497,7 @@ void TestLogger::logSync(unsigned insid, unsigned short sync,
   }
   va_end(args);
   ouf << "\n";
+  ouf.flush();
 }
 
 void TestLogger::flush() {

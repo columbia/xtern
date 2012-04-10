@@ -68,7 +68,7 @@ epoch_mode = 0
 # set epoch length, measured in microsecond = 1e-6 second
 epoch_length = 100
 
-# blocking threads are added back every (x) turns, only works for RR 
+# blocking threads are added back every (x) turns, only works for RR  
 wakeup_period = 100
 
 # set the length of turns to delay if a blocking function times out, measured in microseconds, must be less than 1 second

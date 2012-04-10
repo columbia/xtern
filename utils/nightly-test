@@ -15,6 +15,10 @@ arch=`uname -m`
 timeout=1200
 sendmail="/usr/sbin/sendmail"
 toaddr="dmt-dev@lists.cs.columbia.edu"
+xtern_git="git@repair.cs.columbia.edu:xtern"
+
+# toaddr="junfeng@cs.columbia.edu"
+# xtern_git="/home/junfeng/work/xtern"
 
 #testdir=`date +%F`
 testdir="/tmp/xtern-nightly-test-$build_mode"
@@ -62,7 +66,7 @@ make $llvm_debug install
 
 # build xtern
 cd $testdir
-git clone git@repair.cs.columbia.edu:xtern
+git clone $xtern_git
 cd $XTERN_ROOT
 mkdir obj
 cd obj
@@ -70,26 +74,19 @@ cd obj
 make $llvm_debug  >> $log
 make -C $XTERN_ROOT/dync_hook $llvm_debug BuildMode=$build_mode >> $log
 
-# test
+# run tests
 cd $XTERN_ROOT/obj
-setsid make $llvm_debug check >> $log 2>&1 &
-pid=$!
-(
-    sleep $timeout;
-    echo "$timeout seconds have passed; killing process $pid" >> $log;
-    kill -9 -$pid > /dev/null 2>&1 &
-)
-wait $pid
+timeout $timeout make $llvm_debug check >> $log 2>&1
 status=$?
 if test $status != 0 ; then
+    if test $status == 124 ; then
+        echo "$timeout seconds have passed; killed process $pid" >> $log
+    fi
     (
-        echo "TO: $toaddr";
-        echo "FROM: junfeng@cs.columbia.edu";
-        echo "SUBJECT: xtern nightly test failed with status $status";
-        cat $log;
+        echo "TO: $toaddr"
+        echo "FROM: junfeng@cs.columbia.edu"
+        echo "SUBJECT: xtern nightly test failed with status $status"
+        cat $log
         echo "."
     ) | $sendmail $toaddr
-# > $testdir/email.txt
-#    $sendmail junfeng@cs.columbia.edu < $testdir/email.txt
-#    $sendmail huayang@cs.columbia.edu < $testdir/email.txt
 fi
