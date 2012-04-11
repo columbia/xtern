@@ -1,8 +1,6 @@
 all: xternruntime interpose.so
 
-BuildMode := Debug
 ENABLE_OPTIMIZED := 0
-
 INC_DIRS=-I$(TERN_ROOT)/include/ -I$(XTERN_ROOT)/include/ -I$(XTERN_ROOT)/obj/include
 #INC_DIRS=-I$(XTERN_ROOT)/include/
 STD_LIBS=-lsupc++ -lpthread -lstdc++ -lrt
@@ -11,10 +9,19 @@ FLAG=`date +%F\#%T`
 TERN_LIBS=-L$(XTERN_ROOT)/obj/$(BuildMode)/lib/ -lruntime -lcommon 
 #TERN_LIBS=
 #TERN_LIBS=$(XTERN_ROOT)/obj/$(BuildMode)/lib/libruntime.a
-CFLAGS= -g $(INC_DIRS)
-CXXFLAGS= -g $(INC_DIRS)
 PREFIX=LD_PRELOAD=$(XTERN_ROOT)/dync_hook/interpose.so
 #PREFIX=
+
+ifeq ($(ENABLE_OPTIMIZED), 0)
+    BuildMode := Debug
+    CFLAGS= -g $(INC_DIRS)
+    CXXFLAGS= -g $(INC_DIRS)
+else
+    BuildMode := Release
+    CFLAGS= -O3 -g $(INC_DIRS)
+    CXXFLAGS= -O3 -g $(INC_DIRS)
+endif
+
 
 xternruntime: 
 	cd $(XTERN_ROOT)/obj && make ENABLE_OPTIMIZED=$(ENABLE_OPTIMIZED)
