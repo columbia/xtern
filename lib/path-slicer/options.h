@@ -28,6 +28,7 @@
 #ifndef __OPTIONS_H
 #define __OPTIONS_H
 
+#include <stdlib.h>
 #include <memory>
 #include <iostream>
 
