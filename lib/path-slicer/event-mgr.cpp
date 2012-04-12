@@ -73,7 +73,7 @@ void EventMgr::setupEvents(Module &M) {
       checker = new DataLossChecker(NULL);
       errs() << "EventMgr::setupEvents::DataLossChecker\n";
     } else if (UseOneChecker == "Leak") {
-      checker = new PairwiseChecker(NULL, "malloc", "free");
+      checker = new LeakChecker(NULL);
       errs() << "EventMgr::setupEvents::LeakChecker\n";
     } else
       assert(false && "UseOneChecker must be Assert, OpenClose, Lock, File, or DataLoss.");
