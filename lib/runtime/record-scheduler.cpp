@@ -10,6 +10,7 @@
 #include <cstdio>
 #include <stdlib.h>
 #include <cstring>
+#include <unistd.h>
 #include "tern/options.h"
 
 using namespace std;
