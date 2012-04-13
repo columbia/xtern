@@ -21,11 +21,14 @@ Stat::Stat() {
   numPrunedStates = 0;
   numStates = 0;
   numInstrs = 0;
+  numNotPrunedInternalInstrs = 0;
+  numNotPrunedInstrs = 0;
   numCoveredInstrs = 0;
   numUnCoveredInstrs = 0;
   numPaths = 0;
   numTests = 0;
 
+  initTime = 0;
   pathSlicerTime = 0;
   interSlicingTime = 0;
   intraSlicingTime = 0;
@@ -73,24 +76,29 @@ void Stat::printFinalFormatResults() {
   // Print FORMAT.
   std::string pruneType = MarkPrunedOnly?"Mark":"Real";
   errs() << "\n\n" << "FORMAT ITEMS:    "
-    << "|| Checker || Max time (sec) || Path slicer time || Mark/Real prune || Pruned states || All states (paths) || "
-    << "|| # Tests || # Instructions exed || # Static Instructions exed || # Static instructions ||\n"
+    << "|| App || Checker || All time (sec) || Path slicer time || Init time || Mark/Real prune || Pruned states || All states (paths) || "
+    << "|| # Tests || # Instructions exed || # Not pruned instructions exed || # Not pruned internal instructions exed || # Static instructions exed || # Static instructions ||\n"
     
     << "FORMAT RESULTS:    "
-    << "| " << UseOneChecker
+    << "| " << origModule->getModuleIdentifier()
+    << " | " << UseOneChecker
     << " | " << pathSlicerTime
     << " | " << intraSlicingTime
+    << " | " << initTime
     << " | " << pruneType
     << " | " << numPrunedStates 
     << " | " << numStates
     << " | " << numTests
     << " | " << numInstrs
+    << " | " << numNotPrunedInstrs
+    << " | " << numNotPrunedInternalInstrs
     << " | " << sizeOfExedStaticInstrs()
     << " | " << sizeOfStaticInstrs() << " | "
     // TBA.
-    << "     (" << numCoveredInstrs
+    /*<< "     (" << numCoveredInstrs
     << "/" << numCoveredInstrs + numUnCoveredInstrs
-    << ")\n\n\n";
+    << ")"*/
+    << "\n\n\n";
 
 }
 
@@ -290,4 +298,11 @@ void Stat::getKLEEFinalStat(unsigned numInstrs, unsigned numCoveredInstrs,
   this->numTests = numTests;
 }
 
+void Stat::addNotPrunedInternalInstrs(unsigned traceSize) {
+  numNotPrunedInternalInstrs += traceSize;
+}
+
+void Stat::incNotPrunedStatesInstrs() {
+  numNotPrunedInstrs++;
+}
 

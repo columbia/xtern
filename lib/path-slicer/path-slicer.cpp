@@ -81,6 +81,7 @@ bool PathSlicer::runOnModule(Module &M) {
 
 void PathSlicer::init(llvm::Module &M) {
   fprintf(stderr, "PathSlicer::init begin\n");
+  BEGINTIME(stat.initSt);
   Module *origModule = &M;
   Module *mxModule = NULL;
   Module *simModule = NULL;
@@ -159,7 +160,8 @@ void PathSlicer::init(llvm::Module &M) {
   // Init stat.
   stat.init(&idMgr, &ctxMgr, &funcSumm);
   stat.collectStaticInstrs(*origModule);
-  
+
+  ENDTIME(stat.initTime, stat.initSt, stat.initEnd);
   fprintf(stderr, "PathSlicer::init end\n");
 }
 
@@ -197,6 +199,7 @@ void PathSlicer::runPathSlicer(void *pathId, set<BranchInst *> &rmBrs,
     goto finish;
   if (trace->size() == 0)
     goto finish;
+  stat.addNotPrunedInternalInstrs((unsigned)trace->size());
   traceUtil->preProcess(trace);
 
 #if 0
@@ -357,5 +360,11 @@ bool PathSlicer::isInternalFunction(llvm::Function *f) {
 void PathSlicer::getKLEEFinalStat(unsigned numInstrs, unsigned numCoveredInstrs,
       unsigned numUnCoveredInstrs, unsigned numPaths, unsigned numTests) {
   stat.getKLEEFinalStat(numInstrs, numCoveredInstrs, numUnCoveredInstrs, numPaths, numTests);
+}
+
+void PathSlicer::collectNotPrunedInstrs(void *pathId) {
+  // Collect some stat only.
+  if (!((ExecutionState *)pathId)->isPruned)
+  	 stat.incNotPrunedStatesInstrs();
 }
 

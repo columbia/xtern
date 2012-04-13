@@ -33,6 +33,7 @@ namespace tern {
 
     /* Path exploration branches frequency, map from instruction to frequency. */
     llvm::DenseMap<llvm::Instruction *, int> pathFreq;
+
   protected:
     void collectExternalCalls(DynCallInstr *dynCallInstr);
     void collectExedStaticInstrs(DynInstr *dynInstr);
@@ -42,10 +43,16 @@ namespace tern {
     long numPrunedStates;
     long numStates;
     unsigned numInstrs;
+    unsigned numNotPrunedInternalInstrs;
+    unsigned numNotPrunedInstrs;
     unsigned numCoveredInstrs;
     unsigned numUnCoveredInstrs;
     unsigned numPaths;
     unsigned numTests;
+
+    struct timeval initSt;
+    struct timeval initEnd;
+    double initTime;
 
     struct timeval pathSlicerSt;
     struct timeval pathSlicerEnd;
@@ -132,6 +139,10 @@ namespace tern {
       unsigned numUnCoveredInstrs, unsigned numPaths, unsigned numTests);
 
     void printFinalFormatResults();
+
+    void addNotPrunedInternalInstrs(unsigned traceSize);
+
+    void incNotPrunedStatesInstrs();
   };
 }
 

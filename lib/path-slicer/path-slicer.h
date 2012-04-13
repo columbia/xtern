@@ -141,6 +141,8 @@ namespace tern {
     void getKLEEFinalStat(unsigned numInstrs, unsigned numCoveredInstrs,
       unsigned numUnCoveredInstrs, unsigned numPaths, unsigned numTests);
 
+    void collectNotPrunedInstrs(void *pathId);
+
   };
 }
 
