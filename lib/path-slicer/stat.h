@@ -40,6 +40,7 @@ namespace tern {
     void printFileLoc(llvm::raw_ostream &S, const llvm::Instruction *instr);
 
   public:
+    bool finished;
     long numPrunedStates;
     long numStates;
     unsigned numInstrs;
@@ -136,7 +137,7 @@ namespace tern {
     void printModule(std::string outputDir);
 
     void getKLEEFinalStat(unsigned numInstrs, unsigned numCoveredInstrs,
-      unsigned numUnCoveredInstrs, unsigned numPaths, unsigned numTests);
+      unsigned numUnCoveredInstrs, unsigned numPaths, unsigned numTests, bool finished);
 
     void printFinalFormatResults();
 

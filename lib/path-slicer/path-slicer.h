@@ -88,7 +88,7 @@ namespace tern {
     A challenge is if we enforce partial order of racy edge, how to adjust the logical clock 
     for these regions, given the logical clocks are based on start/end totol order of synch op index. */
     void enforceRacyEdges();
-    void calStat(std::set<llvm::BranchInst *> &rmBrs, std::set<llvm::CallInst *> &rmCalls);
+    void calStat(std::set<size_t> &rmBrs, std::set<size_t> &rmCalls);
     llvm::Module *loadModule(const char *path);
 
     /* Collect KLEE execution states stat, if a state is pruned, it returns true and we can skip slicing. */
@@ -114,8 +114,7 @@ namespace tern {
 
 
     /* The key function called by other modules (such as KLEE) to get relevant branches. */
-    void runPathSlicer(void *pathId, std::set<llvm::BranchInst *> &rmBrs,
-      std::set<llvm::CallInst *> &rmCalls);
+    void runPathSlicer(void *pathId, std::set<size_t> &rmBrs, std::set<size_t> &rmCalls);
 
     /* Copy recorded instructions from current path to a new branched path. */
     void copyTrace(void *newPathId, void *curPathId);
@@ -130,8 +129,9 @@ namespace tern {
     /*  */
     bool isInternalInstr(llvm::Instruction *instr);
 
-    /* Get the latest recorded instruction  */
-    llvm::Instruction *getLatestInstr(void *pathId);
+    /* Get the latest recorded instruction index. */
+    size_t getLatestInstrIdx(void *pathId);
+    
 
     /* Collect path exploration stats. */
     void collectExplored(llvm::Instruction *instr);
@@ -139,7 +139,7 @@ namespace tern {
     bool isInternalFunction(llvm::Function *f);
 
     void getKLEEFinalStat(unsigned numInstrs, unsigned numCoveredInstrs,
-      unsigned numUnCoveredInstrs, unsigned numPaths, unsigned numTests);
+      unsigned numUnCoveredInstrs, unsigned numPaths, unsigned numTests, bool finished);
 
     void collectNotPrunedInstrs(void *pathId);
 

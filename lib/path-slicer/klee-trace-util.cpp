@@ -90,6 +90,7 @@ void KleeTraceUtil::record(DynInstrVector *trace, KInstruction *kInstr,
   if (idMgr->getOrigInstrId(instr) == -1)
     return;
 
+  errs() << "KleeTraceUtil::record: " << stat->printInstr(instr) << "\n";
   // Real recording.
   if (Util::isPHI(instr)) {
     recordPHI(trace, kInstr, state);

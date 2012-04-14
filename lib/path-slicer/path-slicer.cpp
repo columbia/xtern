@@ -184,8 +184,8 @@ void PathSlicer::enforceRacyEdges() {
   // TBD: enforce all racy edges, and split new regions.
 }
 
-void PathSlicer::runPathSlicer(void *pathId, set<BranchInst *> &rmBrs,
-  set<CallInst *> &rmCalls) {  
+void PathSlicer::runPathSlicer(void *pathId, set<size_t> &rmBrs,
+  set<size_t> &rmCalls) {  
   // Collect states stat.
   bool isPruned = collectStatesStat(pathId);
 
@@ -245,7 +245,7 @@ finish:
   ENDTIME(stat.intraSlicingTime, stat.intraSlicingSt, stat.intraSlicingEnd);
 }
 
-void PathSlicer::calStat(set<BranchInst *> &rmBrs, set<CallInst *> &rmCalls) {
+void PathSlicer::calStat(set<size_t> &rmBrs, set<size_t> &rmCalls) {
   errs() << BAN;
   interSlicer.calStat();
   intraSlicer.calStat(rmBrs, rmCalls);
@@ -268,11 +268,16 @@ void PathSlicer::initOutputDir(std::string dir) {
 
 
 void PathSlicer::record(void *pathId, void *instr, void *state, void *f) {
+  //dprint("PathSlicer::record enter, pathId %p\n", (void *)pathId);
+  //Instruction *staticInstr = ((KInstruction *)instr)->inst;
+  //if (staticInstr->getOpcode() == Instruction::Ret || staticInstr->getOpcode() == Instruction::Call)
+	  //SERRS << "PathSlicer::record: " << (void *)pathId << " : " << stat.printInstr(staticInstr) << "\n";
   if (!getStartRecord(instr))
     return;
   if (!DM_IN(pathId, allPathTraces))
     allPathTraces[pathId] = new DynInstrVector;
   traceUtil->record(allPathTraces[pathId], instr, state, f);
+  //dprint("PathSlicer::record finished, pathId %p\n", (void *)pathId);
 }
 
 void PathSlicer::copyTrace(void *newPathId, void *curPathId) {
@@ -292,6 +297,7 @@ void PathSlicer::recordCheckerResult(void *pathId, Checker::Result globalResult,
     Checker::Result localResult, unsigned numTests) {
   if (globalResult != Checker::OK || localResult != Checker::OK) {
     DynInstrVector *trace = allPathTraces[pathId];
+    dprint("PathSlicer::recordCheckerResult, pathId %p\n", (void *)pathId);
     assert(trace);
     assert(trace->size() > 0);
     DynInstr *dynInstr = trace->back();
@@ -328,13 +334,14 @@ bool PathSlicer::isInternalInstr(llvm::Instruction *instr) {
   return (idMgr.getOrigInstrId(instr) != -1);
 }
 
-Instruction *PathSlicer::getLatestInstr(void *pathId) {
+// Returning -1 is legal, klee states from klee_init_env().
+size_t PathSlicer::getLatestInstrIdx(void *pathId) {
   if (!DM_IN(pathId, allPathTraces))
-    return NULL;
+    return (size_t)-1;
   DynInstrVector *trace = allPathTraces[pathId];
   if (trace->size() == 0)
-    return NULL;
-  return idMgr.getOrigInstr(trace->back());
+    return (size_t)-1;
+  return trace->back()->getIndex();
 }
 
 void PathSlicer::collectExplored(llvm::Instruction *instr) {
@@ -358,8 +365,8 @@ bool PathSlicer::isInternalFunction(llvm::Function *f) {
 }
 
 void PathSlicer::getKLEEFinalStat(unsigned numInstrs, unsigned numCoveredInstrs,
-      unsigned numUnCoveredInstrs, unsigned numPaths, unsigned numTests) {
-  stat.getKLEEFinalStat(numInstrs, numCoveredInstrs, numUnCoveredInstrs, numPaths, numTests);
+      unsigned numUnCoveredInstrs, unsigned numPaths, unsigned numTests, bool finished) {
+  stat.getKLEEFinalStat(numInstrs, numCoveredInstrs, numUnCoveredInstrs, numPaths, numTests, finished);
 }
 
 void PathSlicer::collectNotPrunedInstrs(void *pathId) {

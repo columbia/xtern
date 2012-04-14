@@ -451,7 +451,7 @@ void IntraSlicer::takeTestTarget(DynInstr *dynInstr) {
   curIndex = dynInstr->getIndex()-1;
 }
 
-void IntraSlicer::calStat(set<BranchInst *> &rmBrs, set<CallInst *> &rmCalls) {
+void IntraSlicer::calStat(set<size_t> &rmBrs, set<size_t> &rmCalls) {
   std::string checkTag = LLVM_CHECK_TAG;
   checkTag += "IntraSlicer::calStat TAKEN";
   size_t numExedInstrs = trace->size();
@@ -483,11 +483,11 @@ void IntraSlicer::calStat(set<BranchInst *> &rmBrs, set<CallInst *> &rmCalls) {
 
     // Handle not-taken bi-cond branches, pass to argument.
     if (!dynInstr->isTaken() && Util::isBr(instr) && !Util::isUniCondBr(instr))
-      rmBrs.insert(cast<BranchInst>(instr));
+      rmBrs.insert(dynInstr->getIndex());
 
     // Handle not-taken external calls.
     if (!dynInstr->isTaken() && Util::isCall(instr) && !funcSumm->isInternalCall(dynInstr))
-      rmCalls.insert(cast<CallInst>(instr));
+      rmCalls.insert(dynInstr->getIndex());
 
     // Handle taken instructions.
     if (dynInstr->isTaken()) {

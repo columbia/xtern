@@ -18,6 +18,7 @@ extern cl::opt<std::string> UseOneChecker;
 extern cl::opt<bool> MarkPrunedOnly;
 
 Stat::Stat() {
+  finished = false;
   numPrunedStates = 0;
   numStates = 0;
   numInstrs = 0;
@@ -75,30 +76,36 @@ void Stat::printStat(const char *tag) {
 void Stat::printFinalFormatResults() {
   // Print FORMAT.
   std::string pruneType = MarkPrunedOnly?"Mark":"Real";
+  std::string finishResult = finished?"Yes":"No";
+  std::string keyTag = "*";
   errs() << "\n\n" << "FORMAT ITEMS:    "
-    << "|| App || Checker || All time (sec) || Path slicer time || Init time || Mark/Real prune || Pruned states || All states (paths) || "
-    << "|| # Tests || # Instructions exed || # Not pruned instructions exed || # Not pruned internal instructions exed || # Static instructions exed || # Static instructions ||\n"
-    
+    << "|| App || Checker || Mark/Real prune || Finished || All time (sec) || Path slicer time "
+    << "|| Init time || Pruned states || All states (paths) "
+    << "|| # Tests || # Instrs exed || # Not pruned Instrs exed || # Not pruned internal Instrs exed "
+    << "|| # Static Instrs exed || # Static Instrs ||\n"
     << "FORMAT RESULTS:    "
     << "| " << origModule->getModuleIdentifier()
     << " | " << UseOneChecker
+    << " | " << pruneType
+    << " | " << keyTag << finishResult << keyTag
     << " | " << pathSlicerTime
     << " | " << intraSlicingTime
     << " | " << initTime
-    << " | " << pruneType
     << " | " << numPrunedStates 
     << " | " << numStates
     << " | " << numTests
     << " | " << numInstrs
-    << " | " << numNotPrunedInstrs
+    << " | " << keyTag << numNotPrunedInstrs << keyTag
     << " | " << numNotPrunedInternalInstrs
     << " | " << sizeOfExedStaticInstrs()
     << " | " << sizeOfStaticInstrs() << " | "
+    
     // TBA.
     /*<< "     (" << numCoveredInstrs
     << "/" << numCoveredInstrs + numUnCoveredInstrs
     << ")"*/
-    << "\n\n\n";
+
+  	<< "\n\n\n";
 
 }
 
@@ -290,12 +297,13 @@ void Stat::printModule(std::string outputDir) {
 }
 
 void Stat::getKLEEFinalStat(unsigned numInstrs, unsigned numCoveredInstrs,
-      unsigned numUnCoveredInstrs, unsigned numPaths, unsigned numTests) {
+      unsigned numUnCoveredInstrs, unsigned numPaths, unsigned numTests, bool finished) {
   this->numInstrs = numInstrs;
   this->numCoveredInstrs = numCoveredInstrs;
   this->numUnCoveredInstrs = numUnCoveredInstrs;
   this->numPaths = numPaths;
   this->numTests = numTests;
+  this->finished = finished;
 }
 
 void Stat::addNotPrunedInternalInstrs(unsigned traceSize) {
