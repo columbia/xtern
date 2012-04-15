@@ -91,12 +91,12 @@ namespace tern {
     void calStat(std::set<size_t> &rmBrs, std::set<size_t> &rmCalls);
     llvm::Module *loadModule(const char *path);
 
-    /* Collect KLEE execution states stat, if a state is pruned, it returns true and we can skip slicing. */
-    bool collectStatesStat(void *pathId);
-
     /* Filter out instructions before the first instruction in main(), such as C++ ctor and klee_range(). */
     bool getStartRecord(void *instr);
-    
+
+    /* Collect KLEE execution states stat, if a state is pruned, it returns true and we can skip slicing. */
+    void collectStatesStat(void *pathId);
+
   public:
         static char ID;
 
@@ -143,6 +143,7 @@ namespace tern {
 
     void collectNotPrunedInstrs(void *pathId);
 
+    void clearPath(void *pathId);
   };
 }
 

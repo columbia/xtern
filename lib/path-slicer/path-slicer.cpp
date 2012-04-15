@@ -186,9 +186,9 @@ void PathSlicer::enforceRacyEdges() {
 
 void PathSlicer::runPathSlicer(void *pathId, set<size_t> &rmBrs,
   set<size_t> &rmCalls) {  
-  // Collect states stat.
+  // Collect stat.
   bool isPruned = collectStatesStat(pathId);
-
+  
   // Get trace of current path and do some pre-processing.
   if (!DM_IN(pathId, allPathTraces))
     return;
@@ -281,7 +281,8 @@ void PathSlicer::record(void *pathId, void *instr, void *state, void *f) {
 }
 
 void PathSlicer::copyTrace(void *newPathId, void *curPathId) {
-  dprint("PathSlicer::copyTrace new %p, cur %p\n", (void *)newPathId, (void *)curPathId);
+  fprintf(stderr, "PathSlicer::copyTrace new %p, cur %p\n", (void *)newPathId, (void *)curPathId);
+  fflush(stderr);
   assert (!DM_IN(newPathId, allPathTraces));
   if (!DM_IN(curPathId, allPathTraces))
     return;
@@ -353,7 +354,7 @@ bool PathSlicer::collectStatesStat(void *pathId) {
   ExecutionState *state = (ExecutionState *)pathId;
   stat.numStates++;
   if (state->isPruned) {
-    stat.numPrunedStates++;
+	stat.numPrunedStates++;
     return true;
   } else
     return false;
@@ -374,4 +375,14 @@ void PathSlicer::collectNotPrunedInstrs(void *pathId) {
   if (!((ExecutionState *)pathId)->isPruned)
   	 stat.incNotPrunedStatesInstrs();
 }
+
+void PathSlicer::clearPath(void *pathId) {
+  if (!DM_IN(pathId, allPathTraces))
+    return;
+  DynInstrVector *trace = allPathTraces[pathId];
+  tgtMgr.clearTargets(pathId);
+  allPathTraces.erase(pathId);
+  delete trace;
+}
+
 
