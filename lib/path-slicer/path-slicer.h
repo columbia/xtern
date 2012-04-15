@@ -95,7 +95,7 @@ namespace tern {
     bool getStartRecord(void *instr);
 
     /* Collect KLEE execution states stat, if a state is pruned, it returns true and we can skip slicing. */
-    void collectStatesStat(void *pathId);
+    bool collectStatesStat(void *pathId);
 
   public:
         static char ID;
