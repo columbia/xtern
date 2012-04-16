@@ -16,6 +16,7 @@
 #include "llvm/ADT/DenseSet.h"
 
 #include "common/typedefs.h"
+#include "klee/BasicCheckers.h"
 
 namespace tern {
   struct EventMgr: public llvm::ModulePass {	
@@ -31,6 +32,8 @@ namespace tern {
     DenseMap<BasicBlock *, bool> bbVisited;
     std::vector<llvm::Function *> eventFuncs;
     llvm::DenseSet<llvm::Instruction *> eventCallSites;
+    klee::Checker *checker;
+
 
     bool is_exit_block(llvm::BasicBlock *bb);
     void DFS(llvm::Function *f);

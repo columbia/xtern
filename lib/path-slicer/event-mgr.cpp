@@ -9,7 +9,6 @@ using namespace tern;
 #include "llvm/Support/CommandLine.h"
 using namespace llvm;
 
-#include "klee/BasicCheckers.h"
 using namespace klee;
 
 using namespace std;
@@ -26,6 +25,7 @@ namespace {
 }
 
 EventMgr::EventMgr(): ModulePass(&ID) {
+  checker = NULL;
   fprintf(stderr, "EventMgr::EventMgr UseOneChecker (%s)\n", UseOneChecker.c_str());
 }
 
@@ -53,7 +53,6 @@ void EventMgr::getAnalysisUsage(AnalysisUsage &AU) const {
 }
 
 void EventMgr::setupEvents(Module &M) {
-  Checker *checker = NULL;
   if (UseOneChecker == "") {
     // NOP.
   } else {
@@ -113,17 +112,16 @@ void EventMgr::setupEvents(Module &M) {
   errs() << "EventMgr::setupEvents callsite size " << eventCallSites.size() << "\n";
 
 
-  if (checker)
-    delete checker;
+  //if (checker)
+    //delete checker;
 }
 
 bool EventMgr::isEventFunc(Function *f) {
-  for (size_t i = 0; i < eventFuncs.size(); ++i) {
-    // We can only compare the name of external functions, because they are totally relinked and different addresses.
-    if (eventFuncs[i]->getNameStr() == f->getNameStr())  
-      return true;
+  if (!checker) {
+    fprintf(stderr, "EventMgr::isEventFunc checker is NULL, please use only one checker.\n");
+    exit(1);
   }
-  return false;
+  return checker->isImportant(f->getNameStr());
 }
 
 void EventMgr::DFS(Function *f) {
