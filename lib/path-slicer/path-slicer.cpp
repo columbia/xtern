@@ -194,7 +194,8 @@ void PathSlicer::runPathSlicer(void *pathId, set<size_t> &rmBrs,
     return;
   BEGINTIME(stat.intraSlicingSt);
   DynInstrVector *trace = allPathTraces[pathId];
-  fprintf(stderr, "PathSlicer::runPathSlicer pathId %p, size " SZ "\n", pathId, trace->size());
+  fprintf(stderr, "PathSlicer::runPathSlicer pathId %p, isPruned %d, size " SZ "\n",
+    pathId, isPruned, trace->size());
   if (isPruned)
     goto finish;
   if (trace->size() == 0)
@@ -281,8 +282,7 @@ void PathSlicer::record(void *pathId, void *instr, void *state, void *f) {
 }
 
 void PathSlicer::copyTrace(void *newPathId, void *curPathId) {
-  fprintf(stderr, "PathSlicer::copyTrace new %p, cur %p\n", (void *)newPathId, (void *)curPathId);
-  fflush(stderr);
+  dprint("PathSlicer::copyTrace new %p, cur %p\n", (void *)newPathId, (void *)curPathId);
   assert (!DM_IN(newPathId, allPathTraces));
   if (!DM_IN(curPathId, allPathTraces))
     return;
@@ -336,13 +336,24 @@ bool PathSlicer::isInternalInstr(llvm::Instruction *instr) {
 }
 
 // Returning -1 is legal, klee states from klee_init_env().
-size_t PathSlicer::getLatestInstrIdx(void *pathId) {
+size_t PathSlicer::getLatestBrOrExtCallIdx(void *pathId) {
   if (!DM_IN(pathId, allPathTraces))
     return (size_t)-1;
   DynInstrVector *trace = allPathTraces[pathId];
   if (trace->size() == 0)
     return (size_t)-1;
-  return trace->back()->getIndex();
+
+  // Check, must be branch or a external call.
+  DynInstr *dynInstr = trace->back();
+  Instruction *instr = idMgr.getOrigInstr(dynInstr);
+  if (!Util::isBr(instr)) {
+    if (!(Util::isCall(instr) && !funcSumm.isInternalCall(dynInstr))) {
+      stat.printDynInstr(dynInstr, "PathSlicer::getLatestBrOrExtCallIdx");
+      abort();
+    }
+  }
+    
+  return dynInstr->getIndex();
 }
 
 void PathSlicer::collectExplored(llvm::Instruction *instr) {

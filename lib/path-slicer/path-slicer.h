@@ -129,8 +129,8 @@ namespace tern {
     /*  */
     bool isInternalInstr(llvm::Instruction *instr);
 
-    /* Get the latest recorded instruction index. */
-    size_t getLatestInstrIdx(void *pathId);
+    /* Get the latest recorded branch or external call index. */
+    size_t getLatestBrOrExtCallIdx(void *pathId);
     
 
     /* Collect path exploration stats. */
