@@ -129,8 +129,8 @@ void CallStackMgr::setCallStack(DynInstr *dynInstr) {
   }
 }
 
-DynCallInstr *CallStackMgr::getCallOfRet(DynRetInstr *dynRetInstr) {
-  uchar tid = dynRetInstr->getTid();
+DynCallInstr *CallStackMgr::getCaller(DynInstr *dynInstr) {
+  uchar tid = dynInstr->getTid();
   if (tidToCallSeqMap[tid]->size() == 0)
     return NULL; /* This is possible, e.g., instructions in main() and thread routines. */
   else

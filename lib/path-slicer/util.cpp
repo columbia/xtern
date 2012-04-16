@@ -43,6 +43,12 @@ bool Util::isCall(const Instruction *instr) {
   return instr->getOpcode() == Instruction::Call;
 }
 
+bool Util::isProcessExitFunc(Function *f) {
+  assert(f);
+  return (f->getNameStr() == "exit" || f->getNameStr() == "_exit" ||
+    f->getNameStr() == "abort" || f->getNameStr() == "__assert_fail");
+}
+
 bool Util::isIntrinsicCall(const Instruction *instr) {
   const CallInst *ci = dyn_cast<CallInst>(instr);
   if (!ci)

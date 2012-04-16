@@ -33,6 +33,8 @@ namespace tern {
     /* Set of all internal functions from original bc module (regardless of uclibc). */
     llvm::DenseSet<const llvm::Function *> internalFunctions;
 
+    llvm::Function *mainFunc;
+
   protected:
     void collectInternalFunctions(llvm::Module &M);
 
@@ -77,6 +79,10 @@ namespace tern {
     whether the argument has load/store summary. */
     bool isExtFuncSummLoad(llvm::Instruction *instr, unsigned argOffset);
     bool isExtFuncSummStore(llvm::Instruction *instr, unsigned argOffset);
+
+	/* Whether an instruction calls to an event. */
+    bool isEventCall(DynCallInstr *callInstr);
+    size_t numEventCallSites();
 
   };
 

@@ -36,8 +36,12 @@ bool FuncSumm::mayCallEvent(const llvm::Function *f) {
 }
 
 bool FuncSumm::mayCallEvent(DynInstr *dynInstr) {
-  DynCallInstr *callInstr = (DynCallInstr*)dynInstr;
-  Function *f = callInstr->getCalledFunc();
+  Function *f = NULL;
+  if (dynInstr) {
+    DynCallInstr *callInstr = (DynCallInstr*)dynInstr;
+    f = callInstr->getCalledFunc();
+  } else
+    f = mainFunc;
   assert(f);
   return mayCallEvent(f);
 }
@@ -50,6 +54,11 @@ bool FuncSumm::eventBetween(llvm::BranchInst *prevInstr, llvm::Instruction *post
 void FuncSumm::collectInternalFunctions(Module &M) {
   fprintf(stderr, "FuncSumm::collectInternalFunctions begin\n");
   for (Module::iterator f = M.begin(); f != M.end(); ++f) {
+    // Record the main function.
+    if (f->getNameStr() == "main" || f->getNameStr() == "__user_main")
+      mainFunc = f;
+
+    // Collect internal function.
     if (!f->isDeclaration()) {
       internalFunctions.insert(f);
       fprintf(stderr, "Function %s(%p) is internal.\n", 
@@ -124,4 +133,18 @@ bool FuncSumm::isExtFuncSummStore(llvm::Instruction *instr, unsigned argOffset) 
 bool FuncSumm::extFuncHasSumm(llvm::Instruction *instr) {
   return extFuncHasLoadSumm(instr) || extFuncHasStoreSumm(instr);
 }
+
+bool FuncSumm::isEventCall(DynCallInstr *callInstr) {
+  Function *f = callInstr->getCalledFunc();
+  assert(f);
+  EventMgr &EM = getAnalysis<EventMgr>();
+  return EM.isEventFunc(f);
+}
+
+size_t FuncSumm::numEventCallSites() {
+  EventMgr &EM = getAnalysis<EventMgr>();
+  return EM.numEventCallSites();
+}
+
+
 

@@ -34,6 +34,8 @@ namespace tern {
       klee::ThreadState *state);
     void recordCall(DynInstrVector *trace, klee::KInstruction *kInstr, 
       klee::ThreadState *state, llvm::Function *f);
+    void recordProcessExitCall(DynInstrVector *trace, klee::KInstruction *kInstr, 
+      klee::ThreadState *state, llvm::Function *f);
     void recordNonMem(DynInstrVector *trace, klee::KInstruction *kInstr, 
       klee::ThreadState *state);
     void recordLoad(DynInstrVector *trace, klee::KInstruction *kInstr, 

@@ -107,9 +107,12 @@ InstrDenseSet *OprdSumm::getStoreSummBetween(
 }
 
 InstrDenseSet *OprdSumm::getStoreSummInFunc(
-  DynRetInstr *retInstr, bdd &bddResults) {
-  DynCallInstr *callInstr = retInstr->getDynCallInstr();
-  Function *calledFunc = callInstr->getCalledFunc();
+  DynInstr *dynInstr, DynCallInstr *caller, bdd &bddResults) {
+  Function *calledFunc = NULL;
+  if (caller)
+    calledFunc = caller->getCalledFunc();
+  else
+    calledFunc = mainFunc;
   assert(calledFunc);
   visitedBB.clear();
   InstrDenseSet *summ = funcStoreSumm[calledFunc];
@@ -124,7 +127,7 @@ InstrDenseSet *OprdSumm::getStoreSummInFunc(
       module depending on slicing mode, so this is correct. */
       Instruction *storeInstr = *itr;
       SERRS << "\nOprdSumm::getStoreSummInFunc: " << stat->printInstr(storeInstr) << "\n";
-      bddResults |= aliasMgr->getPointTee(retInstr, storeInstr->getOperand(1));
+      bddResults |= aliasMgr->getPointTee(dynInstr, storeInstr->getOperand(1));
     } else {
       Instruction *instr = *itr;
       assert(Util::isCall(instr));
@@ -136,7 +139,7 @@ InstrDenseSet *OprdSumm::getStoreSummInFunc(
           Value *arg = Util::stripCast(*ci);
           SERRS << "\nOprdSumm::getStoreSummInFunc ExtCall argOffSet[" << argOffset << "]: "
             << stat->printInstr(instr) << "\n";
-          bddResults |= aliasMgr->getPointTee(retInstr, arg);
+          bddResults |= aliasMgr->getPointTee(dynInstr, arg);
         }
       }
     }
@@ -202,7 +205,11 @@ void OprdSumm::initAllSumm(llvm::Module &M) {
 
 void OprdSumm::collectSummLocal(llvm::Module &M) {
   visited.clear();
-  for (Module::iterator f = M.begin(); f != M.end(); ++f) {
+  for (Module::iterator f = M.begin(); f != M.end(); ++f) {    
+    // Record the main function.
+    if (f->getNameStr() == "main" || f->getNameStr() == "__user_main")
+      mainFunc = f;
+    
     if (visited.count(f) == 0) {
       visited.insert(f);
       if (funcSumm->isInternalFunction(f)) {

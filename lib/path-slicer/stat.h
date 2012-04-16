@@ -31,12 +31,16 @@ namespace tern {
     /* The set of static external function calls. */
     llvm::DenseSet<const llvm::Instruction *> externalCalls;
 
+    /* The set of event calls of static instructions. */
+    llvm::DenseSet<const llvm::Instruction *> eventCalls;
+
     /* Path exploration branches frequency, map from instruction to frequency. */
     llvm::DenseMap<llvm::Instruction *, int> pathFreq;
 
   protected:
     void collectExternalCalls(DynCallInstr *dynCallInstr);
     void collectExedStaticInstrs(DynInstr *dynInstr);
+    void collectEventCalls(DynCallInstr *dynCallInstr);
     void printFileLoc(llvm::raw_ostream &S, const llvm::Instruction *instr);
 
   public:

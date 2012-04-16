@@ -74,8 +74,8 @@ void PathSlicer::getAnalysisUsage(AnalysisUsage &AU) const {
 }
 
 bool PathSlicer::runOnModule(Module &M) {
-  init(M);
   BEGINTIME(stat.pathSlicerSt);
+  init(M);
   return false;
 }
 

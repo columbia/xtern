@@ -50,6 +50,7 @@ namespace tern {
     void handleBranch(DynInstr *dynInstr);
     void handleRet(DynInstr *dynInstr);
     void handleCall(DynInstr *dynInstr);
+    void handleProcessExitCall(DynInstr *dynInstr);
     void handleNonMem(DynInstr *dynInstr);
     void handleMem(DynInstr *dynInstr);
     bool empty();
@@ -66,14 +67,14 @@ namespace tern {
     bool retRegOverWritten(DynRetInstr *dynRetInstr);
     bool eventBetween(DynBrInstr *dynBrInstr, DynInstr *dynPostInstr);
     bool writtenBetween(DynBrInstr *dynBrInstr, DynInstr *dynPostInstr);
-    bool mayWriteFunc(DynRetInstr *dynRetInstr);
-    bool mayCallEvent(DynRetInstr *dynRetInstr);
+    bool mayWriteFunc(DynInstr *dynInstr, DynCallInstr *caller);
+    bool mayCallEvent(DynCallInstr *caller);
 
     /* Find previous dynamic instruction in the trace with the same thread id. */
     DynInstr *prevDynInstr(DynInstr *dynInstr);
 
-    /* Make curIndex points to the previous instruction of the call instruction of the ret instruction. */
-    void removeRange(DynRetInstr *dynRetInstr);
+    /* Make curIndex points to the previous instruction of the call instruction of the dyn instruction. */
+    void removeRange(DynInstr *dynInstr, DynCallInstr *caller);
     void addMemAddrEqConstr(DynMemInstr *loadInstr, DynMemInstr *storeInstr);
     bool mustAlias(DynOprd *oprd1, DynOprd *oprd2);
     void dump(const char *tag);

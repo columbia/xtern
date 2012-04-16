@@ -147,7 +147,14 @@ namespace tern {
     in function pointers. Need to add constraint assertion to fix this called one. */
     llvm::Function *calledFunc;
 
-    /* Mark whether a function call contains any target instruction (e.g., inter-thread target or checker target).
+    /* The dynamic call instruction corresponds to this return instruction. 
+    This is necessary for all call instructions, because of exit(), which can be
+    viewed as a multiple points of return. If we hit exit(), we need to recursively look back to caller
+    to determine which range to remove in handleProcessExitCallInstr().*/
+    DynCallInstr *caller;
+
+    /* Mark whether a function call contains any target instruction 
+    (e.g., inter-thread target or checker target).
     The bool type can be replaced as a set of dyninstr * which are targets.
     FIXME: when we implement the inter-thread phase, the call stack is built before inter-thread phase
     starts to work, so we need to repick those targets. */
@@ -160,6 +167,8 @@ namespace tern {
     llvm::Function *getCalledFunc();
     void setContainTarget(bool containTarget);
     bool getContainTarget();
+    void setCaller(DynCallInstr *dynInstr);
+    DynCallInstr *getCaller();
   };
 
   class DynRetInstr: public DynInstr {
@@ -175,6 +184,16 @@ namespace tern {
     void setDynCallInstr(DynCallInstr *dynInstr);
     DynCallInstr *getDynCallInstr();
     
+  };
+
+  class DynProcessExitCallInstr: public DynCallInstr {
+  private:
+
+  protected:
+
+  public:
+    DynProcessExitCallInstr();
+    ~DynProcessExitCallInstr();
   };
 
   class DynSpawnThreadInstr: public DynCallInstr {

@@ -99,7 +99,10 @@ void KleeTraceUtil::record(DynInstrVector *trace, KInstruction *kInstr,
   }  else if (Util::isRet(instr)) {
     recordRet(trace, kInstr, state);
   }  else if (Util::isCall(instr)) {
-    recordCall(trace, kInstr, state, f);
+    if (Util::isProcessExitFunc(f))
+      recordProcessExitCall(trace, kInstr, state, f);
+    else
+      recordCall(trace, kInstr, state, f);
   } else if (Util::isMem(instr)) {
     if (Util::isLoad(instr))
       recordLoad(trace, kInstr, state);
@@ -151,6 +154,19 @@ void KleeTraceUtil::recordCall(DynInstrVector *trace, klee::KInstruction *kInstr
   call->setTid((uchar)state->id);
   call->setOrigInstrId(idMgr->getOrigInstrId(kInstr->inst));
   call->setCalledFunc(f);
+  trace->push_back(call);
+  stat->collectExed(call);
+}
+
+void KleeTraceUtil::recordProcessExitCall(DynInstrVector *trace, klee::KInstruction *kInstr, 
+  klee::ThreadState *state, llvm::Function *f) {
+  DynProcessExitCallInstr *exitCall = new DynProcessExitCallInstr;
+  DynCallInstr *call = (DynCallInstr *)exitCall;
+  call->setIndex(trace->size());
+  call->setTid((uchar)state->id);
+  call->setOrigInstrId(idMgr->getOrigInstrId(kInstr->inst));
+  call->setCalledFunc(f);
+  SERRS << "KleeTraceUtil::recordProcessExitCall " << (void *)f << ":" << f->getNameStr() << "\n";
   trace->push_back(call);
   stat->collectExed(call);
 }
@@ -255,7 +271,7 @@ void KleeTraceUtil::preProcess(DynInstrVector *trace) {
     // (4) For each dynamic ret instruction, setup its dynamic call instruction.
     if (Util::isRet(instr)) {
       DynRetInstr *ret = (DynRetInstr *)dynInstr;
-      DynCallInstr *call = ctxMgr->getCallOfRet(ret);
+      DynCallInstr *call = ctxMgr->getCaller(dynInstr);
       if (!call)
         assert(ret->getCallingCtx()->size() == 0);
       else 
@@ -267,6 +283,14 @@ void KleeTraceUtil::preProcess(DynInstrVector *trace) {
       DynCallInstr *call = (DynCallInstr *)dynInstr;
       if (Util::isThreadCreate(call))
         ((DynSpawnThreadInstr *)call)->setChildTid(call->getTid()+1);
+      if (Util::isProcessExitFunc(call->getCalledFunc()))
+        SERRS << "\n\nprocessing exit function... " << (void *)call->getCalledFunc() << "\n\n";
+      DynCallInstr *caller = ctxMgr->getCaller(dynInstr);
+      if (!caller)
+        assert(call->getCallingCtx()->size() == 0);
+      else 
+        call->setCaller(caller);
+
       /* Must make sure Gang's thread model in KLEE still make this rule hold:
       a child's tid is the parent's +1. */
     }

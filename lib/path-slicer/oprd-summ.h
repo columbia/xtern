@@ -64,6 +64,8 @@ namespace tern {
     DenseSet<llvm::Function *> visited;
     DenseSet<llvm::BasicBlock *> visitedBB;
 
+    llvm::Function *mainFunc;
+
   protected:
     void clean();
     void initAllSumm(llvm::Module &M);
@@ -109,7 +111,8 @@ namespace tern {
     /* Given a dynamic return instruction, calculate all reachable store instructions within the
     called function and their bdd. The store instructions are those in corespoing module 
     (normal, mx, or sim).*/
-    InstrDenseSet *getStoreSummInFunc(DynRetInstr *retInstr, bdd &bddResults);
+    InstrDenseSet *getStoreSummInFunc(
+      DynInstr *dynInstr, DynCallInstr *caller, bdd &bddResults);
 
     /* Given a dynamic call instruction, return a bdd to specify all the "ExtStore" summary of
     that instruction.*/

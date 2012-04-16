@@ -29,6 +29,8 @@ void IntraSlicer::detectInputDepRaces(uchar tid) {
     // Handle checker targets.
     if (cur->isCheckerTarget()) {
       handleCheckerTarget(cur);
+      if (DBG)
+        stat->printDynInstr(cur, __func__);
       continue;
     }
 
@@ -47,6 +49,8 @@ void IntraSlicer::detectInputDepRaces(uchar tid) {
     } else { /* Handle all the other non-memory instructions. */
       handleNonMem(cur);
     }
+    if (DBG)
+      stat->printDynInstr(cur, __func__);
   }
 }
 
@@ -68,8 +72,6 @@ DynInstr *IntraSlicer::delTraceTail(uchar tid) {
     } else
       curIndex--;
   }
-  if (dynInstr && DBG)
-    stat->printDynInstr(dynInstr, __func__);
   return dynInstr;
 }
 
@@ -169,18 +171,17 @@ bool IntraSlicer::writtenBetween(DynBrInstr *dynBrInstr, DynInstr *dynPostInstr)
   return (bddBetween & bddOfLive) != bddfalse;
 }
 
-bool IntraSlicer::mayWriteFunc(DynRetInstr *dynRetInstr) {
+bool IntraSlicer::mayWriteFunc(DynInstr *dynInstr, DynCallInstr *caller) {
+  // Passed in argument caller can be NULL, which means main().
   bdd bddOfCall = bddfalse;
-  oprdSumm->getStoreSummInFunc(dynRetInstr, bddOfCall);
+  oprdSumm->getStoreSummInFunc(dynInstr, caller, bddOfCall);
   const bdd bddOfLive = live.getAllLoadMem();
   return (bddOfCall & bddOfLive) != bddfalse;
 }
 
-bool IntraSlicer::mayCallEvent(DynRetInstr *dynRetInstr) {
-  DynCallInstr *dynCallInstr = dynRetInstr->getDynCallInstr();
-  if (!dynCallInstr)
-    return false;
-  return funcSumm->mayCallEvent(dynCallInstr);
+bool IntraSlicer::mayCallEvent(DynCallInstr *caller) {
+  // If caller is NULL, means main() function, NULL is legal.
+  return funcSumm->mayCallEvent(caller);
 }
 
 void IntraSlicer::handleCheckerTarget(DynInstr *dynInstr) {
@@ -248,6 +249,18 @@ finish:
   ENDTIME(stat->intraBrTime, stat->intraBrSt, stat->intraBrEnd);
 }
 
+/*
+For the same reason in handleProcessExitCall(), seems that we have to take the return instruction
+even it only mayCallEvent() or mayWriteFunc(), otherwise the program may go down another path
+and hits an exit(). So current implementation is correct.
+foo(x) {
+  if (x)
+    exit(0);
+  else
+    return 1;
+}
+
+*/
 void IntraSlicer::handleRet(DynInstr *dynInstr) {
   DynRetInstr *retInstr = (DynRetInstr*)dynInstr;
   /* If current return instruction does not have a call instruction, it must 
@@ -263,8 +276,9 @@ void IntraSlicer::handleRet(DynInstr *dynInstr) {
     live.addUsedRegs(retInstr);
     slice.add(retInstr, TakenFlags::INTRA_RET_REG_OW);
   } else {
-    bool reason1 = mayCallEvent(retInstr);
-    bool reason2 = mayWriteFunc(retInstr);
+    DynCallInstr *caller = retInstr->getDynCallInstr();
+    bool reason1 = mayCallEvent(caller);
+    bool reason2 = mayWriteFunc(retInstr, caller);
     SERRS << "IntraSlicer::handleRet reason1 " << reason1
       << ", reason2 " << reason2 << ".\n";
     if (reason1 && reason2)
@@ -274,7 +288,7 @@ void IntraSlicer::handleRet(DynInstr *dynInstr) {
     else if (!reason1 && reason2)
       slice.add(retInstr, TakenFlags::INTRA_RET_WRITE_FUNC);
     else
-      removeRange(retInstr);
+      removeRange(dynInstr, caller);
   }
   ENDTIME(stat->intraRetTime, stat->intraRetSt, stat->intraRetEnd);
 }
@@ -282,6 +296,12 @@ void IntraSlicer::handleRet(DynInstr *dynInstr) {
 void IntraSlicer::handleCall(DynInstr *dynInstr) {
   BEGINTIME(stat->intraCallSt);
   DynCallInstr *callInstr = (DynCallInstr*)dynInstr;
+
+  if (Util::isProcessExitFunc(callInstr->getCalledFunc())) {
+    handleProcessExitCall(dynInstr);
+    goto finished;
+  }
+  
   if (funcSumm->isInternalCall(callInstr)) {
     if (regOverWritten(dynInstr))
       delRegOverWritten(dynInstr);
@@ -302,7 +322,78 @@ void IntraSlicer::handleCall(DynInstr *dynInstr) {
       }
     }
   }
+
+finished:
   ENDTIME(stat->intraCallTime, stat->intraCallSt, stat->intraCallEnd);
+}
+
+/*
+Complicated, because exit() can be viewed as multiple return points of multiple functions,
+so we have to recursively look back to callers. 
+Note we have to take the exit() call, because it has effect "exit", if we do not take it, we would
+go down different paths.
+e.g., the foo() below, current path has an effect "exit", if we do not take this exit(), the input
+may drive x to go down a different path which just return and the process goes on to run,
+which has different effect from current path.
+foo(x) {
+  if (x)
+    exit(0);
+  else
+    return 1;
+}
+
+Also note that if this exit call is target, it would have been handle by handleCheckerTarget()
+correctly and taken.
+Overall, if we backtrack to main() and still do not need to take it, then we do not tak the exit(),
+otherwise we have to take it and have to take its caller, too (in order to maintain the effect of "exit"). */
+void IntraSlicer::handleProcessExitCall(DynInstr *dynInstr) {
+  if (DBG)
+    stat->printDynInstr(dynInstr, "handleProcessExitCall");
+  DynProcessExitCallInstr *exitCall = (DynProcessExitCallInstr *)dynInstr;
+
+  // Start the recursive loop.
+  DynCallInstr *caller = exitCall->getCaller();
+  DynInstr *dyn = dynInstr;
+  bool reason1 = false;
+  bool reason2 = false;
+  bool remove = false;
+  while (true) {
+    reason1 = mayCallEvent(caller);
+    reason2 = mayWriteFunc(dyn, caller);
+    SERRS << "IntraSlicer::handleProcessExitCall reason1 " << reason1
+      << ", reason2 " << reason2 << ".\n";
+    if (reason1 && reason2) {
+      // We have to take the exit() anyway (reason, the foo() above) if we hit a must-not-remove function, in order to ensure the effect of the path: "exit".
+      slice.add(dynInstr, TakenFlags::INTRA_EXIT_BOTH); 
+      remove = false;
+      break;
+    } else if (reason1 && !reason2) {
+      slice.add(dynInstr, TakenFlags::INTRA_EXIT_CALL_EVENT);
+      remove = false;
+      break;
+    } else if (!reason1 && reason2) {
+      slice.add(dynInstr, TakenFlags::INTRA_EXIT_WRITE_FUNC);
+      remove = false;
+      break;
+    } else {
+      // DBG.
+      stat->printDynInstr(dyn, "handleProcessExitCall dyn");
+      if (caller)
+        stat->printDynInstr(caller, "handleProcessExitCall caller");
+      else
+        fprintf(stderr, "handleProcessExitCall caller should have reached main().\n");
+      
+      // Recursively look back to caller (assign dyn as the 'callee').
+      remove = true;
+      if (!caller)    // If have reached main(), break, terminate the recursion.
+        break;
+      dyn = (DynInstr *)caller;
+      caller = caller->getCaller();        
+    }
+  };
+  
+  if (remove)
+    removeRange(dynInstr, caller);
 }
 
 void IntraSlicer::handleNonMem(DynInstr *dynInstr) {
@@ -425,15 +516,20 @@ void IntraSlicer::dump(const char *tag) {
   errs() << BAN;
 }
 
-void IntraSlicer::removeRange(DynRetInstr *dynRetInstr) {
-  DynCallInstr *call = dynRetInstr->getDynCallInstr();
-  assert(call);
+void IntraSlicer::removeRange(DynInstr *dynInstr, DynCallInstr *caller) {
+  if (!caller) {    // If caller is NULL, means we have hit the main() function, done.
+    fprintf(stderr, "IntraSlicer::removeRange() should have reached the main() function.\n");
+    curIndex = -1;
+    if (DBG)
+      stat->printDynInstr(dynInstr, "IntraSlicer::removeRange dynInstr reaches main()");
+    return;
+  }
   /* Directly sets the current slicing index to be the previous one of the call instr. */
-  curIndex = call->getIndex() - 1;
+  curIndex = caller->getIndex() - 1;
   assert(!empty());
   if (DBG) {
-    stat->printDynInstr(dynRetInstr, "IntraSlicer::removeRange dynRetInstr");
-    stat->printDynInstr(call, "IntraSlicer::removeRange call");
+    stat->printDynInstr(dynInstr, "IntraSlicer::removeRange dynInstr");
+    stat->printDynInstr(caller, "IntraSlicer::removeRange caller");
   }
 }
 

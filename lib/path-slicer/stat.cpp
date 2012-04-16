@@ -78,11 +78,11 @@ void Stat::printFinalFormatResults() {
   std::string pruneType = MarkPrunedOnly?"Mark":"Real";
   std::string finishResult = finished?"Yes":"No";
   std::string keyTag = "*";
-  errs() << "\n\n" << "FORMAT ITEMS:    "
+  std::cerr << "\n\n" << "FORMAT ITEMS:    "
     << "|| App || Checker || Mark/Real prune || Finished || All time (sec) || Path slicer time "
     << "|| Init time || Pruned states || All states (paths) "
-    << "|| # Tests || # Instrs exed || # Not pruned Instrs exed || # Not pruned internal Instrs exed "
-    << "|| # Static Instrs exed || # Static Instrs ||\n"
+    << "|| \\# Tests || \\# Instrs exed || \\# Not pruned Instrs exed || \\# Not pruned internal Instrs exed "
+    << "|| \\# Static Instrs exed || \\# Static Instrs || \\# Static exed events || \\# Static events (no fp) ||\n"
     << "FORMAT RESULTS:    "
     << "| " << origModule->getModuleIdentifier()
     << " | " << UseOneChecker
@@ -98,13 +98,15 @@ void Stat::printFinalFormatResults() {
     << " | " << keyTag << numNotPrunedInstrs << keyTag
     << " | " << numNotPrunedInternalInstrs
     << " | " << sizeOfExedStaticInstrs()
-    << " | " << sizeOfStaticInstrs() << " | "
+    << " | " << sizeOfStaticInstrs()
+    << " | " << eventCalls.size()
+    << " | " << funcSumm->numEventCallSites()
     
     // TBA.
     /*<< "     (" << numCoveredInstrs
     << "/" << numCoveredInstrs + numUnCoveredInstrs
     << ")"*/
-
+    << " | "
   	<< "\n\n\n";
 
 }
@@ -199,6 +201,11 @@ void Stat::collectExternalCalls(DynCallInstr *dynCallInstr) {
   externalCalls.insert(instr);
 }
 
+void Stat::collectEventCalls(DynCallInstr *dynCallInstr) {
+  Instruction *instr = idMgr->getOrigInstr(dynCallInstr);
+  eventCalls.insert(instr);
+}
+
 void Stat::printExternalCalls() {
   DenseSet<const Instruction *>::iterator itr(externalCalls.begin());
   errs() << "\n";
@@ -210,8 +217,13 @@ void Stat::printExternalCalls() {
 void Stat::collectExed(DynInstr *dynInstr) {
   Instruction *instr = idMgr->getOrigInstr(dynInstr);
   collectExedStaticInstrs(dynInstr);
-  if (Util::isCall(instr) && !funcSumm->isInternalCall(dynInstr))
-    collectExternalCalls((DynCallInstr *)dynInstr);
+  if (Util::isCall(instr)) {
+    DynCallInstr *callInstr = (DynCallInstr *)dynInstr;
+    if (!funcSumm->isInternalCall(dynInstr))
+      collectExternalCalls(callInstr);
+    if (funcSumm->isEventCall(callInstr))
+      collectEventCalls(callInstr);
+  }
 }
 
 void Stat::collectExplored(llvm::Instruction *instr) {

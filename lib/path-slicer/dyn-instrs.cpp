@@ -151,6 +151,7 @@ DynCallInstr *DynRetInstr::getDynCallInstr() {
 
 DynCallInstr::DynCallInstr() {
   calledFunc = NULL;
+  caller = NULL;
   containTarget = false;
 }
 
@@ -173,6 +174,22 @@ void DynCallInstr::setContainTarget(bool containTarget) {
 
 bool DynCallInstr::getContainTarget() {
   return containTarget;
+}
+
+void DynCallInstr::setCaller(DynCallInstr *caller) {
+  this->caller = caller;
+}
+
+DynCallInstr *DynCallInstr::getCaller() {
+  return caller;
+}
+
+DynProcessExitCallInstr::DynProcessExitCallInstr() : DynCallInstr() {
+
+}
+
+DynProcessExitCallInstr::~DynProcessExitCallInstr() {
+
 }
 
 DynSpawnThreadInstr::DynSpawnThreadInstr() {

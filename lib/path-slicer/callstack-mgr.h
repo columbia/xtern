@@ -43,7 +43,7 @@ namespace tern {
         for mx slicing mode, this is the mx call stack. */
     void setCallStack(DynInstr *dynInstr);
     
-    DynCallInstr *getCallOfRet(DynRetInstr *dynRetInstr);
+    DynCallInstr *getCaller(DynInstr *dynInstr);
 
     /* For each loaded dynamic instruction, update the per-thread "current" call stack. */
     void updateCallStack(DynInstr *dynInstr);

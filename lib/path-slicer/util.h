@@ -22,6 +22,7 @@ namespace tern {
     static bool isUniCondBr(const llvm::Instruction *instr);
     static bool isRet(const llvm::Instruction *instr);
     static bool isCall(const llvm::Instruction *instr);
+    static bool isProcessExitFunc(llvm::Function *f);
     static bool isIntrinsicCall(const llvm::Instruction *instr);
     static bool isLoad(const llvm::Instruction *instr);
     static bool isStore(const llvm::Instruction *instr);

@@ -30,6 +30,7 @@ namespace tern {
     llvm::DenseSet<llvm::Function *> visited;
     DenseMap<BasicBlock *, bool> bbVisited;
     std::vector<llvm::Function *> eventFuncs;
+    llvm::DenseSet<llvm::Instruction *> eventCallSites;
 
     bool is_exit_block(llvm::BasicBlock *bb);
     void DFS(llvm::Function *f);
@@ -49,8 +50,9 @@ namespace tern {
     virtual void print(llvm::raw_ostream &O, const llvm::Module *M) const;
     bool mayCallEvent(llvm::Function *f);
     bool eventBetween(llvm::BranchInst *prevInstr, llvm::Instruction *postInstr);
-    bool is_sync_function(llvm::Function *f);
+    bool isEventFunc(llvm::Function *f);
     void output(const llvm::Module &M) const;
+    size_t numEventCallSites();
   };
 }
 

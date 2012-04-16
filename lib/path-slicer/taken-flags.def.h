@@ -65,6 +65,9 @@ DEF(INTRA_RET_BOTH, IntraThread) /* Both calling event and writing func. */
 /* Reasons of taken by handling call instructions. */
 DEF(INTRA_EXT_CALL_REG_OW, IntraThread)
 DEF(INTRA_EXT_CALL_MOD_LIVE, IntraThread)
+DEF(INTRA_EXIT_CALL_EVENT, IntraThread) /* Calling event only. */
+DEF(INTRA_EXIT_WRITE_FUNC, IntraThread) /* Write func only. */
+DEF(INTRA_EXIT_BOTH, IntraThread) /* Both calling event and writing func. */
 // TBD
 
 /* Reasons of taken by handling load instructions. */

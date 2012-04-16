@@ -93,14 +93,34 @@ void EventMgr::setupEvents(Module &M) {
     }
   }
 
+  // Collect static event callsites, ignore function pointer for now, so the event callsites is only an estimation.
+  for (Module::iterator f = M.begin(), fe = M.end(); f != fe; ++f)
+    for (Function::iterator b = f->begin(), be = f->end(); b != be; ++b)
+      for (BasicBlock::iterator i = b->begin(), ie = b->end(); i != ie; ++i) {
+        Instruction *instr = i;
+        if (Util::isCall(instr)) {
+  			CallInst *ci = cast<CallInst>(instr);
+  			Function *called = ci->getCalledFunction();
+  			if (!called) 
+  			  continue;
+          if (isEventFunc(called)) {
+            eventCallSites.insert(instr);
+            errs() << "EventMgr::setupEvents callsite " << f->getNameStr() << ":" 
+              << b->getNameStr() << ":" << *(instr) << "\n";
+          }
+        }
+      }
+  errs() << "EventMgr::setupEvents callsite size " << eventCallSites.size() << "\n";
+
+
   if (checker)
     delete checker;
 }
 
-// TODO: search in vector may be slow
-bool EventMgr::is_sync_function(Function *f) {
+bool EventMgr::isEventFunc(Function *f) {
   for (size_t i = 0; i < eventFuncs.size(); ++i) {
-    if (eventFuncs[i] == f)
+    // We can only compare the name of external functions, because they are totally relinked and different addresses.
+    if (eventFuncs[i]->getNameStr() == f->getNameStr())  
       return true;
   }
   return false;
@@ -110,8 +130,11 @@ void EventMgr::DFS(Function *f) {
   visited.insert(f);
   CallGraphFP &CG = getAnalysis<CallGraphFP>();
   InstList css = CG.get_call_sites(f);
+  fprintf(stderr, "EventMgr::DFS traverse function %s, callsite " SZ "\n",
+    f->getNameStr().c_str(), css.size());
   for (size_t i = 0; i < css.size(); ++i) {
     Function *caller = css[i]->getParent()->getParent();
+    //errs() << "EventMgr::DFS callsite caller " << caller->getNameStr() << ":" << *(css[i]) << "\n";
     if (visited.count(caller) == 0) {
       parent[caller] = f;
       DFS(caller);
@@ -199,6 +222,14 @@ void EventMgr::traverse_call_graph(Module &M) {
   for (size_t i = 0; i < eventFuncs.size(); ++i) {
     DFS(eventFuncs[i]);
   }
+
+  // DBG.
+  DenseSet<Function *>::iterator itr(visited.begin());
+  for (; itr != visited.end(); ++itr) {
+    Function *f = *itr;
+    errs() << "EventMgr::traverse_call_graph may call event function " << f->getNameStr() << "\n";
+  }
+  //abort();
 }
 
 void EventMgr::print_call_chain(Function *f) {
@@ -239,5 +270,9 @@ bool EventMgr::runOnModule(Module &M) {
 void EventMgr::print(llvm::raw_ostream &O, const Module *M) const {
   output(*M);
   stats(*M);
+}
+
+size_t EventMgr::numEventCallSites() {
+  return eventCallSites.size();
 }
 
