@@ -83,31 +83,28 @@ void Stat::printFinalFormatResults() {
     << "|| Init time || Pruned states || All states (paths) "
     << "|| \\# Tests || \\# Instrs exed || \\# Not pruned Instrs exed || \\# Not pruned internal Instrs exed "
     << "|| \\# Static Instrs exed || \\# Static Instrs || \\# Static exed events || \\# Static events (no fp) || Note ||\n"
-    << "FORMAT RESULTS:    "
-    << "| " << origModule->getModuleIdentifier()
-    << " | " << UseOneChecker
-    << " | " << pruneType
-    << " | " << keyTag << finishResult << keyTag
-    << " | " << pathSlicerTime
-    << " | " << intraSlicingTime
-    << " | " << initTime
-    << " | " << numPrunedStates 
-    << " | " << numStates
-    << " | " << numTests
-    << " | " << numInstrs
-    << " | " << keyTag << numNotPrunedInstrs << keyTag
-    << " | " << numNotPrunedInternalInstrs
-    << " | " << sizeOfExedStaticInstrs()
-    << " | " << sizeOfStaticInstrs()
-    << " | " << eventCalls.size()
-    << " | " << funcSumm->numEventCallSites()
-    << " | " << "tbd"
-    
-    // TBA.
-    /*<< "     (" << numCoveredInstrs
-    << "/" << numCoveredInstrs + numUnCoveredInstrs
-    << ")"*/
-    << " | "
+    << "FORMAT RESULTS:    ";
+  std::cerr << "| " << origModule->getModuleIdentifier();
+  std::cerr << " | " << UseOneChecker;
+  std::cerr << " | " << pruneType;
+  std::cerr << " | " << keyTag << finishResult << keyTag;
+  std::cerr << " | " << std::dec << pathSlicerTime;
+  std::cerr << " | " << std::dec << intraSlicingTime;
+  std::cerr << " | " << std::dec << initTime;
+  std::cerr << " | " << std::dec << numPrunedStates;
+  std::cerr << " | " << std::dec << numStates;
+  std::cerr << " | " << std::dec << numTests;
+  std::cerr << " | " << std::dec << numInstrs;
+  std::cerr << " | " << keyTag; std::cerr << std::dec << numNotPrunedInstrs; std::cerr << keyTag;
+  std::cerr << " | " << std::dec << numNotPrunedInternalInstrs;
+  std::cerr << " | " << std::dec << sizeOfExedStaticInstrs();
+  std::cerr << " | " << std::dec << sizeOfStaticInstrs();
+  std::cerr << " | " << std::dec << eventCalls.size();
+  std::cerr << " | " << std::dec << funcSumm->numEventCallSites();
+  std::cerr << " | " << "tbd";
+  //TBA
+  
+  std::cerr  << " | "
   	<< "\n\n\n";
 
 }
