@@ -10,6 +10,7 @@ namespace tern {
   private:
 
   protected:
+    static std::string printFileLoc(const llvm::Instruction *instr, const char *tag);
     
   public:
     static llvm::Function *getFunction(llvm::Instruction *instr);
@@ -44,6 +45,8 @@ namespace tern {
     static bool isThreadCreate(DynCallInstr *call);
     
     static void addTargetDataToPM(llvm::Module *module, llvm::PassManager *pm);
+
+    static std::string printNearByFileLoc(const llvm::Instruction *instr);
   };
 }
 

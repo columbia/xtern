@@ -148,6 +148,8 @@ namespace tern {
     void addNotPrunedInternalInstrs(unsigned traceSize);
 
     void incNotPrunedStatesInstrs();
+
+    void printEventCalls();
   };
 }
 

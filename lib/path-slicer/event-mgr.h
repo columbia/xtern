@@ -21,6 +21,7 @@
 namespace tern {
   struct EventMgr: public llvm::ModulePass {	
   public:
+    llvm::Module *module;
     static char ID;
 
   protected:
@@ -56,6 +57,7 @@ namespace tern {
     bool isEventFunc(llvm::Function *f);
     void output(const llvm::Module &M) const;
     size_t numEventCallSites();
+    void printEventCalls();
   };
 }
 

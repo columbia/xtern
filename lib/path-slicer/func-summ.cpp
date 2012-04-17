@@ -146,5 +146,9 @@ size_t FuncSumm::numEventCallSites() {
   return EM.numEventCallSites();
 }
 
+void FuncSumm::printEventCalls() {
+  EventMgr &EM = getAnalysis<EventMgr>();
+  return EM.printEventCalls();
+}
 
 

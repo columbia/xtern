@@ -82,7 +82,7 @@ void Stat::printFinalFormatResults() {
     << "|| App || Checker || Mark/Real prune || Finished || All time (sec) || Path slicer time "
     << "|| Init time || Pruned states || All states (paths) "
     << "|| \\# Tests || \\# Instrs exed || \\# Not pruned Instrs exed || \\# Not pruned internal Instrs exed "
-    << "|| \\# Static Instrs exed || \\# Static Instrs || \\# Static exed events || \\# Static events (no fp) ||\n"
+    << "|| \\# Static Instrs exed || \\# Static Instrs || \\# Static exed events || \\# Static events (no fp) || Note ||\n"
     << "FORMAT RESULTS:    "
     << "| " << origModule->getModuleIdentifier()
     << " | " << UseOneChecker
@@ -101,6 +101,7 @@ void Stat::printFinalFormatResults() {
     << " | " << sizeOfStaticInstrs()
     << " | " << eventCalls.size()
     << " | " << funcSumm->numEventCallSites()
+    << " | " << "tbd"
     
     // TBA.
     /*<< "     (" << numCoveredInstrs
@@ -325,4 +326,20 @@ void Stat::addNotPrunedInternalInstrs(unsigned traceSize) {
 void Stat::incNotPrunedStatesInstrs() {
   numNotPrunedInstrs++;
 }
+
+void Stat::printEventCalls() {
+  // Print exed event calls.
+  errs() << BAN;
+  DenseSet<const Instruction *>::iterator itr(eventCalls.begin());
+  for (; itr != eventCalls.end(); ++itr) {
+    errs() << "Stat::printEventCalls exed " << Util::printNearByFileLoc(*itr) 
+      << ": " << printInstr(*itr) << "\n\n";
+  }
+  errs() << BAN;
+  
+  // Print all static event calls.
+  funcSumm->printEventCalls();
+  errs() << BAN;
+}
+
 

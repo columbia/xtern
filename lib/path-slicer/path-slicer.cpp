@@ -63,6 +63,7 @@ PathSlicer::~PathSlicer() {
   ENDTIME(stat.pathSlicerTime, stat.pathSlicerSt, stat.pathSlicerEnd);
   stat.printModule(this->outputDir);
   stat.printStat("PathSlicer::calStat FINAL");
+  stat.printEventCalls();
   stat.printFinalFormatResults();
   if (DBG)
     fprintf(stderr, "PathSlicer::~PathSlicer()\n");

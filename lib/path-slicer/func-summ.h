@@ -83,6 +83,7 @@ namespace tern {
 	/* Whether an instruction calls to an event. */
     bool isEventCall(DynCallInstr *callInstr);
     size_t numEventCallSites();
+    void printEventCalls();
 
   };
 

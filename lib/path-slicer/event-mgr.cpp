@@ -54,7 +54,8 @@ void EventMgr::getAnalysisUsage(AnalysisUsage &AU) const {
 
 void EventMgr::setupEvents(Module &M) {
   if (UseOneChecker == "") {
-    // NOP.
+    fprintf(stderr, "EventMgr::isEventFunc checker is NULL, please use only one checker.\n");
+    exit(1);
   } else {
     if (UseOneChecker == "Assert") {
       checker = new AssertChecker(NULL);
@@ -110,7 +111,7 @@ void EventMgr::setupEvents(Module &M) {
         }
       }
   errs() << "EventMgr::setupEvents callsite size " << eventCallSites.size() << "\n";
-
+  module = &M;
 
   //if (checker)
     //delete checker;
@@ -272,5 +273,19 @@ void EventMgr::print(llvm::raw_ostream &O, const Module *M) const {
 
 size_t EventMgr::numEventCallSites() {
   return eventCallSites.size();
+}
+
+void EventMgr::printEventCalls() {
+  DenseSet<Instruction *>::iterator itr(eventCallSites.begin());
+  for (Module::iterator f = module->begin(), fe = module->end(); f != fe; ++f)
+    for (Function::iterator b = f->begin(), be = f->end(); b != be; ++b)
+      for (BasicBlock::iterator i = b->begin(), ie = b->end(); i != ie; ++i) {
+        Instruction *instr = i;
+        if (eventCallSites.count(instr) > 0) {
+  	      errs() << "EventMgr::printEventCalls static " << Util::printNearByFileLoc(instr)
+           << " " << f->getNameStr() << ":" 
+           << b->getNameStr() << ":" << *(instr) << "\n\n";
+        }
+      }
 }
 

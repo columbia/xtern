@@ -1,9 +1,14 @@
 #include "llvm/Target/TargetData.h"
 #include "llvm/LLVMContext.h"
+#include "llvm/Metadata.h"
+#include "llvm/Analysis/DebugInfo.h"
+#include "llvm/Support/CFG.h"
 using namespace llvm;
 
 #include "util.h"
 using namespace tern;
+
+static const std::string noLocation = "[No-Loc]";
 
 Function *Util::getFunction(Instruction *instr) {
   return instr->getParent()->getParent();
@@ -174,6 +179,52 @@ Value *Util::stripCast(llvm::Value *v) {
       return stripCast(retV); // Recursive.
   }
   return retV;
+}
+
+std::string Util::printFileLoc(const Instruction *instr, const char *tag) {
+  if (MDNode *N = instr->getMetadata("dbg")) {
+    DILocation Loc(N);
+    unsigned Line = Loc.getLineNumber();
+    StringRef File = Loc.getFilename();
+    //StringRef Dir = Loc.getDirectory();
+    std::string str;
+    raw_string_ostream OS(str);
+    OS << " [" << tag << ":" << File << ":" << Line << "] ";
+    return OS.str();
+  }
+  return noLocation;
+}
+
+std::string Util::printNearByFileLoc(const Instruction *instr) {
+  static const int distance = 5; // 5 basicblocks distance.
+  std::string tag = "L";
+  if (instr->getMetadata("dbg"))
+    return printFileLoc(instr, tag.c_str());
+  else {
+    // Lookup current basic block.
+    BasicBlock *bb = (BasicBlock *)((long)instr->getParent());
+    int curDistance = 0;
+    tag = "B";
+    do {
+      // Find dbg in a bb.
+      for (BasicBlock::iterator i = bb->begin(), ie = bb->end(); i != ie; ++i) {
+        if (i->getMetadata("dbg"))
+          return printFileLoc(i, tag.c_str());
+      }
+	   tag = "A";
+      // If can not find, find the successor, util hit end of a function.
+      bool hasSuccessor = false;
+  		for (succ_iterator it = succ_begin(bb); it != succ_end(bb); ++it) {
+        bb = *it;
+        hasSuccessor = true;
+        break;
+      }
+      if (!hasSuccessor)
+        return noLocation;
+      curDistance++;
+    } while (curDistance < distance);
+  }
+  return noLocation;
 }
 
 

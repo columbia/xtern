@@ -27,7 +27,7 @@
 #define dprint(args...) if(get_option(tern_path_slicer,print_debug_info)==1)fprintf(stderr, args)
 #define DBG (get_option(tern_path_slicer,print_debug_info)!=0)
 
-#define BAN "\n\n\n\n====================================================================================================\n\n\n\n"
+#define BAN "\n\n=============================================\n\n"
 #define EXPR_BEGIN "\n\n----------TERN EXPR BEGIN----------\n";
 #define EXPR_END "\n\n----------TERN EXPR END----------\n";
 #define LLVM_CHECK_TAG "// CHECK: "
