@@ -12,12 +12,39 @@
 
 namespace tern {
   class DynInstr;
+  class DynMemInstr;
   class DynCallInstr;
   class InstrIdMgr;
   class CallStackMgr;
   class FuncSumm;
+  class AliasMgr;
+  class Stat;
+  class MemOpStat {
+  public:
+    Stat *stat;
+    AliasMgr *aliasMgr;
+    InstrIdMgr *idMgr;
+    llvm::DenseSet<llvm::Value *> importantValues;
+    llvm::DenseSet<DynMemInstr *> mayAliasSymMemInstrs;
+    std::string arrayName;
+    size_t numLoads;
+    size_t numStores;
+    size_t numSymLoads;
+    size_t numSymStores;
+    size_t numSymAliasLoads;
+    size_t numSymAliasStores;
+
+    MemOpStat();
+    ~MemOpStat();
+    void init(AliasMgr *aliasMgr, InstrIdMgr *idMgr, Stat *stat);
+    void initArrayName(std::string arrayName);
+    void collectImportantValues(DynInstr *dynInstr);
+    void collectMemOpStat(DynMemInstr *memInstr);
+    void print();
+  };
   class Stat {
   private:
+    MemOpStat memOpStat;
     InstrIdMgr *idMgr;
     CallStackMgr *ctxMgr;
     FuncSumm *funcSumm;
@@ -114,7 +141,7 @@ namespace tern {
     
     Stat();
     ~Stat();
-    void init(InstrIdMgr *idMgr, CallStackMgr *ctxMgr, FuncSumm *funcSumm);
+    void init(InstrIdMgr *idMgr, CallStackMgr *ctxMgr, FuncSumm *funcSumm, AliasMgr *aliasMgr);
     void printStat(const char *tag);
     const char *printInstr(const llvm::Instruction *instr, bool withFileLoc = false);    
     void printDynInstr(DynInstr *dynInstr, const char *tag,

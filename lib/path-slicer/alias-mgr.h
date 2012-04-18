@@ -55,6 +55,8 @@ namespace tern {
     /* This is the universal interface to query alias in all other modules. */
     //bool mayAlias(DynInstr *dynInstr1, int opIdx1, DynInstr *dynInstr2, int opIdx2);
     bool mayAlias(DynOprd *dynOprd1, DynOprd *dynOprd2);
+    /* Context-insensitve version. */
+    bool mayAlias(llvm::Value *v1, llvm::Value *v2);
 
     /* Get pointee bdd. In max slicing or range analysis mode, it should return the pointee of 
         the max sliced module. */
@@ -64,7 +66,6 @@ namespace tern {
     from the given instruction), get the pointee of <ctx, v>. The v must have already been from
     either normal module or max sliced module, depending on normal or max slicing mode. */
     bdd getPointTee(DynInstr *ctxOfDynInstr, llvm::Value *v);
-
   };
 }
 

@@ -74,6 +74,10 @@ bool Util::isMem(const Instruction *instr) {
   return isLoad(instr) || isStore(instr);
 }
 
+bool Util::isGetElemPtr(const llvm::Instruction *instr) {
+  return instr->getOpcode() == Instruction::GetElementPtr;
+}
+
 bool Util::isErrnoAddr(const Value *v) {
   const CallInst *ci = dyn_cast<CallInst>(v);
   if (!ci)

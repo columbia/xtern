@@ -133,6 +133,19 @@ bool AliasMgr::mayAlias(DynOprd *dynOprd1, DynOprd *dynOprd2) {
   return result;
 }
 
+bool AliasMgr::mayAlias(llvm::Value *v1, llvm::Value *v2) {
+  BddAliasAnalysis *baa = NULL;
+  if (NORMAL_SLICING) {
+    baa = (BddAliasAnalysis *)(origAaol->AAPass);
+  } else if (MAX_SLICING) {
+    baa = (BddAliasAnalysis *)(mxAaol->AAPass);
+  } else {
+    baa = (BddAliasAnalysis *)(simAaol->AAPass);
+    assert(false);  // range slicing: tbd.
+  }
+  return (baa->getPointeeSet(NULL, v1, 0) & baa->getPointeeSet(NULL, v2, 0)) != bddfalse;
+}
+
 bdd AliasMgr::getPointTee(DynOprd *dynOprd) {
   DynInstr *dynInstr = dynOprd->getDynInstr();
   Instruction *instr = NULL;

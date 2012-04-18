@@ -161,7 +161,7 @@ void PathSlicer::init(llvm::Module &M) {
     assert(false);
 
   // Init stat.
-  stat.init(&idMgr, &ctxMgr, &funcSumm);
+  stat.init(&idMgr, &ctxMgr, &funcSumm, &aliasMgr);
   stat.collectStaticInstrs(*origModule);
 
   ENDTIME(stat.initTime, stat.initSt, stat.initEnd);
@@ -317,7 +317,7 @@ void PathSlicer::recordCheckerResult(void *pathId, Checker::Result globalResult,
     } else {
       assert(globalResult != Checker::IMPORTANT && localResult != Checker::IMPORTANT);
       tgtMgr.markTarget(pathId, dynInstr, TakenFlags::CHECKER_ERROR);
-      if (!isKleeHalted)  // Output the trace is klee is not halted. This will not affect checker reports.
+      if (DBG && !isKleeHalted)  // Output the trace is klee is not halted. This will not affect checker reports.
         traceUtil->store(numTests+1, outputDir.c_str(), trace);
       if (DBG)
         stat.printDynInstr(dynInstr, "PathSlicer::recordCheckerResult Checker::ERROR");

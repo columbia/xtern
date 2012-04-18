@@ -17,6 +17,117 @@ using namespace klee;
 extern cl::opt<std::string> UseOneChecker;
 extern cl::opt<bool> MarkPrunedOnly;
 
+MemOpStat::MemOpStat() {
+  aliasMgr = NULL;
+  idMgr = NULL;
+  stat = NULL;
+  arrayName = "";
+  numLoads = 0;
+  numStores = 0;
+  numSymLoads = 0;
+  numSymStores = 0;
+  numSymAliasLoads = 0;
+  numSymAliasStores = 0;
+}
+
+MemOpStat::~MemOpStat() {
+
+}
+
+void MemOpStat::init(AliasMgr *aliasMgr, InstrIdMgr *idMgr, Stat *stat) {
+  this->aliasMgr = aliasMgr;
+  this->idMgr = idMgr;
+  this->stat = stat;
+}
+
+void MemOpStat::initArrayName(std::string arrayName) {
+  this->arrayName = arrayName;
+}
+
+void MemOpStat::collectImportantValues(DynInstr *dynInstr) {
+  Instruction *instr = idMgr->getOrigInstr(dynInstr);
+  if (Util::isGetElemPtr(instr)) {
+    Value *ptrOprd = instr->getOperand(0);
+    if (ptrOprd->hasName() && ptrOprd->getNameStr() == arrayName) {
+      importantValues.insert((Value *)instr);
+      stat->printDynInstr(dynInstr, "MemOpStat::collectImportantValues");
+    }
+  }
+}
+
+void MemOpStat::collectMemOpStat(DynMemInstr *memInstr) {
+  Instruction *instr = idMgr->getOrigInstr((DynInstr *)memInstr);
+  assert(Util::isMem(instr));
+  Value *ptr = NULL;
+  bool isSym = false;
+  
+  if (Util::isLoad(instr)) {
+    ptr = instr->getOperand(0);
+    numLoads++;
+    if (memInstr->isAddrSymbolic()) {
+      isSym = true;
+      numSymLoads++;
+    }
+  } else {
+    assert(Util::isStore(instr));
+    ptr = instr->getOperand(1);
+    numStores++;
+    if (memInstr->isAddrSymbolic()) {
+      isSym = true;
+      numSymStores++;
+    }
+  }
+
+  // Alias query.
+  if (isSym) {
+    DenseSet<Value *>::iterator itr(importantValues.begin());
+    for (; itr != importantValues.end(); ++itr) {
+      Value *v = *itr;
+      if (v == ptr || aliasMgr->mayAlias(v, ptr)) {
+        mayAliasSymMemInstrs.insert(memInstr);
+        if (Util::isLoad(instr))
+          numSymAliasLoads++;
+        else {
+          assert(Util::isStore(instr));
+          numSymAliasStores++;
+        }
+        return;
+      }
+    }
+  }
+}
+
+void MemOpStat::print() {
+  errs() << "MemOpStat::print"
+    << ": arrayName: " << arrayName
+    << ": [numLoads: " << numLoads
+    << ": numSymLoads: " << numSymLoads
+    << ": numSymAliasLoads: " << numSymAliasLoads
+    << "]"
+    << ":    [numStores: " << numStores
+    << ": numSymStores: " << numSymStores
+    << ": numSymAliasStores: " << numSymAliasStores
+    << "]\n";
+
+  errs() << "MemOpStat::print importantValues size " << importantValues.size() << "\n";
+  DenseSet<Value *>::iterator itr(importantValues.begin());
+  int i = 0;
+  for (; itr != importantValues.end(); ++itr) {
+    Instruction *instr = dyn_cast<Instruction>(*itr);
+    assert(instr);
+    errs() << "MemOpStat::print importantValues [" << i << "]: " <<  stat->printInstr(instr) << "\n";
+    i++;
+  }
+
+  DenseSet<DynMemInstr *>::iterator dynItr(mayAliasSymMemInstrs.begin());
+  i = 0;
+  for (; dynItr != mayAliasSymMemInstrs.end(); ++dynItr) {
+    errs() << "MemOpStat::print mayAliasSymMemInstrs [" << i << "]: ";
+    stat->printDynInstr((DynInstr *)(*dynItr), "MemOpStat::print");
+    i++;
+  }
+}
+
 Stat::Stat() {
   finished = false;
   numPrunedStates = 0;
@@ -49,10 +160,12 @@ Stat::~Stat() {
 
 }
 
-void Stat::init(InstrIdMgr *idMgr, CallStackMgr *ctxMgr, FuncSumm *funcSumm) {
+void Stat::init(InstrIdMgr *idMgr, CallStackMgr *ctxMgr, FuncSumm *funcSumm, AliasMgr *aliasMgr) {
   this->idMgr = idMgr;
   this->ctxMgr = ctxMgr;
   this->funcSumm = funcSumm;
+  memOpStat.init(aliasMgr, idMgr, this);
+  memOpStat.initArrayName("newArgv"); // Currently only looks at argv, can look at other arrays as well.
 }
 
 void Stat::printStat(const char *tag) {
@@ -67,10 +180,11 @@ void Stat::printStat(const char *tag) {
     << "intraMemTime: " << intraMemTime << ", "
     << "intraNonMemTime: " << intraNonMemTime << ", "
     << "StaticExed/Static Instrs: " << sizeOfExedStaticInstrs() << "/" << sizeOfStaticInstrs() << ", "
-    << "numPrunedStates/numStates: " << numPrunedStates << "/" << numStates << ", "
-    
+    << "numPrunedStates/numStates: " << numPrunedStates << "/" << numStates << ", "    
     // TBD.
     << "\n";
+
+  memOpStat.print();
 }
 
 void Stat::printFinalFormatResults() {
@@ -222,6 +336,11 @@ void Stat::collectExed(DynInstr *dynInstr) {
     if (funcSumm->isEventCall(callInstr))
       collectEventCalls(callInstr);
   }
+
+  // Collect mem op stat.
+  memOpStat.collectImportantValues(dynInstr);
+  if (Util::isMem(instr))
+    memOpStat.collectMemOpStat((DynMemInstr *)dynInstr);
 }
 
 void Stat::collectExplored(llvm::Instruction *instr) {

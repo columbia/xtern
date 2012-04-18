@@ -225,6 +225,6 @@ ref<klee::Expr> DynMemInstr::getAddr() {
 }
 
 bool DynMemInstr::isAddrSymbolic() {
-  return isa<klee::ConstantExpr>(addr);
+  return !(isa<klee::ConstantExpr>(addr));
 }
 
