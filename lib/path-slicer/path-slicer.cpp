@@ -55,6 +55,7 @@ char PathSlicer::ID = 0;
 
 PathSlicer::PathSlicer(): ModulePass(&ID) {
   startRecord = false;
+  isKleeHalted = false;
   fprintf(stderr, "PathSlicer::PathSlicer()\n");
   load_options("local.options");
 }
@@ -200,8 +201,10 @@ void PathSlicer::runPathSlicer(void *pathId, set<size_t> &rmBrs,
     pathId, isPruned, isHalted, trace->size());
   if (isPruned)
     goto finish;
-  if (isHalted)
+  if (isHalted) {
+    isKleeHalted = true;
     goto finish;
+  }
   if (trace->size() == 0)
     goto finish;
   stat.addNotPrunedInternalInstrs((unsigned)trace->size());
@@ -314,7 +317,8 @@ void PathSlicer::recordCheckerResult(void *pathId, Checker::Result globalResult,
     } else {
       assert(globalResult != Checker::IMPORTANT && localResult != Checker::IMPORTANT);
       tgtMgr.markTarget(pathId, dynInstr, TakenFlags::CHECKER_ERROR);
-      traceUtil->store(numTests+1, outputDir.c_str(), trace);
+      if (!isKleeHalted)  // Output the trace is klee is not halted. This will not affect checker reports.
+        traceUtil->store(numTests+1, outputDir.c_str(), trace);
       if (DBG)
         stat.printDynInstr(dynInstr, "PathSlicer::recordCheckerResult Checker::ERROR");
     }

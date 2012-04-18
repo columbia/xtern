@@ -80,6 +80,8 @@ namespace tern {
 
     std::string outputDir;
 
+    bool isKleeHalted;
+
   protected:
     /* Init all sub-components of the path-slicer. */
     void init(llvm::Module &M);
