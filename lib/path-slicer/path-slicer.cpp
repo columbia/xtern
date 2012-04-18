@@ -187,7 +187,7 @@ void PathSlicer::enforceRacyEdges() {
 }
 
 void PathSlicer::runPathSlicer(void *pathId, set<size_t> &rmBrs,
-  set<size_t> &rmCalls) {  
+  set<size_t> &rmCalls, bool isHalted) {  
   // Collect stat.
   bool isPruned = collectStatesStat(pathId);
   
@@ -196,9 +196,11 @@ void PathSlicer::runPathSlicer(void *pathId, set<size_t> &rmBrs,
     return;
   BEGINTIME(stat.intraSlicingSt);
   DynInstrVector *trace = allPathTraces[pathId];
-  fprintf(stderr, "PathSlicer::runPathSlicer pathId %p, isPruned %d, size " SZ "\n",
-    pathId, isPruned, trace->size());
+  fprintf(stderr, "PathSlicer::runPathSlicer pathId %p, isPruned %d, isHalted %d, size " SZ "\n",
+    pathId, isPruned, isHalted, trace->size());
   if (isPruned)
+    goto finish;
+  if (isHalted)
     goto finish;
   if (trace->size() == 0)
     goto finish;

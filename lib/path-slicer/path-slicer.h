@@ -114,7 +114,7 @@ namespace tern {
 
 
     /* The key function called by other modules (such as KLEE) to get relevant branches. */
-    void runPathSlicer(void *pathId, std::set<size_t> &rmBrs, std::set<size_t> &rmCalls);
+    void runPathSlicer(void *pathId, std::set<size_t> &rmBrs, std::set<size_t> &rmCalls, bool isHalted);
 
     /* Copy recorded instructions from current path to a new branched path. */
     void copyTrace(void *newPathId, void *curPathId);
