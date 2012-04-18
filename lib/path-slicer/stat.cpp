@@ -164,8 +164,8 @@ void Stat::init(InstrIdMgr *idMgr, CallStackMgr *ctxMgr, FuncSumm *funcSumm, Ali
   this->idMgr = idMgr;
   this->ctxMgr = ctxMgr;
   this->funcSumm = funcSumm;
-  memOpStat.init(aliasMgr, idMgr, this);
-  memOpStat.initArrayName("newArgv"); // Currently only looks at argv, can look at other arrays as well.
+  //memOpStat.init(aliasMgr, idMgr, this);
+  //memOpStat.initArrayName("newArgv"); // Currently only looks at argv, can look at other arrays as well.
 }
 
 void Stat::printStat(const char *tag) {
@@ -184,7 +184,7 @@ void Stat::printStat(const char *tag) {
     // TBD.
     << "\n";
 
-  memOpStat.print();
+  //memOpStat.print();
 }
 
 void Stat::printFinalFormatResults() {
@@ -338,9 +338,9 @@ void Stat::collectExed(DynInstr *dynInstr) {
   }
 
   // Collect mem op stat.
-  memOpStat.collectImportantValues(dynInstr);
+  /*memOpStat.collectImportantValues(dynInstr);
   if (Util::isMem(instr))
-    memOpStat.collectMemOpStat((DynMemInstr *)dynInstr);
+    memOpStat.collectMemOpStat((DynMemInstr *)dynInstr);*/
 }
 
 void Stat::collectExplored(llvm::Instruction *instr) {
