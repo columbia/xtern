@@ -170,6 +170,7 @@ void Stat::init(InstrIdMgr *idMgr, CallStackMgr *ctxMgr, FuncSumm *funcSumm, Ali
 
 void Stat::printStat(const char *tag) {
   errs() << "\n\n" << tag << ": "
+    << "processId: " << getpid() << ", "
     << "intraSlicingTime: " << intraSlicingTime << ", "
     << "intraChkTgtTime: " << intraChkTgtTime << ", "
     << "intraPhiTime: " << intraPhiTime << ", "
