@@ -99,6 +99,8 @@ namespace tern {
     /* Collect KLEE execution states stat, if a state is pruned, it returns true and we can skip slicing. */
     bool collectStatesStat(void *pathId);
 
+    void dumpTrace(DynInstrVector *trace, const char *tag);
+
   public:
         static char ID;
 

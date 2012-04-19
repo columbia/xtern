@@ -343,6 +343,16 @@ bool PathSlicer::isInternalInstr(llvm::Instruction *instr) {
   return (idMgr.getOrigInstrId(instr) != -1);
 }
 
+void PathSlicer::dumpTrace(DynInstrVector *trace, const char *tag) {
+  assert(trace);
+  errs() << BAN;
+  for (size_t i = 0; i < trace->size(); i++) {
+    stat.printDynInstr(trace->at(i), tag);
+  }
+  errs() << BAN;
+}
+
+
 // Returning -1 is legal, klee states from klee_init_env().
 size_t PathSlicer::getLatestBrOrExtCallIdx(void *pathId) {
   if (!DM_IN(pathId, allPathTraces))
@@ -356,7 +366,9 @@ size_t PathSlicer::getLatestBrOrExtCallIdx(void *pathId) {
   Instruction *instr = idMgr.getOrigInstr(dynInstr);
   if (!Util::isBr(instr)) {
     if (!(Util::isCall(instr) && !funcSumm.isInternalCall(dynInstr))) {
-      stat.printDynInstr(dynInstr, "PathSlicer::getLatestBrOrExtCallIdx");
+      errs() << "pathId is inconsistent: " << pathId << "\n";
+      dumpTrace(trace, "PathSlicer::getLatestBrOrExtCallIdx");
+      stat.printDynInstr(dynInstr, "PathSlicer::getLatestBrOrExtCallIdx last one");
       abort();
     }
   }
