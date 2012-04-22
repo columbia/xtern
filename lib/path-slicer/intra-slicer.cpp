@@ -499,17 +499,19 @@ bool IntraSlicer::postDominate(DynInstr *dynPostInstr, DynBrInstr *dynPrevInstr)
     stat->printDynInstr(dynPostInstr, "IntraSlicer::postDominate POST");
     fprintf(stderr, "Please examine the trace to make sure whether prev and \
       post instructions are within the same function\n");
-    dump("IntraSlicer::postDominate function mismatch");
+    dump("IntraSlicer::postDominate function mismatch", dynPrevInstr->getIndex());
     exit(1);
   }
 
   return result;
 }
 
-void IntraSlicer::dump(const char *tag) {
+void IntraSlicer::dump(const char *tag, size_t startIndex) {
   assert(trace);
   errs() << BAN;
   for (size_t i = 0; i < trace->size(); i++) {
+    if (i < startIndex)
+      continue;
     stat->printDynInstr(trace->at(i), tag);
     ctxMgr->printCallStack(trace->at(i));  // Print ctx of each instr so we can easily see which one is wrong.
   }

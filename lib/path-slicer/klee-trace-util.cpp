@@ -299,6 +299,8 @@ void KleeTraceUtil::preProcess(DynInstrVector *trace) {
     if (Util::isCall(instr) || Util::isRet(instr))
       ctxMgr->updateCallStack(dynInstr);
 
+    //ctxMgr->printCallStack(dynInstr);
+
     if (DBG)
       stat->printDynInstr(dynInstr, __func__, true);
   }

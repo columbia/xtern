@@ -77,7 +77,7 @@ namespace tern {
     void removeRange(DynInstr *dynInstr, DynCallInstr *caller);
     void addMemAddrEqConstr(DynMemInstr *loadInstr, DynMemInstr *storeInstr);
     bool mustAlias(DynOprd *oprd1, DynOprd *oprd2);
-    void dump(const char *tag);
+    void dump(const char *tag, size_t startIndex);
 
   public:
     IntraSlicer();
