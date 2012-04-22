@@ -1,12 +1,9 @@
 #!/bin/bash
 
-nrun=$1
-i=1
-while [ $i -le $nrun ]
-do
-  echo $i
-  make $2
-  mv out out_$i
-  i=`expr $i + 1`
-  sleep 1
-done
+path=$PWD
+echo $path
+cd $XTERN_ROOT/apps/bdb_rep/
+rm out -rf
+make eval EXE_PREFIX=LD_PRELOAD=$XTERN_ROOT/dync_hook/interpose.so
+mv out $path/
+mv *.log $path/

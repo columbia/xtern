@@ -329,3 +329,60 @@ int Runtime::__settimeofday(unsigned ins, int &error, const struct timeval *tv, 
   return ret;
 }
 
+int Runtime::__pthread_rwlock_rdlock(unsigned ins, int &error, pthread_rwlock_t *rwlock) 
+{ 
+  error = errno; 
+  int ret = ::pthread_rwlock_rdlock(rwlock); 
+  errno = error; 
+  return ret; 
+}
+
+int Runtime::__pthread_rwlock_tryrdlock(unsigned ins, int &error, pthread_rwlock_t *rwlock) 
+{ 
+  error = errno; 
+  int ret = ::pthread_rwlock_tryrdlock(rwlock); 
+  errno = error; 
+  return ret; 
+}
+
+int Runtime::__pthread_rwlock_wrlock(unsigned ins, int &error, pthread_rwlock_t *rwlock) 
+{ 
+  error = errno; 
+  int ret = ::pthread_rwlock_wrlock(rwlock); 
+  errno = error; 
+  return ret; 
+}
+
+int Runtime::__pthread_rwlock_trywrlock(unsigned ins, int &error, pthread_rwlock_t *rwlock) 
+{ 
+  error = errno; 
+  int ret = ::pthread_rwlock_trywrlock(rwlock); 
+  errno = error; 
+  return ret; 
+}
+
+int Runtime::__pthread_rwlock_unlock(unsigned ins, int &error, pthread_rwlock_t *rwlock) 
+{ 
+  error = errno; 
+  int ret = ::pthread_rwlock_unlock(rwlock); 
+  errno = error; 
+  return ret; 
+}
+
+int Runtime::__pthread_rwlock_destroy(unsigned ins, int &error, pthread_rwlock_t *rwlock) 
+{ 
+  error = errno; 
+  int ret = ::pthread_rwlock_destroy(rwlock); 
+  errno = error; 
+  return ret; 
+}
+
+int Runtime::__pthread_rwlock_init(unsigned ins, int &error, pthread_rwlock_t *rwlock, const pthread_rwlockattr_t * attr) 
+{ 
+  error = errno; 
+  int ret = ::pthread_rwlock_init(rwlock, attr); 
+  errno = error; 
+  return ret; 
+}
+
+

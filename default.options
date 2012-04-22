@@ -50,11 +50,11 @@ set_mutex_errorcheck = 0
 # notice better to set this number of a 32-bit integer.
 nanosec_per_turn = 100000
 
-# this number set the length of idle_thread sleep loop, in microsecond
-idle_sleep_length = 1000
-
 # whether we schedule on output operations like write, send and so. 
 schedule_write = 0
+
+# whether we ignore read/write to regular files
+RR_ignore_rw_regular_file = 1
 
 # determine whether we start an idle thread to avoid empty runq 
 launch_idle_thread = 1
@@ -67,3 +67,13 @@ epoch_mode = 0
 
 # set epoch length, measured in microsecond = 1e-6 second
 epoch_length = 100
+
+# blocking threads are added back every (x) turns, only works for RR  
+wakeup_period = 100
+
+# set the length of turns to delay if a blocking function times out, measured in microseconds, must be less than 1 second
+# default value is 10 milisecond (very large)
+blocked_timeout_delay = 10000
+
+# adjust timeout to make virtual clock and real clock consistent
+adjust_timeout_for_vc = 1

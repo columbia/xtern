@@ -40,6 +40,7 @@ void init_filter()
   add(msghdr);
   add(socklen_t);
   add(epoll_event);
+  add(pthread_rwlock_t);
 #undef add
 }
 

@@ -49,6 +49,7 @@
 #include <fstream>
 #include <map>
 #include <sys/types.h>
+#include <sys/stat.h>
 
 // FIXME: these should be in tern/config.h
 #if !defined(_POSIX_C_SOURCE) || (_POSIX_C_SOURCE<199309L)
@@ -102,11 +103,29 @@ timespec update_time()
   my_time = start_time; 
   return ret;
 }
-  
+
+void check_options()
+{
+  if (!options::DMT)
+    fprintf(stderr, "WARNING: DMT mode is off. The system won't enter scheduler in "
+    "LD_PRELOAD mode!!\n");
+  if (options::epoch_mode && options::nanosec_per_turn != options::epoch_length * 1000)
+    fprintf(stderr, "ERROR: epoch_length and nano_sec_per_turn are inconsistent");
+  if (options::RR_skip_zombie && options::schedule_network)
+    fprintf(stderr, "WARNING: skip_zombie and schedule_network are both on!\n");
+  if (!options::RR_ignore_rw_regular_file)
+    fprintf(stderr, "WARNING: RR_ignore_rw_regular_file is off, and so we can have "
+      "non-determinism on regular file I/O!!\n");
+  if (options::blocked_timeout_delay < 1000)
+    fprintf(stderr, "WARNING: blocked_timeout_delay is less than one milisecond, so we "
+      "might have non-deterministic timing when blocking function returns timeout.\n"); 
+}
+
 void InstallRuntime() {
 //  if (options::runtime_type == "RRuntime")
 //    Runtime::the = new RRuntime();
 //  else 
+  check_options();
   if (options::runtime_type == "RR")
     //Runtime::the = new RecorderRT<RRSchedulerCV>;
     Runtime::the = new RecorderRT<RRScheduler>;
@@ -117,6 +136,7 @@ void InstallRuntime() {
   } else if (options::runtime_type == "FCFS")
     Runtime::the = new RecorderRT<RecordSerializer>;
   assert(Runtime::the && "can't create runtime!");
+  clockManager = tern::ClockManager(time(NULL) * (uint64_t)1000000000);
 }
 
 template <typename _S>
@@ -136,22 +156,29 @@ int RecorderRT<_S>::absTimeToTurn(const struct timespec *abstime)
   return _S::getTurnCount() + 30; //rand() % 10;
 }
 
+int time2turn(uint64_t nsec)
+{
+  const uint64_t MAX_REL = (1000000); // maximum number of turns to wait
+
+  uint64_t ret64 = nsec / options::nanosec_per_turn;
+
+  // if result too large, return MAX_REL
+  int ret = (ret64 > MAX_REL) ? MAX_REL : (int) ret64;
+
+  return ret;
+}
+
 template <typename _S>
 int RecorderRT<_S>::relTimeToTurn(const struct timespec *reltime)
 {
   if (!reltime) return 0;
 
-  const int MAX_REL = (100000); // maximum number of turns to wait
-
   int ret;
-  int64_t ns, ret64;
+  int64_t ns;
 
   ns = reltime->tv_sec;
   ns = ns * (1000000000) + reltime->tv_nsec;
-  ret64 = ns / options::nanosec_per_turn;
-
-  // if result too large, return MAX_REL
-  ret = (ret64 > MAX_REL) ? MAX_REL : (int) ret64;
+  ret = time2turn(ns);
 
   // if result too small or negative, return only (5 * nthread + 1)
   ret = (ret < 5 * _S::nthread + 1) ? (5 * _S::nthread + 1) : ret;
@@ -184,7 +211,7 @@ void RecorderRT<_S>::idle_sleep(void) {
   {
     if (_S::wakeup_flag)
     {
-      _S::check_wakeup();
+      //_S::check_wakeup();
       clockManager.reset_rclock();
     } else
       ::usleep(1);
@@ -204,20 +231,26 @@ void RecorderRT<RecordSerializer>::idle_sleep(void) {
 }
 
 #define BLOCK_TIMER_START \
-  timespec app_time = update_time(); \
-  _S::block(); \
-  timespec sched_block_time = update_time();
+  timespec app_time, sched_block_time, syscall_time; \
+  int block_turn; \
+  if (options::schedule_network) { \
+    app_time = update_time(); \
+    block_turn = _S::block(); \
+    sched_block_time = update_time(); \
+  }
 
 #define BLOCK_TIMER_END(syncop, ...) \
   int backup_errno = errno; \
-  timespec syscall_time = update_time(); \
-  _S::wakeup(); \
-  timespec sched_wakeup_time = update_time(); \
-  timespec sched_time = { \
-    sched_wakeup_time.tv_sec + sched_block_time.tv_sec, \
-    sched_wakeup_time.tv_nsec + sched_block_time.tv_nsec \
-    }; \
-  Logger::the->logSync(ins, (syncop), _S::getTurnCount(), app_time, syscall_time, sched_time, true, __VA_ARGS__); \
+  if (options::schedule_network) { \
+    syscall_time = update_time(); \
+    _S::wakeup(); \
+    timespec sched_wakeup_time = update_time(); \
+    timespec sched_time = { \
+      sched_wakeup_time.tv_sec + sched_block_time.tv_sec, \
+      sched_wakeup_time.tv_nsec + sched_block_time.tv_nsec \
+      }; \
+    Logger::the->logSync(ins, (syncop), _S::getTurnCount(), app_time, syscall_time, sched_time, true, __VA_ARGS__); \
+  } \
   errno = backup_errno; 
 
 #define SCHED_TIMER_START \
@@ -400,11 +433,11 @@ template <typename _S>
 int RecorderRT<_S>::pthreadMutexInit(unsigned ins, int &error, pthread_mutex_t *mutex, const  pthread_mutexattr_t *mutexattr)
 {
   int ret;
-  SCHED_TIMER_START;
+  //SCHED_TIMER_START;
   errno = error;
   ret = pthread_mutex_init(mutex, mutexattr);
   error = errno;
-  SCHED_TIMER_END(syncfunc::pthread_mutex_init, (uint64_t)ret);
+  //SCHED_TIMER_END(syncfunc::pthread_mutex_init, (uint64_t)ret);
   return ret;
 }
 
@@ -433,6 +466,18 @@ int RecorderRT<_S>::pthreadMutexLockHelper(pthread_mutex_t *mu, unsigned timeout
 }
 
 template <typename _S>
+int RecorderRT<_S>::pthreadRWLockHelper(pthread_rwlock_t *rwlock, unsigned timeout) {
+  int ret;
+  while((ret=pthread_rwlock_trywrlock(rwlock))) {
+    assert(ret==EBUSY && "failed sync calls are not yet supported!");
+    ret = wait(rwlock, timeout);
+    if(ret == ETIMEDOUT)
+      return ETIMEDOUT;
+  }
+  return 0;
+}
+
+template <typename _S>
 int RecorderRT<_S>::pthreadMutexLock(unsigned ins, int &error, pthread_mutex_t *mu) {
   SCHED_TIMER_START;
   errno = error;
@@ -440,6 +485,66 @@ int RecorderRT<_S>::pthreadMutexLock(unsigned ins, int &error, pthread_mutex_t *
   error = errno;
   SCHED_TIMER_END(syncfunc::pthread_mutex_lock, (uint64_t)mu);
   return 0;
+}
+
+template <typename _S>
+int RecorderRT<_S>::__pthread_rwlock_rdlock(unsigned ins, int &error, pthread_rwlock_t *rwlock)
+{
+  SCHED_TIMER_START;
+  errno = error;
+  pthreadRWLockHelper(rwlock);  //  FIXME use wrlock for all rdlock currently
+  error = errno;
+  SCHED_TIMER_END(syncfunc::pthread_rwlock_rdlock, (uint64_t)rwlock);
+  return 0;
+}
+
+template <typename _S>
+int RecorderRT<_S>::___pthread_rwlock_wrlock(unsigned ins, int &error, pthread_rwlock_t *rwlock)
+{
+  SCHED_TIMER_START;
+  errno = error;
+  pthreadRWLockHelper(rwlock);
+  error = errno;
+  SCHED_TIMER_END(syncfunc::pthread_rwlock_wrlock, (uint64_t)rwlock);
+  return 0;
+}
+
+template <typename _S>
+int RecorderRT<_S>::___pthread_rwlock_tryrdlock(unsigned ins, int &error, pthread_rwlock_t *rwlock)
+{
+  SCHED_TIMER_START;
+  errno = error;
+  int ret = pthread_rwlock_trywrlock(rwlock); //  FIXME now using wrlock for all rdlock
+  error = errno;
+  SCHED_TIMER_END(syncfunc::pthread_rwlock_tryrdlock, (uint64_t)rwlock, (uint64_t) ret);
+  return ret;
+}
+
+template <typename _S>
+int RecorderRT<_S>::___pthread_rwlock_trywrlock(unsigned ins, int &error, pthread_rwlock_t *rwlock)
+{
+  SCHED_TIMER_START;
+  errno = error;
+  int ret = pthread_rwlock_trywrlock(rwlock); 
+  error = errno;
+  SCHED_TIMER_END(syncfunc::pthread_rwlock_trywrlock, (uint64_t)rwlock, (uint64_t) ret);
+  return ret;
+}
+
+template <typename _S>
+int RecorderRT<_S>::___pthread_rwlock_unlock(unsigned ins, int &error, pthread_rwlock_t *rwlock)
+{
+  int ret;
+  SCHED_TIMER_START;
+
+  errno = error;
+  ret = pthread_rwlock_unlock(rwlock);
+  error = errno;
+  signal(rwlock);
+ 
+  SCHED_TIMER_END(syncfunc::pthread_rwlock_unlock, (uint64_t)rwlock, (uint64_t) ret);
+
+  return ret;
 }
 
 /// instead of looping to get lock as how we implement the regular lock(),
@@ -1224,7 +1329,7 @@ int RecorderRT<_S>::__connect(unsigned ins, int &error, int sockfd, const struct
 {
   BLOCK_TIMER_START;
   int ret = Runtime::__connect(ins, error, sockfd, serv_addr, addrlen);
-  BLOCK_TIMER_END(syncfunc::connect, (uint64_t) ret);
+  BLOCK_TIMER_END(syncfunc::connect, (uint64_t) sockfd, (uint64_t) ret);
   return ret;
 }
 
@@ -1241,10 +1346,10 @@ ssize_t RecorderRT<_S>::__send(unsigned ins, int &error, int sockfd, const void 
 {
   if (options::schedule_write)
   {
-    BLOCK_TIMER_START;
+    SCHED_TIMER_START;
     int ret = Runtime::__send(ins, error, sockfd, buf, len, flags);
     uint64_t sig = hash((char*)buf, len); 
-    BLOCK_TIMER_END(syncfunc::send, (uint64_t) sig, (uint64_t) ret);
+    SCHED_TIMER_END(syncfunc::send, (uint64_t) sig, (uint64_t) ret);
     return ret;
   } else
     return Runtime::__send(ins, error, sockfd, buf, len, flags);
@@ -1255,10 +1360,10 @@ ssize_t RecorderRT<_S>::__sendto(unsigned ins, int &error, int sockfd, const voi
 {
   if (options::schedule_write)
   {
-    BLOCK_TIMER_START;
+    SCHED_TIMER_START;
     int ret = Runtime::__sendto(ins, error, sockfd, buf, len, flags, dest_addr, addrlen);
     uint64_t sig = hash((char*)buf, len); 
-    BLOCK_TIMER_END(syncfunc::sendto, (uint64_t) sig, (uint64_t) ret);
+    SCHED_TIMER_END(syncfunc::sendto, (uint64_t) sig, (uint64_t) ret);
     return ret;
   } else
     return Runtime::__sendto(ins, error, sockfd, buf, len, flags, dest_addr, addrlen);
@@ -1269,10 +1374,10 @@ ssize_t RecorderRT<_S>::__sendmsg(unsigned ins, int &error, int sockfd, const st
 {
   if (options::schedule_write)
   {
-    BLOCK_TIMER_START;
+    SCHED_TIMER_START;
     int ret = Runtime::__sendmsg(ins, error, sockfd, msg, flags);
     uint64_t sig = hash((char*)msg, sizeof(struct msghdr)); 
-    BLOCK_TIMER_END(syncfunc::sendmsg, (uint64_t) sig, (uint64_t) ret);
+    SCHED_TIMER_END(syncfunc::sendmsg, (uint64_t) sig, (uint64_t) ret);
     return ret;
   } else
     return Runtime::__sendmsg(ins, error, sockfd, msg, flags);
@@ -1311,22 +1416,48 @@ ssize_t RecorderRT<_S>::__recvmsg(unsigned ins, int &error, int sockfd, struct m
 template <typename _S>
 ssize_t RecorderRT<_S>::__read(unsigned ins, int &error, int fd, void *buf, size_t count)
 {
+  bool ignore = false;
+  if (options::RR_ignore_rw_regular_file)
+  {
+    struct stat st;
+    fstat(fd, &st);
+//    printf("st.st_mode = %x\n", (unsigned) st.st_mode);
+//    printf("st.st_mode & S_IFMT = %x\n", (unsigned) (st.st_mode & S_IFMT));
+//    printf("S_IFSOCK = %x\n", (unsigned) S_IFSOCK);
+    if (S_IFREG == (st.st_mode & S_IFMT))
+      ignore = true;
+  }
+  if (ignore)
+    return Runtime::__read(ins, error, fd, buf, count);
+
   BLOCK_TIMER_START;
   ssize_t ret = Runtime::__read(ins, error, fd, buf, count);
   uint64_t sig = hash((char*)buf, count); 
-  BLOCK_TIMER_END(syncfunc::read, (uint64_t) sig, (uint64_t) ret);
+  BLOCK_TIMER_END(syncfunc::read, (uint64_t) sig, (uint64_t) fd, (uint64_t) ret);
   return ret;
 }
 
 template <typename _S>
 ssize_t RecorderRT<_S>::__write(unsigned ins, int &error, int fd, const void *buf, size_t count)
 {
+  bool ignore = false;
+  if (options::RR_ignore_rw_regular_file)
+  {
+    struct stat st;
+    fstat(fd, &st);
+    if (S_IFREG == (st.st_mode & S_IFMT))
+      ignore = true;
+  }
+
+  if (ignore)
+    return Runtime::__write(ins, error, fd, buf, count);
+
   if (options::schedule_write)
   {
-    BLOCK_TIMER_START;
+    SCHED_TIMER_START;
     ssize_t ret = Runtime::__write(ins, error, fd, buf, count);
     uint64_t sig = hash((char*)buf, count); 
-    BLOCK_TIMER_END(syncfunc::write, (uint64_t) sig, (uint64_t) ret);
+    SCHED_TIMER_END(syncfunc::write, (uint64_t) sig, (uint64_t) fd, (uint64_t) ret);
     return ret;
   } else
     return Runtime::__write(ins, error, fd, buf, count);
@@ -1335,18 +1466,96 @@ ssize_t RecorderRT<_S>::__write(unsigned ins, int &error, int fd, const void *bu
 template <typename _S>
 int RecorderRT<_S>::__select(unsigned ins, int &error, int nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds, struct timeval *timeout)
 {
+  int wt = 0;
+  if (timeout && options::schedule_network && options::runtime_type == "RR")
+  {
+    uint64_t next = ClockManager::getTick(*timeout);
+    //uint64_t c = clockManager.clock;
+    wt = time2turn(next);
+  }
+
   BLOCK_TIMER_START;
+
+  if (timeout && options::schedule_network && options::runtime_type == "RR" && options::adjust_timeout_for_vc)
+  {
+    uint64_t tick = ClockManager::getTick(*timeout);
+    tick = clockManager.adjust_timeout(tick);
+    clockManager.getClock(*timeout, tick);
+  }
+#if 0
+  struct timespec now; 
+  clock_gettime(CLOCK_REALTIME, &now);
+  uint64_t old_tick = clockManager.clock;
+  uint64_t old_rclock = ClockManager::getTick(now);
+  int old_turn = _S::getTurnCount();
+  fprintf(stderr, "starting select at %ld, %d\n", ClockManager::getTick(now), _S::getTurnCount());
+#endif
   int ret = Runtime::__select(ins, error, nfds, readfds, writefds, exceptfds, timeout);
+#if 0
+  clock_gettime(CLOCK_REALTIME, &now);
+  fprintf(stderr, "finishing select at %ld, %d, clockmanager_diff = %ld, turn_diff = %d\n", 
+    ClockManager::getTick(now) - old_rclock, _S::getTurnCount(), clockManager.clock - old_tick, _S::getTurnCount() - old_turn);
+  fprintf(stderr, "current clock = %ld\n", ClockManager::getTick(now));
+  fprintf(stderr, "clockManager.next_clock = %ld\n", clockManager.next_rclock);
+  fprintf(stderr, "return from blocking function at turn %d\n", _S::getTurnCount());
+#endif
   BLOCK_TIMER_END(syncfunc::select, (uint64_t) ret);
+
+  //  enforce determinism in RR if it times out.
+  if (!ret && options::schedule_network && options::runtime_type == "RR")
+  {
+    //  timeout happens
+    _S::getTurn();
+    assert(timeout && "NULL timeout indicates infinite waiting time");
+    int extra = time2turn(options::blocked_timeout_delay * 1000);
+    int deadline = block_turn + wt + extra;
+
+    dprintf(stderr, "block_turn = %d, exit turn = %d, deadline = %d\n", 
+      block_turn, _S::getTurnCount(), deadline);
+    assert((uint64_t) _S::getTurnCount() < (uint64_t) deadline && "virtual time must not elapse faster than the real time");
+    dprintf(stderr, "return from blocking function, delay until turn %d, block_turn = %d, wt = %d, extra = %d\n", 
+      deadline, block_turn, wt, extra);
+    _S::wait(NULL, deadline);
+    _S::putTurn();
+  }
   return ret;
 }
 
 template <typename _S>
 int RecorderRT<_S>::__epoll_wait(unsigned ins, int &error, int epfd, struct epoll_event *events, int maxevents, int timeout)
-{
+{  
+  int wt = 0;
+  if (timeout >= 0 && options::schedule_network && options::runtime_type == "RR")
+  {
+    //  timeout is measured in milliseconds
+    uint64_t next = (uint64_t) timeout * 1000000;
+    wt = time2turn(next);
+  }
+
   BLOCK_TIMER_START;
+  if (timeout && options::schedule_network && options::runtime_type == "RR" && options::adjust_timeout_for_vc)
+  {
+    uint64_t tick = (uint64_t) timeout * 1000000;
+    tick = clockManager.adjust_timeout(tick);
+    timeout = tick / 1000000;
+  }
   int ret = Runtime::__epoll_wait(ins, error, epfd, events, maxevents, timeout);
   BLOCK_TIMER_END(syncfunc::epoll_wait, (uint64_t) ret);
+
+  //  enforce determinism in RR if it times out.
+  if (!ret && options::schedule_network && options::runtime_type == "RR")
+  {
+    //  timeout happens
+    _S::getTurn();
+    assert(timeout >= 0 && "NULL timeout indicates infinite waiting time");
+    int extra = time2turn(options::blocked_timeout_delay * 1000);
+    int deadline = block_turn + wt + extra;
+
+    assert((uint64_t) _S::getTurnCount() < (uint64_t) deadline && "virtual time must not elapse faster than the real time");
+    _S::wait(NULL, deadline);
+    _S::putTurn();
+  }
+
   return ret;
 }
 
@@ -1362,9 +1571,11 @@ int RecorderRT<_S>::__sigwait(unsigned ins, int &error, const sigset_t *set, int
 template <typename _S>
 char *RecorderRT<_S>::__fgets(unsigned ins, int &error, char *s, int size, FILE *stream)
 {
+//  if (options::RR_ignore_rw_regular_file)
+//    return Runtime::__fgets(ins, error, s, size, stream);
   BLOCK_TIMER_START;
   char * ret = Runtime::__fgets(ins, error, s, size, stream);
-  BLOCK_TIMER_END(syncfunc::sigwait, (uint64_t) ret);
+  BLOCK_TIMER_END(syncfunc::fgets, (uint64_t) ret);
   return ret;
 }
 
