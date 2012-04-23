@@ -6,6 +6,6 @@ LEVEL := ..
 #
 # List all of the subdirectories that we will compile.
 #
-DIRS := common instr runtime analysis path-slicer
+DIRS := common path-slicer
 
 include $(LEVEL)/Makefile.common

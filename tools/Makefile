@@ -1,4 +1,4 @@
 LEVEL := ..
-DIRS  := tern-instr logprint racedet analyzer
+DIRS  := 
 
 include $(LEVEL)/Makefile.common
