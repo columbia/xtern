@@ -1,3 +1,5 @@
+#include <unistd.h>
+
 #include "util.h"
 #include "stat.h"
 #include "dyn-instrs.h"

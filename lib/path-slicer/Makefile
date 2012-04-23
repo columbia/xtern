@@ -8,7 +8,7 @@ SHARED_LIBRARY = 1
 EXCLUDED_SOURCES := template.c
 include $(LEVEL)/Makefile.common
 
-CXXFLAGS += -I$(XTERN_ROOT)/include/ -I$(LLVM_ROOT) \
+CXXFLAGS += -Wno-deprecated -I$(XTERN_ROOT)/include/ -I$(LLVM_ROOT) \
 	-I$(DIRECT_SYM_ROOT)/klee/lib/stp/install/include/ \
 	-I$(DIRECT_SYM_ROOT)/klee/include/
 
