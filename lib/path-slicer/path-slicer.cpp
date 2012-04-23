@@ -313,7 +313,7 @@ void PathSlicer::recordCheckerResult(void *pathId, Checker::Result globalResult,
     if (MarkPrunedOnly && isPruned && (globalResult == Checker::ERROR || localResult == Checker::ERROR)) {
       fprintf(stderr, "PathSlicer::recordCheckerResult, a state %p triggered a checker error after pruned.\n",
         pathId);
-      exit(1);
+      //exit(1);
     }
   }
 
@@ -438,9 +438,15 @@ void PathSlicer::clearPath(void *pathId) {
 }
 
 void PathSlicer::printDynInstr(void *pathId, size_t index) {
+  if (!DM_IN(pathId, allPathTraces)) {
+    fprintf(stderr, "PathSlicer::printDynInstr curState %p no trace, return.\n", pathId);
+    return;
+  }
   DynInstrVector *trace = allPathTraces[pathId];
-  assert(trace);
-  assert(trace->size() > index);
+  if (!(trace->size() > index)) {
+    fprintf(stderr, "PathSlicer::printDynInstr curState %p trace too small, return.\n", pathId);
+    return;
+  }
   stat.printDynInstr(trace->at(index), "PathSlicer::printDynInstr");
 }
 
