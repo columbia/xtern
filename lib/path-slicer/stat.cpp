@@ -139,6 +139,7 @@ Stat::Stat() {
   numUnCoveredInstrs = 0;
   numPaths = 0;
   numTests = 0;
+  numChkrErrs = 0;
 
   initTime = 0;
   pathSlicerTime = 0;
@@ -197,7 +198,7 @@ void Stat::printFinalFormatResults() {
     << "|| App || Checker || Mark/Real prune || Finished || All time (sec) || Path slicer time "
     << "|| Init time || Pruned states || All states (paths) "
     << "|| \\# Tests || \\# Instrs exed || \\# Not pruned Instrs exed || \\# Not pruned internal Instrs exed "
-    << "|| \\# Static Instrs exed || \\# Static Instrs || \\# Static exed events || \\# Static events (no fp) || Note ||\n"
+    << "|| \\# Static Instrs exed || \\# Static Instrs || \\# Static exed events || \\# Static events (no fp) || \\# Chkr errs || Note ||\n"
     << "FORMAT RESULTS:    ";
   std::cerr << "| " << origModule->getModuleIdentifier();
   std::cerr << " | " << UseOneChecker;
@@ -216,6 +217,7 @@ void Stat::printFinalFormatResults() {
   std::cerr << " | " << std::dec << sizeOfStaticInstrs();
   std::cerr << " | " << std::dec << eventCalls.size();
   std::cerr << " | " << std::dec << funcSumm->numEventCallSites();
+  std::cerr << " | " << std::dec << numChkrErrs;
   std::cerr << " | " << "tbd";
   //TBA
   
@@ -459,4 +461,7 @@ void Stat::printEventCalls() {
   errs() << BAN;
 }
 
+void Stat::incNumChkrErrs() {
+  numChkrErrs++;
+}
 

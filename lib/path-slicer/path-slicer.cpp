@@ -13,6 +13,8 @@ using namespace tern;
 
 using namespace klee;
 
+extern cl::opt<bool> MarkPrunedOnly;
+
 static RegisterPass<PathSlicer> X(
 		"tern-path-slicer",
 		"Tern Path Slicer",
@@ -276,7 +278,7 @@ void PathSlicer::initOutputDir(std::string dir) {
 
 
 void PathSlicer::record(void *pathId, void *instr, void *state, void *f) {
-  //dprint("PathSlicer::record enter, pathId %p\n", (void *)pathId);
+  //fprintf(stderr, "PathSlicer::record enter, pathId %p\n", (void *)pathId);
   //Instruction *staticInstr = ((KInstruction *)instr)->inst;
   //if (staticInstr->getOpcode() == Instruction::Ret || staticInstr->getOpcode() == Instruction::Call)
 	  //SERRS << "PathSlicer::record: " << (void *)pathId << " : " << stat.printInstr(staticInstr) << "\n";
@@ -285,11 +287,11 @@ void PathSlicer::record(void *pathId, void *instr, void *state, void *f) {
   if (!DM_IN(pathId, allPathTraces))
     allPathTraces[pathId] = new DynInstrVector;
   traceUtil->record(allPathTraces[pathId], instr, state, f);
-  //dprint("PathSlicer::record finished, pathId %p\n", (void *)pathId);
+  //fprintf(stderr, "PathSlicer::record finished, pathId %p\n", (void *)pathId);
 }
 
 void PathSlicer::copyTrace(void *newPathId, void *curPathId) {
-  dprint("PathSlicer::copyTrace new %p, cur %p\n", (void *)newPathId, (void *)curPathId);
+  //fprintf(stderr, "PathSlicer::copyTrace new %p, cur %p\n", (void *)newPathId, (void *)curPathId);
   assert (!DM_IN(newPathId, allPathTraces));
   if (!DM_IN(curPathId, allPathTraces))
     return;
@@ -303,9 +305,24 @@ void PathSlicer::copyTrace(void *newPathId, void *curPathId) {
 /* The assertions in this function indicate we only support one checker at one run. */
 void PathSlicer::recordCheckerResult(void *pathId, Checker::Result globalResult,
     Checker::Result localResult, unsigned numTests) {
+  bool isPruned = ((ExecutionState *)pathId)->isPruned;
+  // DBG.
+  if (globalResult != Checker::OK || localResult != Checker::OK) {
+    fprintf(stderr, "PathSlicer::recordCheckerResult, pathId %p, isPruned %d, isHalted %d, globalResult %d, localResult %d.\n",
+      (void *)pathId, isPruned, isKleeHalted, globalResult, localResult);
+    if (MarkPrunedOnly && isPruned && (globalResult == Checker::ERROR || localResult == Checker::ERROR)) {
+      fprintf(stderr, "PathSlicer::recordCheckerResult, a state %p triggered a checker error after pruned.\n",
+        pathId);
+      exit(1);
+    }
+  }
+
+  // If this state is already pruned, just discard it, since its trace and targets have already been freed.  
+  if (isPruned)
+    return;
+  
   if (globalResult != Checker::OK || localResult != Checker::OK) {
     DynInstrVector *trace = allPathTraces[pathId];
-    dprint("PathSlicer::recordCheckerResult, pathId %p\n", (void *)pathId);
     assert(trace);
     assert(trace->size() > 0);
     DynInstr *dynInstr = trace->back();
@@ -321,6 +338,7 @@ void PathSlicer::recordCheckerResult(void *pathId, Checker::Result globalResult,
         traceUtil->store(numTests+1, outputDir.c_str(), trace);
       if (DBG)
         stat.printDynInstr(dynInstr, "PathSlicer::recordCheckerResult Checker::ERROR");
+      stat.incNumChkrErrs();
     }
   }
 }
@@ -361,8 +379,11 @@ size_t PathSlicer::getLatestBrOrExtCallIdx(void *pathId) {
   if (trace->size() == 0)
     return (size_t)-1;
 
+  /* Note: according to klee, states do not have to be forked by only branches, 
+	it could be load/store, malloc()/free(), or calls to function pointers.
+  */
   // Check, must be branch or a external call.
-  DynInstr *dynInstr = trace->back();
+  /*DynInstr *dynInstr = trace->back();
   Instruction *instr = idMgr.getOrigInstr(dynInstr);
   if (!Util::isBr(instr)) {
     if (!(Util::isCall(instr) && !funcSumm.isInternalCall(dynInstr))) {
@@ -371,9 +392,9 @@ size_t PathSlicer::getLatestBrOrExtCallIdx(void *pathId) {
       stat.printDynInstr(dynInstr, "PathSlicer::getLatestBrOrExtCallIdx last one");
       abort();
     }
-  }
+  }*/
     
-  return dynInstr->getIndex();
+  return trace->back()->getIndex();
 }
 
 void PathSlicer::collectExplored(llvm::Instruction *instr) {
@@ -416,4 +437,10 @@ void PathSlicer::clearPath(void *pathId) {
   delete trace;
 }
 
+void PathSlicer::printDynInstr(void *pathId, size_t index) {
+  DynInstrVector *trace = allPathTraces[pathId];
+  assert(trace);
+  assert(trace->size() > index);
+  stat.printDynInstr(trace->at(index), "PathSlicer::printDynInstr");
+}
 

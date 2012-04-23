@@ -1,4 +1,3 @@
-#include "event-funcs.h"
 #include "util.h"
 #include "event-mgr.h"
 #include "tern/syncfuncs.h"
@@ -81,14 +80,12 @@ void EventMgr::setupEvents(Module &M) {
   
   for (Module::iterator f = M.begin(); f != M.end(); ++f) {
     if (f->hasName()) {
-      // Get function list from event-funcs.h.
-      if (tern::EventFuncs::isEventFunc(f->getNameStr().c_str())) {
-        if (!checker) {
-          eventFuncs.push_back(f);
-        } else if (checker->isImportant(f->getNameStr())) { // Select events based on the checker.
-          fprintf(stderr, "EventMgr::initEvents event %s\n", f->getNameStr().c_str());
-          eventFuncs.push_back(f);
-        }
+      if (!checker) {
+        fprintf(stderr, "EventMgr::isEventFunc checker is NULL, please use only one checker.\n");
+        exit(1);
+      } else if (checker->isImportant(f->getNameStr())) { // Select events based on the checker.
+        fprintf(stderr, "EventMgr::initEvents event %s\n", f->getNameStr().c_str());
+        eventFuncs.push_back(f);
       }
     }
   }
@@ -142,7 +139,7 @@ void EventMgr::DFS(Function *f) {
 }
 
 void EventMgr::output(const Module &M) const {
-  vector<string> func_names;
+  /*vector<string> func_names;
   FILE *fout;
 
   func_names.clear();
@@ -150,9 +147,11 @@ void EventMgr::output(const Module &M) const {
     func_names.push_back(fi->getNameStr());
   sort(func_names.begin(), func_names.end());
   fout = fopen("/tmp/all-func.txt", "w");
+  assert(fout);
   for (size_t i = 0; i < func_names.size(); ++i) {
     fprintf(fout, "%s\n", func_names[i].c_str());
   }
+  fclose(fout);
 
   func_names.clear();
   for (DenseSet<Function *>::const_iterator it = visited.begin();
@@ -161,9 +160,11 @@ void EventMgr::output(const Module &M) const {
   }
   sort(func_names.begin(), func_names.end());
   fout = fopen("/tmp/event-func.txt", "w");
+  assert(fout);
   for (size_t i = 0; i < func_names.size(); ++i) {
     fprintf(fout, "%s\n", func_names[i].c_str());
   }
+  fclose(fout);*/
 }
 
 bool EventMgr::mayCallEvent(Function *f) {

@@ -81,6 +81,7 @@ namespace tern {
     unsigned numUnCoveredInstrs;
     unsigned numPaths;
     unsigned numTests;
+    unsigned numChkrErrs;
 
     struct timeval initSt;
     struct timeval initEnd;
@@ -177,6 +178,8 @@ namespace tern {
     void incNotPrunedStatesInstrs();
 
     void printEventCalls();
+
+    void incNumChkrErrs();
   };
 }
 

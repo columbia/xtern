@@ -587,6 +587,13 @@ void IntraSlicer::calStat(set<size_t> &rmBrs, set<size_t> &rmCalls) {
     if (!dynInstr->isTaken() && Util::isCall(instr) && !funcSumm->isInternalCall(dynInstr))
       rmCalls.insert(dynInstr->getIndex());
 
+	/* TODO: actually, in KLEE, forking states are not restricted to branch instructions,
+		it could be load/store, malloc()/free(), or even calls to function pointers (with symbolic addresses).
+		But currently we only consider removing branches in internal and external calls, we are conservative
+		but still correct and sound. Need to think of implementing removing any instructions 
+		which forking states in the future.
+	*/
+
     // Handle taken instructions.
     if (dynInstr->isTaken()) {
       // Handle taken branches.

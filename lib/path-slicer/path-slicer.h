@@ -148,6 +148,8 @@ namespace tern {
     void collectNotPrunedInstrs(void *pathId);
 
     void clearPath(void *pathId);
+
+    void printDynInstr(void *pathId, size_t index);
   };
 }
 
