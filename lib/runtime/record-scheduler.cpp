@@ -10,11 +10,8 @@
 #include <cstdio>
 #include <stdlib.h>
 #include <cstring>
-<<<<<<< HEAD
 #include <algorithm>
-=======
 #include <unistd.h>
->>>>>>> 367e9100fb77b07302114c5fd67fcf6084caf182
 #include "tern/options.h"
 
 using namespace std;
