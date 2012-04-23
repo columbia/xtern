@@ -192,7 +192,7 @@ void PathSlicer::enforceRacyEdges() {
 void PathSlicer::runPathSlicer(void *pathId, set<size_t> &rmBrs,
   set<size_t> &rmCalls, bool isHalted) {  
   // Collect stat.
-  bool isPruned = collectStatesStat(pathId);
+  bool isPruned = ((ExecutionState *)pathId)->isPruned;
   
   // Get trace of current path and do some pre-processing.
   if (!DM_IN(pathId, allPathTraces))
@@ -401,15 +401,12 @@ void PathSlicer::collectExplored(llvm::Instruction *instr) {
   stat.collectExplored(instr);
 }
 
-bool PathSlicer::collectStatesStat(void *pathId) {
+void PathSlicer::collectStatesStat(void *pathId) {
   assert(pathId);
   ExecutionState *state = (ExecutionState *)pathId;
   stat.numStates++;
-  if (state->isPruned) {
+  if (state->isPruned)
 	stat.numPrunedStates++;
-    return true;
-  } else
-    return false;
 }
 
 bool PathSlicer::isInternalFunction(llvm::Function *f) {

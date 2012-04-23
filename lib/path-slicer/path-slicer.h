@@ -96,9 +96,6 @@ namespace tern {
     /* Filter out instructions before the first instruction in main(), such as C++ ctor and klee_range(). */
     bool getStartRecord(void *instr);
 
-    /* Collect KLEE execution states stat, if a state is pruned, it returns true and we can skip slicing. */
-    bool collectStatesStat(void *pathId);
-
     void dumpTrace(DynInstrVector *trace, const char *tag);
 
   public:
@@ -150,6 +147,9 @@ namespace tern {
     void clearPath(void *pathId);
 
     void printDynInstr(void *pathId, size_t index);
+
+    /* Collect KLEE execution states stat, if a state is pruned, it returns true and we can skip slicing. */
+    void collectStatesStat(void *pathId);
   };
 }
 
