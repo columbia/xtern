@@ -87,10 +87,11 @@ void KleeTraceUtil::record(DynInstrVector *trace, KInstruction *kInstr,
   Instruction *instr = kInstr->inst;
 
   // DBG.
-  errs() << "KleeTraceUtil::record"
-    << " : F: " << instr->getParent()->getParent()->getNameStr()
-    << " : BB: " << instr->getParent()->getNameStr()
-    << "\n";
+  if (Util::isRet(instr))
+    errs() << "KleeTraceUtil::record"
+      << " : F: " << instr->getParent()->getParent()->getNameStr()
+      << " : BB: " << instr->getParent()->getNameStr()
+      << "\n";
   
   // Ignore an instruction if it is not from the original module.
   if (idMgr->getOrigInstrId(instr) == -1)
@@ -119,11 +120,13 @@ void KleeTraceUtil::record(DynInstrVector *trace, KInstruction *kInstr,
   }
 
   // DBG.
-  assert(trace->size());
-  errs() << "KleeTraceUtil::record idx: " << trace->back()->getIndex()
-    << " : F: " << instr->getParent()->getParent()->getNameStr()
-    << " : BB: " << instr->getParent()->getNameStr()
-    << "\n";  
+  if (Util::isRet(instr)) {
+    assert(trace->size());
+    errs() << "KleeTraceUtil::record idx: " << trace->back()->getIndex()
+      << " : F: " << instr->getParent()->getParent()->getNameStr()
+      << " : BB: " << instr->getParent()->getNameStr()
+      << "\n";  
+  }
 }
 
 void KleeTraceUtil::recordPHI(DynInstrVector *trace, klee::KInstruction *kInstr,
