@@ -159,6 +159,7 @@ Stat::Stat() {
   intraBrWrBetTime = 0;
   intraBrWrBetGetSummTime = 0;
   intraBrWrBetGetBddTime = 0;
+  intraLiveLoadMemTime = 0;
 }
 
 Stat::~Stat() {
@@ -182,7 +183,9 @@ void Stat::printStat(const char *tag) {
     << "intraBrTime: " << intraBrTime << " ("
       << intraBrDomTime << ", " << intraBrEvBetTime << ", " << intraBrWrBetTime
         << " (intraBrWrBetGetSummTime: " << intraBrWrBetGetSummTime 
-        << ", intraBrWrBetGetBddTime: " << intraBrWrBetGetBddTime << ") "
+        << ", intraBrWrBetGetBddTime: " << intraBrWrBetGetBddTime
+        << ", intraLiveLoadMemTime: " << intraLiveLoadMemTime
+        << ") "
   	  << "), "
     << "intraRetTime: " << intraRetTime << ", "
     << "intraCallTime: " << intraCallTime << ", "

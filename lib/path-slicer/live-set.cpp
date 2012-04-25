@@ -139,6 +139,7 @@ DenseSet<DynInstr *> &LiveSet::getAllLoadInstrs() {
   /* TBD: USE SLOW VERSION TEMPORARILLY UNTIL WE FIGURE OUT HOW TO IMPLEMENT
   REF-COUNTED BDD. */
 bdd LiveSet::getAllLoadMem() {
+  BEGINTIME(stat->intraLiveLoadMemSt);
   bdd retBDD = bddfalse;
 
   // First, get the load bdd from all real load instructions.
@@ -154,6 +155,7 @@ bdd LiveSet::getAllLoadMem() {
 
   // Second, get the load bdd from all load arguments of external calls.
   retBDD |= getExtCallLoadMem();
+  ENDTIME(stat->intraLiveLoadMemTime, stat->intraLiveLoadMemSt, stat->intraLiveLoadMemEnd);
   return retBDD;
 }
 

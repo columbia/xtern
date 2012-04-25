@@ -146,6 +146,11 @@ namespace tern {
     struct timeval intraBrWrBetGetBddSt;
     struct timeval intraBrWrBetGetBddEnd;
     double intraBrWrBetGetBddTime;       
+
+    struct timeval intraLiveLoadMemSt;
+    struct timeval intraLiveLoadMemEnd;
+    double intraLiveLoadMemTime;   
+
     Stat();
     ~Stat();
     void init(InstrIdMgr *idMgr, CallStackMgr *ctxMgr, FuncSumm *funcSumm, AliasMgr *aliasMgr);
