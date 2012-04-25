@@ -31,6 +31,8 @@ namespace tern {
     /** Store all the load instructions. **/
     llvm::DenseSet<DynInstr *> loadInstrs;
     llvm::DenseSet<DynInstr *> extCallLoadInstrs;
+    bdd allLoadMem;
+    bdd extCallLoadMem;
 
     /** Store all the pointed to locations of pointer operands of all load instructions. **/
     //RefCntBdd loadInstrsBdd;

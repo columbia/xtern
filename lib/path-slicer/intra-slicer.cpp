@@ -451,6 +451,8 @@ void IntraSlicer::handleMem(DynInstr *dynInstr) {
         takeStore(dynInstr, TakenFlags::INTRA_STORE_ALIAS);
     }
 
+    // TODO: IS THIS PRECISE? WHEN DO WE REMOVE "EXT LOAD" INSTR?
+
     // Handle external calls which have semantic "load" in live set.
     if ((aliasMgr->getPointTee(&storePtrOprd) & live.getExtCallLoadMem()) != bddfalse)
       takeStore(dynInstr, TakenFlags::INTRA_STORE_ALIAS_EXT_CALL);

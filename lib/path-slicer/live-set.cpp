@@ -31,6 +31,8 @@ void LiveSet::clear() {
   virtRegs.clear();
   loadInstrs.clear();
   extCallLoadInstrs.clear();
+  allLoadMem = bddfalse;
+  extCallLoadMem = bddfalse;
 }
 
 void LiveSet::addReg(CallCtx *ctx, Value *v) {
@@ -120,16 +122,19 @@ void LiveSet::addUsedRegs(DynInstr *dynInstr) {
 void LiveSet::addLoadMem(DynInstr *dynInstr) {
   ASSERT(!DS_IN(dynInstr, loadInstrs));
   loadInstrs.insert(dynInstr);
+  allLoadMem = extCallLoadMem = bddfalse;
 }
 
 void LiveSet::addExtCallLoadMem(DynInstr *dynInstr) {
   ASSERT(!DS_IN(dynInstr, extCallLoadInstrs));
   extCallLoadInstrs.insert(dynInstr);  
+  allLoadMem = extCallLoadMem = bddfalse;
 }
 
 void LiveSet::delLoadMem(DynInstr *dynInstr) {
   ASSERT(DS_IN(dynInstr, loadInstrs));
   loadInstrs.erase(dynInstr);
+  allLoadMem = extCallLoadMem = bddfalse;
 }
 
 DenseSet<DynInstr *> &LiveSet::getAllLoadInstrs() {
@@ -140,28 +145,52 @@ DenseSet<DynInstr *> &LiveSet::getAllLoadInstrs() {
   REF-COUNTED BDD. */
 bdd LiveSet::getAllLoadMem() {
   BEGINTIME(stat->intraLiveLoadMemSt);
+  DenseSet<std::pair<void *, void *> > curLoadMemCache; // High level cache.
   bdd retBDD = bddfalse;
+  DenseSet<DynInstr *>::iterator itr(loadInstrs.begin());
+
+  // fast path.
+  if (allLoadMem != bddfalse) {
+    retBDD = allLoadMem;
+    goto finish;
+  }
 
   // First, get the load bdd from all real load instructions.
-  DenseSet<DynInstr *>::iterator itr(loadInstrs.begin());
   for (; itr != loadInstrs.end(); ++itr) {
     DynInstr *loadInstr = *itr;
     Instruction *staticLoadInstr = idMgr->getOrigInstr(loadInstr);
-    DynOprd loadPtrOprd(loadInstr, staticLoadInstr->getOperand(0), 0);
+    Value *v = staticLoadInstr->getOperand(0);
+    PtrPair p = std::make_pair((void *)loadInstr->getCallingCtx(), (void *)v);
+    if (DM_IN(p, curLoadMemCache))
+      continue;
+    DynOprd loadPtrOprd(loadInstr, v, 0);
     if (DBG)
       stat->printDynInstr(loadInstr, "LiveSet::getAllLoadMem RealLoad");
     retBDD |= aliasMgr->getPointTee(&loadPtrOprd);
+    curLoadMemCache.insert(p);
   }
 
   // Second, get the load bdd from all load arguments of external calls.
   retBDD |= getExtCallLoadMem();
+
+finish:
   ENDTIME(stat->intraLiveLoadMemTime, stat->intraLiveLoadMemSt, stat->intraLiveLoadMemEnd);
+  allLoadMem = retBDD;
   return retBDD;
 }
 
 bdd LiveSet::getExtCallLoadMem() {
+  DenseSet<std::pair<void *, void *> > curLoadMemCache; // High level cache.
   bdd retBDD = bddfalse;
   DenseSet<DynInstr *>::iterator itrCall(extCallLoadInstrs.begin());
+
+  // fast path.
+  if (extCallLoadMem != bddfalse) {
+    retBDD = extCallLoadMem;
+    goto finish;
+  }
+
+  // slow path.
   for (; itrCall != extCallLoadInstrs.end(); ++itrCall) {
     DynInstr *extCallInstr = *itrCall;
     Instruction *staticCall = idMgr->getOrigInstr(extCallInstr);
@@ -173,10 +202,17 @@ bdd LiveSet::getExtCallLoadMem() {
     for (CallSite::arg_iterator ci = cs.arg_begin(), ce = cs.arg_end(); ci != ce; ++ci, ++argOffset) {
       if (funcSumm->isExtFuncSummLoad(staticCall, argOffset)) {
         Value *arg = Util::stripCast(*ci);
+        PtrPair p = std::make_pair((void *)extCallInstr->getCallingCtx(), (void *)arg);
+        if (DM_IN(p, curLoadMemCache))
+          continue;
         retBDD |= aliasMgr->getPointTee(extCallInstr, arg);
+        curLoadMemCache.insert(p);
       }
     }
   }
+
+finish:
+  extCallLoadMem = retBDD;
   return retBDD;
 }
 

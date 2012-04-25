@@ -151,6 +151,14 @@ namespace tern {
     struct timeval intraLiveLoadMemEnd;
     double intraLiveLoadMemTime;   
 
+    struct timeval mayAliasSt;
+    struct timeval mayAliasEnd;
+    double mayAliasTime;   
+
+    struct timeval pointeeSt;
+    struct timeval pointeeEnd;
+    double pointeeTime;  
+
     Stat();
     ~Stat();
     void init(InstrIdMgr *idMgr, CallStackMgr *ctxMgr, FuncSumm *funcSumm, AliasMgr *aliasMgr);

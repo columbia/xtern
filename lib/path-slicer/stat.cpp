@@ -160,6 +160,8 @@ Stat::Stat() {
   intraBrWrBetGetSummTime = 0;
   intraBrWrBetGetBddTime = 0;
   intraLiveLoadMemTime = 0;
+  mayAliasTime = 0;
+  pointeeTime = 0;
 }
 
 Stat::~Stat() {

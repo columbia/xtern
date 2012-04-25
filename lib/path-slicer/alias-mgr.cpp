@@ -80,6 +80,7 @@ void AliasMgr::genInstrMap(Module &module,
 
 bool AliasMgr::mayAlias(DynOprd *dynOprd1, DynOprd *dynOprd2) {
   bool result = false;
+  BEGINTIME(stat->mayAliasSt);
   DynInstr *dynInstr1 = dynOprd1->getDynInstr();
   DynInstr *dynInstr2 = dynOprd2->getDynInstr();
   //assert(Util::isMem(dynInstr1) && Util::isMem(dynInstr2));
@@ -112,7 +113,7 @@ bool AliasMgr::mayAlias(DynOprd *dynOprd1, DynOprd *dynOprd2) {
 
   // Query cache first.
   if (aliasCache.in((void *)ctx1, (void *)instrId1, (void *)ctx2, (void *)instrId2, result))
-    return result;
+    goto finish;
 
   // Query bdd.
   if (CTX_SENSITIVE) {
@@ -131,7 +132,9 @@ bool AliasMgr::mayAlias(DynOprd *dynOprd1, DynOprd *dynOprd2) {
 
   // Update cache.
   aliasCache.add((void *)ctx1, (void *)instrId1, (void *)ctx2, (void *)instrId2, result);
-  
+
+finish:
+  ENDTIME(stat->mayAliasTime, stat->mayAliasSt, stat->mayAliasEnd);
   return result;
 }
 
@@ -145,10 +148,12 @@ bool AliasMgr::mayAlias(llvm::Value *v1, llvm::Value *v2) {
     baa = (BddAliasAnalysis *)(simAaol->AAPass);
     assert(false);  // range slicing: tbd.
   }
-  return (baa->getPointeeSet(NULL, v1, 0) & baa->getPointeeSet(NULL, v2, 0)) != bddfalse;
+  bool result = (baa->getPointeeSet(NULL, v1, 0) & baa->getPointeeSet(NULL, v2, 0)) != bddfalse;
+  return result;
 }
 
 bdd AliasMgr::getPointTee(DynOprd *dynOprd) {
+  BEGINTIME(stat->pointeeSt);
   DynInstr *dynInstr = dynOprd->getDynInstr();
   Instruction *instr = NULL;
   unsigned opIndex = dynOprd->getIndex();
@@ -175,7 +180,8 @@ bdd AliasMgr::getPointTee(DynOprd *dynOprd) {
     // Fast path, query bdd cache.
     if (pointeeCache.in((void *)intCtx, (void *)v)) {
       numHitPointeeQry++;
-      return pointeeCache.get((void *)intCtx, (void *)v);
+      retBdd = pointeeCache.get((void *)intCtx, (void *)v);
+      goto finish;
     }
 
     // Slow path.
@@ -200,7 +206,8 @@ bdd AliasMgr::getPointTee(DynOprd *dynOprd) {
     // Fast path, query bdd cache.
     if (pointeeCache.in(NULL, (void *)v)) {
       numHitPointeeQry++;
-      return pointeeCache.get(NULL, (void *)v);
+      retBdd = pointeeCache.get(NULL, (void *)v);
+      goto finish;
     }
 
     // Slow path.
@@ -219,10 +226,13 @@ bdd AliasMgr::getPointTee(DynOprd *dynOprd) {
     pointeeCache.add(NULL, (void *)v, retBdd);
   }
 
+finish:
+  ENDTIME(stat->pointeeTime, stat->pointeeSt, stat->pointeeEnd);
   return retBdd;
 }
 
 bdd AliasMgr::getPointTee(DynInstr *ctxOfDynInstr, llvm::Value *v) {
+  BEGINTIME(stat->pointeeSt);
   BddAliasAnalysis *baa = NULL;
   bdd retBdd = bddfalse;
   numPointeeQry++;
@@ -237,7 +247,8 @@ bdd AliasMgr::getPointTee(DynInstr *ctxOfDynInstr, llvm::Value *v) {
     // Fast path, query bdd cache.
     if (pointeeCache.in((void *)intCtx, (void *)v)) {
       numHitPointeeQry++;
-      return pointeeCache.get((void *)intCtx, (void *)v);
+      retBdd = pointeeCache.get((void *)intCtx, (void *)v);
+      goto finish;
     }
 
     if (NORMAL_SLICING) {
@@ -261,7 +272,8 @@ bdd AliasMgr::getPointTee(DynInstr *ctxOfDynInstr, llvm::Value *v) {
     // Fast path, query bdd cache.
     if (pointeeCache.in(NULL, (void *)v)) {
       numHitPointeeQry++;
-      return pointeeCache.get(NULL, (void *)v);
+      retBdd = pointeeCache.get(NULL, (void *)v);
+      goto finish;
     }
 
     if (NORMAL_SLICING) {
@@ -279,6 +291,8 @@ bdd AliasMgr::getPointTee(DynInstr *ctxOfDynInstr, llvm::Value *v) {
     pointeeCache.add(NULL, (void *)v, retBdd);
   }
 
+finish:
+  ENDTIME(stat->pointeeTime, stat->pointeeSt, stat->pointeeEnd);
   return retBdd;
 }
 
