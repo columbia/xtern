@@ -512,8 +512,8 @@ void IntraSlicer::dump(const char *tag, size_t startIndex) {
   assert(trace);
   errs() << BAN;
   for (size_t i = 0; i < trace->size(); i++) {
-    if (i < startIndex)
-      continue;
+    //if (i < startIndex)
+      //continue;
     stat->printDynInstr(trace->at(i), tag);
     ctxMgr->printCallStack(trace->at(i));  // Print ctx of each instr so we can easily see which one is wrong.
   }
