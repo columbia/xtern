@@ -85,6 +85,12 @@ void KleeTraceUtil::record(DynInstrVector *trace, void *instr, void *state, void
 void KleeTraceUtil::record(DynInstrVector *trace, KInstruction *kInstr,
   ThreadState *state, Function *f) {
   Instruction *instr = kInstr->inst;
+
+  // DBG.
+  errs() << "KleeTraceUtil::record"
+    << " : F: " << instr->getParent()->getParent()->getNameStr()
+    << " : BB: " << instr->getParent()->getNameStr()
+    << "\n";
   
   // Ignore an instruction if it is not from the original module.
   if (idMgr->getOrigInstrId(instr) == -1)
@@ -111,6 +117,13 @@ void KleeTraceUtil::record(DynInstrVector *trace, KInstruction *kInstr,
   } else {
     recordNonMem(trace, kInstr, state);    
   }
+
+  // DBG.
+  assert(trace->size());
+  errs() << "KleeTraceUtil::record idx: " << trace->back()->getIndex()
+    << " : F: " << instr->getParent()->getParent()->getNameStr()
+    << " : BB: " << instr->getParent()->getNameStr()
+    << "\n";  
 }
 
 void KleeTraceUtil::recordPHI(DynInstrVector *trace, klee::KInstruction *kInstr,
@@ -145,13 +158,6 @@ void KleeTraceUtil::recordRet(DynInstrVector *trace, klee::KInstruction *kInstr,
   ret->setOrigInstrId(idMgr->getOrigInstrId(kInstr->inst));
   trace->push_back(ret);
   stat->collectExed(ret);
-
-  // DBG.
-  Instruction *instr = kInstr->inst;
-  errs() << "KleeTraceUtil::recordRet idx: " << ret->getIndex()
-    << " : F: " << instr->getParent()->getParent()->getNameStr()
-    << " : BB: " << instr->getParent()->getNameStr()
-    << "\n";
 }
 
 void KleeTraceUtil::recordCall(DynInstrVector *trace, klee::KInstruction *kInstr,
