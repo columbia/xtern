@@ -584,13 +584,15 @@ void IntraSlicer::calStat(set<size_t> &rmBrs, set<size_t> &rmCalls) {
     // Handle not-taken bi-cond branches, pass to argument.
     if (!dynInstr->isTaken() && Util::isBr(instr) && !Util::isUniCondBr(instr)) {
       rmBrs.insert(dynInstr->getIndex());
-      stat->printDynInstr(dynInstr, "calStat rmBrs");
+      if (DBG)
+        stat->printDynInstr(dynInstr, "calStat rmBrs");
     }
 
     // Handle not-taken external calls.
     if (!dynInstr->isTaken() && Util::isCall(instr) && !funcSumm->isInternalCall(dynInstr)) {
       rmCalls.insert(dynInstr->getIndex());
-      stat->printDynInstr(dynInstr, "calStat rmCalls");
+      if (DBG)
+        stat->printDynInstr(dynInstr, "calStat rmCalls");
     }
 
 	/* TODO: actually, in KLEE, forking states are not restricted to branch instructions,
@@ -633,6 +635,7 @@ void IntraSlicer::calStat(set<size_t> &rmBrs, set<size_t> &rmCalls) {
     << ";  numTakenExtCalls/numExedExtCalls: " << numTakenExtCalls << "/" << numExedExtCalls
     << ";\n\n\n";
 
-  stat->printExternalCalls();
+  if (DBG)
+    stat->printExternalCalls();
 }
 
