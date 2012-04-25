@@ -87,12 +87,18 @@ void KleeTraceUtil::record(DynInstrVector *trace, KInstruction *kInstr,
   Instruction *instr = kInstr->inst;
 
   // DBG.
-  if (Util::isRet(instr) || Util::isCall(instr))
-    errs() << "KleeTraceUtil::record " << instr->getOpcodeName(instr->getOpcode())
-      << " : ptr: " << (void *)instr << " : instr id: " << idMgr->getOrigInstrId(instr)
-      << " : F: " << instr->getParent()->getParent()->getNameStr()
-      << " : BB: " << instr->getParent()->getNameStr()
-      << "\n";
+  if (Util::isRet(instr)/* || Util::isCall(instr)*/) {
+    Function *f = instr->getParent()->getParent();
+    if (f->hasName() && f->getNameStr() == "compile_address" &&
+      idMgr->getOrigInstrId(instr) == -1) {
+	    errs() << "KleeTraceUtil::record " << instr->getOpcodeName(instr->getOpcode())
+	      << " : ptr: " << (void *)instr << " : instr id: " << idMgr->getOrigInstrId(instr)
+	      << " : F: " << instr->getParent()->getParent()->getNameStr()
+	      << " : BB: " << instr->getParent()->getNameStr()
+	      << "\n";
+      abort();
+    }
+  }
   
   // Ignore an instruction if it is not from the original module.
   if (idMgr->getOrigInstrId(instr) == -1)
@@ -121,7 +127,7 @@ void KleeTraceUtil::record(DynInstrVector *trace, KInstruction *kInstr,
   }
 
   // DBG.
-  if (Util::isRet(instr) || Util::isCall(instr)) {
+  /*if (Util::isRet(instr) || Util::isCall(instr)) {
     assert(trace->size());
     errs() << "KleeTraceUtil::record idx: " << trace->back()->getIndex() << " : " 
       << instr->getOpcodeName(instr->getOpcode())
@@ -129,7 +135,7 @@ void KleeTraceUtil::record(DynInstrVector *trace, KInstruction *kInstr,
       << " : F: " << instr->getParent()->getParent()->getNameStr()
       << " : BB: " << instr->getParent()->getNameStr()
       << "\n";
-  }
+  }*/
 }
 
 void KleeTraceUtil::recordPHI(DynInstrVector *trace, klee::KInstruction *kInstr,
