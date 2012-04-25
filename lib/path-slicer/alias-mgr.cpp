@@ -156,8 +156,8 @@ bdd AliasMgr::getPointTee(DynOprd *dynOprd) {
   bdd retBdd = bddfalse;
   numPointeeQry++;
   Value *v = NULL;
-  if (numPointeeQry%100 == 0)
-    fprintf(stderr, "AliasMgr::getPointTee1 %ld/%ld\n", numHitPointeeQry, numPointeeQry);
+  //if (numPointeeQry%100000 == 0)
+    //fprintf(stderr, "AliasMgr::getPointTee1 %ld/%ld\n", numHitPointeeQry, numPointeeQry);
 
   if (NORMAL_SLICING)
     instr = idMgr->getOrigInstr(dynInstr);
@@ -226,8 +226,8 @@ bdd AliasMgr::getPointTee(DynInstr *ctxOfDynInstr, llvm::Value *v) {
   BddAliasAnalysis *baa = NULL;
   bdd retBdd = bddfalse;
   numPointeeQry++;
-  if (numPointeeQry%100 == 0)
-    fprintf(stderr, "AliasMgr::getPointTee2 %ld/%ld\n", numHitPointeeQry, numPointeeQry);
+  //if (numPointeeQry%100 == 0)
+    //fprintf(stderr, "AliasMgr::getPointTee2 %ld/%ld\n", numHitPointeeQry, numPointeeQry);
   
   if (CTX_SENSITIVE) {
     vector<User *> usrCtx;
