@@ -87,7 +87,7 @@ void KleeTraceUtil::record(DynInstrVector *trace, KInstruction *kInstr,
   Instruction *instr = kInstr->inst;
 
   // DBG.
-  if (Util::isRet(instr))
+  if (Util::isRet(instr) || Util::isCall(instr))
     errs() << "KleeTraceUtil::record"
       << " : F: " << instr->getParent()->getParent()->getNameStr()
       << " : BB: " << instr->getParent()->getNameStr()
@@ -120,7 +120,7 @@ void KleeTraceUtil::record(DynInstrVector *trace, KInstruction *kInstr,
   }
 
   // DBG.
-  if (Util::isRet(instr)) {
+  if (Util::isRet(instr) || Util::isCall(instr)) {
     assert(trace->size());
     errs() << "KleeTraceUtil::record idx: " << trace->back()->getIndex()
       << " : F: " << instr->getParent()->getParent()->getNameStr()
