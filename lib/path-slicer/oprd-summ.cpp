@@ -68,6 +68,7 @@ InstrDenseSet *OprdSumm::getStoreSummBetween(
   // Collect static store instructions.
   visitedBB.clear();
   InstrDenseSet summ;
+  BEGINTIME(stat->intraBrWrBetGetSummSt);
   BasicBlock *x = Util::getBasicBlock(idMgr->getOrigInstr(prevBrInstr));
   BasicBlock *sink = Util::getBasicBlock(idMgr->getOrigInstr(postInstr));
   for (succ_iterator it = succ_begin(x); it != succ_end(x); ++it) {
@@ -76,10 +77,12 @@ InstrDenseSet *OprdSumm::getStoreSummBetween(
       continue;
     DFSBasicBlock(y, sink, summ, Store);
   }
+  ENDTIME(stat->intraBrWrBetGetSummTime, stat->intraBrWrBetGetSummSt, stat->intraBrWrBetGetSummEnd);
 
   // Get bdd of these store instructions with the calling context.
   bddResults = bddfalse;
   InstrDenseSet::iterator itr(summ.begin());
+  BEGINTIME(stat->intraBrWrBetGetBddSt);
   for (; itr != summ.end(); ++itr) {
     if (Util::isStore(*itr)) {
       /* The instructions here are already from either normal or max slicing 
@@ -103,6 +106,7 @@ InstrDenseSet *OprdSumm::getStoreSummBetween(
       }
     }
   }
+  ENDTIME(stat->intraBrWrBetGetBddTime, stat->intraBrWrBetGetBddSt, stat->intraBrWrBetGetBddEnd);
   return NULL;
 }
 

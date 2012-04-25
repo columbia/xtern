@@ -138,8 +138,14 @@ namespace tern {
     struct timeval intraBrWrBetSt;
     struct timeval intraBrWrBetEnd;
     double intraBrWrBetTime;
-    
-    
+
+    struct timeval intraBrWrBetGetSummSt;
+    struct timeval intraBrWrBetGetSummEnd;
+    double intraBrWrBetGetSummTime;    
+
+    struct timeval intraBrWrBetGetBddSt;
+    struct timeval intraBrWrBetGetBddEnd;
+    double intraBrWrBetGetBddTime;       
     Stat();
     ~Stat();
     void init(InstrIdMgr *idMgr, CallStackMgr *ctxMgr, FuncSumm *funcSumm, AliasMgr *aliasMgr);
