@@ -95,11 +95,12 @@ void KleeTraceUtil::record(DynInstrVector *trace, KInstruction *kInstr,
       	// to be added.
       ) &&
       idMgr->getOrigInstrId(instr) == -1) {
-	    errs() << "KleeTraceUtil::record " << instr->getOpcodeName(instr->getOpcode())
+	    std::cerr << "KleeTraceUtil::record " << instr->getOpcodeName(instr->getOpcode())
 	      << " : ptr: " << (void *)instr << " : instr id: " << idMgr->getOrigInstrId(instr)
 	      << " : F: " << instr->getParent()->getParent()->getNameStr()
 	      << " : BB: " << instr->getParent()->getNameStr()
-	      << "\n";
+	      << endl;
+      sleep(1);
       abort();
     }
   }
