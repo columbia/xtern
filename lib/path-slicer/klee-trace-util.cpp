@@ -87,9 +87,13 @@ void KleeTraceUtil::record(DynInstrVector *trace, KInstruction *kInstr,
   Instruction *instr = kInstr->inst;
 
   // DBG.
-  if (Util::isRet(instr)/* || Util::isCall(instr)*/) {
+  if (Util::isRet(instr) || Util::isCall(instr)) {
     Function *f = instr->getParent()->getParent();
-    if (f->hasName() && f->getNameStr() == "compile_address" &&
+    if (f->hasName() &&
+      (f->getNameStr() == "compile_address" || // This is a weird problem in sed, a ret instr in this function is not recorded.
+      f->getNameStr() == "ck_realloc" // This is a weird problem in sed, a ret instr in this function is not recorded.
+      	// to be added.
+      ) &&
       idMgr->getOrigInstrId(instr) == -1) {
 	    errs() << "KleeTraceUtil::record " << instr->getOpcodeName(instr->getOpcode())
 	      << " : ptr: " << (void *)instr << " : instr id: " << idMgr->getOrigInstrId(instr)
