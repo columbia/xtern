@@ -27,6 +27,11 @@ namespace tern {
     InstrIdMgr *idMgr;
     CacheUtil aliasCache; /* Do we need multiple caches for each slicing mode? orig, mx, simple?
                                           Yes. TBD. */
+
+    BddCacheUtil pointeeCache;
+    long numPointeeQry;
+    long numHitPointeeQry;
+
     Stat *stat;
     std::set<const Type *> raceFreeTypes;
     

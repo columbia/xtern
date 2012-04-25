@@ -12,6 +12,8 @@ AliasMgr::AliasMgr() {
   origAaol = NULL;
   mxAaol = NULL;
   simAaol = NULL;
+  numPointeeQry = 0;
+  numHitPointeeQry = 0;
   //advAlias = NULL;
 }
 
@@ -151,50 +153,93 @@ bdd AliasMgr::getPointTee(DynOprd *dynOprd) {
   Instruction *instr = NULL;
   unsigned opIndex = dynOprd->getIndex();
   BddAliasAnalysis *baa = NULL;
-  
+  bdd retBdd = bddfalse;
+  numPointeeQry++;
+  Value *v = NULL;
+  if (numPointeeQry%100 == 0)
+    fprintf(stderr, "AliasMgr::getPointTee1 %ld/%ld\n", numHitPointeeQry, numPointeeQry);
+
+  if (NORMAL_SLICING)
+    instr = idMgr->getOrigInstr(dynInstr);
+  else if (MAX_SLICING)
+    instr = idMgr->getMxInstr(dynInstr);      
+  else
+    assert(false);
+  v = instr->getOperand(opIndex);
+
   if (CTX_SENSITIVE) {
     vector<User *> usrCtx;
     CallCtx *intCtx = dynInstr->getCallingCtx();
     assert(intCtx);
+
+    // Fast path, query bdd cache.
+    if (pointeeCache.in((void *)intCtx, (void *)v)) {
+      numHitPointeeQry++;
+      return pointeeCache.get((void *)intCtx, (void *)v);
+    }
+
+    // Slow path.
     if (NORMAL_SLICING) {
       baa = (BddAliasAnalysis *)(origAaol->AAPass);
       for (size_t i = 0; i < intCtx->size(); i++)
         usrCtx.push_back(cast<User>(idMgr->getOrigInstrCtx(intCtx->at(i))));
-      instr = idMgr->getOrigInstr(dynInstr);
     } else if (MAX_SLICING) {
       baa = (BddAliasAnalysis *)(mxAaol->AAPass);
       for (size_t i = 0; i < intCtx->size(); i++)
         usrCtx.push_back(cast<User>(idMgr->getMxInstrCtx(intCtx->at(i))));
-      instr = idMgr->getMxInstr(dynInstr);      
     } else {
       baa = (BddAliasAnalysis *)(simAaol->AAPass);
       assert(false);  // range slicing: tbd.
     }
 
-    return baa->getPointeeSet(&usrCtx, instr->getOperand(opIndex), 0);
+    retBdd = baa->getPointeeSet(&usrCtx, v, 0);
+
+    // Update bdd cache.
+    pointeeCache.add((void *)intCtx, (void *)v, retBdd);
   } else {
+    // Fast path, query bdd cache.
+    if (pointeeCache.in(NULL, (void *)v)) {
+      numHitPointeeQry++;
+      return pointeeCache.get(NULL, (void *)v);
+    }
+
+    // Slow path.
     if (NORMAL_SLICING) {
       baa = (BddAliasAnalysis *)(origAaol->AAPass);
-      instr = idMgr->getOrigInstr(dynInstr);
     } else if (MAX_SLICING) {
       baa = (BddAliasAnalysis *)(mxAaol->AAPass);
-      instr = idMgr->getMxInstr(dynInstr);      
     } else {
       baa = (BddAliasAnalysis *)(simAaol->AAPass);
       assert(false);  // range slicing: tbd.
     }
 
-    return baa->getPointeeSet(NULL, instr->getOperand(opIndex), 0);
+    retBdd = baa->getPointeeSet(NULL, v, 0);
+
+    // Update bdd cache.
+    pointeeCache.add(NULL, (void *)v, retBdd);
   }
+
+  return retBdd;
 }
 
 bdd AliasMgr::getPointTee(DynInstr *ctxOfDynInstr, llvm::Value *v) {
   BddAliasAnalysis *baa = NULL;
+  bdd retBdd = bddfalse;
+  numPointeeQry++;
+  if (numPointeeQry%100 == 0)
+    fprintf(stderr, "AliasMgr::getPointTee2 %ld/%ld\n", numHitPointeeQry, numPointeeQry);
   
   if (CTX_SENSITIVE) {
     vector<User *> usrCtx;
     CallCtx *intCtx = ctxOfDynInstr->getCallingCtx();
     assert(intCtx);
+
+    // Fast path, query bdd cache.
+    if (pointeeCache.in((void *)intCtx, (void *)v)) {
+      numHitPointeeQry++;
+      return pointeeCache.get((void *)intCtx, (void *)v);
+    }
+
     if (NORMAL_SLICING) {
       baa = (BddAliasAnalysis *)(origAaol->AAPass);
       for (size_t i = 0; i < intCtx->size(); i++)
@@ -208,8 +253,17 @@ bdd AliasMgr::getPointTee(DynInstr *ctxOfDynInstr, llvm::Value *v) {
       assert(false);  // range slicing: tbd.
     }
 
-    return baa->getPointeeSet(&usrCtx, v, 0);
+    retBdd = baa->getPointeeSet(&usrCtx, v, 0);
+
+    // Update bdd cache.
+    pointeeCache.add((void *)intCtx, (void *)v, retBdd);
   } else {
+    // Fast path, query bdd cache.
+    if (pointeeCache.in(NULL, (void *)v)) {
+      numHitPointeeQry++;
+      return pointeeCache.get(NULL, (void *)v);
+    }
+
     if (NORMAL_SLICING) {
       baa = (BddAliasAnalysis *)(origAaol->AAPass);
     } else if (MAX_SLICING) {
@@ -219,8 +273,13 @@ bdd AliasMgr::getPointTee(DynInstr *ctxOfDynInstr, llvm::Value *v) {
       assert(false);  // range slicing: tbd.
     }
 
-    return baa->getPointeeSet(NULL, v, 0);
+    retBdd = baa->getPointeeSet(NULL, v, 0);
+
+    // Update bdd cache.
+    pointeeCache.add(NULL, (void *)v, retBdd);
   }
+
+  return retBdd;
 }
 
 

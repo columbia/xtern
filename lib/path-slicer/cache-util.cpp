@@ -51,3 +51,32 @@ void CacheUtil::del(void *high, void *low) {
   singleCache.erase(p);
 }
 
+BddCacheUtil::BddCacheUtil() {
+
+}
+
+BddCacheUtil::~BddCacheUtil() {
+
+}
+
+bool BddCacheUtil::in(void *high, void *low) {
+  PtrPair p = std::make_pair(high, low);
+  if (DM_IN(p, bddCache))
+    return true;
+  else
+    return false;
+}
+
+bdd BddCacheUtil::get(void *high, void *low) {
+  PtrPair p = std::make_pair(high, low);
+  assert(DM_IN(p, bddCache));
+  return bddCache[p];
+}
+
+void BddCacheUtil::add(void *high, void *low, bdd pointee) {
+  PtrPair p = std::make_pair(high, low);
+  assert(!DM_IN(p, bddCache));
+  bddCache[p] = pointee;
+}
+
+

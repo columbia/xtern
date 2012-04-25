@@ -6,6 +6,7 @@
 
 #include "macros.h"
 #include "type-defs.h"
+#include <bdd.h>
 
 namespace tern {
   class CacheUtil {
@@ -50,8 +51,23 @@ namespace tern {
 
     /* Delete one dynamic instruction with its property from cache. */
     void del(void *high, void *low);
-
   };
+
+  class BddCacheUtil {
+  private:
+    llvm::DenseMap<std::pair<void *, void *>, bdd> bddCache; 
+
+  protected:
+
+  public:
+     BddCacheUtil();
+     ~BddCacheUtil();
+
+    /* Cache for bdd. */
+    bool in(void *high, void *low);
+    bdd get(void *high, void *low);
+    void add(void *high, void *low, bdd pointee);
+   };
 }
 
 #endif
