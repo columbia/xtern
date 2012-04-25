@@ -145,6 +145,13 @@ void KleeTraceUtil::recordRet(DynInstrVector *trace, klee::KInstruction *kInstr,
   ret->setOrigInstrId(idMgr->getOrigInstrId(kInstr->inst));
   trace->push_back(ret);
   stat->collectExed(ret);
+
+  // DBG.
+  Instruction *instr = kInstr->inst;
+  errs() << "KleeTraceUtil::recordRet idx: " << ret->getIndex()
+    << " : F: " << instr->getParent()->getParent()->getNameStr()
+    << " : BB: " << instr->getParent()->getNameStr()
+    << "\n";
 }
 
 void KleeTraceUtil::recordCall(DynInstrVector *trace, klee::KInstruction *kInstr,
