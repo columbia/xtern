@@ -189,6 +189,8 @@ void Stat::printStat(const char *tag) {
         << ") "
   	  << "), "
     << "intraLiveLoadMemTime: " << intraLiveLoadMemTime << ", "
+    << "mayAliasTime: " << mayAliasTime << ", "
+    << "pointeeTime: " << pointeeTime << ", "
     << "intraRetTime: " << intraRetTime << ", "
     << "intraCallTime: " << intraCallTime << ", "
     << "intraMemTime: " << intraMemTime << ", "
