@@ -437,7 +437,7 @@ void IntraSlicer::handleMem(DynInstr *dynInstr) {
     // Handle real load instructions in live set.
     DenseSet<DynInstr *> loadInstrs = live.getAllLoadInstrs();
     DenseSet<DynInstr *>::iterator itr(loadInstrs.begin());
-    bool alreadyAlias = false;
+    bool alreadyAlias = false; // An optimization flag to skip unnecessary may alias queries.
     for (; itr != loadInstrs.end(); ++itr) {
       DynMemInstr *loadInstr = (DynMemInstr*)(*itr);
       Instruction *staticLoadInstr = idMgr->getOrigInstr((DynInstr *)loadInstr);

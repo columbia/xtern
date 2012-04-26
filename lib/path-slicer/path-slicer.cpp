@@ -199,7 +199,7 @@ void PathSlicer::runPathSlicer(void *pathId, set<size_t> &rmBrs,
     return;
   BEGINTIME(stat.intraSlicingSt);
   DynInstrVector *trace = allPathTraces[pathId];
-  fprintf(stderr, "PathSlicer::runPathSlicer pathId %p, isPruned %d, isHalted %d, size " SZ "\n",
+  fprintf(stderr, "PathSlicer::runPathSlicer START pathId %p, isPruned %d, isHalted %d, size " SZ "\n",
     pathId, isPruned, isHalted, trace->size());
   if (isPruned)
     goto finish;
@@ -253,6 +253,8 @@ finish:
   allPathTraces.erase(pathId);
   delete trace;
   ENDTIME(stat.intraSlicingTime, stat.intraSlicingSt, stat.intraSlicingEnd);
+  fprintf(stderr, "PathSlicer::runPathSlicer END pathId %p, isPruned %d, isHalted %d\n",
+    pathId, isPruned, isHalted);
 }
 
 void PathSlicer::calStat(set<size_t> &rmBrs, set<size_t> &rmCalls) {
