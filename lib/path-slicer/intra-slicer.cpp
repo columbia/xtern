@@ -437,6 +437,7 @@ void IntraSlicer::handleMem(DynInstr *dynInstr) {
     // Handle real load instructions in live set.
     DenseSet<DynInstr *> loadInstrs = live.getAllLoadInstrs();
     DenseSet<DynInstr *>::iterator itr(loadInstrs.begin());
+    bool alreadyAlias = false;
     for (; itr != loadInstrs.end(); ++itr) {
       DynMemInstr *loadInstr = (DynMemInstr*)(*itr);
       Instruction *staticLoadInstr = idMgr->getOrigInstr((DynInstr *)loadInstr);
@@ -447,16 +448,26 @@ void IntraSlicer::handleMem(DynInstr *dynInstr) {
         }
         live.delLoadMem(loadInstr);
         takeStore(dynInstr, TakenFlags::INTRA_STORE_OW);
-      } else if (aliasMgr->mayAlias(&loadPtrOprd, &storePtrOprd))
-        takeStore(dynInstr, TakenFlags::INTRA_STORE_ALIAS);
+        alreadyAlias = true;
+        /* Need think: could we jump out of this loop once hit a must-alias?
+          Or do we have to look at all load instrs to delete all must-alias load instrs? */
+      } else if (!alreadyAlias) {
+        /* Optimization: we only need to hit one may alias in order to take this store,
+          then we can save lots of may alias queries. */
+        if (aliasMgr->mayAlias(&loadPtrOprd, &storePtrOprd)) {
+          takeStore(dynInstr, TakenFlags::INTRA_STORE_ALIAS);
+          alreadyAlias = true;
+        }
+      }
     }
 
-    // TODO: IS THIS PRECISE? WHEN DO WE REMOVE "EXT LOAD" INSTR?
+    // TODO: IS THIS PRECISE? WHEN DO WE DELETE "EXT LOAD" INSTR FROM LIVE SET?
 
     // Handle external calls which have semantic "load" in live set.
-    if ((aliasMgr->getPointTee(&storePtrOprd) & live.getExtCallLoadMem()) != bddfalse)
+    if (!alreadyAlias && ((aliasMgr->getPointTee(&storePtrOprd) & live.getExtCallLoadMem()) != bddfalse))
       takeStore(dynInstr, TakenFlags::INTRA_STORE_ALIAS_EXT_CALL);
   }
+
   ENDTIME(stat->intraMemTime, stat->intraMemSt, stat->intraMemEnd);
 }
 
