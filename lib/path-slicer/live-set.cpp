@@ -200,7 +200,10 @@ bdd LiveSet::getExtCallLoadMem() {
     CallSite cs  = CallSite(cast<CallInst>(staticCall));
     unsigned argOffset = 0;
     for (CallSite::arg_iterator ci = cs.arg_begin(), ce = cs.arg_end(); ci != ce; ++ci, ++argOffset) {
-      if (funcSumm->isExtFuncSummLoad(staticCall, argOffset)) {
+      BEGINTIME(stat->getExtCallMemSt);
+      bool isExtLoad = funcSumm->isExtFuncSummLoad(staticCall, argOffset);
+      ENDTIME(stat->getExtCallMemTime, stat->getExtCallMemSt, stat->getExtCallMemEnd);
+      if (isExtLoad) {
         Value *arg = Util::stripCast(*ci);
         PtrPair p = std::make_pair((void *)extCallInstr->getCallingCtx(), (void *)arg);
         if (DM_IN(p, curLoadMemCache))

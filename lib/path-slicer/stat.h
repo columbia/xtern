@@ -159,6 +159,10 @@ namespace tern {
     struct timeval pointeeEnd;
     double pointeeTime;  
 
+    struct timeval getExtCallMemSt;
+    struct timeval getExtCallMemEnd;
+    double getExtCallMemTime;  
+
     Stat();
     ~Stat();
     void init(InstrIdMgr *idMgr, CallStackMgr *ctxMgr, FuncSumm *funcSumm, AliasMgr *aliasMgr);

@@ -162,6 +162,7 @@ Stat::Stat() {
   intraLiveLoadMemTime = 0;
   mayAliasTime = 0;
   pointeeTime = 0;
+  getExtCallMemTime = 0;
 }
 
 Stat::~Stat() {
@@ -191,6 +192,7 @@ void Stat::printStat(const char *tag) {
     << "intraLiveLoadMemTime: " << intraLiveLoadMemTime << ", "
     << "mayAliasTime: " << mayAliasTime << ", "
     << "pointeeTime: " << pointeeTime << ", "
+    << "getExtCallMemTime: " << getExtCallMemTime << ", "
     << "intraRetTime: " << intraRetTime << ", "
     << "intraCallTime: " << intraCallTime << ", "
     << "intraMemTime: " << intraMemTime << ", "
