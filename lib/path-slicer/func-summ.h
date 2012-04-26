@@ -10,6 +10,7 @@
 
 #include "event-mgr.h"
 #include "dyn-instrs.h"
+#include "cache-util.h"
 
 namespace tern {
   // TBD: should move the internal function list from path slicer to here.
@@ -34,6 +35,9 @@ namespace tern {
     llvm::DenseSet<const llvm::Function *> internalFunctions;
 
     llvm::Function *mainFunc;
+
+    CacheUtil extLoadCache;
+    CacheUtil extStoreCache;
 
   protected:
     void collectInternalFunctions(llvm::Module &M);

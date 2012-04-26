@@ -111,23 +111,43 @@ bool FuncSumm::extFuncHasStoreSumm(llvm::Instruction *instr) {
 }
 
 bool FuncSumm::isExtFuncSummLoad(llvm::Instruction *instr, unsigned argOffset) {
+  bool result = false;
+  if (extLoadCache.in((void *)instr, (void *)argOffset, result))
+    return result;
+  
   assert(isa<CallInst>(instr));
   CallInst *ci = cast<CallInst>(instr);
   Function *f = ci->getCalledFunction();
-  if (!f) // Ignore function pointer for now, affect soundness.
-    return false;
-  return ExtFuncSumm::getExtFuncSummType(f->getNameStr().c_str(), argOffset) ==
-    ExtFuncSumm::ExtLoad;
+  if (!f) {// Ignore function pointer for now, affect soundness.
+    result = false;
+    goto finish;
+  }
+  result = (ExtFuncSumm::getExtFuncSummType(f->getNameStr().c_str(), argOffset) ==
+    ExtFuncSumm::ExtLoad);
+
+finish:
+  extLoadCache.add((void *)instr, (void *)argOffset, result);
+  return result;
 }
 
 bool FuncSumm::isExtFuncSummStore(llvm::Instruction *instr, unsigned argOffset) {
+  bool result = false;
+  if (extStoreCache.in((void *)instr, (void *)argOffset, result))
+    return result;
+  
   assert(isa<CallInst>(instr));
   CallInst *ci = cast<CallInst>(instr);
   Function *f = ci->getCalledFunction();
-  if (!f) // Ignore function pointer for now, affect soundness.
-    return false;
-  return ExtFuncSumm::getExtFuncSummType(f->getNameStr().c_str(), argOffset) ==
-    ExtFuncSumm::ExtStore;
+  if (!f) {// Ignore function pointer for now, affect soundness.
+    result = false;
+    goto finish;
+  }
+  result = (ExtFuncSumm::getExtFuncSummType(f->getNameStr().c_str(), argOffset) ==
+    ExtFuncSumm::ExtStore);
+
+finish:
+  extStoreCache.add((void *)instr, (void *)argOffset, result);
+  return result;  
 }
 
 bool FuncSumm::extFuncHasSumm(llvm::Instruction *instr) {
