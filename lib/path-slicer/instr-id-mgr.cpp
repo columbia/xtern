@@ -32,13 +32,14 @@ void InstrIdMgr::initModules(llvm::Module *origModule, llvm::Module *mxModule,
   origIdPm->add(origIda);
   origIdPm->run(*origModule);
 
-  // DBG.
-  for (Module::iterator f = origModule->begin(), fe = origModule->end(); f != fe; ++f)
-    for (Function::iterator b = f->begin(), be = f->end(); b != be; ++b)
-      for (BasicBlock::iterator i = b->begin(), ie = b->end(); i != ie; ++i) {
-        Instruction *instr = i;
-        errs() << "InstrIdMgr::initModules: " << (void *)instr << " --> " <<  getOrigInstrId(instr) << "\n";
-      }
+  // DBG. Print instruction pointer to id mapping.
+  if (DBG)
+	  for (Module::iterator f = origModule->begin(), fe = origModule->end(); f != fe; ++f)
+	    for (Function::iterator b = f->begin(), be = f->end(); b != be; ++b)
+	      for (BasicBlock::iterator i = b->begin(), ie = b->end(); i != ie; ++i) {
+	        Instruction *instr = i;
+	        errs() << "InstrIdMgr::initModules: " << (void *)instr << " --> " <<  getOrigInstrId(instr) << "\n";
+	      }
 
   if (mxModule) {
     mxIda = new IDAssigner();
