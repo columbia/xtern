@@ -34,7 +34,7 @@ struct RecordSerializer: public Serializer {
     pthread_mutex_unlock(&lock);
   }
 
-  void block() {}	//	no block
+  int block() { return getTurnCount(); }	//	no block
 
   void wakeup() {
     pthread_mutex_lock(&lock);
@@ -97,7 +97,7 @@ struct RRScheduler: public Scheduler {
   int  wait(void *chan, unsigned timeout = Scheduler::FOREVER);
   void signal(void *chan, bool all=false);
 
-  void block(); 
+  int block(); 
   void wakeup();
 
   unsigned incTurnCount(void);

@@ -660,14 +660,16 @@ void RRScheduler::getTurn()
   SELFCHECK;
 }
 
-void RRScheduler::block()
+int RRScheduler::block()
 {
   getTurn();
   int tid = self();
   assert(tid>=0 && tid < Scheduler::nthread);
   assert(tid == runq.front());
   dprintf("RRScheduler: %d blocks\n", self());
+  int ret = getTurnCount();
   next();
+  return ret;
 }
 
 void RRScheduler::wakeup()
@@ -797,7 +799,7 @@ unsigned RRScheduler::incTurnCount(void)
 
 unsigned RRScheduler::getTurnCount(void)
 {
-  return idle_done ? (1 << 30) : turnCount;
+  return idle_done ? (1 << 30) : turnCount - 1;
 }
 
 void RRScheduler::childForkReturn() {

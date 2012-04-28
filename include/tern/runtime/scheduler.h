@@ -110,6 +110,20 @@ protected:
 /// schedule them.  The nondeterministic recorder runtime and the replay
 /// runtime use serializers, instead of schedulers.
 struct Serializer: public TidMap {
+
+  enum {FOREVER = UINT_MAX}; // wait forever w/o timeout
+
+  /// wait on @chan until another thread calls signal(@chan), or turnCount
+  /// is greater than or equal to @timeout if @timeout is not 0.  give up
+  /// turn and re-grab it upon return.
+  ///
+  /// To avoid @chan conflicts, should choose @chan values from the same
+  /// domain.  @chan can be NULL; @wait(NULL, @timeout) simply means sleep
+  /// until @timeout
+  ///
+  /// @return 0 if wait() is signaled or ETIMEOUT if wait() times out
+  int wait(void *chan, unsigned timeout=FOREVER) { return 0; }
+
   /// get the turn so that other threads trying to get the turn must wait
   void getTurn() { }
 
@@ -122,7 +136,7 @@ struct Serializer: public TidMap {
   ///
   /// NOTICE: different delay before @block() should not lead to different
   /// schedule.
-  void block() {}
+  int block() { return getTurnCount(); }
 
   /// inform the scheduler that a blocking thread has returned.
   void wakeup() {}
@@ -174,19 +188,6 @@ struct Serializer: public TidMap {
 ///  when necessary.  A nice side effect is we get static polymorphism
 ///  within the Runtime subclasses
 struct Scheduler: public Serializer {
-
-  enum {FOREVER = UINT_MAX}; // wait forever w/o timeout
-
-  /// wait on @chan until another thread calls signal(@chan), or turnCount
-  /// is greater than or equal to @timeout if @timeout is not 0.  give up
-  /// turn and re-grab it upon return.
-  ///
-  /// To avoid @chan conflicts, should choose @chan values from the same
-  /// domain.  @chan can be NULL; @wait(NULL, @timeout) simply means sleep
-  /// until @timeout
-  ///
-  /// @return 0 if wait() is signaled or ETIMEOUT if wait() times out
-  int wait(void *chan, unsigned timeout=FOREVER) { return 0; }
 
   /// wake up one thread (@all = false) or all threads (@all = true)
   /// waiting on @chan; must call with turn held.  @chan has the same

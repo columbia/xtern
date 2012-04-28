@@ -13,11 +13,10 @@ namespace tern {
 //  at least wait for 1 miliseconds
 #define WAITING_THRESHOLD 1000000
 //  should not delay more than a second
-#define WARNING_THRESHOLD 1000000000
+#define WARNING_THRESHOLD 10000000
 
 #ifdef _DEBUG_RECORDER
 #  define dprintf(fmt...) do {                   \
-     fprintf(stderr, "[%d] ", _S::self());        \
      fprintf(stderr, fmt);                       \
      fflush(stderr);                             \
   } while(0)
@@ -28,6 +27,7 @@ namespace tern {
 ClockManager::ClockManager(uint64_t init_clock)
 {
   epochLength = (uint64_t) options::epoch_length * 1000;
+  dprintf("epochLength = %ld\n", epochLength);
   tickCount = 0;
   clock = init_clock;
 
@@ -68,8 +68,12 @@ void ClockManager::tick()
   uint64_t rclock = ts2ll(now);
   if (rclock > next_rclock + WARNING_THRESHOLD)
   {
-    dprintf("WARNING: delayed more than %d macroseconds\n", 
-      (WARNING_THRESHOLD / 1000));
+    dprintf("WARNING: tick = %d, delayed %d more than %d macroseconds\n", 
+      tickCount,
+      int((rclock - next_rclock) / 1000),
+      int(WARNING_THRESHOLD / 1000));
+    dprintf("\t real_clock = %ld, next_clock = %ld\n", 
+      rclock, next_rclock);
   }
 
   if (rclock < next_rclock - WAITING_THRESHOLD)
@@ -80,6 +84,19 @@ void ClockManager::tick()
   }
 
   next_rclock += epochLength;
+}
+
+uint64_t ClockManager::adjust_timeout(uint64_t timeout)
+{
+  struct timespec now; 
+  clock_gettime(CLOCK_REALTIME, &now);
+  uint64_t rclock = getTick(now);
+  if (clock < rclock)
+    timeout -= (rclock - clock);
+
+  if (timeout <= 0)
+    timeout = 1000; //  at least set it to 1 macrosecond
+  return timeout;
 }
 
 void ClockManager::getClock(time_t &t, uint64_t clock)
