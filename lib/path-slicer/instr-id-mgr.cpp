@@ -38,7 +38,8 @@ void InstrIdMgr::initModules(llvm::Module *origModule, llvm::Module *mxModule,
 	    for (Function::iterator b = f->begin(), be = f->end(); b != be; ++b)
 	      for (BasicBlock::iterator i = b->begin(), ie = b->end(); i != ie; ++i) {
 	        Instruction *instr = i;
-	        errs() << "InstrIdMgr::initModules: " << (void *)instr << " --> " <<  getOrigInstrId(instr) << "\n";
+	        errs() << "InstrIdMgr::initModules: F:" << f->getNameStr() << ":BB:" << b->getNameStr() << ":" 
+            << (void *)instr << " --> " <<  getOrigInstrId(instr) << "\n";
 	      }
 
   if (mxModule) {

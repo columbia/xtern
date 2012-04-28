@@ -92,7 +92,8 @@ void KleeTraceUtil::record(DynInstrVector *trace, KInstruction *kInstr,
     if (f->hasName() &&
       (f->getNameStr() == "compile_address" || // This is a weird problem in sed, a ret instr in this function is not recorded.
       f->getNameStr() == "ck_realloc" || // This is a weird problem in sed, a ret instr in this function is not recorded.
-      f->getNameStr() == "parse_opt"
+      f->getNameStr() == "parse_opt" ||
+      f->getNameStr() == "getopt_internal_r"
       	// to be added.
       ) &&
       idMgr->getOrigInstrId(instr) == -1) {
