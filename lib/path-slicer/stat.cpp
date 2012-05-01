@@ -178,7 +178,11 @@ void Stat::init(InstrIdMgr *idMgr, CallStackMgr *ctxMgr, FuncSumm *funcSumm, Ali
 }
 
 void Stat::printStat(const char *tag) {
+  std::string pruneType = MarkPrunedOnly?"Mark":"Real";
   errs() << "\n\n" << tag << ": "
+    << "app: " << origModule->getModuleIdentifier() << ", "
+    << "chercker: " << UseOneChecker << ", "
+    << "pruneType: " << pruneType << ", "
     << "time: " << (unsigned long)time(NULL) << ", "
     << "processId: " << getpid() << ", "
     << "intraSlicingTime: " << intraSlicingTime << ", "
