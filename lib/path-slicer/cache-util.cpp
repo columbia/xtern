@@ -13,7 +13,7 @@ CacheUtil::~CacheUtil() {
 }
 
 void CacheUtil::clear() {
-  mutualCache.clear();
+  //mutualCache.clear();
   singleCache.clear();
 }
 

@@ -18,7 +18,6 @@ IntraSlicer::~IntraSlicer() {}
 
 /* Core function for intra-thread slicer. */
 void IntraSlicer::detectInputDepRaces(uchar tid) {
-  dprint("%sIntraSlicer::detectInputDepRaces tid %u, start index " SZ "\n", BAN, tid, curIndex);
   DynInstr *cur = NULL;
   while (!empty()) {
     cur = delTraceTail(tid);

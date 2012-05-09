@@ -24,7 +24,6 @@
 #include "path_slicer-options.h"
 #define SERRS if(get_option(tern_path_slicer,print_debug_info)==DBG1)errs()
 #define SERRS2 if(get_option(tern_path_slicer,print_debug_info)==DBG2)errs()
-#define dprint(args...) if(get_option(tern_path_slicer,print_debug_info)==1)fprintf(stderr, args)
 #define DBG (get_option(tern_path_slicer,print_debug_info)!=0)
 
 #define BAN "\n\n=============================================\n\n"
@@ -53,10 +52,6 @@
 
 #define CTX_SENSITIVE (get_option(tern_path_slicer, context_sensitive_ailas_query)==1)
 
-#include <ext/hash_set>
-#include <ext/hash_map>
-#define HMAP __gnu_cxx::hash_map
-#define HM_IN(ELEM, SET) (SET.find(ELEM) != SET.end())
 #define DM_IN(ELEM, SET) (SET.count(ELEM) > 0)
 #define DS_IN(ELEM, SET) DM_IN(ELEM, SET)
 

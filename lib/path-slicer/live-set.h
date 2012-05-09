@@ -3,7 +3,6 @@
 
 #include <set>
 #include <vector>
-#include <ext/hash_set>
 
 #include "llvm/ADT/DenseSet.h"
 #include "bc2bdd/ext/JavaBDD/buddy/src/bdd.h"

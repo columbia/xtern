@@ -2,7 +2,6 @@
 #define __TERN_PATH_SLICER_CACHE_UTIL_H
 
 #include "llvm/ADT/DenseSet.h"
-#include <ext/hash_map>
 
 #include "macros.h"
 #include "type-defs.h"
@@ -13,7 +12,7 @@ namespace tern {
   private:
     /* Whether two dynamic instr may alias.
       Each dynamic instruction is <context pointer, instr pointer>, long long type, two of them form a pair. */
-    HMAP<PtrPairPair, bool> mutualCache;
+    //HMAP<PtrPairPair, bool> mutualCache;
 
     /* Whether one dynamic instr has a property (true or false).
       Each dynamic instruction is <context pointer, instr pointer>, long long type. */
