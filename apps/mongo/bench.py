@@ -3,7 +3,6 @@ import sys, time
 from pymongo import Connection
 
 # connect to redis & mongodb
-redis = redis.Redis()
 mongo = Connection().test
 collection = mongo['test']
 collection.ensure_index('key', unique=True)
