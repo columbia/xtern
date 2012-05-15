@@ -117,16 +117,17 @@ bool AliasMgr::mayAlias(DynOprd *dynOprd1, DynOprd *dynOprd2) {
 
   // Query bdd.
   if (CTX_SENSITIVE) {
+    result = origAaol->aliasQuery(*ctx1, instrId1, opIndex1, *ctx2, instrId2, opIndex2);
     if (DBG) {
-      fprintf(stderr, "alias query <%p (" SZ ") %d %d>, <%p (" SZ ") %d %d>\n",
+      fprintf(stderr, "alias query <%p (" SZ ") %d %d>, <%p (" SZ ") %d %d>: result %s\n",
         (void *)ctx1, ctx1->size(), instrId1, opIndex1,
-        (void *)ctx2, ctx2->size(), instrId2, opIndex2);
+        (void *)ctx2, ctx2->size(), instrId2, opIndex2,
+        result?"MayAlias":"NoAlias");
       for (size_t i = 0; i < ctx1->size(); i++)
         fprintf(stderr, "CTX [" SZ "]: %d\n", i, ctx1->at(i));
       errs() << "INSTR1: " << stat->printInstr(idMgr->getOrigInstr(dynInstr1)) << "\n";
       errs() << "INSTR2: " << stat->printInstr(idMgr->getOrigInstr(dynInstr2)) << "\n";
     }
-    result = origAaol->aliasQuery(*ctx1, instrId1, opIndex1, *ctx2, instrId2, opIndex2);
   } else
     result = origAaol->aliasQuery(instrId1, opIndex1, instrId2, opIndex2);
 
