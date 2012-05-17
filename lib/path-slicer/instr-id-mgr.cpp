@@ -90,6 +90,7 @@ void InstrIdMgr::checkInstrMapConsistency() {
     for (Function::iterator b = f->begin(), be = f->end(); b != be; ++b)
       for (BasicBlock::iterator i = b->begin(), ie = b->end(); i != ie; ++i) {
         Instruction *instr = i;
+        // Each internal instruction must belong to an internal function.
         if (getOrigInstrId(instr) != -1) {
           if (!funcSumm->isInternalFunction(f)) {
             printInstrIdMap();
@@ -98,9 +99,17 @@ void InstrIdMgr::checkInstrMapConsistency() {
               Please make sure your /proc/sys/kernel/randomize_va_space is 0.\n", (void *)instr);
             exit(1);
           }
-        } else {
-        	/* This branch does not have to be hold. Some external instructions may be linked
-        	into the internal functions and inlined. */
+        }
+
+        // Each external function must not contain any internal instruction.
+        if (!funcSumm->isInternalFunction(f)) {
+          if (getOrigInstrId(instr) != -1) {
+            printInstrIdMap();
+            fprintf(stderr, "InstrIdMgr::checkInstrMapConsistency instruction %p must be EXTERNAL. \
+              LLVM linker may have randomly changed the pointer of some internal sincturctions. \
+              Please make sure your /proc/sys/kernel/randomize_va_space is 0.\n", (void *)instr);
+            exit(1);
+          }
         }
       }
 }
