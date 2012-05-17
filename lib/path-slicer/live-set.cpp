@@ -102,8 +102,10 @@ void LiveSet::addUsedRegs(DynInstr *dynInstr) {
       /* If the called value is not a constant (i.e., a function pointer that can
       have multiple choices), we have to add it to virtual reg. */
       if (!isa<Constant>(calledV)) {    
-        errs() << "LiveSet::addUsedRegs called function pointer: ";
-        calledV->dump();  // Debugging.
+        if (DBG) {
+        	errs() << "LiveSet::addUsedRegs called function pointer: ";
+        	calledV->dump();  // Debugging.
+        }
         addReg(intCtx, calledV);
       }
     } else {

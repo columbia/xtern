@@ -18,6 +18,7 @@
 #include "dyn-instrs.h"
 #include "macros.h"
 #include "stat.h"
+#include "func-summ.h"
 
 namespace tern {
   class DynOprd;
@@ -25,6 +26,7 @@ namespace tern {
   class InstrIdMgr {
   private:
     Stat *stat;
+    FuncSumm *funcSumm;
     
     /* Original LLVM Module. */
     llvm::Module *origModule;    
@@ -74,13 +76,12 @@ namespace tern {
     bool isOrigBcInstr(const llvm::Instruction *instr);
     bool isMxBcInstr(const llvm::Instruction *instr);
     bool isSimBcInstr(const llvm::Instruction *instr);
-
-
+    void printInstrIdMap();
 
   public:
     InstrIdMgr();
     ~InstrIdMgr();
-    void initStat(Stat *stat);
+    void init(Stat *stat, FuncSumm *funcSumm);
     void initModules(llvm::Module *origModule, llvm::Module *mxModule, llvm::Module *simModule,
       const char *lmTracePath);
     
@@ -111,6 +112,10 @@ namespace tern {
     llvm::Instruction *getMxInstrCtx(int mxInstrId);
     llvm::Instruction *getSimInstrCtx(int simInstrId); /* There is only one return instr pointer, yes. */
 
+    /* Check the instruction pointer <-> instruction id mapping consistency.
+    	This is to avoid the LLVM linker to do something bad on internal instructions (e.g.,
+    	modify the intruction pointer of internal instructions). */
+	void checkInstrMapConsistency();
 
   };
 }
