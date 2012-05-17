@@ -14,8 +14,9 @@ InstrIdMgr::~InstrIdMgr() {
 
 }
 
-void InstrIdMgr::initStat(Stat *stat) {
+void InstrIdMgr::init(Stat *stat, FuncSumm *funcSumm) {
   this->stat = stat;
+  this->funcSumm = funcSumm;
 }
 
 void InstrIdMgr::initModules(llvm::Module *origModule, llvm::Module *mxModule,
@@ -34,13 +35,7 @@ void InstrIdMgr::initModules(llvm::Module *origModule, llvm::Module *mxModule,
 
   // DBG. Print instruction pointer to id mapping.
   if (DBG)
-	  for (Module::iterator f = origModule->begin(), fe = origModule->end(); f != fe; ++f)
-	    for (Function::iterator b = f->begin(), be = f->end(); b != be; ++b)
-	      for (BasicBlock::iterator i = b->begin(), ie = b->end(); i != ie; ++i) {
-	        Instruction *instr = i;
-	        errs() << "InstrIdMgr::initModules: F:" << f->getNameStr() << ":BB:" << b->getNameStr() << ":" 
-            << (void *)instr << " --> " <<  getOrigInstrId(instr) << "\n";
-	      }
+	printInstrIdMap();
 
   if (mxModule) {
     mxIda = new IDAssigner();
@@ -90,4 +85,33 @@ int InstrIdMgr::getMxInstrId(DynInstr *dynInstr) {
   return -1;//TBD
 }
 
+void InstrIdMgr::checkInstrMapConsistency() {
+  for (Module::iterator f = origModule->begin(), fe = origModule->end(); f != fe; ++f)
+    for (Function::iterator b = f->begin(), be = f->end(); b != be; ++b)
+      for (BasicBlock::iterator i = b->begin(), ie = b->end(); i != ie; ++i) {
+        Instruction *instr = i;
+        if (getOrigInstrId(instr) != -1) {
+          if (!funcSumm->isInternalFunction(f)) {
+            printInstrIdMap();
+            fprintf(stderr, "InstrIdMgr::checkInstrMapConsistency instruction %p must be INTERNAL. \
+              LLVM linker may have randomly changed the pointer of some internal sincturctions. \
+              Please make sure your /proc/sys/kernel/randomize_va_space is 0.\n", (void *)instr);
+            exit(1);
+          }
+        } else {
+        	/* This branch does not have to be hold. Some external instructions may be linked
+        	into the internal functions and inlined. */
+        }
+      }
+}
+
+void InstrIdMgr::printInstrIdMap() {
+for (Module::iterator f = origModule->begin(), fe = origModule->end(); f != fe; ++f)
+	    for (Function::iterator b = f->begin(), be = f->end(); b != be; ++b)
+	      for (BasicBlock::iterator i = b->begin(), ie = b->end(); i != ie; ++i) {
+	        Instruction *instr = i;
+	        errs() << "InstrIdMgr::printInstrIdMap: F:" << f->getNameStr() << ":BB:" << b->getNameStr() << ":" 
+            << (void *)instr << " --> " <<  getOrigInstrId(instr) << "\n";
+	      }
+}
 

@@ -130,7 +130,7 @@ void PathSlicer::init(llvm::Module &M) {
   }
 
   /* Init instruction id manager. */
-  idMgr.initStat(&stat);
+  idMgr.init(&stat, &funcSumm);
   idMgr.initModules(origModule, mxModule, simModule, LmTrace.c_str());
 
   /* Init call stack manager. */
@@ -271,6 +271,9 @@ void PathSlicer::initKModule(KModule *kmodule) {
     ((KleeTraceUtil *)traceUtil)->initKModule(kmodule);
   else
     assert(false);
+
+  // Check instruction mapping consistency.
+  idMgr.checkInstrMapConsistency();
 }
 
 void PathSlicer::initOutputDir(std::string dir) {
