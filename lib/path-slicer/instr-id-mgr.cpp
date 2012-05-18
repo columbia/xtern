@@ -85,7 +85,7 @@ int InstrIdMgr::getMxInstrId(DynInstr *dynInstr) {
   return -1;//TBD
 }
 
-void InstrIdMgr::checkInstrMapConsistency() {
+void InstrIdMgr::checkInstrMapConsistency(const char *tag) {
   for (Module::iterator f = origModule->begin(), fe = origModule->end(); f != fe; ++f)
     for (Function::iterator b = f->begin(), be = f->end(); b != be; ++b)
       for (BasicBlock::iterator i = b->begin(), ie = b->end(); i != ie; ++i) {
@@ -96,7 +96,9 @@ void InstrIdMgr::checkInstrMapConsistency() {
             printInstrIdMap();
             fprintf(stderr, "InstrIdMgr::checkInstrMapConsistency instruction %p must be INTERNAL. \
               LLVM linker may have randomly changed the pointer of some internal sincturctions. \
-              Please make sure your /proc/sys/kernel/randomize_va_space is 0.\n", (void *)instr);
+              Please make sure your /proc/sys/kernel/randomize_va_space is 0. tag [%s].\n", (void *)instr, tag);
+            errs() << "F: " << instr->getParent()->getParent()->getNameStr()
+            	<< ": BB: " << instr->getParent()->getNameStr() << ": Instr: " << *(instr) << "\n";
             exit(1);
           }
         }
@@ -107,7 +109,9 @@ void InstrIdMgr::checkInstrMapConsistency() {
             printInstrIdMap();
             fprintf(stderr, "InstrIdMgr::checkInstrMapConsistency instruction %p must be EXTERNAL. \
               LLVM linker may have randomly changed the pointer of some internal sincturctions. \
-              Please make sure your /proc/sys/kernel/randomize_va_space is 0.\n", (void *)instr);
+              Please make sure your /proc/sys/kernel/randomize_va_space is 0. tag %s.\n", (void *)instr, tag);
+            errs() << "F: " << instr->getParent()->getParent()->getNameStr()
+            	<< ": BB: " << instr->getParent()->getNameStr() << ": Instr: " << *(instr) << "\n";
             exit(1);
           }
         }

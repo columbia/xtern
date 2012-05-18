@@ -150,6 +150,8 @@ namespace tern {
 
     /* Collect KLEE execution states stat, if a state is pruned, it returns true and we can skip slicing. */
     void collectStatesStat(void *pathId);
+
+    void checkInstrMapConsistency(const char *tag);
   };
 }
 

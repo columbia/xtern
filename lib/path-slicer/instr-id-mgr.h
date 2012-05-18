@@ -115,7 +115,7 @@ namespace tern {
     /* Check the instruction pointer <-> instruction id mapping consistency.
     	This is to avoid the LLVM linker to do something bad on internal instructions (e.g.,
     	modify the intruction pointer of internal instructions). */
-	void checkInstrMapConsistency();
+	void checkInstrMapConsistency(const char *tag);
 
   };
 }

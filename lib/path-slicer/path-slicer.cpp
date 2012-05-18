@@ -271,9 +271,6 @@ void PathSlicer::initKModule(KModule *kmodule) {
     ((KleeTraceUtil *)traceUtil)->initKModule(kmodule);
   else
     assert(false);
-
-  // Check instruction mapping consistency.
-  idMgr.checkInstrMapConsistency();
 }
 
 void PathSlicer::initOutputDir(std::string dir) {
@@ -450,5 +447,9 @@ void PathSlicer::printDynInstr(void *pathId, size_t index) {
     return;
   }
   stat.printDynInstr(trace->at(index), "PathSlicer::printDynInstr");
+}
+
+void PathSlicer::checkInstrMapConsistency(const char *tag) {
+  idMgr.checkInstrMapConsistency(tag);
 }
 
