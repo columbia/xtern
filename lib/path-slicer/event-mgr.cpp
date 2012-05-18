@@ -75,7 +75,7 @@ void EventMgr::setupEvents(Module &M) {
       checker = new LeakChecker(NULL);
       errs() << "EventMgr::setupEvents::LeakChecker\n";
     } else
-      assert(false && "UseOneChecker must be Assert, OpenClose, Lock, File, or DataLoss.");
+      assert(false && "UseOneChecker must be Assert, OpenClose, Lock, File, Leak or DataLoss.");
   }
   
   for (Module::iterator f = M.begin(); f != M.end(); ++f) {
