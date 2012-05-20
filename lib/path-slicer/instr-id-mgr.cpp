@@ -96,7 +96,7 @@ void InstrIdMgr::checkInstrMapConsistency(const char *tag) {
             printInstrIdMap();
             fprintf(stderr, "InstrIdMgr::checkInstrMapConsistency instruction %p must be INTERNAL. \
               LLVM linker may have randomly changed the pointer of some internal sincturctions. \
-              Please make sure your /proc/sys/kernel/randomize_va_space is 0. tag [%s].\n", (void *)instr, tag);
+              Tag mismatch [%s].\n", (void *)instr, tag);
             errs() << "F: " << instr->getParent()->getParent()->getNameStr()
             	<< ": BB: " << instr->getParent()->getNameStr() << ": Instr: " << *(instr) << "\n";
             exit(1);
@@ -109,7 +109,7 @@ void InstrIdMgr::checkInstrMapConsistency(const char *tag) {
             printInstrIdMap();
             fprintf(stderr, "InstrIdMgr::checkInstrMapConsistency instruction %p must be EXTERNAL. \
               LLVM linker may have randomly changed the pointer of some internal sincturctions. \
-              Please make sure your /proc/sys/kernel/randomize_va_space is 0. tag %s.\n", (void *)instr, tag);
+              Tag mismatch %s.\n", (void *)instr, tag);
             errs() << "F: " << instr->getParent()->getParent()->getNameStr()
             	<< ": BB: " << instr->getParent()->getNameStr() << ": Instr: " << *(instr) << "\n";
             exit(1);

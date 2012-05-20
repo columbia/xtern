@@ -296,14 +296,14 @@ void Stat::printDynInstr(raw_ostream &S, DynInstr *dynInstr, const char *tag, bo
   }
 
   // Print the condition if this is a symbolic branch.
-  if (DBG && Util::isBr(instr) && !Util::isUniCondBr(instr)) {
+  /*if (DBG && Util::isBr(instr) && !Util::isUniCondBr(instr)) {
     DynBrInstr *br = (DynBrInstr *)dynInstr;
     if (br->isSymbolicBr()) {
       errs() << EXPR_BEGIN;
       br->getBrCondition()->print(std::cerr);
       errs() << EXPR_END;
     }
-  }
+  }*/
 }
 
 void Stat::collectStaticInstrs(llvm::Module &M) {
