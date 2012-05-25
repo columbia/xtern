@@ -4,11 +4,11 @@ using namespace tern;
 char tern::OprdSumm::ID = 0;
 
 #include "common/util.h"
-#include "common/callgraph-fp.h"
 using namespace llvm;
 
 OprdSumm::OprdSumm(): ModulePass(&ID) {
   funcSumm = NULL;
+  CG = NULL;
 }
 
 OprdSumm::~OprdSumm() {
@@ -17,7 +17,6 @@ OprdSumm::~OprdSumm() {
 
 void OprdSumm::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();
-  AU.addRequired<CallGraphFP>();
   ModulePass::getAnalysisUsage(AU);
 }
 
@@ -26,28 +25,16 @@ bool OprdSumm::runOnModule(Module &M) {
   collectSummLocal(M);
   collectSummTopDown(M);
   fprintf(stderr, "OprdSumm::runOnModule end\n");
-  clean();
   return false;
 }
 
-void OprdSumm::clean() {
-  fprintf(stderr, "EventMgr::clean\n");
-  CallGraphFP &CG = getAnalysis<CallGraphFP>();
-  CG.destroy();
-  /* We have to destroy the CallGraph here, since when uclibc is linking in, 
-  LLVM would remove some functions in original modules and link in ones in 
-  uclibc, and the removal would cause crash if we do not free the CallGraph 
-  before hand. But there is no problem because callgraph-fp maintains callsites
-  independently. */
-}
-
-
-void OprdSumm::init(Stat *stat, FuncSumm *funcSumm,
-  AliasMgr *aliasMgr, InstrIdMgr *idMgr) {
+void OprdSumm::init(Stat *stat, FuncSumm *funcSumm, AliasMgr *aliasMgr,
+  InstrIdMgr *idMgr, llvm::CallGraphFP *CG) {
   this->stat = stat;
   this->funcSumm = funcSumm;
   this->aliasMgr = aliasMgr;
   this->idMgr = idMgr;
+  this->CG = CG;
 }
 
 void OprdSumm::printSumm(InstrDenseSet &summ, const char *tag) {
@@ -273,11 +260,10 @@ void OprdSumm::collectSummTopDown(llvm::Module &M) {
 }
 
 void OprdSumm::DFSTopDown(llvm::Function *f) {
-  CallGraphFP &CG = getAnalysis<CallGraphFP>();
   for (Function::iterator b = f->begin(), be = f->end(); b != be; ++b) {
     for (BasicBlock::iterator i = b->begin(), ie = b->end(); i != ie; ++i) {
       if (Util::isCall(i)) {
-        vector<Function *> calledFuncs = CG.get_called_functions(i);
+        vector<Function *> calledFuncs = CG->get_called_functions(i);
         for (size_t j = 0; j < calledFuncs.size(); ++j) {
           Function *callee = calledFuncs[j];
 

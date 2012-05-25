@@ -7,6 +7,9 @@
 #include "llvm/Attributes.h"
 using namespace llvm;
 
+#include "bc2bdd/BddAliasAnalysis.h"
+using namespace repair;
+
 #include "util.h"
 #include "path-slicer.h"
 using namespace tern;
@@ -104,15 +107,29 @@ void PathSlicer::init(llvm::Module &M) {
   } else {
     assert(false && "Slicing mode should be valid.");
   }
+
+  /* Init call graph. */
+  PassManager *cgPM = new PassManager;
+  Util::addTargetDataToPM(origModule, cgPM);
+  cgPM->add(&CG);
+  cgPM->run(*origModule);
+
+  /* Init event manager. */
+  evMgr.initCallGraph(&CG);
+  PassManager *eventPM = new PassManager;
+  Util::addTargetDataToPM(origModule, eventPM);
+  eventPM->add(&evMgr);
+  eventPM->run(*origModule);
   
-  /* Init function summary. */  
+  /* Init function summary. */
+  funcSumm.initEventMgr(&evMgr);
   PassManager *funcPM = new PassManager;
   Util::addTargetDataToPM(origModule, funcPM);
   funcPM->add(&funcSumm);
   funcPM->run(*origModule);
 
   /* Init oprd summary. */
-  oprdSumm.init(&stat, &funcSumm, &aliasMgr, &idMgr);
+  oprdSumm.init(&stat, &funcSumm, &aliasMgr, &idMgr, &CG);
   PassManager *oprdPM = new PassManager;
   if (NORMAL_SLICING) {
     Util::addTargetDataToPM(origModule, oprdPM);
@@ -142,13 +159,11 @@ void PathSlicer::init(llvm::Module &M) {
   Util::addTargetDataToPM(origModule, cfgPM);
   cfgPM->add(&cfgMgr);
   cfgPM->run(*origModule);
-  fprintf(stderr, "PathSlicer::init 2\n");
 
   /* Init alias manager. */
   aliasMgr.initStat(&stat);
   aliasMgr.initInstrIdMgr(&idMgr);
-  aliasMgr.initModules(origModule, mxModule, simModule);
-  fprintf(stderr, "PathSlicer::init 1\n");
+  aliasMgr.initBAA(&(CG.getAnalysis<BddAliasAnalysis>()));
 
   /* Init trace util. */
   if (KLEE_RECORDING) {
@@ -162,9 +177,12 @@ void PathSlicer::init(llvm::Module &M) {
   else
     assert(false);
 
-  // Init stat.
+  /* Init stat. */
   stat.init(&idMgr, &ctxMgr, &funcSumm, &aliasMgr);
   stat.collectStaticInstrs(*origModule);
+
+  /* Destroy call graph, because it is not longer useful. */
+  CG.destroy();
 
   ENDTIME(stat.initTime, stat.initSt, stat.initEnd);
   fprintf(stderr, "PathSlicer::init end\n");

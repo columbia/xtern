@@ -1,8 +1,7 @@
 #ifndef __TERN_PATH_SLICER_COMMON_UTIL_H
 #define __TERN_PATH_SLICER_COMMON_UTIL_H
 
-
-
+#include "llvm/PassManager.h"
 #include "dyn-instrs.h"
 
 namespace tern {

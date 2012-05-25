@@ -15,6 +15,7 @@
 #include "llvm/Transforms/Utils/ValueMapper.h"
 #include "llvm/ADT/DenseSet.h"
 
+#include "common/callgraph-fp.h"
 #include "common/typedefs.h"
 #include "klee/BasicCheckers.h"
 
@@ -34,24 +35,20 @@ namespace tern {
     std::vector<llvm::Function *> eventFuncs;
     llvm::DenseSet<llvm::Instruction *> eventCallSites;
     klee::Checker *checker;
-
+    llvm::CallGraphFP *CG;
 
     bool is_exit_block(llvm::BasicBlock *bb);
     void DFS(llvm::Function *f);
     void DFS(llvm::BasicBlock *x, llvm::BasicBlock *sink);
     void traverse_call_graph(llvm::Module &M);
-    void print_call_chain(llvm::Function *f);
-    void print_calling_functions(llvm::Function *f);
-    void stats(const llvm::Module &M) const;
     void setupEvents(llvm::Module &M);
-    void clean();
 
   public:
     EventMgr();
     ~EventMgr();
+    void initCallGraph(llvm::CallGraphFP *CG);
     virtual void getAnalysisUsage(llvm::AnalysisUsage &AU) const;
     virtual bool runOnModule(llvm::Module &M);
-    virtual void print(llvm::raw_ostream &O, const llvm::Module *M) const;
     bool mayCallEvent(llvm::Function *f);
     bool eventBetween(llvm::BranchInst *prevInstr, llvm::Instruction *postInstr);
     bool isEventFunc(llvm::Function *f);

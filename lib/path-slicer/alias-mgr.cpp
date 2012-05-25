@@ -3,15 +3,14 @@
 #include "util.h"
 using namespace tern;
 
-#include "bc2bdd/BddAliasAnalysis.h"
 using namespace repair;
 
 using namespace llvm;
 
 AliasMgr::AliasMgr() {
-  origAaol = NULL;
-  mxAaol = NULL;
-  simAaol = NULL;
+  origBAA = NULL;
+  mxBAA = NULL;
+  simBAA = NULL;
   numPointeeQry = 0;
   numHitPointeeQry = 0;
   //advAlias = NULL;
@@ -29,53 +28,24 @@ void AliasMgr::initInstrIdMgr(InstrIdMgr *idMgr) {
   this->idMgr = idMgr;
 }
 
-void AliasMgr::initModules(Module *origModule, Module *mxModule,
-    Module *simModule) {
-  fprintf(stderr, "AliasMgr::initModules begin %p, %p, %p\n", (void *)origModule, 
-    (void *)mxModule, (void *)simModule);
-  // Init the three AAOLs.
-  assert(origModule);
-  origAaol = initAAOL(origModule);
-  if (mxModule)
-    mxAaol = initAAOL(mxModule);
-  if (simModule)
-    simAaol = initAAOL(simModule);
-  
-  // Init adv alias.
-  // TBD.
+void AliasMgr::initBAA(repair::BddAliasAnalysis *BAA) {
+  if (NORMAL_SLICING) {
+    origBAA = BAA;
+  } else if (MAX_SLICING) {
+    mxBAA = BAA;
+  } else {
+    assert(false);  // range slicing: tbd.
+  }
 }
 
-AAOLClient *AliasMgr::initAAOL(llvm::Module *module) {
-  fprintf(stderr, "AliasMgr::initAAOL begin\n");
-  std::string llvmRoot(getenv("LLVM_ROOT"));
-  assert(llvmRoot != "");
-  std::string aaolLib = llvmRoot + "/install/lib/libaaol.so";
-  std::string idmLib = llvmRoot + "/install/lib/libid-manager.so";
-  std::string libPath = llvmRoot + "/install/lib/libbc2bdd.so";
-
-  std::map<Instruction *, int> instrMap;
-  genInstrMap(*module, instrMap);
-  AAOLClient *aaol = new AAOLClient(aaolLib.c_str(), idmLib.c_str(), libPath.c_str(),
-    "-bc2bdd-aa", *module, instrMap);
-  if(!aaol->begin())
-    exit(1);
-  aaol->setDebugLevel(get_option(tern_path_slicer, aaol_dbg_level));
-  fprintf(stderr, "AliasMgr::initAAOL end\n");
-  return aaol;
-}
-
-void AliasMgr::genInstrMap(Module &module,
-  std::map<Instruction *, int> &insMap) {
-  PassManager pm;
-  IDAssigner *idm = new IDAssigner();
-  pm.add(idm);
-  pm.run(module);
-
-  insMap.clear();
-  for (Module::iterator f = module.begin(), fe = module.end(); f != fe; ++f)
-    for (Function::iterator b = f->begin(), be = f->end(); b != be; ++b)
-      for (BasicBlock::iterator i = b->begin(), ie = b->end(); i != ie; ++i)
-        insMap[i] = idm->getInstructionID(i);
+BddAliasAnalysis *AliasMgr::getBAA() {
+  if (NORMAL_SLICING) {
+    return origBAA;
+  } else if (MAX_SLICING) {
+    return mxBAA;
+  } else {
+    assert(false);  // range slicing: tbd.
+  }
 }
 
 bool AliasMgr::mayAlias(DynOprd *dynOprd1, DynOprd *dynOprd2) {
@@ -87,22 +57,24 @@ bool AliasMgr::mayAlias(DynOprd *dynOprd1, DynOprd *dynOprd2) {
 
   CallCtx *ctx1 = NULL;
   CallCtx *ctx2 = NULL;
-  int instrId1 = -1;
-  int instrId2 = -1;
-  int opIndex1 = dynOprd1->getIndex();
-  int opIndex2 = dynOprd2->getIndex();
+  Instruction *instr1 = NULL;
+  Instruction *instr2 = NULL;
+  Value *v1 = NULL;
+  Value *v2 = NULL;
+  unsigned opIndex1 = dynOprd1->getIndex();
+  unsigned opIndex2 = dynOprd2->getIndex();
 
   if (NORMAL_SLICING) {
     ctx1 = dynInstr1->getCallingCtx();
     ctx2 = dynInstr2->getCallingCtx();
-    instrId1 = dynInstr1->getOrigInstrId();
-    instrId2 = dynInstr2->getOrigInstrId();
+    instr1 = idMgr->getOrigInstr(dynInstr1);
+    instr2 = idMgr->getOrigInstr(dynInstr2);
   } else if (MAX_SLICING) {
     // In max slicing mode, getCallingCtx() is the call stack of max sliced bc.
     ctx1 = dynInstr1->getCallingCtx();  
     ctx2 = dynInstr2->getCallingCtx();
-    instrId1 = idMgr->getMxInstrId(dynInstr1);
-    instrId2 = idMgr->getMxInstrId(dynInstr2);
+    instr1 = idMgr->getMxInstr(dynInstr1);
+    instr2 = idMgr->getMxInstr(dynInstr2);
   } else if (RANGE_SLICING) {
     /* TBD: NOT SURE ABOUT THE NEW CALL CONTEXT OF ADV ALIAS.
         There could be multiple simplified calling context with respected to 
@@ -110,18 +82,24 @@ bool AliasMgr::mayAlias(DynOprd *dynOprd1, DynOprd *dynOprd2) {
         respected to each original instruction. */
     assert(false);
   }
+  v1 = instr1->getOperand(opIndex1);
+  v2 = instr2->getOperand(opIndex2);
 
   // Query cache first.
-  if (aliasCache.in((void *)ctx1, (void *)instrId1, (void *)ctx2, (void *)instrId2, result))
+  if (aliasCache.in((void *)ctx1, (void *)v1, (void *)ctx2, (void *)v2, result))
     goto finish;
 
   // Query bdd.
   if (CTX_SENSITIVE) {
-    result = origAaol->aliasQuery(*ctx1, instrId1, opIndex1, *ctx2, instrId2, opIndex2);
+    vector<User *> userCtx1;
+    vector<User *> userCtx2;
+    buildUserCtx(ctx1, userCtx1);
+    buildUserCtx(ctx2, userCtx2);
+    result = getBAA()->alias(&userCtx1, v1, 0, &userCtx2, v2, 0);
     if (DBG) {
-      fprintf(stderr, "alias query <%p (" SZ ") %d %d>, <%p (" SZ ") %d %d>: result %s\n",
-        (void *)ctx1, ctx1->size(), instrId1, opIndex1,
-        (void *)ctx2, ctx2->size(), instrId2, opIndex2,
+      fprintf(stderr, "alias query <%p (" SZ ") %p %d>, <%p (" SZ ") %p %d>: result %s\n",
+        (void *)ctx1, ctx1->size(), (void *)instr1, opIndex1,
+        (void *)ctx2, ctx2->size(), (void *)instr2, opIndex2,
         result?"MayAlias":"NoAlias");
       for (size_t i = 0; i < ctx1->size(); i++)
         fprintf(stderr, "CTX [" SZ "]: %d\n", i, ctx1->at(i));
@@ -129,10 +107,10 @@ bool AliasMgr::mayAlias(DynOprd *dynOprd1, DynOprd *dynOprd2) {
       errs() << "INSTR2: " << stat->printInstr(idMgr->getOrigInstr(dynInstr2)) << "\n";
     }
   } else
-    result = origAaol->aliasQuery(instrId1, opIndex1, instrId2, opIndex2);
+    result = getBAA()->alias(v1, 0, v2, 0);
 
   // Update cache.
-  aliasCache.add((void *)ctx1, (void *)instrId1, (void *)ctx2, (void *)instrId2, result);
+  aliasCache.add((void *)ctx1, (void *)v1, (void *)ctx2, (void *)v2, result);
 
 finish:
   ENDTIME(stat->mayAliasTime, stat->mayAliasSt, stat->mayAliasEnd);
@@ -140,16 +118,7 @@ finish:
 }
 
 bool AliasMgr::mayAlias(llvm::Value *v1, llvm::Value *v2) {
-  BddAliasAnalysis *baa = NULL;
-  if (NORMAL_SLICING) {
-    baa = (BddAliasAnalysis *)(origAaol->AAPass);
-  } else if (MAX_SLICING) {
-    baa = (BddAliasAnalysis *)(mxAaol->AAPass);
-  } else {
-    baa = (BddAliasAnalysis *)(simAaol->AAPass);
-    assert(false);  // range slicing: tbd.
-  }
-  bool result = (baa->getPointeeSet(NULL, v1, 0) & baa->getPointeeSet(NULL, v2, 0)) != bddfalse;
+  bool result = (getBAA()->getPointeeSet(NULL, v1, 0) & getBAA()->getPointeeSet(NULL, v2, 0)) != bddfalse;
   return result;
 }
 
@@ -158,7 +127,6 @@ bdd AliasMgr::getPointTee(DynOprd *dynOprd) {
   DynInstr *dynInstr = dynOprd->getDynInstr();
   Instruction *instr = NULL;
   unsigned opIndex = dynOprd->getIndex();
-  BddAliasAnalysis *baa = NULL;
   bdd retBdd = bddfalse;
   numPointeeQry++;
   Value *v = NULL;
@@ -174,7 +142,7 @@ bdd AliasMgr::getPointTee(DynOprd *dynOprd) {
   v = instr->getOperand(opIndex);
 
   if (CTX_SENSITIVE) {
-    vector<User *> usrCtx;
+    vector<User *> userCtx;
     CallCtx *intCtx = dynInstr->getCallingCtx();
     assert(intCtx);
 
@@ -186,20 +154,8 @@ bdd AliasMgr::getPointTee(DynOprd *dynOprd) {
     }
 
     // Slow path.
-    if (NORMAL_SLICING) {
-      baa = (BddAliasAnalysis *)(origAaol->AAPass);
-      for (size_t i = 0; i < intCtx->size(); i++)
-        usrCtx.push_back(cast<User>(idMgr->getOrigInstrCtx(intCtx->at(i))));
-    } else if (MAX_SLICING) {
-      baa = (BddAliasAnalysis *)(mxAaol->AAPass);
-      for (size_t i = 0; i < intCtx->size(); i++)
-        usrCtx.push_back(cast<User>(idMgr->getMxInstrCtx(intCtx->at(i))));
-    } else {
-      baa = (BddAliasAnalysis *)(simAaol->AAPass);
-      assert(false);  // range slicing: tbd.
-    }
-
-    retBdd = baa->getPointeeSet(&usrCtx, v, 0);
+    buildUserCtx(intCtx, userCtx);
+    retBdd = getBAA()->getPointeeSet(&userCtx, v, 0);
 
     // Update bdd cache.
     pointeeCache.add((void *)intCtx, (void *)v, retBdd);
@@ -212,16 +168,7 @@ bdd AliasMgr::getPointTee(DynOprd *dynOprd) {
     }
 
     // Slow path.
-    if (NORMAL_SLICING) {
-      baa = (BddAliasAnalysis *)(origAaol->AAPass);
-    } else if (MAX_SLICING) {
-      baa = (BddAliasAnalysis *)(mxAaol->AAPass);
-    } else {
-      baa = (BddAliasAnalysis *)(simAaol->AAPass);
-      assert(false);  // range slicing: tbd.
-    }
-
-    retBdd = baa->getPointeeSet(NULL, v, 0);
+    retBdd = getBAA()->getPointeeSet(NULL, v, 0);
 
     // Update bdd cache.
     pointeeCache.add(NULL, (void *)v, retBdd);
@@ -234,14 +181,13 @@ finish:
 
 bdd AliasMgr::getPointTee(DynInstr *ctxOfDynInstr, llvm::Value *v) {
   BEGINTIME(stat->pointeeSt);
-  BddAliasAnalysis *baa = NULL;
   bdd retBdd = bddfalse;
   numPointeeQry++;
   //if (numPointeeQry%100 == 0)
     //fprintf(stderr, "AliasMgr::getPointTee2 %ld/%ld\n", numHitPointeeQry, numPointeeQry);
   
   if (CTX_SENSITIVE) {
-    vector<User *> usrCtx;
+    vector<User *> userCtx;
     CallCtx *intCtx = ctxOfDynInstr->getCallingCtx();
     assert(intCtx);
 
@@ -252,20 +198,8 @@ bdd AliasMgr::getPointTee(DynInstr *ctxOfDynInstr, llvm::Value *v) {
       goto finish;
     }
 
-    if (NORMAL_SLICING) {
-      baa = (BddAliasAnalysis *)(origAaol->AAPass);
-      for (size_t i = 0; i < intCtx->size(); i++)
-        usrCtx.push_back(cast<User>(idMgr->getOrigInstrCtx(intCtx->at(i))));
-    } else if (MAX_SLICING) {
-      baa = (BddAliasAnalysis *)(mxAaol->AAPass);
-      for (size_t i = 0; i < intCtx->size(); i++)
-        usrCtx.push_back(cast<User>(idMgr->getMxInstrCtx(intCtx->at(i))));
-    } else {
-      baa = (BddAliasAnalysis *)(simAaol->AAPass);
-      assert(false);  // range slicing: tbd.
-    }
-
-    retBdd = baa->getPointeeSet(&usrCtx, v, 0);
+	buildUserCtx(intCtx, userCtx);
+    retBdd = getBAA()->getPointeeSet(&userCtx, v, 0);
 
     // Update bdd cache.
     pointeeCache.add((void *)intCtx, (void *)v, retBdd);
@@ -277,16 +211,7 @@ bdd AliasMgr::getPointTee(DynInstr *ctxOfDynInstr, llvm::Value *v) {
       goto finish;
     }
 
-    if (NORMAL_SLICING) {
-      baa = (BddAliasAnalysis *)(origAaol->AAPass);
-    } else if (MAX_SLICING) {
-      baa = (BddAliasAnalysis *)(mxAaol->AAPass);
-    } else {
-      baa = (BddAliasAnalysis *)(simAaol->AAPass);
-      assert(false);  // range slicing: tbd.
-    }
-
-    retBdd = baa->getPointeeSet(NULL, v, 0);
+    retBdd = getBAA()->getPointeeSet(NULL, v, 0);
 
     // Update bdd cache.
     pointeeCache.add(NULL, (void *)v, retBdd);
@@ -297,4 +222,16 @@ finish:
   return retBdd;
 }
 
+void AliasMgr::buildUserCtx(const std::vector<int> *intCtx, std::vector<llvm::User *> &userCtx) {
+  userCtx.clear();
+  if (NORMAL_SLICING) {
+    for (size_t i = 0; i < intCtx->size(); i++)
+      userCtx.push_back(cast<User>(idMgr->getOrigInstrCtx(intCtx->at(i))));
+  } else if (MAX_SLICING) {
+    for (size_t i = 0; i < intCtx->size(); i++)
+      userCtx.push_back(cast<User>(idMgr->getMxInstrCtx(intCtx->at(i))));
+  } else {
+    assert(false);
+  }
+}
 

@@ -8,7 +8,8 @@ using namespace llvm;
 
 char tern::FuncSumm::ID = 0;
 
-FuncSumm::FuncSumm(): ModulePass(&ID) {
+FuncSumm::FuncSumm(): FunctionPass(&ID) {
+  EM = NULL;
 }
 
 FuncSumm::~FuncSumm() {
@@ -18,21 +19,34 @@ FuncSumm::~FuncSumm() {
   }
 }
 
-void FuncSumm::getAnalysisUsage(AnalysisUsage &AU) const {
-  AU.setPreservesAll();
-  AU.addRequired<EventMgr>();
-  ModulePass::getAnalysisUsage(AU);
+void FuncSumm::initEventMgr(EventMgr *EM) {
+  this->EM = EM;
 }
 
-bool FuncSumm::runOnModule(Module &M) {
-  collectInternalFunctions(M);
+void FuncSumm::getAnalysisUsage(AnalysisUsage &AU) const {
+  AU.setPreservesAll();
+  FunctionPass::getAnalysisUsage(AU);
+}
+
+bool FuncSumm::runOnFunction(Function &F) {
+  fprintf(stderr, "FuncSumm::collectInternalFunctions begin\n");
+  // Record the main function.
+  if (F.getNameStr() == "main" || F.getNameStr() == "__user_main")
+    mainFunc = &F;
+
+  // Collect internal function.
+  if (!F.isDeclaration()) {
+    internalFunctions.insert(&F);
+    fprintf(stderr, "Function %s(%p) is internal.\n", 
+      F.getNameStr().c_str(), (void *)&F);
+  }
+  fprintf(stderr, "FuncSumm::collectInternalFunctions end\n");
   return false;
 }
 
 bool FuncSumm::mayCallEvent(const llvm::Function *f) {
   long intF = (long)f;  
-  EventMgr &EM = getAnalysis<EventMgr>();
-  return EM.mayCallEvent((Function *)intF);
+  return EM->mayCallEvent((Function *)intF);
 }
 
 bool FuncSumm::mayCallEvent(DynInstr *dynInstr) {
@@ -47,25 +61,7 @@ bool FuncSumm::mayCallEvent(DynInstr *dynInstr) {
 }
 
 bool FuncSumm::eventBetween(llvm::BranchInst *prevInstr, llvm::Instruction *postInstr) {
-  EventMgr &EM = getAnalysis<EventMgr>();
-  return EM.eventBetween(prevInstr, postInstr);
-}
-
-void FuncSumm::collectInternalFunctions(Module &M) {
-  fprintf(stderr, "FuncSumm::collectInternalFunctions begin\n");
-  for (Module::iterator f = M.begin(); f != M.end(); ++f) {
-    // Record the main function.
-    if (f->getNameStr() == "main" || f->getNameStr() == "__user_main")
-      mainFunc = f;
-
-    // Collect internal function.
-    if (!f->isDeclaration()) {
-      internalFunctions.insert(f);
-      fprintf(stderr, "Function %s(%p) is internal.\n", 
-        f->getNameStr().c_str(), (void *)f);
-    }
-  }
-  fprintf(stderr, "FuncSumm::collectInternalFunctions end\n");
+  return EM->eventBetween(prevInstr, postInstr);
 }
 
 bool FuncSumm::isInternalCall(const Instruction *instr) {
@@ -157,18 +153,15 @@ bool FuncSumm::extFuncHasSumm(llvm::Instruction *instr) {
 bool FuncSumm::isEventCall(DynCallInstr *callInstr) {
   Function *f = callInstr->getCalledFunc();
   assert(f);
-  EventMgr &EM = getAnalysis<EventMgr>();
-  return EM.isEventFunc(f);
+  return EM->isEventFunc(f);
 }
 
 size_t FuncSumm::numEventCallSites() {
-  EventMgr &EM = getAnalysis<EventMgr>();
-  return EM.numEventCallSites();
+  return EM->numEventCallSites();
 }
 
 void FuncSumm::printEventCalls() {
-  EventMgr &EM = getAnalysis<EventMgr>();
-  return EM.printEventCalls();
+  return EM->printEventCalls();
 }
 
 

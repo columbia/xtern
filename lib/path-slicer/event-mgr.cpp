@@ -4,7 +4,6 @@
 using namespace tern;
 
 #include "common/util.h"
-#include "common/callgraph-fp.h"
 #include "llvm/Support/CommandLine.h"
 using namespace llvm;
 
@@ -24,6 +23,7 @@ namespace {
 }
 
 EventMgr::EventMgr(): ModulePass(&ID) {
+  CG = NULL;
   checker = NULL;
   fprintf(stderr, "EventMgr::EventMgr UseOneChecker (%s)\n", UseOneChecker.c_str());
 }
@@ -34,20 +34,12 @@ EventMgr::~EventMgr() {
     fprintf(stderr, "EventMgr::~EventMgr\n");
 }
 
-void EventMgr::clean() {
-  //fprintf(stderr, "EventMgr::clean\n");
-  CallGraphFP &CG = getAnalysis<CallGraphFP>();
-  CG.destroy();
-  /* We have to destroy the CallGraph here, since when uclibc is linking in, 
-  LLVM would remove some functions in original modules and link in ones in 
-  uclibc, and the removal would cause crash if we do not free the CallGraph 
-  before hand. But there is no problem because callgraph-fp maintains callsites
-  independently. */
+void EventMgr::initCallGraph(llvm::CallGraphFP *CG) {
+  this->CG = CG;
 }
 
 void EventMgr::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();
-  AU.addRequired<CallGraphFP>();
   ModulePass::getAnalysisUsage(AU);
 }
 
@@ -124,8 +116,7 @@ bool EventMgr::isEventFunc(Function *f) {
 
 void EventMgr::DFS(Function *f) {
   visited.insert(f);
-  CallGraphFP &CG = getAnalysis<CallGraphFP>();
-  InstList css = CG.get_call_sites(f);
+  InstList css = CG->get_call_sites(f);
   fprintf(stderr, "EventMgr::DFS traverse function %s, callsite " SZ "\n",
     f->getNameStr().c_str(), css.size());
   for (size_t i = 0; i < css.size(); ++i) {
@@ -136,35 +127,6 @@ void EventMgr::DFS(Function *f) {
       DFS(caller);
     }
   }
-}
-
-void EventMgr::output(const Module &M) const {
-  /*vector<string> func_names;
-  FILE *fout;
-
-  func_names.clear();
-  for (Module::const_iterator fi = M.begin(); fi != M.end(); ++fi)
-    func_names.push_back(fi->getNameStr());
-  sort(func_names.begin(), func_names.end());
-  fout = fopen("/tmp/all-func.txt", "w");
-  assert(fout);
-  for (size_t i = 0; i < func_names.size(); ++i) {
-    fprintf(fout, "%s\n", func_names[i].c_str());
-  }
-  fclose(fout);
-
-  func_names.clear();
-  for (DenseSet<Function *>::const_iterator it = visited.begin();
-      it != visited.end(); ++it) {
-    func_names.push_back((*it)->getNameStr());
-  }
-  sort(func_names.begin(), func_names.end());
-  fout = fopen("/tmp/event-func.txt", "w");
-  assert(fout);
-  for (size_t i = 0; i < func_names.size(); ++i) {
-    fprintf(fout, "%s\n", func_names[i].c_str());
-  }
-  fclose(fout);*/
 }
 
 bool EventMgr::mayCallEvent(Function *f) {
@@ -179,7 +141,6 @@ bool EventMgr::eventBetween(BranchInst *prevInstr, Instruction *postInstr) {
   
   /* Flood fill from <bb> until reaching <post_dominator_bb> */
   bbVisited.clear();
-  CallGraphFP &CG = getAnalysis<CallGraphFP>();
   for (Function::iterator bi = func->begin(); bi != func->end(); ++bi)
     bbVisited[bi] = false;
   for (unsigned i = 0; i < prevInstr->getNumSuccessors(); i++)
@@ -191,7 +152,7 @@ bool EventMgr::eventBetween(BranchInst *prevInstr, Instruction *postInstr) {
     // cerr << "Visited BB: " << bi->getNameStr() << endl;
     for (BasicBlock::iterator ii = bi->begin(); ii != bi->end(); ++ii) {
       if (is_call(ii) && !is_intrinsic_call(ii)) {
-        vector<Function *> called_funcs = CG.get_called_functions(ii);
+        vector<Function *> called_funcs = CG->get_called_functions(ii);
         for (size_t i = 0; i < called_funcs.size(); ++i) {
           if (mayCallEvent(called_funcs[i]))
             return true;
@@ -232,44 +193,11 @@ void EventMgr::traverse_call_graph(Module &M) {
   //abort();
 }
 
-void EventMgr::print_call_chain(Function *f) {
-  /*if (!parent.count(f)) {
-    std::cerr << endl;
-    return;
-  }
-  std::cerr << f->getNameStr() << " => ";
-  print_call_chain(parent[f]);*/
-}
-
-void EventMgr::print_calling_functions(Function *f) {
-  /*if (!call_sites.count(f))
-    return;
-  cerr << f->getNameStr() << ": ";
-  vector<Instruction *> &callers = call_sites[f];
-  for (size_t i = 0; i < callers.size(); ++i) {
-    cerr << callers[i]->getParent()->getParent()->getNameStr() << ' ';
-  }
-  cerr << endl;*/
-}
-
-void EventMgr::stats(const Module &M) const {
-
-}
-
 bool EventMgr::runOnModule(Module &M) {
-  //CallGraphFP::runOnModule(M);
+  assert(CG);
   setupEvents(M);
-  traverse_call_graph(M);
-
-  // Clean callgraph-fp.
-  clean();
-  
+  traverse_call_graph(M);  
   return false;
-}
-
-void EventMgr::print(llvm::raw_ostream &O, const Module *M) const {
-  output(*M);
-  stats(*M);
 }
 
 size_t EventMgr::numEventCallSites() {

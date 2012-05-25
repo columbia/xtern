@@ -7,6 +7,7 @@
 #include "llvm/Pass.h"
 #include "llvm/ADT/DenseSet.h"
 #include "bc2bdd/ext/JavaBDD/buddy/src/bdd.h"
+#include "common/callgraph-fp.h"
 
 #include "dyn-instrs.h"
 #include "type-defs.h"
@@ -35,8 +36,8 @@ namespace tern {
     Stat *stat;
     AliasMgr *aliasMgr;
     InstrIdMgr *idMgr;
-
     FuncSumm *funcSumm;
+    llvm::CallGraphFP *CG;
 
     /* All "reachable" store pointer operands. This is collected by a inter-procedural algorithm. */
     /* Used by mayWriteFunc() in intra-thread phase. */
@@ -67,7 +68,6 @@ namespace tern {
     llvm::Function *mainFunc;
 
   protected:
-    void clean();
     void initAllSumm(llvm::Module &M);
 
     /* Phase 1: compute store pointer operands for a function (locally).
@@ -92,7 +92,7 @@ namespace tern {
   public:
     OprdSumm();
     ~OprdSumm();
-    void init(Stat *stat, FuncSumm *funcSumm, AliasMgr *aliasMgr, InstrIdMgr *idMgr);
+    void init(Stat *stat, FuncSumm *funcSumm, AliasMgr *aliasMgr, InstrIdMgr *idMgr, llvm::CallGraphFP *CG);
     virtual void getAnalysisUsage(llvm::AnalysisUsage &AU) const;
     virtual bool runOnModule(llvm::Module &M);
 

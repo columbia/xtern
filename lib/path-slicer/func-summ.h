@@ -21,11 +21,13 @@ namespace tern {
     (2) Whether a function is internal (in the orig module, not including linking of uclibc).
     ...
   */
-  class FuncSumm: public llvm::ModulePass {
+  class FuncSumm: public llvm::FunctionPass {
   public:
     static char ID;
 
   private:
+    EventMgr *EM;
+    
     /* Set of events such as lock()/unlock(), or fopen()/fclose(). */
     llvm::DenseSet<const llvm::Function *> events;
     /* Set of all functions that may reach any events in the function body. */
@@ -40,14 +42,15 @@ namespace tern {
     CacheUtil extStoreCache;
 
   protected:
-    void collectInternalFunctions(llvm::Module &M);
 
   public:
     FuncSumm();
     ~FuncSumm();
 
+    void initEventMgr(EventMgr *EM);
+
     virtual void getAnalysisUsage(AnalysisUsage &AU) const;
-    virtual bool runOnModule(Module &M);
+    virtual bool runOnFunction(Function &F);
 
     /* Event functions. */
     /* The initEvents() must be called before run() on this func-summ, since event-func will

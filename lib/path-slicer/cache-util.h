@@ -12,11 +12,11 @@ namespace tern {
   private:
     /* Whether two dynamic instr may alias.
       Each dynamic instruction is <context pointer, instr pointer>, long long type, two of them form a pair. */
-    //HMAP<PtrPairPair, bool> mutualCache;
+    llvm::DenseMap<PtrPairPair, bool> mutualCache;
 
     /* Whether one dynamic instr has a property (true or false).
       Each dynamic instruction is <context pointer, instr pointer>, long long type. */
-    llvm::DenseMap<std::pair<void *, void *>, bool> singleCache;
+    llvm::DenseMap<PtrPair, bool> singleCache;
 
   protected:
 

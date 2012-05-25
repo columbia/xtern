@@ -9,6 +9,7 @@
 #include "llvm/Pass.h"
 #include "llvm/Module.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/PassManager.h"
 
 #include "klee/Internal/Module/KModule.h"
 #include "klee/Checker.h" 
@@ -24,6 +25,7 @@
 #include "klee-trace-util.h"
 #include "xtern-trace-util.h"
 #include "oprd-summ.h"
+#include "event-mgr.h"
 #include "func-summ.h"
 #include "target-mgr.h"
 
@@ -71,8 +73,15 @@ namespace tern {
     (orig, mx and simplified) LLVM modules. */
     OprdSumm oprdSumm;
 
+    /* Event manager. */
+    EventMgr evMgr;
+
     /* Function summary. */
     FuncSumm funcSumm;
+
+    /* The call graph used by oprd summ and event mgr, and the bc2bdd pass of the CG is
+    used by the alias mgr. */
+    llvm::CallGraphFP CG;
 
     TargetMgr tgtMgr;
 
