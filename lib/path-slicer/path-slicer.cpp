@@ -472,6 +472,6 @@ void PathSlicer::checkInstrMapConsistency(const char *tag) {
   idMgr.checkInstrMapConsistency(tag);
 }
 
-void PathSlicer::computeModuleMD5(const char *data, size_t length) {
-  repair::MD5Sum = Util::computeMD5(data, length);
+void PathSlicer::readModulePath(std::string path) {
+  repair::Bc2BddPass::setModulePath(path);
 }

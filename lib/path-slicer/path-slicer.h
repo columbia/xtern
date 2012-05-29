@@ -162,7 +162,7 @@ namespace tern {
 
     void checkInstrMapConsistency(const char *tag);
 
-    void computeModuleMD5(const char *data, size_t length);
+    void readModulePath(std::string path);
   };
 }
 
