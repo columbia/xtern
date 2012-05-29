@@ -47,6 +47,8 @@ namespace tern {
     static void addTargetDataToPM(llvm::Module *module, llvm::PassManager *pm);
 
     static std::string printNearByFileLoc(const llvm::Instruction *instr);
+
+    static std::string computeMD5(const char *data, size_t length);
   };
 }
 

@@ -7,6 +7,7 @@
 #include "llvm/Attributes.h"
 using namespace llvm;
 
+#include "bc2bdd/Bc2Bdd.h"
 #include "bc2bdd/BddAliasAnalysis.h"
 using namespace repair;
 
@@ -471,3 +472,6 @@ void PathSlicer::checkInstrMapConsistency(const char *tag) {
   idMgr.checkInstrMapConsistency(tag);
 }
 
+void PathSlicer::computeModuleMD5(const char *data, size_t length) {
+  repair::MD5Sum = Util::computeMD5(data, length);
+}

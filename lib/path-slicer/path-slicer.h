@@ -161,6 +161,8 @@ namespace tern {
     void collectStatesStat(void *pathId);
 
     void checkInstrMapConsistency(const char *tag);
+
+    void computeModuleMD5(const char *data, size_t length);
   };
 }
 

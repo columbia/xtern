@@ -1,3 +1,5 @@
+#include <openssl/md5.h>
+
 #include "llvm/Target/TargetData.h"
 #include "llvm/LLVMContext.h"
 #include "llvm/Metadata.h"
@@ -229,6 +231,20 @@ std::string Util::printNearByFileLoc(const Instruction *instr) {
     } while (curDistance < distance);
   }
   return noLocation;
+}
+
+std::string Util::computeMD5(const char *data, size_t length) {
+  unsigned char result[MD5_DIGEST_LENGTH+1];
+  char md5Sum[2*MD5_DIGEST_LENGTH+1];
+  memset(result, 0, MD5_DIGEST_LENGTH+1);
+  memset(md5Sum, 0, 2*MD5_DIGEST_LENGTH+1);
+  unsigned offset = 0;
+  MD5((const unsigned char *)data, length, result);
+  for (size_t i = 0; i < MD5_DIGEST_LENGTH; ++i) {
+    offset += sprintf(md5Sum+offset, "%02x", result[i]);
+  }
+  //errs() << "MD5Sum: " << md5Sum << "\n";
+  return &(md5Sum[0]);
 }
 
 
