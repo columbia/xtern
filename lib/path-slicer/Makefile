@@ -13,6 +13,7 @@ CXXFLAGS += -I$(XTERN_ROOT)/include/ -I$(LLVM_ROOT) \
 	-I$(DIRECT_SYM_ROOT)/klee/include/
 
 LIBS += $(LLVM_ROOT)/install/lib/libcallgraph-fp.so \
+	$(LLVM_ROOT)/install/lib/libid-manager.so \
 	$(LLVM_ROOT)/install/lib/libbc2bdd.so \
 	-lbdd
 
