@@ -77,3 +77,6 @@ blocked_timeout_delay = 10000
 
 # adjust timeout to make virtual clock and real clock consistent
 adjust_timeout_for_vc = 1
+
+# prevent select returns errno == EINTR
+disable_select_interrupt = 0

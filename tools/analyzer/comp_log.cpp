@@ -13,6 +13,7 @@
 using namespace std;
 using namespace tern;
 
+extern bool po_signature; //  declared in analyzer.cpp. the corresponding cmd line option is -po
 typedef pair<int, int> id_pair; 
 typedef map<id_pair, vector<op_t> > thread_log_map;
 typedef thread_log_map::iterator tlmi;
@@ -49,9 +50,20 @@ bool try_match(vector<op_t> &x, vector<op_t> &y)
   return true;
 }
 
+void comp_log_po(
+  vector<op_t> &x, const char *dir1, vector<op_t> &y, const char *dir2)
+{
+}
+
 void comp_log(
   vector<op_t> &x, const char *dir1, vector<op_t> &y, const char *dir2)
 {
+/*  if (po_signature)
+  {
+    comp_log_po(x, dir1, y, dir2);
+    return; 
+  }
+*/
   thread_log_map xtm, ytm;
   split_log(x, xtm);
   split_log(y, ytm);

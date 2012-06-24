@@ -94,7 +94,7 @@ uint64_t ClockManager::adjust_timeout(uint64_t timeout)
   if (clock < rclock)
     timeout -= (rclock - clock);
 
-  if (timeout <= 0)
+  if ((int64_t)timeout <= 0)
     timeout = 1000; //  at least set it to 1 macrosecond
   return timeout;
 }

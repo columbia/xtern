@@ -156,6 +156,11 @@ int RecorderRT<_S>::absTimeToTurn(const struct timespec *abstime)
   return _S::getTurnCount() + 30; //rand() % 10;
 }
 
+uint64_t turn2time(int turn)
+{
+  return (uint64_t)turn * options::nanosec_per_turn;
+}
+
 int time2turn(uint64_t nsec)
 {
   const uint64_t MAX_REL = (1000000); // maximum number of turns to wait
@@ -1467,19 +1472,20 @@ template <typename _S>
 int RecorderRT<_S>::__select(unsigned ins, int &error, int nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds, struct timeval *timeout)
 {
   int wt = 0;
+  uint64_t orig_tick = !timeout ? 0x7fffffff : ClockManager::getTick(*timeout);
   if (timeout && options::schedule_network && options::runtime_type == "RR")
   {
     uint64_t next = ClockManager::getTick(*timeout);
     //uint64_t c = clockManager.clock;
     wt = time2turn(next);
+    printf("select, timeout = %d turns, nfds = %d\n", wt, nfds);
   }
 
   BLOCK_TIMER_START;
 
   if (timeout && options::schedule_network && options::runtime_type == "RR" && options::adjust_timeout_for_vc)
   {
-    uint64_t tick = ClockManager::getTick(*timeout);
-    tick = clockManager.adjust_timeout(tick);
+    uint64_t tick = clockManager.adjust_timeout(orig_tick);
     clockManager.getClock(*timeout, tick);
   }
 #if 0
@@ -1491,6 +1497,55 @@ int RecorderRT<_S>::__select(unsigned ins, int &error, int nfds, fd_set *readfds
   fprintf(stderr, "starting select at %ld, %d\n", ClockManager::getTick(now), _S::getTurnCount());
 #endif
   int ret = Runtime::__select(ins, error, nfds, readfds, writefds, exceptfds, timeout);
+  if (options::schedule_network && options::disable_select_interrupt)
+  {
+//    while (ret < 0 && errno == EINTR)
+    while (true)
+    {
+      int sth_set = 0;
+      for (int i = 0; i < nfds; ++i)
+      {
+        if (readfds && (FD_ISSET(i, readfds)))
+        {
+          ++sth_set;
+          printf("%d fd of read is set\n", i);
+        }
+        if (writefds && FD_ISSET(i, writefds))
+        {
+          ++sth_set;
+          printf("%d fd of write is set\n", i);
+        }
+        if (exceptfds && FD_ISSET(i, exceptfds))
+        {
+          ++sth_set;
+          printf("%d fd of except is set\n", i);
+        }
+      }
+      if (sth_set)
+      {
+        printf("something set, set_count = %d\n", sth_set);
+        break;
+      }
+      if (timeout)
+      {
+        uint64_t passed_turn = _S::getTurnCount() - block_turn;
+        uint64_t tick = wt - passed_turn; 
+        printf("retry, passed_turn = %ld, wt = %d, tick = %ld, timeout=%d:%d\n", 
+          passed_turn, (int) wt, tick, (int) timeout->tv_sec, (int)timeout->tv_usec);
+        if ((int64_t)tick >= 0)
+          tick = clockManager.adjust_timeout((uint64_t)tick * options::nanosec_per_turn) / options::nanosec_per_turn;
+        printf("retry, passed_turn = %ld, wt = %d, tick = %ld, timeout=%d:%d\n", 
+          passed_turn, (int) wt, tick, (int) timeout->tv_sec, (int)timeout->tv_usec);
+        if ((int64_t) tick <= 0) 
+        {
+          errno = 0, ret = 0;
+          break;
+        }
+        clockManager.getClock(*timeout, tick);
+      }
+      ret = Runtime::__select(ins, error, nfds, readfds, writefds, exceptfds, timeout);
+    }
+  }
 #if 0
   clock_gettime(CLOCK_REALTIME, &now);
   fprintf(stderr, "finishing select at %ld, %d, clockmanager_diff = %ld, turn_diff = %d\n", 

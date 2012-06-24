@@ -40,8 +40,8 @@ eval: prepare clean
 	sleep 20
 	./gen-input | $(EXE_PREFIX) $(MY_PREFIX)  ./rep_mgr -C -h data2 -l 127.0.0.1:10002 -r 127.0.0.1:10001 -r 127.0.0.1:10003 > rep2.log 2>&1 &
 	sleep 20
-	./gen-input | $(EXE_PREFIX) $(MY_PREFIX)  ./rep_mgr -C -h data3 -l 127.0.0.1:10003 -r 127.0.0.1:10001 -r 127.0.0.1:10002 > rep3.log 2>&1 &
-	sleep 20
+	#./gen-input | $(EXE_PREFIX) $(MY_PREFIX)  ./rep_mgr -C -h data3 -l 127.0.0.1:10003 -r 127.0.0.1:10001 -r 127.0.0.1:10002 > rep3.log 2>&1 &
+	#sleep 20
 	ps -a | grep rep_mgr
 	killall rep_mgr_master
 	#sleep 1
