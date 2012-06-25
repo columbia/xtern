@@ -204,8 +204,6 @@ void RecorderRT<_S>::progEnd(void) {
 
 template <typename _S>
 void RecorderRT<_S>::idle_sleep(void) {
-//  _S::getTurn();
-//  _S::putTurn();
   _S::getTurn();
   while (_S::runq.size() == 1 && _S::waitq.empty())
   {
@@ -213,7 +211,11 @@ void RecorderRT<_S>::idle_sleep(void) {
     {
       _S::check_wakeup();
       clockManager.reset_rclock();
+
+      //  check_wakeup sometimes won't wake up any thread because of 
+      //  options::wakeup_period. Use the folowing break to avoid deadlock
       break;
+
     } else
       ::usleep(1);
   }
