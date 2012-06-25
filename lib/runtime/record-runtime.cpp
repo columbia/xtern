@@ -211,8 +211,9 @@ void RecorderRT<_S>::idle_sleep(void) {
   {
     if (_S::wakeup_flag)
     {
-      //_S::check_wakeup();
+      _S::check_wakeup();
       clockManager.reset_rclock();
+      break;
     } else
       ::usleep(1);
   }
@@ -236,6 +237,7 @@ void RecorderRT<RecordSerializer>::idle_sleep(void) {
   if (options::schedule_network) { \
     app_time = update_time(); \
     block_turn = _S::block(); \
+    assert(block_turn >= 0); \
     sched_block_time = update_time(); \
   }
 
