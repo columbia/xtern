@@ -14,6 +14,15 @@ static void cross(void) {
   current_space = !current_space;
 }
 
+void setSpace(bool s)
+{
+  current_space = s;
+}
+
+bool getSpace() {
+  return current_space;
+}
+
 void enterSys(void) {
   assert(isApp() && "can't enter Sys space since already in Sys space!");
   cross();
