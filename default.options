@@ -15,7 +15,9 @@ schedule_network  = 1
 # the runtime scheduler algorithm, options are:
 # 1.  FCFS    first come first serve
 # 2.  RR      round-robin
+# 3.  Replay  replay
 runtime_type = RR
+replay_log_dir = replay
 
 # seed for seeded round-robin scheduler
 scheduler_seed = 0x12345 

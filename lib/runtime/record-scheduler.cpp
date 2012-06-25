@@ -579,7 +579,7 @@ void RRScheduler::check_wakeup()
   if (wakeup_flag && 
     (options::wakeup_period <= 0 || 
 #if 1
-    turnCount >= options::wakeup_period * check_count
+    (int) turnCount >= (int) options::wakeup_period * check_count
 #else
     !(turnCount % options::wakeup_period)
 #endif
@@ -892,3 +892,5 @@ ostream& RRScheduler::dump(ostream& o)
   o << "]\n";
   return o;
 }
+
+

@@ -14,6 +14,7 @@
 
 #include <list>
 #include <vector>
+#include <map>
 #include <errno.h>
 #include <pthread.h>
 #include <iostream>
@@ -310,7 +311,37 @@ struct SeededRRScheduler: public RRScheduler {
 
 /// replay scheduler using semaphores
 struct ReplaySchedulerSem: public Scheduler {
-  // TODO
+public:
+  ReplaySchedulerSem();
+  ~ReplaySchedulerSem();
+
+  void getTurn();
+  void putTurn(bool at_thread_end = false);
+
+  typedef std::map<std::string, std::string> record_type;
+  struct record_list : public std::vector<record_type>
+  {
+    record_list()
+      : std::vector<record_type>(), pos(0) {}
+    record_type &next() { return (*this)[pos]; }
+    bool has_next() { return pos < (int) this->size(); }
+    void move_next() { ++pos; }
+    int pos;
+  };
+
+protected:
+  sem_t waits[MaxThreads];
+  std::vector<record_list> logdata;
+  void readrecords(FILE * fin, record_list &records);
+
+  /*  inherent from parent  */
+  //int  wait(void *chan, unsigned timeout = Scheduler::FOREVER);
+  //void signal(void *chan, bool all=false);
+  //int block(); 
+  //void wakeup();
+  //unsigned incTurnCount(void);
+  //unsigned getTurnCount(void);
+  //void childForkReturn();
 };
 
 /// replay scheduler using integer flags
