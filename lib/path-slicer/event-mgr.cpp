@@ -75,7 +75,7 @@ void EventMgr::setupEvents(Module &M) {
       if (!checker) {
         fprintf(stderr, "EventMgr::isEventFunc checker is NULL, please use only one checker.\n");
         exit(1);
-      } else if (checker->isImportant(f->getNameStr())) { // Select events based on the checker.
+      } else if (checker->mayBeEvent(f->getNameStr())) { // Select events based on the checker.
         fprintf(stderr, "EventMgr::initEvents event %s\n", f->getNameStr().c_str());
         eventFuncs.push_back(f);
       }
@@ -111,7 +111,7 @@ bool EventMgr::isEventFunc(Function *f) {
     fprintf(stderr, "EventMgr::isEventFunc checker is NULL, please use only one checker.\n");
     exit(1);
   }
-  return checker->isImportant(f->getNameStr());
+  return checker->mayBeEvent(f->getNameStr());
 }
 
 void EventMgr::DFS(Function *f) {

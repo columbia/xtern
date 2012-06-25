@@ -328,10 +328,10 @@ void PathSlicer::recordCheckerResult(void *pathId, Checker::Result globalResult,
     Checker::Result localResult, unsigned numTests) {
   bool isPruned = ((ExecutionState *)pathId)->isPruned;
   // DBG.
-  if (globalResult != Checker::OK || localResult != Checker::OK) {
+  if (BIT_NEQ(globalResult, Checker::OK) || BIT_NEQ(localResult, Checker::OK)) {
     fprintf(stderr, "PathSlicer::recordCheckerResult, pathId %p, isPruned %d, isHalted %d, globalResult %d, localResult %d.\n",
-      (void *)pathId, isPruned, isKleeHalted, globalResult, localResult);
-    if (MarkPrunedOnly && isPruned && (globalResult == Checker::ERROR || localResult == Checker::ERROR)) {
+      (void *)pathId, isPruned, isKleeHalted, (int)globalResult, (int)localResult);
+    if (MarkPrunedOnly && isPruned && (globalResult & Checker::ERROR || localResult & Checker::ERROR)) {
       fprintf(stderr, "PathSlicer::recordCheckerResult, a state %p triggered a checker error after pruned.\n",
         pathId);
       //exit(1);
@@ -342,18 +342,18 @@ void PathSlicer::recordCheckerResult(void *pathId, Checker::Result globalResult,
   if (isPruned)
     return;
   
-  if (globalResult != Checker::OK || localResult != Checker::OK) {
+  if (BIT_NEQ(globalResult, Checker::OK) || BIT_NEQ(localResult, Checker::OK)) {
     DynInstrVector *trace = allPathTraces[pathId];
     assert(trace);
     assert(trace->size() > 0);
     DynInstr *dynInstr = trace->back();
-    if (globalResult == Checker::IMPORTANT || localResult == Checker::IMPORTANT) {
-      assert(globalResult != Checker::ERROR && localResult != Checker::ERROR);
+    if (globalResult & Checker::IMPORTANT || localResult & Checker::IMPORTANT) {
+      assert(BIT_NEQ(globalResult, Checker::ERROR) && BIT_NEQ(localResult, Checker::ERROR));
       tgtMgr.markTarget(pathId, dynInstr, TakenFlags::CHECKER_IMPORTANT);
       if (DBG)
         stat.printDynInstr(dynInstr, "PathSlicer::recordCheckerResult Checker::IMPORTANT");
     } else {
-      assert(globalResult != Checker::IMPORTANT && localResult != Checker::IMPORTANT);
+      assert(BIT_NEQ(globalResult, Checker::IMPORTANT) && BIT_NEQ(localResult, Checker::IMPORTANT));
       tgtMgr.markTarget(pathId, dynInstr, TakenFlags::CHECKER_ERROR);
       if (DBG && !isKleeHalted)  // Output the trace is klee is not halted. This will not affect checker reports.
         traceUtil->store(numTests+1, outputDir.c_str(), trace);

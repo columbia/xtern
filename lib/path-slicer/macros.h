@@ -55,6 +55,8 @@
 #define DM_IN(ELEM, SET) (SET.count(ELEM) > 0)
 #define DS_IN(ELEM, SET) DM_IN(ELEM, SET)
 
+#define BIT_NEQ(FLAG1, FLAG2) ((FLAG1 != FLAG2) && !(FLAG1 & FLAG2))
+
 #include "taken-flags.h"
 
 #define BUF_SIZE 1024
