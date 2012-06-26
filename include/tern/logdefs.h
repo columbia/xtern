@@ -168,8 +168,12 @@ inline short ExtraArgsRec::numArgsInRec() const {
 
 static inline int getLogFilename(char *buf, size_t sz,
                                  int tid, const char* ext) {
-  return snprintf(buf, sz, "%s/tid-%d-%d%s",
+  if (options::pid_in_logfilename)
+    return snprintf(buf, sz, "%s/tid-%d-%d%s",
                   options::output_dir.c_str(), getpid(), tid, ext);
+  else
+    return snprintf(buf, sz, "%s/tid-%d%s",
+                  options::output_dir.c_str(), tid, ext);
 }
 
 } // namespace tern

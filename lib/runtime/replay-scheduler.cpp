@@ -23,7 +23,7 @@ static vector<string> split(char *p, const char *del = " ")
   string st = p;
   vector<string> ret;
   int last = -1;
-  while (true)
+  while (last < (int) st.size())
   {
     int i = st.find_first_of(del, last + 1);
     if (i == (int) string::npos) i = (int) st.size(); 
@@ -101,13 +101,22 @@ ReplaySchedulerSem::~ReplaySchedulerSem()
 void ReplaySchedulerSem::getTurn()
 {
   sem_wait(&waits[self()]);
+  record_type &r = logdata[self()].next();
+  int real_turn = getTurnCount() + 1;
+  if (real_turn > INF) real_turn = INF; 
+
+  fprintf(stderr, "thread %d: op = %s, turn = %s, runtime_turnCount = %d\n", 
+    self(), r["op"].c_str(), r["turn"].c_str(), real_turn);
+  fflush(stderr);
+  int log_turn = atoi(r["turn"].c_str());
+  assert(log_turn == real_turn && "log turn number and real turn number inconsistent");
   logdata[self()].move_next();
 }
 
 void ReplaySchedulerSem::putTurn(bool at_thread_end)
 {
   if(at_thread_end) {
-    Scheduler::zombify(pthread_self());
+    zombify(pthread_self());
   }
 
   //  find the next scheduled thread and post semaphore

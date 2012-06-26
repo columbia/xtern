@@ -28,22 +28,22 @@ namespace tern {
 struct RecordSerializer: public Serializer {
   typedef Serializer Parent;
 
-  void getTurn() { pthread_mutex_lock(&lock); }
-  void putTurn(bool at_thread_end = false) {
+  virtual void getTurn() { pthread_mutex_lock(&lock); }
+  virtual void putTurn(bool at_thread_end = false) {
     if(at_thread_end)
       zombify(pthread_self());
     pthread_mutex_unlock(&lock);
   }
 
-  int block() { return getTurnCount(); }	//	no block
+  virtual int block() { return getTurnCount(); }	//	no block
 
-  void wakeup() {
+  virtual void wakeup() {
     pthread_mutex_lock(&lock);
     ouf << ' ' << turnCount;
     ouf << ' ' << self();
     ouf << std::endl;
 
-    turnCount++;
+    //turnCount++;
     pthread_mutex_unlock(&lock);
   }
 
@@ -310,13 +310,13 @@ struct SeededRRScheduler: public RRScheduler {
 
 
 /// replay scheduler using semaphores
-struct ReplaySchedulerSem: public Scheduler {
+struct ReplaySchedulerSem: public RecordSerializer {
 public:
   ReplaySchedulerSem();
   ~ReplaySchedulerSem();
 
-  void getTurn();
-  void putTurn(bool at_thread_end = false);
+  virtual void getTurn();
+  virtual void putTurn(bool at_thread_end = false);
 
   typedef std::map<std::string, std::string> record_type;
   struct record_list : public std::vector<record_type>
@@ -333,6 +333,9 @@ protected:
   sem_t waits[MaxThreads];
   std::vector<record_list> logdata;
   void readrecords(FILE * fin, record_list &records);
+
+  bool wakeup_flag;
+  void check_wakeup() {}
 
   /*  inherent from parent  */
   //int  wait(void *chan, unsigned timeout = Scheduler::FOREVER);

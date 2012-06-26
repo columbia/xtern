@@ -79,3 +79,6 @@ blocked_timeout_delay = 10000
 
 # adjust timeout to make virtual clock and real clock consistent
 adjust_timeout_for_vc = 1
+
+# determine whether or not put process ID in the logfilename
+pid_in_logfilename = 1

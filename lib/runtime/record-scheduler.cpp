@@ -790,16 +790,16 @@ extern ClockManager clockManager;
 //@after with turn
 unsigned RRScheduler::incTurnCount(void)
 {
-  unsigned ret = turnCount++;
+  unsigned ret = Serializer::incTurnCount();
   fireTimeouts();
   check_wakeup();
   clockManager.tick();
-  return idle_done ? (1 << 30) : ret;
+  return ret;
 }
 
 unsigned RRScheduler::getTurnCount(void)
 {
-  return idle_done ? (1 << 30) : turnCount - 1;
+  return Serializer::getTurnCount();
 }
 
 void RRScheduler::childForkReturn() {

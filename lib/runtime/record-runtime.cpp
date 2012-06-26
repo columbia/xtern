@@ -133,8 +133,11 @@ void InstallRuntime() {
     RecorderRT<SeededRRScheduler> *rt = new RecorderRT<SeededRRScheduler>;
     static_cast<SeededRRScheduler*>(rt)->setSeed(options::scheduler_seed);
     Runtime::the = rt;
-  } else if (options::runtime_type == "FCFS")
+  } else if (options::runtime_type == "FCFS") {
     Runtime::the = new RecorderRT<RecordSerializer>;
+  } else if (options::runtime_type == "Replay") {
+    Runtime::the = new RecorderRT<ReplaySchedulerSem>;
+  }
   assert(Runtime::the && "can't create runtime!");
   clockManager = tern::ClockManager(time(NULL) * (uint64_t)1000000000);
 }
@@ -202,10 +205,24 @@ void RecorderRT<_S>::progEnd(void) {
   Logger::progEnd();
 }
 
+/*
+ *  This is a fake API function that advances clock when all the threads  
+ *  are blocked. 
+ */
 template <typename _S>
 void RecorderRT<_S>::idle_sleep(void) {
+/*  if (options::runtime_type == "Replay")
+  {
+    _S::getTurn();
+    _S::putTurn();
+    return;
+  } */
+
+#if 0
+  assert(false && "fix the codes following");
+#else
   _S::getTurn();
-  while (_S::runq.size() == 1 && _S::waitq.empty())
+/*  while (_S::runq.size() == 1 && _S::waitq.empty())
   {
     if (_S::wakeup_flag)
     {
@@ -218,14 +235,15 @@ void RecorderRT<_S>::idle_sleep(void) {
 
     } else
       ::usleep(1);
-  }
+  } 
   if (_S::runq.size() == 1)
   {
     if (!options::epoch_mode)
       ::usleep(1);  //  in epoch_mode, delay is added by clockManager
     _S::incTurnCount();  //  TODO fix the convertion rate
-  }
+  } */ 
   _S::putTurn();
+#endif
 }
 
 template <>
