@@ -73,23 +73,48 @@ ReplaySchedulerSem::ReplaySchedulerSem()
   string log_dir = options::replay_log_dir;
 
   logdata.clear();
-  for (int i = 0; ; ++i)
+  if (options::replay_log_type == "recorder")
   {
+    for (int i = 0; ; ++i)
+    {
+      char buffer[256];
+      sprintf(buffer, "%s/tid-%d.txt", log_dir.c_str(), i);
+      FILE *fin = fopen(buffer, "r");
+  
+      //  maybe we want to check errno here in case the file is busy
+      if (!fin)
+        break;
+  
+      logdata.push_back(record_list());
+      record_list &records = logdata.back();
+  
+      readrecords(fin, records);
+  
+      fclose(fin);
+    }
+  } else if (options::replay_log_type == "serializer")
+  {
+    FILE *fin = fopen("replay.log", "r");
+
+    char tidst[256];
     char buffer[256];
-    sprintf(buffer, "%s/tid-%d.txt", log_dir.c_str(), i);
-    FILE *fin = fopen(buffer, "r");
+    int tid, turn;
+    while (fscanf(fin, "%d %d", &tid, &turn) > 0)
+    {
+      sprintf(tidst, "%d", tid);
+      sprintf(buffer, "%d", turn);
 
-    //  maybe we want to check errno here in case the file is busy
-    if (!fin)
-      break;
-
-    logdata.push_back(record_list());
-    record_list &records = logdata.back();
-
-    readrecords(fin, records);
-
+      while ((int) logdata.size() <= tid) 
+        logdata.push_back(record_list());
+      record_type r;
+      r["op"] = "unknown";
+      r["turn"] = string(buffer);
+      r["tid"] = string(tidst);
+      logdata[tid].push_back(r);
+    }
     fclose(fin);
-  }
+  } else
+    assert(false && "unrecognized replay log type");
 
   dprintf("obtained %d thread-logs\n", (int) logdata.size());
 }
@@ -103,11 +128,14 @@ void ReplaySchedulerSem::getTurn()
   sem_wait(&waits[self()]);
   record_type &r = logdata[self()].next();
   int real_turn = getTurnCount() + 1;
-  if (real_turn > INF) real_turn = INF; 
+  //if (real_turn > INF) real_turn = INF; 
 
-  fprintf(stderr, "thread %d: op = %s, turn = %s, runtime_turnCount = %d\n", 
+  if (r["op"] != "tern_idle" && 0)
+  {
+    fprintf(stderr, "thread %d: op = %s, turn = %s, runtime_turnCount = %d\n", 
     self(), r["op"].c_str(), r["turn"].c_str(), real_turn);
-  fflush(stderr);
+    fflush(stderr);
+  }
   int log_turn = atoi(r["turn"].c_str());
   assert(log_turn == real_turn && "log turn number and real turn number inconsistent");
   logdata[self()].move_next();

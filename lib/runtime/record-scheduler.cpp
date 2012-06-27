@@ -422,7 +422,11 @@ ostream& RRSchedulerCV::dump(ostream& o) {
 
 void RRSchedulerCV::block()
 {
-  if (!options::schedule_network) return;
+  if (!options::schedule_network) 
+  {
+    Serializer::block();
+    return;
+  }
 
 /*
   pthread_mutex_lock(&lock);
@@ -667,7 +671,7 @@ int RRScheduler::block()
   assert(tid>=0 && tid < Scheduler::nthread);
   assert(tid == runq.front());
   dprintf("RRScheduler: %d blocks\n", self());
-  int ret = getTurnCount();
+  int ret = incTurnCount();
   next();
   return ret;
 }
@@ -738,6 +742,7 @@ void RRScheduler::putTurn(bool at_thread_end)
 //@after with turn
 int RRScheduler::wait(void *chan, unsigned nturn)
 {
+  incTurnCount();
   int tid = self();
   assert(tid>=0 && tid < Scheduler::nthread);
   assert(tid == runq.front());

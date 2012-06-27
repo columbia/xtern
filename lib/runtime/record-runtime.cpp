@@ -80,6 +80,9 @@ tern::ClockManager clockManager(time(NULL) * (uint64_t)1000000000);
 
 namespace tern {
 
+extern "C" {
+  extern int idle_done;
+}
 static __thread timespec my_time;
 
 timespec time_diff(const timespec &start, const timespec &end)
@@ -222,6 +225,8 @@ void RecorderRT<_S>::idle_sleep(void) {
   assert(false && "fix the codes following");
 #else
   _S::getTurn();
+  int turn = _S::incTurnCount();
+  assert(turn >= 0);
 /*  while (_S::runq.size() == 1 && _S::waitq.empty())
   {
     if (_S::wakeup_flag)
@@ -243,6 +248,9 @@ void RecorderRT<_S>::idle_sleep(void) {
     _S::incTurnCount();  //  TODO fix the convertion rate
   } */ 
   _S::putTurn();
+
+  timespec ts;
+  Logger::the->logSync(0, syncfunc::tern_idle, turn, ts, ts, ts, true);
 #endif
 }
 
@@ -259,7 +267,7 @@ void RecorderRT<RecordSerializer>::idle_sleep(void) {
     block_turn = _S::block(); \
     assert(block_turn >= 0); \
     sched_block_time = update_time(); \
-  }
+  } 
 
 #define BLOCK_TIMER_END(syncop, ...) \
   int backup_errno = errno; \
@@ -271,7 +279,7 @@ void RecorderRT<RecordSerializer>::idle_sleep(void) {
       sched_wakeup_time.tv_sec + sched_block_time.tv_sec, \
       sched_wakeup_time.tv_nsec + sched_block_time.tv_nsec \
       }; \
-    Logger::the->logSync(ins, (syncop), _S::getTurnCount(), app_time, syscall_time, sched_time, true, __VA_ARGS__); \
+    Logger::the->logSync(ins, (syncop), block_turn, app_time, syscall_time, sched_time, true, __VA_ARGS__); \
   } \
   errno = backup_errno; 
 
@@ -326,6 +334,7 @@ template <typename _S>
 void RecorderRT<_S>::threadEnd(unsigned ins) {
   SCHED_TIMER_START;
   pthread_t th = pthread_self();
+
   SCHED_TIMER_THREAD_END(syncfunc::tern_thread_end, (uint64_t)th);
   
   Logger::threadEnd();

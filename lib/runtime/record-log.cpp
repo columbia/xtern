@@ -108,6 +108,7 @@ void TxtLogger::logSync(unsigned insid, unsigned short sync,
   case syncfunc::fgets:
   case syncfunc::fork:
   case syncfunc::wait:
+  case syncfunc::tern_idle:
     break;
     // log one sync var (common case)
   case syncfunc::pthread_mutex_init:

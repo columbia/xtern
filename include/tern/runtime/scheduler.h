@@ -127,6 +127,7 @@ struct Serializer: public TidMap {
   ///
   /// @return 0 if wait() is signaled or ETIMEOUT if wait() times out
   virtual int wait(void *chan, unsigned timeout=FOREVER) { 
+    incTurnCount();
     putTurn();
     getTurn();
     return 0; 
@@ -149,7 +150,12 @@ struct Serializer: public TidMap {
   ///
   /// NOTICE: different delay before @block() should not lead to different
   /// schedule.
-  virtual int block() { return getTurnCount(); }
+  virtual int block() { 
+    getTurn();
+    int ret = incTurnCount(); 
+    putTurn();
+    return ret;
+  }
 
   /// inform the scheduler that a blocking thread has returned.
   virtual void wakeup() {}
@@ -174,16 +180,14 @@ struct Serializer: public TidMap {
   /// each successful getTurn() because a successful getTurn() may not
   /// lead to a real success of a synchronization operation (e.g., see
   /// pthread_mutex_lock() implementation)
-  static const int INF = 0x7ffffff0;
-  virtual unsigned incTurnCount(void) { 
-    return idle_done ? INF : turnCount++;   
-  }
-  virtual unsigned getTurnCount(void) { 
-    return idle_done ? INF : turnCount - 1; 
-  }
+  static const int INF = 0x7fffff00;
+  virtual unsigned incTurnCount(void);
+  virtual unsigned getTurnCount(void);
 
-  Serializer(): TidMap(pthread_self()), turnCount(0) {}
+  Serializer();
+  ~Serializer();
 
+  FILE *logger;
   unsigned turnCount; // number of turns so far
 };
 

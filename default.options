@@ -82,3 +82,8 @@ adjust_timeout_for_vc = 1
 
 # determine whether or not put process ID in the logfilename
 pid_in_logfilename = 1
+
+# for replayer: whether read log from tid-* or from serializer.log, options are:
+# 1. recorder
+# 2. serializer
+replay_log_type = serializer

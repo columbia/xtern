@@ -35,18 +35,6 @@ struct RecordSerializer: public Serializer {
     pthread_mutex_unlock(&lock);
   }
 
-  virtual int block() { return getTurnCount(); }	//	no block
-
-  virtual void wakeup() {
-    pthread_mutex_lock(&lock);
-    ouf << ' ' << turnCount;
-    ouf << ' ' << self();
-    ouf << std::endl;
-
-    //turnCount++;
-    pthread_mutex_unlock(&lock);
-  }
-
   /// NOTE: This method breaks the Seralizer interface.  Need it to
   /// deterministically record pthread_cond_wait.  See the comments for
   /// pthread_cond_wait in the recorder runtime
@@ -315,8 +303,16 @@ public:
   ReplaySchedulerSem();
   ~ReplaySchedulerSem();
 
+  /*  inherent from parent  */
   virtual void getTurn();
   virtual void putTurn(bool at_thread_end = false);
+  //int  wait(void *chan, unsigned timeout = Scheduler::FOREVER);
+  //void signal(void *chan, bool all=false);
+  //virtual int block(); 
+  //void wakeup();
+  //unsigned incTurnCount(void);
+  //unsigned getTurnCount(void);
+  //void childForkReturn();
 
   typedef std::map<std::string, std::string> record_type;
   struct record_list : public std::vector<record_type>
@@ -337,14 +333,6 @@ protected:
   bool wakeup_flag;
   void check_wakeup() {}
 
-  /*  inherent from parent  */
-  //int  wait(void *chan, unsigned timeout = Scheduler::FOREVER);
-  //void signal(void *chan, bool all=false);
-  //int block(); 
-  //void wakeup();
-  //unsigned incTurnCount(void);
-  //unsigned getTurnCount(void);
-  //void childForkReturn();
 };
 
 /// replay scheduler using integer flags
