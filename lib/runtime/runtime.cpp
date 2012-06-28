@@ -3,6 +3,7 @@
 #include <assert.h>
 #include <stdlib.h>
 #include <iostream>
+#include <fcntl.h>
 
 #include "tern/config.h"
 #include "tern/hooks.h"
@@ -63,10 +64,22 @@ int Runtime::__listen(unsigned ins, int &error, int sockfd, int backlog)
   return ret;
 }
 
+static bool sock_nonblock (int fd)
+{
+#ifndef __WIN32__
+  return fcntl (fd, F_SETFL, O_NONBLOCK) >= 0;
+#else
+  u_long a = 1;
+  return ioctlsocket (fd, FIONBIO, &a) >= 0;
+#endif
+}
+
 int Runtime::__accept(unsigned ins, int &error, int sockfd, struct sockaddr *cliaddr, socklen_t *addrlen)
 {
   errno = error;
   int ret = accept(sockfd, cliaddr, addrlen);
+  if (options::non_block_recv)
+    assert(sock_nonblock(sockfd));
   error = errno;
   return ret;
 }
@@ -83,6 +96,8 @@ int Runtime::__connect(unsigned ins, int &error, int sockfd, const struct sockad
 {
   errno = error;
   int ret = connect(sockfd, serv_addr, addrlen);
+  if (options::non_block_recv)
+    assert(sock_nonblock(sockfd));
   error = errno;
   return ret;
 }
@@ -132,7 +147,30 @@ ssize_t Runtime::__sendmsg(unsigned ins, int &error, int sockfd, const struct ms
 ssize_t Runtime::__recv(unsigned ins, int &error, int sockfd, void *buf, size_t len, int flags)
 {
   errno = error;
-  ssize_t ret = recv(sockfd, buf, len, flags);
+  ssize_t ret = 0;
+  int try_count = 0;
+  timespec ts;
+  ts.tv_sec = 0;
+  ts.tv_nsec = 1000 * 1000 * 100; // 10 ms;
+  while ((int) ret < (int) len && try_count < 10)
+  {
+    ssize_t sr = recv(sockfd, (char*)buf + ret, len - ret, flags);
+
+    if (sr >= 0) 
+      ret += sr;
+    else if (ret == 0)
+      ret = -1;
+
+    if (sr < 0 || !options::non_block_recv) // it's the end of a package
+      break;
+
+    //fprintf(stderr, "sr = %d\n", (int) sr);
+
+    if (!sr) {
+      ::nanosleep(&ts, NULL);
+      ++try_count;
+    }
+  }
   error = errno;
   return ret;
 }

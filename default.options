@@ -87,3 +87,6 @@ pid_in_logfilename = 1
 # 1. recorder
 # 2. serializer
 replay_log_type = serializer
+
+# if set all sockets as non-block and enforce maximum recv buffer.
+non_block_recv = 0
