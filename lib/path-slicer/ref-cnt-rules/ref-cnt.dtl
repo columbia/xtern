@@ -1,0 +1,12 @@
+NewRefcountedPointees(L, N') := RefcountedPointees(L, N),
+PointeesOfPtr(L), NextInteger(N', N), N' != 0
+NewRefcountedPointees(L, N)  := RefcountedPointees(L, N), not PointessOfPtr(L)
+
+NextInteger(N', N) maps N' = N-1 to N
+
+To add the pointee set of Ptr to RefcountedPointees(L, N), we can do
+the reverse:
+
+NewRefcountedPointees(L, N') := RefcountedPointees(L, N),
+PointeesOfPtr(L), NextInteger(N, N')
+NewRefcountedPointees(L, 1)  := not RefcountedPointees(L, _), PointessOfPtr(L)
