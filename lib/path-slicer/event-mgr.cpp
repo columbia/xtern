@@ -73,45 +73,28 @@ void EventMgr::setupEvents(Module &M) {
   for (Module::iterator f = M.begin(); f != M.end(); ++f) {
     if (f->hasName()) {
       if (!checker) {
-        fprintf(stderr, "EventMgr::isEventFunc checker is NULL, please use only one checker.\n");
+        fprintf(stderr, "EventMgr::setupEvents checker is NULL, please use only one checker.\n");
         exit(1);
       } else if (checker->mayBeEvent(f->getNameStr())) { // Select events based on the checker.
-        fprintf(stderr, "EventMgr::initEvents event %s\n", f->getNameStr().c_str());
-        eventFuncs.push_back(f);
+        fprintf(stderr, "EventMgr::setupEvents event %s\n", f->getNameStr().c_str());
+        eventFuncs.insert(f);
       }
     }
   }
-
-  // Collect static event callsites, ignore function pointer for now, so the event callsites is only an estimation.
-  for (Module::iterator f = M.begin(), fe = M.end(); f != fe; ++f)
-    for (Function::iterator b = f->begin(), be = f->end(); b != be; ++b)
-      for (BasicBlock::iterator i = b->begin(), ie = b->end(); i != ie; ++i) {
-        Instruction *instr = i;
-        if (Util::isCall(instr)) {
-  			CallInst *ci = cast<CallInst>(instr);
-  			Function *called = ci->getCalledFunction();
-  			if (!called) 
-  			  continue;
-          if (isEventFunc(called)) {
-            eventCallSites.insert(instr);
-            errs() << "EventMgr::setupEvents callsite " << f->getNameStr() << ":" 
-              << b->getNameStr() << ":" << *(instr) << "\n";
-          }
-        }
-      }
-  errs() << "EventMgr::setupEvents callsite size " << eventCallSites.size() << "\n";
   module = &M;
-
-  //if (checker)
-    //delete checker;
 }
 
-bool EventMgr::isEventFunc(Function *f) {
+bool EventMgr::isEventCall(Instruction *instr) {
   if (!checker) {
-    fprintf(stderr, "EventMgr::isEventFunc checker is NULL, please use only one checker.\n");
+    fprintf(stderr, "EventMgr::isEventCall checker is NULL, please use only one checker.\n");
     exit(1);
   }
-  return checker->mayBeEvent(f->getNameStr());
+  if (DS_IN(instr, eventCallSites)) {
+    //errs() << "EventMgr::isEventCall yes: " << *instr << "\n";
+    return true;
+  }
+  //errs() << "EventMgr::isEventCall no: " << *instr << "\n";
+  return false;
 }
 
 void EventMgr::DFS(Function *f) {
@@ -120,6 +103,8 @@ void EventMgr::DFS(Function *f) {
   fprintf(stderr, "EventMgr::DFS traverse function %s, callsite " SZ "\n",
     f->getNameStr().c_str(), css.size());
   for (size_t i = 0; i < css.size(); ++i) {
+    if (isIgnoredEventCall(css[i], f))
+      continue;
     Function *caller = css[i]->getParent()->getParent();
     //errs() << "EventMgr::DFS callsite caller " << caller->getNameStr() << ":" << *(css[i]) << "\n";
     if (visited.count(caller) == 0) {
@@ -180,17 +165,18 @@ void EventMgr::DFS(BasicBlock *x, BasicBlock *sink) {
 void EventMgr::traverse_call_graph(Module &M) {
   visited.clear();
   parent.clear();
-  for (size_t i = 0; i < eventFuncs.size(); ++i) {
-    DFS(eventFuncs[i]);
+  DenseSet<Function *>::iterator itr(eventFuncs.begin());
+  for (; itr != eventFuncs.end(); ++itr) {
+    collectEventCalls(*itr);
+    DFS(*itr);
   }
 
   // DBG.
-  DenseSet<Function *>::iterator itr(visited.begin());
-  for (; itr != visited.end(); ++itr) {
-    Function *f = *itr;
+  DenseSet<Function *>::iterator itrVisited(visited.begin());
+  for (; itrVisited != visited.end(); ++itrVisited) {
+    Function *f = *itrVisited;
     errs() << "EventMgr::traverse_call_graph may call event function " << f->getNameStr() << "\n";
   }
-  //abort();
 }
 
 bool EventMgr::runOnModule(Module &M) {
@@ -216,5 +202,69 @@ void EventMgr::printEventCalls() {
            << b->getNameStr() << ":" << *(instr) << "\n\n";
         }
       }
+}
+
+void EventMgr::collectEventCalls(Function *event) {
+  InstList css = CG->get_call_sites(event);
+  for (size_t i = 0; i < css.size(); ++i) {
+    if (isIgnoredEventCall(css[i], event))
+      continue;
+    eventCallSites.insert(css[i]);
+  }
+}
+
+bool EventMgr::isIgnoredEventCall(Instruction *call, Function *event) {
+  int argOffset = -1;
+  std::string eventName = event->getNameStr();
+  if (eventName == "fclose" ||
+    eventName == "fprintf" ||
+    eventName == "ferror" ||
+    eventName == "ferror_unlocked")
+    argOffset = 0;
+  else if (eventName == "fputs" ||
+    eventName == "fputs_unlocked")
+    argOffset = 1;
+  else if (
+    eventName == "fgets" ||
+    eventName == "fgets_unlocked")
+    argOffset = 2;
+  else if (eventName == "fread" ||
+    eventName == "fread_unlocked" ||
+    eventName == "fwrite" ||
+    eventName == "fwrite_unlocked")
+    argOffset = 3;
+
+  if (argOffset >= 0) {
+    assert(Util::isCall(call));
+    argOffset++;  // The "1" offset is the called function.
+    Value *oprd = call->getOperand(argOffset);  
+    errs() << "EventMgr::isIgnoredEventCall oprd: " << *oprd << "\n";
+    if  (isStdErrOrOut(call->getParent(), oprd)) {
+      errs() << "EventMgr::isIgnoredEventCall IGNORED event: " << *call << "\n";
+      return true;
+    }
+  }
+
+  errs() << "EventMgr::isIgnoredEventCall VALID event: " << *call << "\n";
+  return false;  
+}
+
+/* Statically and conservatively (soundly) check whether a value v is @stderr or @stdout.
+  Iff the value v is a @stderr or @stdout from current basic block, returns true. */
+bool EventMgr::isStdErrOrOut(BasicBlock *curBB, Value *v) {
+  Instruction *instr = dyn_cast<Instruction>(v);
+  if (instr) {
+    BasicBlock *bb = instr->getParent();
+    if (bb != curBB || instr->getNumOperands() == 0)
+      return false;
+    Value *oprd0 = instr->getOperand(0);
+    if (Util::isLoad(instr)) {
+       if (oprd0->getNameStr() == "stderr" || oprd0->getNameStr() == "stdout")
+         return true;
+    } else
+      return isStdErrOrOut(curBB, oprd0); /* Recursively look at the first operand,
+      since sometimes it could be a bit cast instruction and then a load instruction. */
+  }
+  return false;
 }
 

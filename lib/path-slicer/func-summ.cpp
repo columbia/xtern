@@ -9,6 +9,7 @@ using namespace llvm;
 char tern::FuncSumm::ID = 0;
 
 FuncSumm::FuncSumm(): FunctionPass(&ID) {
+  idMgr = NULL;
   EM = NULL;
 }
 
@@ -19,7 +20,8 @@ FuncSumm::~FuncSumm() {
   }
 }
 
-void FuncSumm::initEventMgr(EventMgr *EM) {
+void FuncSumm::init(InstrIdMgr *idMgr, EventMgr *EM) {
+  this->idMgr = idMgr;
   this->EM = EM;
 }
 
@@ -151,9 +153,7 @@ bool FuncSumm::extFuncHasSumm(llvm::Instruction *instr) {
 }
 
 bool FuncSumm::isEventCall(DynCallInstr *callInstr) {
-  Function *f = callInstr->getCalledFunc();
-  assert(f);
-  return EM->isEventFunc(f);
+  return EM->isEventCall(idMgr->getOrigInstr(callInstr));
 }
 
 size_t FuncSumm::numEventCallSites() {

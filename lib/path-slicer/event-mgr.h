@@ -32,7 +32,7 @@ namespace tern {
     llvm::DenseMap<llvm::Function *, llvm::Function *> parent; // Used in DFS
     llvm::DenseSet<llvm::Function *> visited;
     DenseMap<BasicBlock *, bool> bbVisited;
-    std::vector<llvm::Function *> eventFuncs;
+    llvm::DenseSet<llvm::Function *> eventFuncs;
     llvm::DenseSet<llvm::Instruction *> eventCallSites;
     klee::Checker *checker;
     llvm::CallGraphFP *CG;
@@ -42,6 +42,9 @@ namespace tern {
     void DFS(llvm::BasicBlock *x, llvm::BasicBlock *sink);
     void traverse_call_graph(llvm::Module &M);
     void setupEvents(llvm::Module &M);
+    void collectEventCalls(llvm::Function *event);
+    static bool isIgnoredEventCall(llvm::Instruction *call, llvm::Function *event);
+    static bool isStdErrOrOut(llvm::BasicBlock *curBB, llvm::Value *v);
 
   public:
     EventMgr();
@@ -51,7 +54,7 @@ namespace tern {
     virtual bool runOnModule(llvm::Module &M);
     bool mayCallEvent(llvm::Function *f);
     bool eventBetween(llvm::BranchInst *prevInstr, llvm::Instruction *postInstr);
-    bool isEventFunc(llvm::Function *f);
+    bool isEventCall(llvm::Instruction *instr);
     void output(const llvm::Module &M) const;
     size_t numEventCallSites();
     void printEventCalls();

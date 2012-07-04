@@ -26,12 +26,15 @@ namespace tern {
     static char ID;
 
   private:
+    InstrIdMgr *idMgr;
     EventMgr *EM;
-    
+
+#if 0    
     /* Set of events such as lock()/unlock(), or fopen()/fclose(). */
     llvm::DenseSet<const llvm::Function *> events;
     /* Set of all functions that may reach any events in the function body. */
     llvm::DenseSet<const llvm::Function *> eventFunctions;
+#endif
 
     /* Set of all internal functions from original bc module (regardless of uclibc). */
     llvm::DenseSet<const llvm::Function *> internalFunctions;
@@ -47,7 +50,7 @@ namespace tern {
     FuncSumm();
     ~FuncSumm();
 
-    void initEventMgr(EventMgr *EM);
+    void init(InstrIdMgr *idMgr, EventMgr *EM);
 
     virtual void getAnalysisUsage(AnalysisUsage &AU) const;
     virtual bool runOnFunction(Function &F);

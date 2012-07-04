@@ -123,7 +123,7 @@ void PathSlicer::init(llvm::Module &M) {
   eventPM->run(*origModule);
   
   /* Init function summary. */
-  funcSumm.initEventMgr(&evMgr);
+  funcSumm.init(&idMgr, &evMgr);
   PassManager *funcPM = new PassManager;
   Util::addTargetDataToPM(origModule, funcPM);
   funcPM->add(&funcSumm);
