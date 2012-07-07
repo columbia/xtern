@@ -4,23 +4,23 @@ using namespace tern;
 
 using namespace llvm;
 
+using namespace klee;
+
 TargetMgr::TargetMgr() {
   targets.clear();
+  targetMasks.clear();
 }
 
 TargetMgr::~TargetMgr() {
 
 }
 
-void TargetMgr::markTarget(void *pathId, DynInstr *dynInstr, uchar reason) {
+void TargetMgr::markTarget(void *pathId, DynInstr *dynInstr, uchar reason, klee::Checker :: ResultType mask) {
   if (targets.count(pathId) == 0)
     targets[pathId] = new DenseSet<DynInstr *>;
   dynInstr->setTaken(reason);
   targets[pathId]->insert(dynInstr);
-}
-
-void TargetMgr::markTargetOfCall(DynCallInstr *dynCallInstr) {
-  dynCallInstr->setContainTarget(true);
+  setTargetMask(dynInstr,  mask);
 }
 
 size_t TargetMgr::getLargestTargetIdx(void *pathId) {
@@ -59,4 +59,12 @@ void TargetMgr::clearTargets(void *pathId) {
   //fprintf(stderr, "TargetMgr::clearTargets end\n");
 }
 
+void TargetMgr::setTargetMask(DynInstr *dynInstr, klee::Checker::ResultType mask) {
+  targetMasks[dynInstr] = mask;
+}
+
+klee::Checker::ResultType TargetMgr::getTargetMask(DynInstr *dynInstr) {
+  assert(DM_IN(dynInstr, targetMasks));
+  return targetMasks[dynInstr];
+}
 

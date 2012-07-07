@@ -9,6 +9,7 @@
 #include "llvm/ADT/DenseSet.h"
 
 #include "klee/ExecutionState.h"
+#include "klee/Checker.h"
 
 #include "macros.h"
 #include "stat.h"
@@ -21,6 +22,7 @@
 #include "func-summ.h"
 #include "oprd-summ.h"
 #include "callstack-mgr.h"
+#include "target-mgr.h"
 
 namespace tern {
   /* Note:
@@ -39,6 +41,7 @@ namespace tern {
     AliasMgr *aliasMgr;
     CfgMgr *cfgMgr;
     CallStackMgr *ctxMgr;
+    TargetMgr *tgtMgr;
     const DynInstrVector *trace;
     size_t curIndex;
 
@@ -78,12 +81,13 @@ namespace tern {
     void addMemAddrEqConstr(DynMemInstr *loadInstr, DynMemInstr *storeInstr);
     bool mustAlias(DynOprd *oprd1, DynOprd *oprd2);
     void dump(const char *tag, size_t startIndex);
+    void addCallSiteArgs(DynInstr *dynInstr, klee::Checker::ResultType argMask);
 
   public:
     IntraSlicer();
     ~IntraSlicer();
     void init(klee::ExecutionState *state, OprdSumm *oprdSumm, FuncSumm *funcSumm,
-      AliasMgr *aliasMgr, InstrIdMgr *idMgr, CfgMgr *cfgMgr, CallStackMgr *ctxMgr, Stat *stat,
+      AliasMgr *aliasMgr, InstrIdMgr *idMgr, CfgMgr *cfgMgr, CallStackMgr *ctxMgr, TargetMgr *tgtMgr, Stat *stat,
       const DynInstrVector *trace, size_t startIndex);
 
     /* The function to run the intra-thread slicing. */

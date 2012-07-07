@@ -75,7 +75,7 @@ DynInstr *IntraSlicer::delTraceTail(uchar tid) {
 }
 
 void IntraSlicer::init(ExecutionState *state, OprdSumm *oprdSumm, FuncSumm *funcSumm,
-      AliasMgr *aliasMgr, InstrIdMgr *idMgr, CfgMgr *cfgMgr, CallStackMgr *ctxMgr, Stat *stat,
+      AliasMgr *aliasMgr, InstrIdMgr *idMgr, CfgMgr *cfgMgr, CallStackMgr *ctxMgr, TargetMgr *tgtMgr, Stat *stat,
       const DynInstrVector *trace, size_t startIndex) {
   this->state = state;
   this->oprdSumm = oprdSumm;
@@ -84,6 +84,7 @@ void IntraSlicer::init(ExecutionState *state, OprdSumm *oprdSumm, FuncSumm *func
   this->idMgr = idMgr;
   this->cfgMgr = cfgMgr;
   this->ctxMgr = ctxMgr;
+  this->tgtMgr = tgtMgr;
   this->stat = stat;
   this->trace = trace;
   curIndex = startIndex;
@@ -183,11 +184,54 @@ bool IntraSlicer::mayCallEvent(DynCallInstr *caller) {
   return funcSumm->mayCallEvent(caller);
 }
 
+void IntraSlicer::addCallSiteArgs(DynInstr *dynInstr, klee::Checker::ResultType argMask) {
+  Instruction *instr = idMgr->getOrigInstr(dynInstr);
+  CallCtx *intCtx = dynInstr->getCallingCtx();
+  assert(Util::isCall(instr));
+  if (DBG)
+     errs() << "IntraSlicer::addCallSiteArgs instr " << *instr << "\n"; 
+  // Start from the first argument of the call instruction.
+  for (unsigned i = 1; i < instr->getNumOperands(); i++) {
+    if (i == 1 && !(argMask & Checker::NEED_ARG0))
+      continue;
+    if (i == 2 && !(argMask & Checker::NEED_ARG1))
+      continue;
+    if (i == 3 && !(argMask & Checker::NEED_ARG2))
+      continue;
+    if (i == 4 && !(argMask & Checker::NEED_ARG3))
+      continue;
+    if (i == 5 && !(argMask & Checker::NEED_ARG4))
+      continue;
+    if (i > 5)  // Currently all event calls have at most 4 arguments.
+      abort();
+    
+    Value *oprd = instr->getOperand(i);
+    if (DBG)
+      errs() << "IntraSlicer::addCallSiteArgs instr takes oprd (" << i << ") " << *oprd << "\n"; 
+    llvm::ConstantExpr *opInner = dyn_cast<llvm::ConstantExpr>(oprd);
+    if(opInner) {
+      if (DBG)
+        errs() << "IntraSlicer::addCallSiteArgs handles nested instruction " << *instr << "\n"
+          << "Oprd " << *oprd << "\n";
+      live.addInnerUsedRegs(intCtx, opInner);
+    } else {// Only need to add this reg when it is not a LLVM Constant.
+      if (DBG)
+        errs() << "IntraSlicer::addCallSiteArgs tries to add oprd " << *oprd << "\n";
+      DynOprd dynOprd(dynInstr, oprd, i);
+      live.addReg(&dynOprd);
+    }
+  }
+}
+
 void IntraSlicer::handleCheckerTarget(DynInstr *dynInstr) {
   BEGINTIME(stat->intraChkTgtSt);
   if (regOverWritten(dynInstr))
     delRegOverWritten(dynInstr);
-  live.addUsedRegs(dynInstr);
+  Instruction *instr = idMgr->getOrigInstr(dynInstr);
+  if (Util::isCall(instr))
+    addCallSiteArgs(dynInstr, tgtMgr->getTargetMask(dynInstr));
+  else
+    live.addUsedRegs(dynInstr);
   slice.add(dynInstr, dynInstr->getTakenFlag());
   ENDTIME(stat->intraChkTgtTime, stat->intraChkTgtSt, stat->intraChkTgtEnd);
 }

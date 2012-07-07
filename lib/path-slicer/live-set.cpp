@@ -37,7 +37,8 @@ void LiveSet::clear() {
 
 void LiveSet::addReg(CallCtx *ctx, Value *v) {
   if (!Util::isConstant(v)) { // Discard it if it is a LLVM Constant.
-    //SERRS << "LiveSet::addReg <" << (void *)v << ">: " << *v << "\n";
+    if (DBG)
+      errs() << "LiveSet::addReg <" << (void *)v << ">: " << *v << "\n\n";
     CtxVPair p = std::make_pair(ctx, v);
     //ASSERT(!DS_IN(p, virtRegs));
     virtRegs.insert(p);
@@ -83,41 +84,34 @@ bool LiveSet::regIn(DynOprd *dynOprd) {
   return (DS_IN(p, virtRegs));
 }
 
+void LiveSet::addInnerUsedRegs(CallCtx *intCtx, User *user) {
+  unsigned numOperands = user->getNumOperands();
+  for(unsigned i = 0; i < numOperands; i++) {
+    Value *oprd = user->getOperand(i);
+    if (DBG)
+      errs() << "LiveSet::addInnerUsedRegs handles oprd " << *oprd << "\n";
+    ConstantExpr *opInner = dyn_cast<ConstantExpr>(oprd);
+    if (opInner)
+      addInnerUsedRegs(intCtx, opInner);
+    else // Only need to add this reg when it is not a LLVM Constant.
+      addReg(intCtx, oprd);
+  }
+}
+
 void LiveSet::addUsedRegs(DynInstr *dynInstr) {
-  // Checke whether we need to strip cast for function arguments of external calls.
-  bool oprdStripCast = false;
   Instruction *instr = idMgr->getOrigInstr(dynInstr);
-  if (Util::isCall(instr) && !funcSumm->isInternalCall(dynInstr))
-    oprdStripCast = true;
-  
-  // TBD: DO WE NEED TO CONSIDER SIM CALL CTX HERE?
   CallCtx *intCtx = dynInstr->getCallingCtx();
-  if (Util::isCall(instr)) {
-    CallSite cs  = CallSite(cast<CallInst>(instr));
-    // TBD: Some real function call may be wrapped by bitcast? YES WE SHOULD. 
-    // REFER TO EXECUTOR.CPP IN KLEE.
-    Function *f = cs.getCalledFunction();   
-    if (!f) {
-      Value *calledV = cs.getCalledValue();
-      /* If the called value is not a constant (i.e., a function pointer that can
-      have multiple choices), we have to add it to virtual reg. */
-      if (!isa<Constant>(calledV)) {    
-        if (DBG) {
-        	errs() << "LiveSet::addUsedRegs called function pointer: ";
-        	calledV->dump();  // Debugging.
-        }
-        addReg(intCtx, calledV);
-      }
-    } else {
-      for (CallSite::arg_iterator ci = cs.arg_begin(), ce = cs.arg_end(); ci != ce; ++ci) {
-        Value *arg = oprdStripCast?Util::stripCast(*ci):(*ci);
-        addReg(intCtx, arg);
-      }
-    }
-  } else {
-    for (unsigned i = 0; i < instr->getNumOperands(); i++) {
-      addReg(intCtx, instr->getOperand(i));
-    }
+  // This also handles function call arguments.
+  for (unsigned i = 0; i < instr->getNumOperands(); i++) {
+    Value *oprd = instr->getOperand(i);
+    ConstantExpr *opInner = dyn_cast<ConstantExpr>(oprd);
+    if(opInner) {
+      if (DBG)
+        errs() << "LiveSet::addUsedRegs handles nested instruction " << *instr << "\n"
+          << "Oprd " << *oprd << "\n";
+      addInnerUsedRegs(intCtx, opInner);
+    } else // Only need to add this reg when it is not a LLVM Constant.
+      addReg(intCtx, oprd);
   }
 }
 

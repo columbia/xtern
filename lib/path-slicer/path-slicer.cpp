@@ -251,7 +251,7 @@ void PathSlicer::runPathSlicer(void *pathId, set<size_t> &rmBrs,
     /* (3) Init slicing sub modules. This function will also clean live set and 
       slice set in the intra-thread slicer. */
     intraSlicer.init((ExecutionState *)pathId, &oprdSumm, &funcSumm,
-      &aliasMgr, &idMgr, &cfgMgr, &ctxMgr, &stat, trace, startIndex);
+      &aliasMgr, &idMgr, &cfgMgr, &ctxMgr, &tgtMgr, &stat, trace, startIndex);
 
     // If it is in testing mode, take the last instruction in trace as test target.
     if (INTRA_SLICING_FOR_TEST)
@@ -349,12 +349,12 @@ void PathSlicer::recordCheckerResult(void *pathId, Checker::Result globalResult,
     DynInstr *dynInstr = trace->back();
     if (globalResult & Checker::IMPORTANT || localResult & Checker::IMPORTANT) {
       assert(BIT_NEQ(globalResult, Checker::ERROR) && BIT_NEQ(localResult, Checker::ERROR));
-      tgtMgr.markTarget(pathId, dynInstr, TakenFlags::CHECKER_IMPORTANT);
+      tgtMgr.markTarget(pathId, dynInstr, TakenFlags::CHECKER_IMPORTANT, (klee::Checker::ResultType)localResult);
       if (DBG)
         stat.printDynInstr(dynInstr, "PathSlicer::recordCheckerResult Checker::IMPORTANT");
     } else {
       assert(BIT_NEQ(globalResult, Checker::IMPORTANT) && BIT_NEQ(localResult, Checker::IMPORTANT));
-      tgtMgr.markTarget(pathId, dynInstr, TakenFlags::CHECKER_ERROR);
+      tgtMgr.markTarget(pathId, dynInstr, TakenFlags::CHECKER_ERROR, (klee::Checker::ResultType)localResult);
       if (DBG && !isKleeHalted)  // Output the trace is klee is not halted. This will not affect checker reports.
         traceUtil->store(numTests+1, outputDir.c_str(), trace);
       if (DBG)

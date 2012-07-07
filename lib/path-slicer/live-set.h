@@ -37,7 +37,7 @@ namespace tern {
     //RefCntBdd loadInstrsBdd;
 
   protected:
-    void addReg(CallCtx *ctx, Value *v);
+    void addReg(CallCtx *ctx, llvm::Value *v);
 
   public:
     LiveSet();
@@ -59,7 +59,10 @@ namespace tern {
 
     /** Add all the used operands of an instruction to live set (include call args).
     It uses the addReg() above. **/
-    void addUsedRegs(DynInstr *dynInstr);    
+    void addUsedRegs(DynInstr *dynInstr);
+
+    /** Handle recurive instruction such as "bitcast ...", or "load getelemptr ...", etc. **/
+    void addInnerUsedRegs(CallCtx *intCtx, llvm::User *user);
  
     /** Load memory locations. **/
     /** Add a load memory location (the load instruction) to live set.
