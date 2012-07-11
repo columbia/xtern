@@ -1,4 +1,4 @@
-all: xternruntime interpose.so
+all: xternruntime interpose.so usermonitor
 
 BuildMode := Debug
 ENABLE_OPTIMIZED := 0
@@ -15,6 +15,9 @@ CFLAGS= -g $(INC_DIRS)
 CXXFLAGS= -g $(INC_DIRS)
 PREFIX=LD_PRELOAD=$(XTERN_ROOT)/dync_hook/interpose.so
 #PREFIX=
+
+usermonitor: usermonitor.cpp
+	g++ usermonitor.cpp -o usermonitor
 
 xternruntime: 
 	cd $(XTERN_ROOT)/obj && make ENABLE_OPTIMIZED=$(ENABLE_OPTIMIZED)

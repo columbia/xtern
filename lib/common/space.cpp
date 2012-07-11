@@ -14,9 +14,11 @@ static void cross(void) {
   current_space = !current_space;
 }
 
-void setSpace(bool s)
+bool setSpace(bool s)
 {
+  bool ret = current_space;
   current_space = s;
+  return ret;
 }
 
 bool getSpace() {

@@ -46,6 +46,8 @@
 #include "tern/space.h"
 #include "tern/options.h"
 #include "tern/hooks.h"
+#include "tern/runtime/monitor.h"
+
 #include <fstream>
 #include <map>
 #include <sys/types.h>
@@ -137,7 +139,7 @@ void InstallRuntime() {
     static_cast<SeededRRScheduler*>(rt)->setSeed(options::scheduler_seed);
     Runtime::the = rt;
   } else if (options::runtime_type == "FCFS") {
-    Runtime::the = new RecorderRT<RecordSerializer>;
+    Runtime::the = new RecorderRT<FCFSScheduler>;
   } else if (options::runtime_type == "Replay") {
     Runtime::the = new RecorderRT<ReplaySchedulerSem>;
   }
@@ -254,10 +256,12 @@ void RecorderRT<_S>::idle_sleep(void) {
 #endif
 }
 
+/*
 template <>
 void RecorderRT<RecordSerializer>::idle_sleep(void) {
   ::usleep(10);
 }
+*/
 
 #define BLOCK_TIMER_START \
   timespec app_time, sched_block_time, syscall_time; \
@@ -703,8 +707,13 @@ int RecorderRT<_S>::pthreadBarrierWait(unsigned ins, int &error,
     ret = PTHREAD_BARRIER_SERIAL_THREAD;
     _S::putTurn();    
     _S::getTurn();
+    _S::incTurnCount();
+    _S::putTurn();
+    _S::getTurn();
   } else {
     ret = 0;
+    _S::putTurn();    
+    _S::getTurn();
     _S::wait(barrier);
   }
   sched_time = update_time();
@@ -1123,6 +1132,7 @@ void RecorderRT<_S>::symbolic(unsigned ins, int &error, void *addr,
 // occurs.  Thus, we can simplify the implementation of pthread cond var
 // methods for RecordSerializer.
 
+/*
 template <>
 int RecorderRT<RecordSerializer>::wait(void *chan, unsigned timeout) {
   typedef RecordSerializer _S;
@@ -1148,9 +1158,7 @@ int RecorderRT<RecordSerializer>::pthreadMutexTimedLock(unsigned ins, int &error
   SCHED_TIMER_START;
   while((ret=pthread_mutex_trylock(mu))) {
     assert(ret==EBUSY && "failed sync calls are not yet supported!");
-    //_S::putTurn();
-    //sched_yield();
-    //_S::getTurn();
+
     wait(mu);
 
     struct timespec curtime;
@@ -1207,7 +1215,7 @@ int RecorderRT<RecordSerializer>::semTimedWait(unsigned ins, int &error, sem_t *
   errno = saved_err;
   return ret;
 }
-
+*/
 /// NOTE: recording may be nondeterministic because the order of turns may
 /// not be the order in which threads arrive or leave barrier_wait().  if
 /// we have N concurrent barrier_wait() but the barrier count is smaller
@@ -1221,6 +1229,10 @@ int RecorderRT<RecordSerializer>::pthreadBarrierWait(unsigned ins, int &error,
     
   SCHED_TIMER_START;
   SCHED_TIMER_FAKE_END(syncfunc::pthread_barrier_wait, (uint64_t)barrier, (uint64_t)ret);
+
+  _S::putTurn();
+  _S::getTurn();  //  more getTurn for consistent number of getTurn with RRSchedler
+  _S::incTurnCount();
   _S::putTurn();
 
   errno = error;

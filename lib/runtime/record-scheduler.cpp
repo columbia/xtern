@@ -898,4 +898,39 @@ ostream& RRScheduler::dump(ostream& o)
   return o;
 }
 
+void FCFSScheduler::getTurn() {  
+  pthread_mutex_lock(&fcfs_lock);
+  //  fake
+  runq.push_front(self());
+}
 
+void FCFSScheduler::putTurn(bool at_thread_end) {  
+  int tid = self();
+  assert(runq.size() && runq.front() == tid);
+
+  if(at_thread_end) 
+  {
+    signal((void*)pthread_self());
+    Parent::zombify(pthread_self());
+  }
+
+  next(at_thread_end);
+}
+
+FCFSScheduler::FCFSScheduler()
+  : RRScheduler()
+{  
+  pthread_mutex_init(&fcfs_lock, NULL);
+}
+
+FCFSScheduler::~FCFSScheduler() {  
+  pthread_mutex_destroy(&fcfs_lock);
+}
+
+void FCFSScheduler::next(bool at_thread_end)
+{
+  int tid = self();
+  assert(runq.size() && runq.front() == tid);
+  runq.pop_front();
+  pthread_mutex_unlock(&fcfs_lock);
+}

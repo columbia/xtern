@@ -163,10 +163,17 @@ void ReplaySchedulerSem::putTurn(bool at_thread_end)
   
   if (next_tid < 0)
   {
-    dprintf("warning: next_tid not found, will give control to a random thread\n"
-            "\tThis is dangarous and might lead to deadlock\n");
-    while (t_p_map.find(next_tid) == t_p_map.end())
-      next_tid = rand() % nthread;
+    if (t_p_map.size())
+    {
+      dprintf("warning: next_tid not found, will give control to a random thread\n"
+              "\tThis is dangarous and might lead to deadlock\n");
+      while (t_p_map.find(next_tid) == t_p_map.end())
+        next_tid = rand() % nthread;
+    } else {
+      dprintf("warning: t_p_map is empty, assume here's the end of execution\n"
+              "\tNow continue without posting semaphore\n");
+      return;
+    }
   }
 
   sem_post(&waits[next_tid]);

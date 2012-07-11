@@ -35,6 +35,14 @@ struct RecordSerializer: public Serializer {
     pthread_mutex_unlock(&lock);
   }
 
+  int  wait(void *chan, unsigned timeout = Scheduler::FOREVER) {
+    incTurnCount();
+    putTurn();
+    sched_yield();  //  give control to other threads
+    getTurn();
+    return 0;
+  }
+
   /// NOTE: This method breaks the Seralizer interface.  Need it to
   /// deterministically record pthread_cond_wait.  See the comments for
   /// pthread_cond_wait in the recorder runtime
@@ -81,13 +89,13 @@ struct RRScheduler: public Scheduler {
     }
   };
 
-  void getTurn();
-  void putTurn(bool at_thread_end = false);
-  int  wait(void *chan, unsigned timeout = Scheduler::FOREVER);
-  void signal(void *chan, bool all=false);
+  virtual void getTurn();
+  virtual void putTurn(bool at_thread_end = false);
+  virtual int  wait(void *chan, unsigned timeout = Scheduler::FOREVER);
+  virtual void signal(void *chan, bool all=false);
 
-  int block(); 
-  void wakeup();
+  virtual int block(); 
+  virtual void wakeup();
 
   unsigned incTurnCount(void);
   unsigned getTurnCount(void);
@@ -105,7 +113,7 @@ protected:
   /// return the next timeout turn number
   unsigned nextTimeout();
   /// pop the @runq and wakes up the thread at the front of @runq
-  void next(bool at_thread_end=false);
+  virtual void next(bool at_thread_end=false);
   /// child classes can override this method to reorder threads in @runq
   virtual void reorderRunq(void) {}
 
@@ -131,6 +139,16 @@ protected:
   void check_wakeup();
 };
 
+struct FCFSScheduler: public RRScheduler {
+public:
+  virtual void getTurn();
+  virtual void putTurn(bool at_thread_end = false);
+  FCFSScheduler();
+  ~FCFSScheduler();
+protected:
+  virtual void next(bool at_thread_end=false);
+  pthread_mutex_t fcfs_lock;
+};
 
 #if 0
 struct RRSchedulerCV: public Scheduler {

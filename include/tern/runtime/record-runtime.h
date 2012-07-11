@@ -6,6 +6,7 @@
 
 #include <tr1/unordered_map>
 #include "tern/runtime/runtime.h"
+#include "tern/runtime/monitor.h"
 #include "tern/runtime/record-scheduler.h"
 #include <time.h>
 
@@ -114,6 +115,19 @@ struct RecorderRT: public Runtime, public _Scheduler {
     assert(!ret && "can't initialize semaphore!");
     ret = sem_init(&thread_begin_done_sem, 0, 0);
     assert(!ret && "can't initialize semaphore!");
+
+    if (options::launch_monitor)
+      monitor = new RuntimeMonitor();
+    else
+      monitor = NULL;
+  }
+
+  ~RecorderRT() {
+    if (monitor)
+    {
+      delete monitor; 
+      monitor = NULL;
+    }
   }
 
 protected:
@@ -134,6 +148,8 @@ protected:
   /// for pthreadCreate() and threadBegin()
   sem_t thread_begin_sem;
   sem_t thread_begin_done_sem;
+
+  RuntimeMonitor *monitor;
 };
 #if 0
 struct RRuntime: public Runtime {

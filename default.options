@@ -90,3 +90,6 @@ replay_log_type = serializer
 
 # if set all sockets as non-block and enforce maximum recv buffer.
 non_block_recv = 0
+
+# if we should launch a monitor
+launch_monitor = 0

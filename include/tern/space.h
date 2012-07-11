@@ -11,7 +11,7 @@ void exitSys(void); /// exit Sys space to App space
 bool isApp(void); /// is current space App space?
 bool isSys(void); /// is current space Sys space?
 
-void setSpace(bool s);
+bool setSpace(bool s);
 bool getSpace();
 
 }
