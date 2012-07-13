@@ -142,12 +142,14 @@ def findBarrierDeps(ops):
     def secondArrive(self, op):
       opid = op['id']
       tid = op['tid']
-
+      if tid not in self.deps:
+        print op
       assert(tid in self.deps)
 
       ret = []
       for x in self.deps[tid]:
         ret.append((x, opid, 'barrier=%s' % self.barrier))
+      self.deps[tid] = []
       return ret
   ### End of BarrierType ###
 

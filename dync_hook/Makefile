@@ -111,7 +111,7 @@ run_yfs: prepare_yfs
 
 fft:
 	rm -rf out
-	LD_PRELOAD=$(XTERN_ROOT)/dync_hook/interpose.so ./FFT -m6 -p8
+	LD_PRELOAD=$(XTERN_ROOT)/dync_hook/interpose.so ./FFT -m24 -p4
 
 eval:
 	cd $(XTERN_ROOT)/apps/ && make -B EXE_PREFIX="env LD_PRELOAD=$(XTERN_ROOT)/dync_hook/interpose.so"

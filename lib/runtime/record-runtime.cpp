@@ -698,6 +698,14 @@ int RecorderRT<_S>::pthreadBarrierWait(unsigned ins, int &error,
   barrier_t &b = bi->second;
 
   ++ b.narrived;
+
+//#define xxx
+#ifdef xxx
+  fprintf(stderr, "thread %d arrives at barrier, b.count = %d, b.arrvied = %d\n", 
+    _S::self(), (int) b.count, (int) b.narrived);
+  fflush(stderr);
+#endif
+
   assert(b.narrived <= b.count && "barrier overflow!");
   if(b.count == b.narrived) {
     b.narrived = 0; // barrier may be reused
@@ -705,18 +713,24 @@ int RecorderRT<_S>::pthreadBarrierWait(unsigned ins, int &error,
     // according to the man page of pthread_barrier_wait, one of the
     // waiters should return PTHREAD_BARRIER_SERIAL_THREAD, instead of 0
     ret = PTHREAD_BARRIER_SERIAL_THREAD;
-    _S::putTurn();    
-    _S::getTurn();
-    _S::incTurnCount();
-    _S::putTurn();
+#ifdef xxx
+    fprintf(stderr, "thread %d claims itself as the last one, b.count = %d, b.arrvied = %d\n", 
+      _S::self(), (int) b.count, (int) b.narrived);
+    fflush(stderr);
+#endif
+
+    _S::putTurn();  // this gives _first and _second different turn numbers.
     _S::getTurn();
   } else {
     ret = 0;
-    _S::putTurn();    
-    _S::getTurn();
+    --_S::turnCount;  //  in _S::wait will increase it again.
     _S::wait(barrier);
   }
   sched_time = update_time();
+#ifdef xxx
+  fprintf(stderr, "thread %d leaves barrier\n", _S::self());
+  fflush(stderr);
+#endif
 
   SCHED_TIMER_END(syncfunc::pthread_barrier_wait, (uint64_t)barrier);
 

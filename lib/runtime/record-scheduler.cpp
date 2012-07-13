@@ -921,6 +921,9 @@ FCFSScheduler::FCFSScheduler()
   : RRScheduler()
 {  
   pthread_mutex_init(&fcfs_lock, NULL);
+
+  assert(self() == MainThreadTid && "tid hasn't been initialized!");
+  sem_init(&waits[MainThreadTid].sem, 0, 0);  //  clear it
 }
 
 FCFSScheduler::~FCFSScheduler() {  
@@ -934,3 +937,51 @@ void FCFSScheduler::next(bool at_thread_end)
   runq.pop_front();
   pthread_mutex_unlock(&fcfs_lock);
 }
+
+void FCFSScheduler::signal(void *chan, bool all)
+{
+  list<int>::iterator prv, cur;
+
+  assert(chan && "can't signal/broadcast NULL");
+  assert(self() == runq.front());
+  dprintf("RRScheduler: %d: %s %p\n",
+          self(), (all?"broadcast":"signal"), chan);
+
+  // use delete-safe way of iterating the list in case @all is true
+  for(cur=waitq.begin(); cur!=waitq.end();) {
+    prv = cur ++;
+
+    int tid = *prv;
+    assert(tid >=0 && tid < Scheduler::nthread);
+    if(waits[tid].chan == chan) {
+      dprintf("RRScheduler: %d signals %d(%p)\n", self(), tid, chan);
+      waits[tid].reset();
+      waitq.erase(prv);
+      //runq.push_back(tid);
+
+      sem_post(&waits[tid].sem); //  added for FCFSScheduler
+      if(!all)
+        break;
+    }
+  }
+  SELFCHECK;
+}
+
+int FCFSScheduler::wait(void *chan, unsigned nturn)
+{
+  incTurnCount();
+  int tid = self();
+  assert(tid>=0 && tid < Scheduler::nthread);
+  assert(tid == runq.front());
+  waits[tid].chan = chan;
+  waits[tid].timeout = nturn;
+  waitq.push_back(tid);
+
+  next();
+
+  sem_wait(&waits[tid].sem); // added from RRScheduler's wait()
+
+  getTurn();
+  return waits[tid].status;
+}
+

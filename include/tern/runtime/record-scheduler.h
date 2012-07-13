@@ -143,6 +143,8 @@ struct FCFSScheduler: public RRScheduler {
 public:
   virtual void getTurn();
   virtual void putTurn(bool at_thread_end = false);
+  virtual int  wait(void *chan, unsigned timeout = Scheduler::FOREVER);
+  virtual void signal(void *chan, bool all=false);
   FCFSScheduler();
   ~FCFSScheduler();
 protected:
