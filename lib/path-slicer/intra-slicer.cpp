@@ -153,8 +153,8 @@ bool IntraSlicer::eventBetween(DynBrInstr *dynBrInstr, DynInstr *dynPostInstr) {
     postInstr = idMgr->getOrigInstr((DynInstr *)dynPostInstr);
   else {
     postInstr = cfgMgr->getStaticPostDom(prevInstr);
-    /*if (DBG && postInstr)
-      errs() << "IntraSlicer::eventBetween: " << *(postInstr) << "\n";*/
+    if (DBG && postInstr)
+      errs() << "IntraSlicer::eventBetween postInstr: " << *(postInstr) << "\n";
   }
   return funcSumm->eventBetween(branch, postInstr);
 }
@@ -246,10 +246,10 @@ void IntraSlicer::handlePHI(DynInstr *dynInstr) {
     DynOprd oprd(phiInstr, phiNode->getIncomingValue(index), index);
     if (!Util::isConstant(&oprd)) {
       live.addReg(&oprd);
-    } else {
-      DynInstr *prevInstr = prevDynInstr(phiInstr);
-      prevInstr->setTaken(TakenFlags::INTRA_PHI_BR_CTRL_DEP);
     }
+    DynInstr *prevInstr = prevDynBrInstr(phiInstr);
+    assert(phiNode->getIncomingBlock(index) == idMgr->getOrigInstr(prevInstr)->getParent());
+    prevInstr->setTaken(TakenFlags::INTRA_PHI_BR_CTRL_DEP);
     slice.add(phiInstr, TakenFlags::INTRA_PHI);
   }
   ENDTIME(stat->intraPhiTime, stat->intraPhiSt, stat->intraPhiEnd);
@@ -526,13 +526,14 @@ bool IntraSlicer::mustAlias(DynOprd *oprd1, DynOprd *oprd2) {
   return false;
 }
 
-DynInstr *IntraSlicer::prevDynInstr(DynInstr *dynInstr) {
+DynInstr *IntraSlicer::prevDynBrInstr(DynInstr *dynInstr) {
   uchar tid = dynInstr->getTid();
   size_t tmpIndex = curIndex;
   DynInstr *prevInstr = NULL;
   while (tmpIndex != SIZE_T_INVALID) {
-    if (trace->at(tmpIndex)->getTid() == tid) {
-      prevInstr = trace->at(tmpIndex);
+    DynInstr *curInstr = trace->at(tmpIndex);
+    if (curInstr->getTid() == tid && Util::isBr(idMgr->getOrigInstr(curInstr))) {
+      prevInstr = curInstr;
       break;
     } else
       tmpIndex--;

@@ -338,6 +338,8 @@ void Stat::collectExternalCalls(DynCallInstr *dynCallInstr) {
 }
 
 void Stat::collectEventCalls(DynCallInstr *dynCallInstr) {
+  if (DBG)
+    printDynInstr(dynCallInstr, "Stat::collectEventCalls");
   Instruction *instr = idMgr->getOrigInstr(dynCallInstr);
   eventCalls.insert(instr);
 }

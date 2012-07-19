@@ -73,8 +73,8 @@ namespace tern {
     bool mayWriteFunc(DynInstr *dynInstr, DynCallInstr *caller);
     bool mayCallEvent(DynCallInstr *caller);
 
-    /* Find previous dynamic instruction in the trace with the same thread id. */
-    DynInstr *prevDynInstr(DynInstr *dynInstr);
+    /* Find previous dynamic branch instruction in the trace with the same thread id. */
+    DynInstr *prevDynBrInstr(DynInstr *dynInstr);
 
     /* Make curIndex points to the previous instruction of the call instruction of the dyn instruction. */
     void removeRange(DynInstr *dynInstr, DynCallInstr *caller);

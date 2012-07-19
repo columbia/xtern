@@ -128,3 +128,8 @@ for (Module::iterator f = origModule->begin(), fe = origModule->end(); f != fe; 
 	      }
 }
 
+bool InstrIdMgr::isInternalInstr(llvm::Instruction *instr) {
+  return (getOrigInstrId(instr) != -1);
+}
+
+

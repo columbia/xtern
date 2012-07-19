@@ -220,6 +220,8 @@ void PathSlicer::runPathSlicer(void *pathId, set<size_t> &rmBrs,
   DynInstrVector *trace = allPathTraces[pathId];
   fprintf(stderr, "PathSlicer::runPathSlicer START pathId %p, isPruned %d, isHalted %d, size " SZ "\n",
     pathId, isPruned, isHalted, trace->size());
+  if (DBG)
+    dumpTrace(trace, "PathSlicer::runPathSlicer");
   if (isPruned)
     goto finish;
   if (isHalted) {
@@ -307,8 +309,14 @@ void PathSlicer::record(void *pathId, void *instr, void *state, void *f) {
     return;
   if (!DM_IN(pathId, allPathTraces))
     allPathTraces[pathId] = new DynInstrVector;
+  if (DBG) {
+    Instruction *call = ((KInstruction *)instr)->inst;
+    if (Util::isCall(call) && idMgr.isInternalInstr(call)) {
+      fprintf(stderr, "\n\ncurrent recordCall state %p start: ", pathId);
+      errs() << "call static instr: " << *call << "\n";
+    }
+  }
   traceUtil->record(allPathTraces[pathId], instr, state, f);
-  //fprintf(stderr, "PathSlicer::record finished, pathId %p\n", (void *)pathId);
 }
 
 void PathSlicer::copyTrace(void *newPathId, void *curPathId) {
@@ -378,10 +386,6 @@ bool PathSlicer::getStartRecord(void *instr) {
   return false;
 }
 
-bool PathSlicer::isInternalInstr(llvm::Instruction *instr) {
-  return (idMgr.getOrigInstrId(instr) != -1);
-}
-
 void PathSlicer::dumpTrace(DynInstrVector *trace, const char *tag) {
   assert(trace);
   errs() << BAN;
@@ -404,18 +408,21 @@ size_t PathSlicer::getLatestBrOrExtCallIdx(void *pathId) {
 	it could be load/store, malloc()/free(), or calls to function pointers.
   */
   // Check, must be branch or a external call.
-  /*DynInstr *dynInstr = trace->back();
+  DynInstr *dynInstr = trace->back();
   Instruction *instr = idMgr.getOrigInstr(dynInstr);
-  if (!Util::isBr(instr)) {
-    if (!(Util::isCall(instr) && !funcSumm.isInternalCall(dynInstr))) {
-      errs() << "pathId is inconsistent: " << pathId << "\n";
-      dumpTrace(trace, "PathSlicer::getLatestBrOrExtCallIdx");
-      stat.printDynInstr(dynInstr, "PathSlicer::getLatestBrOrExtCallIdx last one");
-      abort();
-    }
-  }*/
+  if (!Util::isForkStateInstr(instr)) {
+    errs() << "pathId is inconsistent: " << pathId << "\n";
+    dumpTrace(trace, "PathSlicer::getLatestBrOrExtCallIdx");
+    stat.printDynInstr(dynInstr, "PathSlicer::getLatestBrOrExtCallIdx last one");
+    exit(1);
+  }
+
+  if (DBG) {
+    errs() << "PathSlicer::getLatestBrOrExtCallIdx pathId is: " << pathId << "\n";
+    stat.printDynInstr(dynInstr, "PathSlicer::getLatestBrOrExtCallIdx");
+  }
     
-  return trace->back()->getIndex();
+  return dynInstr->getIndex();
 }
 
 void PathSlicer::collectExplored(llvm::Instruction *instr) {

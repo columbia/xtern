@@ -86,6 +86,19 @@ bool Util::isErrnoAddr(const Value *v) {
   return (callee && callee->getNameStr() == "__errno_location");  // LLVM errno mechanism.
 }
 
+bool Util::isForkStateInstr(const llvm::Instruction *instr) {
+  unsigned opCode = instr->getOpcode();
+  if (opCode == Instruction::Br ||
+    opCode == Instruction::Switch ||
+    opCode == Instruction::Call ||
+    opCode == Instruction::Load ||
+    opCode == Instruction::Store
+    )
+    return true;
+  return false;
+}
+
+
 
 bool Util::hasDestOprd(const Instruction *instr) {
       /*  LLVM instructions that do not have dest operands.

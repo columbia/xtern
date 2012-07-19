@@ -101,6 +101,8 @@ namespace tern {
     /* Given a dynamic instr, return its set of instr id in simplified module. */
     std::set<int *> *getSimInstrId(DynInstr *dynInstr);
 
+    bool isInternalInstr(llvm::Instruction *instr);
+
     /* Given a dynamic instr, return its set of instr in simplified module. */
     std::set<llvm::Instruction *> *getSimInstr(DynInstr *dynInstr);
 

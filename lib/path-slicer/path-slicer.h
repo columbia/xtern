@@ -136,9 +136,6 @@ namespace tern {
     void recordCheckerResult(void *pathId, 
       klee::Checker::Result globalResult, klee::Checker::Result localResult, unsigned numTests);
 
-    /*  */
-    bool isInternalInstr(llvm::Instruction *instr);
-
     /* Get the latest recorded branch or external call index. */
     size_t getLatestBrOrExtCallIdx(void *pathId);
     
