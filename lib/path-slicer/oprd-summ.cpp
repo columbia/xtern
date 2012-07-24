@@ -339,7 +339,6 @@ void OprdSumm::addSummTopDown(InstrDenseSet *calleeSet,
 void OprdSumm::getUsedByPhiSummBetween(DynBrInstr *prevBrInstr, DynInstr *postInstr, InstrDenseSet &phiSet) {
   // TBD. traverse the basicblocks and then collect all phinodes from the bbPhiDefSumm.
   visitedBB.clear();
-  assert(prevBrInstr && postInstr);
   BasicBlock *x = Util::getBasicBlock(idMgr->getOrigInstr(prevBrInstr));
   BasicBlock *sink = Util::getBasicBlock(idMgr->getOrigInstr(postInstr));
   for (succ_iterator it = succ_begin(x); it != succ_end(x); ++it) {
