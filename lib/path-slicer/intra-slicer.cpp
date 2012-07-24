@@ -172,6 +172,11 @@ bool IntraSlicer::writtenBetween(DynBrInstr *dynBrInstr, DynInstr *dynPostInstr)
 }
 
 bool IntraSlicer::phiDefBetween(DynBrInstr *dynBrInstr, DynInstr *dynPostInstr) {
+  /* dynPostInstr or successor can be NULL because sometimes we start from empty target. */
+  if (!dynPostInstr || !dynBrInstr->getSuccessorBB()) {  
+    assert(slice.size() == 0 && live.virtRegsSize() == 0 && live.loadInstrsSize() == 0);
+    return false;
+  }
   InstrDenseSet phiSet;
   oprdSumm->getUsedByPhiSummBetween(dynBrInstr, dynPostInstr, phiSet);
   return live.phiDefBetween(dynBrInstr->getCallingCtx(), &phiSet);
