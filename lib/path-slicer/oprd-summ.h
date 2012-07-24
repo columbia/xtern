@@ -31,7 +31,7 @@ namespace tern {
   for return instructions. */
   class OprdSumm: public llvm::ModulePass {
   private:
-    enum OprdType {Load = 1, Store = 2};
+    enum OprdType {Load = 1, Store = 2, PHI = 3};
     static char ID;
     Stat *stat;
     AliasMgr *aliasMgr;
@@ -61,6 +61,16 @@ namespace tern {
     llvm::DenseMap<llvm::BasicBlock *, InstrDenseSet * > bbLoadSumm;
     /* cache */
     //llvm::DenseMap<std::pair<CallCtx *, const llvm::BasicBlock *>, bdd * > bbLoadBDD;
+
+    /* Used by phiDefBetween() in intra-thread phase. Maps from each basicblock
+    to a set of phi instructions in anywhere the bitcode, if a phi instruction uses any
+    virtual registers defined in this bb. Intra-procedural. */
+    llvm::DenseMap<llvm::BasicBlock *, InstrDenseSet * > bbPhiDefSumm;
+
+    /* Map from a pair of <prevInstr, postInstr> to a set of phi instructions,
+    if a phi instruction uses any virtual registers defined in between of these
+    two instructions. Intra-procedural. */
+    //llvm::DenseMap<PtrPair, ValueDenseSet *> phiDefSummCache;
 
     DenseSet<llvm::Function *> visited;
     DenseSet<llvm::BasicBlock *> visitedBB;
@@ -117,6 +127,10 @@ namespace tern {
     /* Given a dynamic call instruction, return a bdd to specify all the "ExtStore" summary of
     that instruction.*/
     InstrDenseSet *getExtCallStoreSumm(DynCallInstr *callInstr, bdd &bddResults);
+
+    /* Return  a set of phi instructions in anywhere the bitcode, if a phi instruction uses any
+    virtual registers defined in between (of the prevBrInstr and postInstr). Intra-procedural. */
+    void getUsedByPhiSummBetween(DynBrInstr *prevBrInstr, DynInstr *postInstr, InstrDenseSet &phiSet);
   };
 }
 

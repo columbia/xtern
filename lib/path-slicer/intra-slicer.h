@@ -70,6 +70,7 @@ namespace tern {
     bool retRegOverWritten(DynRetInstr *dynRetInstr);
     bool eventBetween(DynBrInstr *dynBrInstr, DynInstr *dynPostInstr);
     bool writtenBetween(DynBrInstr *dynBrInstr, DynInstr *dynPostInstr);
+    bool phiDefBetween(DynBrInstr *dynBrInstr, DynInstr *dynPostInstr);
     bool mayWriteFunc(DynInstr *dynInstr, DynCallInstr *caller);
     bool mayCallEvent(DynCallInstr *caller);
 

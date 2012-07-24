@@ -29,6 +29,7 @@ size_t LiveSet::loadInstrsSize() {
 
 void LiveSet::clear() {
   virtRegs.clear();
+  phiVirtRegs.clear();
   loadInstrs.clear();
   extCallLoadInstrs.clear();
   allLoadMem = bddfalse;
@@ -40,37 +41,29 @@ void LiveSet::addReg(CallCtx *ctx, Value *v) {
     if (DBG)
       errs() << "LiveSet::addReg <" << (void *)v << ">: " << *v << "\n\n";
     CtxVPair p = std::make_pair(ctx, v);
-    //ASSERT(!DS_IN(p, virtRegs));
     virtRegs.insert(p);
+    if (Util::isPHI(v))
+      phiVirtRegs.insert(p);
   }
 }
 
 void LiveSet::addReg(DynOprd *dynOprd) {
   if (!Util::isConstant(dynOprd)) { // Discard it if it is a LLVM Constant.
-    CtxVPair p = std::make_pair(dynOprd->getDynInstr()->getCallingCtx(), 
-      dynOprd->getStaticValue());
-    /*if (DS_IN(p, virtRegs)) {
-      errs() << "LiveSet::addReg assert failure<" << (void *)(dynOprd->getStaticValue())
-      << ">: " << *(dynOprd->getStaticValue()) << "\n";
-      CtxVDenseSet::iterator itr(virtRegs.begin());
-      for (; itr != virtRegs.end(); ++itr) {
-        CtxVPair p = *itr;
-        fprintf(stderr, "CtxV in virtRegs: <%p> <%p>\n", (void *)p.first, (void *)p.second);
-      }
-      assert(false);
-    }*/
-    /*SERRS << "LiveSet::addReg OK <" << (void *)(dynOprd->getStaticValue())
-      << ">: " << *(dynOprd->getStaticValue()) << "\n";*/
+    Value *v = dynOprd->getStaticValue();
+    CtxVPair p = std::make_pair(dynOprd->getDynInstr()->getCallingCtx(), v);
     virtRegs.insert(p);
+    if (Util::isPHI(v))
+      phiVirtRegs.insert(p);
   }
 }
 
 void LiveSet::delReg(DynOprd *dynOprd) {
-  CtxVPair p = std::make_pair(
-    dynOprd->getDynInstr()->getCallingCtx(), 
-    dynOprd->getStaticValue());
+  Value *v = dynOprd->getStaticValue();
+  CtxVPair p = std::make_pair(dynOprd->getDynInstr()->getCallingCtx(), v);
   ASSERT(DS_IN(p, virtRegs));
   virtRegs.erase(p);
+  if (Util::isPHI(v))
+    phiVirtRegs.erase(p);
 }
 
 CtxVDenseSet &LiveSet::getAllRegs() {
@@ -192,7 +185,7 @@ bdd LiveSet::getExtCallLoadMem() {
     Instruction *staticCall = idMgr->getOrigInstr(extCallInstr);
     if (DBG)
       stat->printDynInstr(extCallInstr, "LiveSet::getExtCallLoadMem ExtCall");
-    assert(isa<CallInst>(staticCall));
+    ASSERT(isa<CallInst>(staticCall));
     CallSite cs  = CallSite(cast<CallInst>(staticCall));
     unsigned argOffset = 0;
     for (CallSite::arg_iterator ci = cs.arg_begin(), ce = cs.arg_end(); ci != ce; ++ci, ++argOffset) {
@@ -215,4 +208,13 @@ finish:
   return retBDD;
 }
 
+bool LiveSet::phiDefBetween(CallCtx *ctx, InstrDenseSet *phiSet) {
+  InstrDenseSet::iterator itr(phiSet->begin());
+  for (; itr != phiSet->end(); ++itr) {
+    CtxVPair p = std::make_pair(ctx, (Value *)(*itr));
+    if (phiVirtRegs.count(p))
+      return true;
+  }
+  return false;
+}
 

@@ -160,6 +160,9 @@ namespace tern {
     void checkInstrMapConsistency(const char *tag);
 
     void readModulePath(std::string path);
+
+    /* Used by KLEE executor. */
+    bool isInternalInstr(llvm::Instruction *instr);
   };
 }
 

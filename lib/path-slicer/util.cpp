@@ -26,6 +26,11 @@ const BasicBlock *Util::getBasicBlock(const Instruction *instr) {
   return instr->getParent();
 }
 
+bool Util::isPHI(const llvm::Value *v) {
+  const Instruction *instr = dyn_cast<Instruction>(v);
+  return instr && instr->getOpcode() == Instruction::PHI;
+}
+
 bool Util::isPHI(const Instruction *instr) {
   return instr->getOpcode() == Instruction::PHI;
 }
@@ -242,5 +247,11 @@ std::string Util::printNearByFileLoc(const Instruction *instr) {
     } while (curDistance < distance);
   }
   return noLocation;
+}
+
+void Util::addUsedByPhiNodes(llvm::Value *v, InstrDenseSet *phiNodes) {
+  for (Value::use_iterator UI = v->use_begin(), E = v->use_end();UI != E; ++UI)
+    if (isa<PHINode>(*UI))
+      phiNodes->insert(dyn_cast<Instruction>(*UI));
 }
 

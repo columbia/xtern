@@ -17,6 +17,7 @@ namespace tern {
     static const llvm::Function *getFunction(const llvm::Instruction *instr);
     static const llvm::BasicBlock *getBasicBlock(const llvm::Instruction *instr);
 
+    static bool isPHI(const llvm::Value *v);
     static bool isPHI(const llvm::Instruction *instr);
     static bool isBr(const llvm::Instruction *instr);
     static bool isUniCondBr(const llvm::Instruction *instr);
@@ -48,6 +49,8 @@ namespace tern {
     static void addTargetDataToPM(llvm::Module *module, llvm::PassManager *pm);
 
     static std::string printNearByFileLoc(const llvm::Instruction *instr);
+
+    static void addUsedByPhiNodes(llvm::Value *v, InstrDenseSet *phiNodes);
   };
 }
 

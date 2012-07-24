@@ -482,3 +482,8 @@ void PathSlicer::checkInstrMapConsistency(const char *tag) {
 void PathSlicer::readModulePath(std::string path) {
   repair::Bc2BddPass::setModulePath(path);
 }
+
+bool PathSlicer::isInternalInstr(llvm::Instruction *instr) {
+  return idMgr.isInternalInstr(instr);
+}
+

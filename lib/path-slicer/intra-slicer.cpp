@@ -171,6 +171,12 @@ bool IntraSlicer::writtenBetween(DynBrInstr *dynBrInstr, DynInstr *dynPostInstr)
   return (bddBetween & bddOfLive) != bddfalse;
 }
 
+bool IntraSlicer::phiDefBetween(DynBrInstr *dynBrInstr, DynInstr *dynPostInstr) {
+  InstrDenseSet phiSet;
+  oprdSumm->getUsedByPhiSummBetween(dynBrInstr, dynPostInstr, phiSet);
+  return live.phiDefBetween(dynBrInstr->getCallingCtx(), &phiSet);
+}
+
 bool IntraSlicer::mayWriteFunc(DynInstr *dynInstr, DynCallInstr *caller) {
   // Passed in argument caller can be NULL, which means main().
   bdd bddOfCall = bddfalse;
@@ -265,6 +271,7 @@ void IntraSlicer::handleBranch(DynInstr *dynInstr) {
     takeBr(brInstr, brInstr->getTakenFlag());
   } else {
     DynInstr *head = slice.getHead();
+
     BEGINTIME(stat->intraBrDomSt);
     bool result1 = !postDominate(head, brInstr);
     ENDTIME(stat->intraBrDomTime, stat->intraBrDomSt, stat->intraBrDomEnd);
@@ -272,6 +279,7 @@ void IntraSlicer::handleBranch(DynInstr *dynInstr) {
       takeBr(brInstr, TakenFlags::INTRA_BR_N_POSTDOM);
       goto finish;
     }
+
     BEGINTIME(stat->intraBrEvBetSt);
     bool result2 = eventBetween(brInstr, head);
     ENDTIME(stat->intraBrEvBetTime, stat->intraBrEvBetSt, stat->intraBrEvBetEnd);
@@ -279,11 +287,18 @@ void IntraSlicer::handleBranch(DynInstr *dynInstr) {
       takeBr(brInstr, TakenFlags::INTRA_BR_EVENT_BETWEEN);
       goto finish;
     }
+
     BEGINTIME(stat->intraBrWrBetSt);
     bool result3 = writtenBetween(brInstr, head);
     ENDTIME(stat->intraBrWrBetTime, stat->intraBrWrBetSt, stat->intraBrWrBetEnd);
     if (result3) {
       takeBr(brInstr, TakenFlags::INTRA_BR_WR_BETWEEN);
+      goto finish;
+    }
+
+    bool result4 = phiDefBetween(brInstr, head);
+    if (result4) {
+      takeBr(brInstr, TakenFlags::INTRA_BR_PHI_DEF_BETWEEN);
       goto finish;
     }
    }

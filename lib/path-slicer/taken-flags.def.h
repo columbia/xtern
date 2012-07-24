@@ -53,6 +53,7 @@ DEF(INTRA_PHI_BR_CTRL_DEP, IntraThread)
 DEF(INTRA_BR_N_POSTDOM, IntraThread)
 DEF(INTRA_BR_EVENT_BETWEEN, IntraThread)
 DEF(INTRA_BR_WR_BETWEEN, IntraThread)
+DEF(INTRA_BR_PHI_DEF_BETWEEN, IntraThread)
 // TBD
 
 /* Reasons of taken by handling return instructions. */

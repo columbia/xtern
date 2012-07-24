@@ -132,4 +132,3 @@ bool InstrIdMgr::isInternalInstr(llvm::Instruction *instr) {
   return (getOrigInstrId(instr) != -1);
 }
 
-

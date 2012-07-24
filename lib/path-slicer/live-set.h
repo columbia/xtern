@@ -26,6 +26,10 @@ namespace tern {
     /** Store all the virtual registers, they are only calling context plus the value pointer 
           of virtual registers. **/
     CtxVDenseSet virtRegs;
+    /** The phiVirtRegs stores the phi nodes of the virt regs. We use this "redundant" design
+    to speed up lookup. Whenever a virt reg is removed or added against the virtRegs, the same operation
+    is also done agains phiVirtRegs. **/
+    CtxVDenseSet phiVirtRegs;
 
     /** Store all the load instructions. **/
     llvm::DenseSet<DynInstr *> loadInstrs;
@@ -84,6 +88,10 @@ namespace tern {
     /** Get the abstract locations for all load memory locations.
     This is used in handleMem() in intra-thread phase. **/
     bdd getExtCallLoadMem();
+
+    /** Given a calling context and a set of phi intructions, see whether this combination is in the phiVirtRegs,,
+    if yes, it means phi-definition-between. **/
+    bool phiDefBetween(CallCtx *ctx, InstrDenseSet *phiSet);
   };
 }
 

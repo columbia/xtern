@@ -172,10 +172,15 @@ void OprdSumm::DFSBasicBlock(BasicBlock *x, BasicBlock *sink,
     InstrDenseSet *loadSet = bbLoadSumm[x];
     assert(loadSet);
     summ.insert(loadSet->begin(), loadSet->end());
-  } else {
+  } else if (oprdType == Store) {
     InstrDenseSet *storeSet = bbStoreSumm[x];
     assert(storeSet);
     summ.insert(storeSet->begin(), storeSet->end());
+  } else {
+    assert(oprdType == PHI);
+    InstrDenseSet *phiSet = bbPhiDefSumm[x];
+    assert(phiSet);
+    summ.insert(phiSet->begin(), phiSet->end());
   }
   
   for (succ_iterator it = succ_begin(x); it != succ_end(x); ++it) {
@@ -187,9 +192,12 @@ void OprdSumm::DFSBasicBlock(BasicBlock *x, BasicBlock *sink,
 
 void OprdSumm::initAllSumm(llvm::Module &M) {
   for (Module::iterator fi = M.begin(); fi != M.end(); ++fi) {
-    funcLoadSumm[fi] = funcStoreSumm[fi] = NULL;
+    funcLoadSumm[fi] = NULL;
+    funcStoreSumm[fi] = NULL;
     for (Function::iterator bi = fi->begin(); bi != fi->end(); ++bi) {
-      bbLoadSumm[bi] = bbStoreSumm[bi] = NULL;
+      bbLoadSumm[bi] = NULL;
+      bbStoreSumm[bi] = NULL;
+      bbPhiDefSumm[bi] = NULL;
     }
   }
 }
@@ -216,6 +224,7 @@ void OprdSumm::collectFuncSummLocal(llvm::Function *f) {
   for (Function::iterator bi = f->begin(); bi != f->end(); ++bi) {
     bbLoadSumm[bi] = new InstrDenseSet;
     bbStoreSumm[bi] = new InstrDenseSet;
+    bbPhiDefSumm[bi] = new InstrDenseSet;
     for (BasicBlock::iterator ii = bi->begin(); ii != bi->end(); ++ii) {
       collectInstrSummLocal(ii);
     }
@@ -245,6 +254,8 @@ void OprdSumm::collectInstrSummLocal(llvm::Instruction *instr) {
       }
     }
   }
+
+  Util::addUsedByPhiNodes(instr, bbPhiDefSumm[bb]);
 }
 
 void OprdSumm::collectSummTopDown(llvm::Module &M) {
@@ -323,5 +334,19 @@ void OprdSumm::addSummTopDown(InstrDenseSet *calleeSet,
   InstrDenseSet::iterator itr(calleeSet->begin());
   for (; itr != calleeSet->end(); ++itr)
     callerSet->insert(*itr);
+}
+
+void OprdSumm::getUsedByPhiSummBetween(DynBrInstr *prevBrInstr, DynInstr *postInstr, InstrDenseSet &phiSet) {
+  // TBD. traverse the basicblocks and then collect all phinodes from the bbPhiDefSumm.
+  visitedBB.clear();
+  BasicBlock *x = Util::getBasicBlock(idMgr->getOrigInstr(prevBrInstr));
+  BasicBlock *sink = Util::getBasicBlock(idMgr->getOrigInstr(postInstr));
+  for (succ_iterator it = succ_begin(x); it != succ_end(x); ++it) {
+    BasicBlock *y = *it;
+    if (y == prevBrInstr->getSuccessorBB())   // We can ignore the executed branch.
+      continue;
+    DFSBasicBlock(y, sink, phiSet, PHI);
+  }
+  printSumm(phiSet, "OprdSumm::getUsedByPhiSummBetween");
 }
 

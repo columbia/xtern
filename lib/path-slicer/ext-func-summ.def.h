@@ -70,4 +70,20 @@ DEF(strtok, ExtStore, ExtLoad)
 //size_t strxfrm ( char * destination, const char * source, size_t num );
 DEF(strxfrm, ExtStore, ExtLoad, ExtReadVal)
 
+#if 0
+/* External function summaries for file operations, since they will load from or store to memory buffers, just like memcpy().
+    This is necessary because some checkers such as assert may also use file operations as well.
+    In order to handle this correctly, may need to reconsider the mechanism of handleCheckerTarget().
+*/
+//size_t fread ( void * ptr, size_t size, size_t count, FILE * stream );
+DEF(fread,                  ExtStore, ExtReadVal, ExtReadVal, ExtReadVal)
+DEF(fread_unlocked, ExtStore, ExtReadVal, ExtReadVal, ExtReadVal)
+
+//size_t fwrite ( const void * ptr, size_t size, size_t count, FILE * stream );
+DEF(fwrite,                  ExtLoad, ExtReadVal, ExtReadVal, ExtReadVal)
+DEF(fwrite_unlocked, ExtLoad, ExtReadVal, ExtReadVal, ExtReadVal)
+
+// TBD.
+#endif
+
 
