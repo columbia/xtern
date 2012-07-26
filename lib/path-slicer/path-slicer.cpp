@@ -339,11 +339,6 @@ void PathSlicer::recordCheckerResult(void *pathId, Checker::Result globalResult,
   if (BIT_NEQ(globalResult, Checker::OK) || BIT_NEQ(localResult, Checker::OK)) {
     fprintf(stderr, "PathSlicer::recordCheckerResult, pathId %p, isPruned %d, isHalted %d, globalResult %d, localResult %d.\n",
       (void *)pathId, isPruned, isKleeHalted, (int)globalResult, (int)localResult);
-    if (MarkPrunedOnly && isPruned && (globalResult & Checker::ERROR || localResult & Checker::ERROR)) {
-      fprintf(stderr, "PathSlicer::recordCheckerResult, a state %p triggered a checker error after pruned.\n",
-        pathId);
-      //exit(1);
-    }
   }
 
   // If this state is already pruned, just discard it, since its trace and targets have already been freed.  
