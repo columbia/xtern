@@ -337,9 +337,9 @@ void Stat::collectExternalCalls(DynCallInstr *dynCallInstr) {
   externalCalls.insert(instr);
 }
 
-void Stat::collectEventCalls(DynCallInstr *dynCallInstr) {
+void Stat::collectExedEventCalls(DynCallInstr *dynCallInstr) {
   if (DBG)
-    printDynInstr(dynCallInstr, "Stat::collectEventCalls");
+    printDynInstr(dynCallInstr, "Stat::collectExedEventCalls");
   Instruction *instr = idMgr->getOrigInstr(dynCallInstr);
   eventCalls.insert(instr);
 }
@@ -360,7 +360,7 @@ void Stat::collectExed(DynInstr *dynInstr) {
     if (!funcSumm->isInternalCall(dynInstr))
       collectExternalCalls(callInstr);
     if (funcSumm->isEventCall(callInstr))
-      collectEventCalls(callInstr);
+      collectExedEventCalls(callInstr);
   }
 
   // Collect mem op stat.

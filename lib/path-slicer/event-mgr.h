@@ -42,7 +42,7 @@ namespace tern {
     void DFS(llvm::BasicBlock *x, llvm::BasicBlock *sink);
     void traverse_call_graph(llvm::Module &M);
     void setupEvents(llvm::Module &M);
-    void collectEventCalls(llvm::Function *event);
+    void collectStaticEventCalls(llvm::Function *event);
     static bool isIgnoredEventCall(llvm::Instruction *call, llvm::Function *event);
     static bool isStdErrOrOut(llvm::BasicBlock *curBB, llvm::Value *v);
 

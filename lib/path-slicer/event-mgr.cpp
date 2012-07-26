@@ -167,7 +167,7 @@ void EventMgr::traverse_call_graph(Module &M) {
   parent.clear();
   DenseSet<Function *>::iterator itr(eventFuncs.begin());
   for (; itr != eventFuncs.end(); ++itr) {
-    collectEventCalls(*itr);
+    collectStaticEventCalls(*itr);
     DFS(*itr);
   }
 
@@ -204,7 +204,7 @@ void EventMgr::printEventCalls() {
       }
 }
 
-void EventMgr::collectEventCalls(Function *event) {
+void EventMgr::collectStaticEventCalls(Function *event) {
   InstList css = CG->get_call_sites(event);
   for (size_t i = 0; i < css.size(); ++i) {
     if (isIgnoredEventCall(css[i], event))

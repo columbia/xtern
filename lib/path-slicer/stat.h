@@ -67,7 +67,7 @@ namespace tern {
   protected:
     void collectExternalCalls(DynCallInstr *dynCallInstr);
     void collectExedStaticInstrs(DynInstr *dynInstr);
-    void collectEventCalls(DynCallInstr *dynCallInstr);
+    void collectExedEventCalls(DynCallInstr *dynCallInstr);
     void printFileLoc(llvm::raw_ostream &S, const llvm::Instruction *instr);
 
   public:
