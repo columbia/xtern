@@ -7,6 +7,7 @@ using namespace llvm;
 using namespace klee;
 
 TargetMgr::TargetMgr() {
+  stat = NULL;
   targets.clear();
   targetMasks.clear();
 }
@@ -15,24 +16,16 @@ TargetMgr::~TargetMgr() {
 
 }
 
+void TargetMgr::init(Stat *stat) {
+  this->stat = stat;
+}
+
 void TargetMgr::markTarget(void *pathId, DynInstr *dynInstr, uchar reason, klee::Checker :: ResultType mask) {
   if (targets.count(pathId) == 0)
     targets[pathId] = new DenseSet<DynInstr *>;
   dynInstr->setTaken(reason);
   targets[pathId]->insert(dynInstr);
   setTargetMask(dynInstr,  mask);
-}
-
-size_t TargetMgr::getLargestTargetIdx(void *pathId) {
-  assert(hasTarget(pathId));
-  size_t max = 0;
-  DenseSet<DynInstr *>::iterator itr(targets[pathId]->begin());
-  for (; itr != targets[pathId]->end(); ++itr) {
-    DynInstr *dynInstr = *itr;
-    if (max < dynInstr->getIndex())
-      max = dynInstr->getIndex();
-  }
-  return max;
 }
 
 bool TargetMgr::hasTarget(void *pathId) {
@@ -66,5 +59,21 @@ void TargetMgr::setTargetMask(DynInstr *dynInstr, klee::Checker::ResultType mask
 klee::Checker::ResultType TargetMgr::getTargetMask(DynInstr *dynInstr) {
   assert(DM_IN(dynInstr, targetMasks));
   return targetMasks[dynInstr];
+}
+
+void TargetMgr::printTargets(void *pathId, const char *tag) {
+  if (!hasTarget(pathId))
+    return;
+  llvm::DenseSet<DynInstr *> *pathTargets = targets[pathId];
+  llvm::DenseSet<DynInstr *>::iterator itr = pathTargets->begin();
+  for (; itr != pathTargets->end(); ++itr)
+    stat->printDynInstr(*itr, tag);
+}
+
+size_t TargetMgr::sizeOfTargets(void *pathId) {
+  if (!hasTarget(pathId))
+    return 0;
+  else
+    return targets[pathId]->size();
 }
 

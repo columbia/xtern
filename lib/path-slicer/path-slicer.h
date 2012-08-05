@@ -99,13 +99,15 @@ namespace tern {
     A challenge is if we enforce partial order of racy edge, how to adjust the logical clock 
     for these regions, given the logical clocks are based on start/end totol order of synch op index. */
     void enforceRacyEdges();
-    void calStat(std::set<size_t> &rmBrs, std::set<size_t> &rmCalls);
+    void calStat(void *pathId, std::set<size_t> &rmBrs, std::set<size_t> &rmCalls);
     llvm::Module *loadModule(const char *path);
 
     /* Filter out instructions before the first instruction in main(), such as C++ ctor and klee_range(). */
     bool getStartRecord(void *instr);
 
     void dumpTrace(DynInstrVector *trace, const char *tag);
+
+    DynInstr *getLatestBrOrExtCall(void *pathId);
 
   public:
         static char ID;
@@ -163,6 +165,11 @@ namespace tern {
 
     /* Used by KLEE executor. */
     bool isInternalInstr(llvm::Instruction *instr);
+
+    /* Tracke symbolic query time. */
+    void startSymQuery(void *pathId);
+    void endSymQuery(void *pathId, int result);
+
   };
 }
 

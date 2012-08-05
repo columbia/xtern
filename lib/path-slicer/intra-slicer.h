@@ -98,7 +98,7 @@ namespace tern {
     used operands, do not need to care about its destination operand, even if it exists). */
     void takeTestTarget(DynInstr *dynInstr);
 
-    void calStat(std::set<size_t> &rmBrs, std::set<size_t> &rmCalls);
+    void calStat(void *pathId, std::set<size_t> &rmBrs, std::set<size_t> &rmCalls);
   };
 }
 

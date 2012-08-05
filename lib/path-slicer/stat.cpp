@@ -19,6 +19,17 @@ using namespace klee;
 extern cl::opt<std::string> UseOneChecker;
 extern cl::opt<bool> MarkPrunedOnly;
 
+SymQueryRec::SymQueryRec(void *pathId, DynInstr *dynInstr) {
+  this->pathId = pathId;
+  this->dynInstr = dynInstr;
+  queryTime = 0;
+  result = 0;
+}
+
+SymQueryRec::~SymQueryRec() {
+
+}
+
 MemOpStat::MemOpStat() {
   aliasMgr = NULL;
   idMgr = NULL;
@@ -248,6 +259,9 @@ void Stat::printFinalFormatResults() {
 }
 
 const char *Stat::printInstr(const llvm::Instruction *instr, bool withFileLoc) {
+  if (!instr) {
+    return "Stat::printInstr NULL static instr!!\n";
+  }
   if (DM_IN(instr, buf)) {
     return buf[instr]->str().c_str();
   } else {
@@ -279,6 +293,11 @@ void Stat::printDynInstr(DynInstr *dynInstr, const char *tag, bool withFileLoc) 
 }
 
 void Stat::printDynInstr(raw_ostream &S, DynInstr *dynInstr, const char *tag, bool withFileLoc) {
+  if (!dynInstr) {
+    S << tag << " Stat::printDynInstr NULL dyn instr!!\n";
+    return;
+  }
+
   Instruction *instr = idMgr->getOrigInstr(dynInstr);
   S << tag
     << ": IDX: " << dynInstr->getIndex()
@@ -486,5 +505,57 @@ void Stat::printEventCalls() {
 
 void Stat::incNumChkrErrs() {
   numChkrErrs++;
+}
+
+void Stat::startSymQuery(void *pathId, DynInstr *dynInstr) {
+  SymQueryRec *rec = new SymQueryRec(pathId, dynInstr);
+  symQueryStat.push_back(rec);
+  BEGINTIME(rec->querySt);
+}
+
+void Stat::endSymQuery(void *pathId, DynInstr *dynInstr, int result) {
+  SymQueryRec *rec = symQueryStat.back();
+  assert(rec->pathId == pathId && rec->dynInstr == dynInstr);
+  /*if (result != 0) {  // result == 0 means the solver of KLEE returns "Unknown". We are interested in Unknown queries.
+    symQueryStat.pop_back();
+    delete rec;
+    return;
+  }*/
+  ENDTIME(rec->queryTime, rec->querySt, rec->queryEnd);
+  rec->result = result;
+}
+
+void Stat::printSymQueryStat() {
+  size_t numUnkownQueries = 0;
+  double totalQueryTime = 0;
+  double totalUnknownQueryTime = 0;
+  DenseMap<int, int> staticInstrFreq;
+  
+  for (size_t i = 0; i < symQueryStat.size(); i++) {
+    SymQueryRec *rec = symQueryStat[i];
+    totalQueryTime += rec->queryTime;
+    if (rec->result == 0) {
+      numUnkownQueries++;
+      totalUnknownQueryTime += rec->queryTime;
+      errs() << "Path Id " << rec->pathId << ", time cost " << rec->queryTime << " s, result " << rec->result << ": ";
+      printDynInstr(rec->dynInstr, "Stat::printSymQueryStat");
+
+      // calculate freq.
+      int staticInstrId = rec->dynInstr->getOrigInstrId();
+      if (!staticInstrFreq.count(staticInstrId))
+        staticInstrFreq[staticInstrId] = 1;
+      else
+        staticInstrFreq[staticInstrId] = staticInstrFreq[staticInstrId] + 1;
+    }
+  }
+
+  // print freq.
+  DenseMap<int, int>::iterator itr = staticInstrFreq.begin();
+  for (; itr != staticInstrFreq.end(); ++itr) {
+    errs() << "Unknown sym query freq: static instr id (" << itr->first << ") -> freq (" << itr->second << ").\n";
+  }
+  
+  errs() << "Stat::printSymQueryStat # quries (all/unknown) " << symQueryStat.size() << "/" << numUnkownQueries
+    << ", total time (all/unknown) " << totalQueryTime << "/" << totalUnknownQueryTime << " s.\n\n";
 }
 

@@ -97,25 +97,25 @@ bool EventMgr::isEventCall(Instruction *instr) {
   return false;
 }
 
-void EventMgr::DFS(Function *f) {
-  visited.insert(f);
+void EventMgr::DFSCollectMayCallEventFuncs(Function *f) {
+  mayCallEventFuncs.insert(f);
   InstList css = CG->get_call_sites(f);
-  fprintf(stderr, "EventMgr::DFS traverse function %s, callsite " SZ "\n",
+  fprintf(stderr, "EventMgr::DFSCollectMayCallEventFuncs traverse function %s, callsite " SZ "\n",
     f->getNameStr().c_str(), css.size());
   for (size_t i = 0; i < css.size(); ++i) {
     if (isIgnoredEventCall(css[i], f))
       continue;
     Function *caller = css[i]->getParent()->getParent();
-    //errs() << "EventMgr::DFS callsite caller " << caller->getNameStr() << ":" << *(css[i]) << "\n";
-    if (visited.count(caller) == 0) {
+    //errs() << "EventMgr::DFSCollectMayCallEventFuncs callsite caller " << caller->getNameStr() << ":" << *(css[i]) << "\n";
+    if (mayCallEventFuncs.count(caller) == 0) {
       parent[caller] = f;
-      DFS(caller);
+      DFSCollectMayCallEventFuncs(caller);
     }
   }
 }
 
 bool EventMgr::mayCallEvent(Function *f) {
-  return visited.count(f);
+  return mayCallEventFuncs.count(f);
 }
 
 bool EventMgr::eventBetween(BranchInst *prevInstr, Instruction *postInstr) {
@@ -163,17 +163,17 @@ void EventMgr::DFS(BasicBlock *x, BasicBlock *sink) {
 }
 
 void EventMgr::traverse_call_graph(Module &M) {
-  visited.clear();
+  mayCallEventFuncs.clear();
   parent.clear();
   DenseSet<Function *>::iterator itr(eventFuncs.begin());
   for (; itr != eventFuncs.end(); ++itr) {
     collectStaticEventCalls(*itr);
-    DFS(*itr);
+    DFSCollectMayCallEventFuncs(*itr);
   }
 
   // DBG.
-  DenseSet<Function *>::iterator itrVisited(visited.begin());
-  for (; itrVisited != visited.end(); ++itrVisited) {
+  DenseSet<Function *>::iterator itrVisited(mayCallEventFuncs.begin());
+  for (; itrVisited != mayCallEventFuncs.end(); ++itrVisited) {
     Function *f = *itrVisited;
     errs() << "EventMgr::traverse_call_graph may call event function " << f->getNameStr() << "\n";
   }

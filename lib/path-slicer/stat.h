@@ -19,6 +19,19 @@ namespace tern {
   class FuncSumm;
   class AliasMgr;
   class Stat;
+  
+  class SymQueryRec {
+  public:
+    void *pathId;
+    DynInstr *dynInstr;
+    struct timeval querySt;
+    struct timeval queryEnd;
+    double queryTime;
+    int result;
+    SymQueryRec(void *pathId, DynInstr *dynInstr);
+    ~SymQueryRec();
+  };
+  
   class MemOpStat {
   public:
     Stat *stat;
@@ -42,8 +55,10 @@ namespace tern {
     void collectMemOpStat(DynMemInstr *memInstr);
     void print();
   };
+  
   class Stat {
   private:
+    std::vector<SymQueryRec *> symQueryStat;
     MemOpStat memOpStat;
     InstrIdMgr *idMgr;
     CallStackMgr *ctxMgr;
@@ -203,6 +218,12 @@ namespace tern {
     void printEventCalls();
 
     void incNumChkrErrs();
+
+    void startSymQuery(void *pathId, DynInstr *dynInstr);
+
+    void endSymQuery(void *pathId, DynInstr *dynInstr, int result);
+
+    void printSymQueryStat();
   };
 }
 

@@ -30,7 +30,7 @@ namespace tern {
     typedef llvm::DenseMap<const llvm::Function *, InstList> FuncSiteMapping;
 		
     llvm::DenseMap<llvm::Function *, llvm::Function *> parent; // Used in DFS
-    llvm::DenseSet<llvm::Function *> visited;
+    llvm::DenseSet<llvm::Function *> mayCallEventFuncs;
     DenseMap<BasicBlock *, bool> bbVisited;
     llvm::DenseSet<llvm::Function *> eventFuncs;
     llvm::DenseSet<llvm::Instruction *> eventCallSites;
@@ -38,7 +38,7 @@ namespace tern {
     llvm::CallGraphFP *CG;
 
     bool is_exit_block(llvm::BasicBlock *bb);
-    void DFS(llvm::Function *f);
+    void DFSCollectMayCallEventFuncs(llvm::Function *f);
     void DFS(llvm::BasicBlock *x, llvm::BasicBlock *sink);
     void traverse_call_graph(llvm::Module &M);
     void setupEvents(llvm::Module &M);

@@ -70,6 +70,7 @@ PathSlicer::~PathSlicer() {
   ENDTIME(stat.pathSlicerTime, stat.pathSlicerSt, stat.pathSlicerEnd);
   if (DBG)
     stat.printModule(this->outputDir);
+  stat.printSymQueryStat();
   stat.printStat("PathSlicer::calStat FINAL");
   stat.printEventCalls();
   stat.printFinalFormatResults();
@@ -182,6 +183,9 @@ void PathSlicer::init(llvm::Module &M) {
   stat.init(&idMgr, &ctxMgr, &funcSumm, &aliasMgr);
   stat.collectStaticInstrs(*origModule);
 
+  /* init target mgr. */
+  tgtMgr.init(&stat);
+
   /* Destroy call graph, because it is not longer useful. */
   CG.destroy();
 
@@ -220,8 +224,6 @@ void PathSlicer::runPathSlicer(void *pathId, set<size_t> &rmBrs,
   DynInstrVector *trace = allPathTraces[pathId];
   fprintf(stderr, "PathSlicer::runPathSlicer START pathId %p, isPruned %d, isHalted %d, size " SZ "\n",
     pathId, isPruned, isHalted, trace->size());
-  if (DBG)
-    dumpTrace(trace, "PathSlicer::runPathSlicer");
   if (isPruned)
     goto finish;
   if (isHalted) {
@@ -264,7 +266,7 @@ void PathSlicer::runPathSlicer(void *pathId, set<size_t> &rmBrs,
   } while (0);
   
   // Calculate stat results.
-  calStat(rmBrs, rmCalls);
+  calStat(pathId, rmBrs, rmCalls);
 
   // Free the trace along current path. 
   traceUtil->postProcess(trace);
@@ -278,10 +280,10 @@ finish:
     pathId, isPruned, isHalted);
 }
 
-void PathSlicer::calStat(set<size_t> &rmBrs, set<size_t> &rmCalls) {
+void PathSlicer::calStat(void *pathId, set<size_t> &rmBrs, set<size_t> &rmCalls) {
   errs() << BAN;
   interSlicer.calStat();
-  intraSlicer.calStat(rmBrs, rmCalls);
+  intraSlicer.calStat(pathId, rmBrs, rmCalls);
   stat.printStat("PathSlicer::calStat");
   stat.printExplored();
   errs() << BAN;
@@ -309,13 +311,13 @@ void PathSlicer::record(void *pathId, void *instr, void *state, void *f) {
     return;
   if (!DM_IN(pathId, allPathTraces))
     allPathTraces[pathId] = new DynInstrVector;
-  if (DBG) {
+  /*if (DBG) {
     Instruction *call = ((KInstruction *)instr)->inst;
     if (Util::isCall(call) && idMgr.isInternalInstr(call)) {
       fprintf(stderr, "\n\ncurrent recordCall state %p start: ", pathId);
       errs() << "call static instr: " << *call << "\n";
     }
-  }
+  }*/
   traceUtil->record(allPathTraces[pathId], instr, state, f);
 }
 
@@ -390,14 +392,12 @@ void PathSlicer::dumpTrace(DynInstrVector *trace, const char *tag) {
   errs() << BAN;
 }
 
-
-// Returning -1 is legal, klee states from klee_init_env().
-size_t PathSlicer::getLatestBrOrExtCallIdx(void *pathId) {
+DynInstr *PathSlicer::getLatestBrOrExtCall(void *pathId) {
   if (!DM_IN(pathId, allPathTraces))
-    return (size_t)-1;
+    return NULL;
   DynInstrVector *trace = allPathTraces[pathId];
   if (trace->size() == 0)
-    return (size_t)-1;
+    return NULL;
 
   /* Note: according to klee, states do not have to be forked by only branches, 
 	it could be load/store, malloc()/free(), or calls to function pointers.
@@ -407,17 +407,26 @@ size_t PathSlicer::getLatestBrOrExtCallIdx(void *pathId) {
   Instruction *instr = idMgr.getOrigInstr(dynInstr);
   if (!Util::isForkStateInstr(instr)) {
     errs() << "pathId is inconsistent: " << pathId << "\n";
-    dumpTrace(trace, "PathSlicer::getLatestBrOrExtCallIdx");
-    stat.printDynInstr(dynInstr, "PathSlicer::getLatestBrOrExtCallIdx last one");
-    exit(1);
+    dumpTrace(trace, "PathSlicer::getLatestBrOrExtCall");
+    stat.printDynInstr(dynInstr, "PathSlicer::getLatestBrOrExtCall last one");
+    assert(false);
   }
 
-  if (DBG) {
-    errs() << "PathSlicer::getLatestBrOrExtCallIdx pathId is: " << pathId << "\n";
-    stat.printDynInstr(dynInstr, "PathSlicer::getLatestBrOrExtCallIdx");
-  }
+  /*if (DBG) {
+    errs() << "PathSlicer::getLatestBrOrExtCall pathId is: " << pathId << "\n";
+    stat.printDynInstr(dynInstr, "PathSlicer::getLatestBrOrExtCall");
+  }*/
     
-  return dynInstr->getIndex();
+  return dynInstr;
+}
+
+// Returning -1 is legal, klee states from klee_init_env().
+size_t PathSlicer::getLatestBrOrExtCallIdx(void *pathId) {
+  DynInstr *dynInstr = getLatestBrOrExtCall(pathId);
+  if (!dynInstr)
+    return (size_t)-1;
+  else
+    return dynInstr->getIndex();
 }
 
 void PathSlicer::collectExplored(llvm::Instruction *instr) {
@@ -480,5 +489,21 @@ void PathSlicer::readModulePath(std::string path) {
 
 bool PathSlicer::isInternalInstr(llvm::Instruction *instr) {
   return idMgr.isInternalInstr(instr);
+}
+
+void PathSlicer::startSymQuery(void *pathId) {
+  DynInstr *dynInstr = getLatestBrOrExtCall(pathId);
+  //assert(dynInstr);
+  if (!dynInstr)
+    return;
+  stat.startSymQuery(pathId, dynInstr);
+}
+
+void PathSlicer::endSymQuery(void *pathId, int result) {
+  DynInstr *dynInstr = getLatestBrOrExtCall(pathId);
+  //assert(dynInstr);
+  if (!dynInstr)
+    return;
+  stat.endSymQuery(pathId, dynInstr, result);
 }
 

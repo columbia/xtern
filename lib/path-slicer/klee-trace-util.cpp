@@ -87,6 +87,10 @@ void KleeTraceUtil::record(DynInstrVector *trace, KInstruction *kInstr,
   Instruction *instr = kInstr->inst;
 
   // DBG.
+  /*if (DBG) {
+    errs() << "\n\nKleeTraceUtil::record any (internal/external) instr: " << stat->printInstr(instr);
+    errs() << "\n\n";
+  }*/
   if (DBG && (Util::isRet(instr) || Util::isCall(instr))) { 
     Function *f = instr->getParent()->getParent();
     if (f->hasName() &&

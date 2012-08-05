@@ -97,7 +97,10 @@ bool Util::isForkStateInstr(const llvm::Instruction *instr) {
     opCode == Instruction::Switch ||
     opCode == Instruction::Call ||
     opCode == Instruction::Load ||
-    opCode == Instruction::Store
+    opCode == Instruction::Store ||
+    opCode == Instruction::Ret  /* This also possible, because the ret 
+    instruction of main() can be followed by a call to exit() in 
+    __uclibc_main() and contains branch. */
     )
     return true;
   return false;

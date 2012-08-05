@@ -151,12 +151,15 @@ bool IntraSlicer::eventBetween(DynBrInstr *dynBrInstr, DynInstr *dynPostInstr) {
   Instruction *postInstr = NULL;
   if (dynPostInstr) /* dynPostInstr can be NULL because sometimes we start from empty target. */
     postInstr = idMgr->getOrigInstr((DynInstr *)dynPostInstr);
-  else {
+  else
     postInstr = cfgMgr->getStaticPostDom(prevInstr);
-    if (DBG && postInstr)
-      errs() << "IntraSlicer::eventBetween postInstr: " << *(postInstr) << "\n";
+  bool result = funcSumm->eventBetween(branch, postInstr);
+  if (DBG) {
+    errs() << "\n\nIntraSlicer::eventBetween result " << result << ":\n";
+    errs() << "IntraSlicer::eventBetween prevInstr: " << stat->printInstr(prevInstr) << "\n";
+    errs() << "IntraSlicer::eventBetween postInstr: " << stat->printInstr(postInstr) << "\n\n\n";
   }
-  return funcSumm->eventBetween(branch, postInstr);
+  return result;
 }
 
 bool IntraSlicer::writtenBetween(DynBrInstr *dynBrInstr, DynInstr *dynPostInstr) {
@@ -410,17 +413,19 @@ correctly and taken.
 Overall, if we backtrack to main() and still do not need to take it, then we do not tak the exit(),
 otherwise we have to take it and have to take its caller, too (in order to maintain the effect of "exit"). */
 void IntraSlicer::handleProcessExitCall(DynInstr *dynInstr) {
-  if (DBG)
-    stat->printDynInstr(dynInstr, "handleProcessExitCall");
   DynProcessExitCallInstr *exitCall = (DynProcessExitCallInstr *)dynInstr;
-
-  // Start the recursive loop.
   DynCallInstr *caller = exitCall->getCaller();
+  
+  // Start the recursive loop.
   DynInstr *dyn = dynInstr;
   bool reason1 = false;
   bool reason2 = false;
   bool remove = false;
   while (true) {
+    if (DBG) {
+      stat->printDynInstr(dyn, "handleProcessExitCall");
+      stat->printDynInstr(caller, "CALLER handleProcessExitCall");
+    }
     reason1 = mayCallEvent(caller);
     reason2 = mayWriteFunc(dyn, caller);
     SERRS << "IntraSlicer::handleProcessExitCall reason1 " << reason1
@@ -626,9 +631,10 @@ void IntraSlicer::takeTestTarget(DynInstr *dynInstr) {
   curIndex = dynInstr->getIndex()-1;
 }
 
-void IntraSlicer::calStat(set<size_t> &rmBrs, set<size_t> &rmCalls) {
+void IntraSlicer::calStat(void *pathId, set<size_t> &rmBrs, set<size_t> &rmCalls) {
   std::string checkTag = LLVM_CHECK_TAG;
   checkTag += "IntraSlicer::calStat TAKEN";
+  DynInstr *firstTakenInstr = NULL;
   size_t numExedInstrs = trace->size();
   size_t numTakenInstrs = slice.size();
   size_t numExedBrs = 0;
@@ -680,6 +686,7 @@ void IntraSlicer::calStat(set<size_t> &rmBrs, set<size_t> &rmCalls) {
     // Handle taken instructions.
     if (dynInstr->isTaken()) {
       // Handle taken branches.
+      firstTakenInstr = dynInstr;
       if (Util::isBr(instr)) {
         numTakenBrs++;
         if (!Util::isUniCondBr(instr)) {
@@ -708,7 +715,14 @@ void IntraSlicer::calStat(set<size_t> &rmBrs, set<size_t> &rmCalls) {
     << ";  numTakenSymBrs: " << numTakenSymBrs
     << "; StaticExed/Static Instrs: " << stat->sizeOfExedStaticInstrs() << "/" << stat->sizeOfStaticInstrs()
     << ";  numTakenExtCalls/numExedExtCalls: " << numTakenExtCalls << "/" << numExedExtCalls
+    << "; pathId: " << pathId
+    << "; numExedEvents: " << tgtMgr->sizeOfTargets(pathId)
+    << "; firstTakenInstr reason: " << (firstTakenInstr?firstTakenInstr->takenReason():"NULL")
     << ";\n\n\n";
+
+  if (firstTakenInstr)
+    stat->printDynInstr(firstTakenInstr, "IntraSlicer::calStat firstTakenInstr");
+  tgtMgr->printTargets(pathId, "IntraSlicer::calStat exed events");
 
   if (DBG)
     stat->printExternalCalls();
