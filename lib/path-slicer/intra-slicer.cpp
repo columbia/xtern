@@ -393,76 +393,79 @@ finished:
   ENDTIME(stat->intraCallTime, stat->intraCallSt, stat->intraCallEnd);
 }
 
-/*
-Complicated, because exit() can be viewed as multiple return points of multiple functions,
-so we have to recursively look back to callers. 
-Note we have to take the exit() call, because it has effect "exit", if we do not take it, we would
-go down different paths.
-e.g., the foo() below, current path has an effect "exit", if we do not take this exit(), the input
-may drive x to go down a different path which just return and the process goes on to run,
-which has different effect from current path.
-foo(x) {
-  if (x)
-    exit(0);
-  else
-    return 1;
+
+/** Problem: we want to know whether an exit() call would reach any events in 
+the rest of an execution. If it would, we must take all branches (but in implementation, we only 
+need to take the first branch, and all the other branches would also be taken due to the path slicing 
+mechanism) that ensure the reachability of the this exit(), in order to make sure the process terminates
+(so it will not reach any event later). **/
+void IntraSlicer::handleProcessExitCall(DynInstr *exitCall) {
+  DynInstr *postInstr = exitCall;
+  DynCallInstr *caller = ((DynCallInstr *)postInstr)->getCaller();
+  uchar tid = postInstr->getTid();
+  DynInstr *cur = NULL;
+
+  while (true) {
+    // The inner loop to backward and look at instructions between the caller and the postInstr.
+    while (!empty()) {
+      cur = delTraceTail(tid);
+      if (!cur)
+        return;
+      if (DBG)
+        stat->printDynInstr(cur, "IntraSlicer::handleProcessExitCall cur is being looked at...");
+      if (cur == caller) {
+        if (DBG) {
+          stat->printDynInstr(caller, "IntraSlicer::handleProcessExitCall hit the caller: caller");
+          stat->printDynInstr(postInstr, "IntraSlicer::handleProcessExitCall hit the caller: postInstr");
+        }
+        break;
+      }
+
+      /** go backward, if we find an already taken instr (e.g., an event), then just stop,
+      because the path slicing will ensure the reachability and operands
+      from the beginning to this taken instruction. **/
+      if (cur->isTaken()) {
+        if (DBG) {
+          stat->printDynInstr(cur, "IntraSlicer::handleProcessExitCall: cur isTaken");
+          stat->printDynInstr(postInstr, "IntraSlicer::handleProcessExitCall hit the caller: postInstr");
+        }
+        return;
+      }
+ 
+      /** if it is a branch, and there is event between, take it.
+      And we do not need to consider writtenBetween() here, because
+      an exit call must be the last instruction in a trace, so the slice and live set must be empty at this point,
+      so nothing could be written between. **/
+      Instruction *instr = idMgr->getOrigInstr(cur);
+      if (Util::isBr(instr) && eventBetween((DynBrInstr *)cur, postInstr)) {
+        if (DBG) {
+          stat->printDynInstr(caller, "IntraSlicer::handleProcessExitCall: eventBetween: caller");
+          stat->printDynInstr(cur, "IntraSlicer::handleProcessExitCall: eventBetween: cur");
+          stat->printDynInstr(postInstr, "IntraSlicer::handleProcessExitCall: eventBetween: postInstr");
+        }
+        takeBr(cur, TakenFlags::INTRA_BR_EVENT_BETWEEN_CALLER_N_POST);
+        return;
+      }
+    }
+
+    /** If we hit the main(), then stop. **/
+    if (!caller) {
+      if (DBG) {
+        stat->printDynInstr(postInstr, "IntraSlicer::handleProcessExitCall: hit main(): postInstr");
+      }
+      return;
+    }
+
+    /** Recursively check caller of caller. **/
+    postInstr = caller;
+    caller = ((DynCallInstr *)postInstr)->getCaller();
+    if (DBG) {
+      stat->printDynInstr(caller, "IntraSlicer::handleProcessExitCall: recursive: caller");
+      stat->printDynInstr(postInstr, "IntraSlicer::handleProcessExitCall: recursive: postInstr");
+    }
+  }
 }
 
-Also note that if this exit call is target, it would have been handle by handleCheckerTarget()
-correctly and taken.
-Overall, if we backtrack to main() and still do not need to take it, then we do not tak the exit(),
-otherwise we have to take it and have to take its caller, too (in order to maintain the effect of "exit"). */
-void IntraSlicer::handleProcessExitCall(DynInstr *dynInstr) {
-  DynProcessExitCallInstr *exitCall = (DynProcessExitCallInstr *)dynInstr;
-  DynCallInstr *caller = exitCall->getCaller();
-  
-  // Start the recursive loop.
-  DynInstr *dyn = dynInstr;
-  bool reason1 = false;
-  bool reason2 = false;
-  bool remove = false;
-  while (true) {
-    if (DBG) {
-      stat->printDynInstr(dyn, "handleProcessExitCall");
-      stat->printDynInstr(caller, "CALLER handleProcessExitCall");
-    }
-    reason1 = mayCallEvent(caller);
-    reason2 = mayWriteFunc(dyn, caller);
-    SERRS << "IntraSlicer::handleProcessExitCall reason1 " << reason1
-      << ", reason2 " << reason2 << ".\n";
-    if (reason1 && reason2) {
-      // We have to take the exit() anyway (reason, the foo() above) if we hit a must-not-remove function, in order to ensure the effect of the path: "exit".
-      slice.add(dynInstr, TakenFlags::INTRA_EXIT_BOTH); 
-      remove = false;
-      break;
-    } else if (reason1 && !reason2) {
-      slice.add(dynInstr, TakenFlags::INTRA_EXIT_CALL_EVENT);
-      remove = false;
-      break;
-    } else if (!reason1 && reason2) {
-      slice.add(dynInstr, TakenFlags::INTRA_EXIT_WRITE_FUNC);
-      remove = false;
-      break;
-    } else {
-      // DBG.
-      stat->printDynInstr(dyn, "handleProcessExitCall dyn");
-      if (caller)
-        stat->printDynInstr(caller, "handleProcessExitCall caller");
-      else
-        fprintf(stderr, "handleProcessExitCall caller should have reached main().\n");
-      
-      // Recursively look back to caller (assign dyn as the 'callee').
-      remove = true;
-      if (!caller)    // If have reached main(), break, terminate the recursion.
-        break;
-      dyn = (DynInstr *)caller;
-      caller = caller->getCaller();        
-    }
-  };
-  
-  if (remove)
-    removeRange(dynInstr, caller);
-}
 
 void IntraSlicer::handleNonMem(DynInstr *dynInstr) {
   BEGINTIME(stat->intraNonMemSt);

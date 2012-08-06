@@ -52,6 +52,7 @@ DEF(INTRA_PHI_BR_CTRL_DEP, IntraThread)
 /* Reasons of taken by handling branch instructions. */
 DEF(INTRA_BR_N_POSTDOM, IntraThread)
 DEF(INTRA_BR_EVENT_BETWEEN, IntraThread)
+DEF(INTRA_BR_EVENT_BETWEEN_CALLER_N_POST, IntraThread)
 DEF(INTRA_BR_WR_BETWEEN, IntraThread)
 DEF(INTRA_BR_PHI_DEF_BETWEEN, IntraThread)
 // TBD
