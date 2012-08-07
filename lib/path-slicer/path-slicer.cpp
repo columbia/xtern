@@ -404,12 +404,14 @@ DynInstr *PathSlicer::getLatestBrOrExtCall(void *pathId, bool checkInstr) {
   */
   // Check, must be branch or a external call.
   DynInstr *dynInstr = trace->back();
-  Instruction *instr = idMgr.getOrigInstr(dynInstr);
-  if (checkInstr && !Util::isForkStateInstr(instr)) {
-    errs() << "pathId is inconsistent: " << pathId << "\n";
-    dumpTrace(trace, "PathSlicer::getLatestBrOrExtCall");
-    stat.printDynInstr(dynInstr, "PathSlicer::getLatestBrOrExtCall last one");
-    assert(false);
+  if (checkInstr) {
+    Instruction *instr = idMgr.getOrigInstr(dynInstr);
+    if (!Util::isForkStateInstr(instr)) {
+      errs() << "pathId is inconsistent: " << pathId << "\n";
+      dumpTrace(trace, "PathSlicer::getLatestBrOrExtCall");
+      stat.printDynInstr(dynInstr, "PathSlicer::getLatestBrOrExtCall last one");
+      assert(false);
+    }
   }
 
   /*if (DBG) {
