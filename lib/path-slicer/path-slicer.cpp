@@ -70,7 +70,8 @@ PathSlicer::~PathSlicer() {
   ENDTIME(stat.pathSlicerTime, stat.pathSlicerSt, stat.pathSlicerEnd);
   if (DBG)
     stat.printModule(this->outputDir);
-  stat.printSymQueryStat();
+  if (DBG)
+    stat.printSymQueryStat();
   stat.printStat("PathSlicer::calStat FINAL");
   stat.printEventCalls();
   stat.printFinalFormatResults();
@@ -494,18 +495,22 @@ bool PathSlicer::isInternalInstr(llvm::Instruction *instr) {
 }
 
 void PathSlicer::startSymQuery(void *pathId) {
-  DynInstr *dynInstr = getLatestBrOrExtCall(pathId);
-  //assert(dynInstr);
-  if (!dynInstr)
-    return;
-  stat.startSymQuery(pathId, dynInstr);
+  if (DBG) {
+    DynInstr *dynInstr = getLatestBrOrExtCall(pathId);
+    //assert(dynInstr);
+    if (!dynInstr)
+      return;
+    stat.startSymQuery(pathId, dynInstr);
+  }
 }
 
 void PathSlicer::endSymQuery(void *pathId, int result) {
-  DynInstr *dynInstr = getLatestBrOrExtCall(pathId);
-  //assert(dynInstr);
-  if (!dynInstr)
-    return;
-  stat.endSymQuery(pathId, dynInstr, result);
+  if (DBG) {
+    DynInstr *dynInstr = getLatestBrOrExtCall(pathId);
+    //assert(dynInstr);
+    if (!dynInstr)
+      return;
+    stat.endSymQuery(pathId, dynInstr, result);
+  }
 }
 
