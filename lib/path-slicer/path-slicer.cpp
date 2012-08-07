@@ -392,7 +392,7 @@ void PathSlicer::dumpTrace(DynInstrVector *trace, const char *tag) {
   errs() << BAN;
 }
 
-DynInstr *PathSlicer::getLatestBrOrExtCall(void *pathId) {
+DynInstr *PathSlicer::getLatestBrOrExtCall(void *pathId, bool checkInstr) {
   if (!DM_IN(pathId, allPathTraces))
     return NULL;
   DynInstrVector *trace = allPathTraces[pathId];
@@ -405,7 +405,7 @@ DynInstr *PathSlicer::getLatestBrOrExtCall(void *pathId) {
   // Check, must be branch or a external call.
   DynInstr *dynInstr = trace->back();
   Instruction *instr = idMgr.getOrigInstr(dynInstr);
-  if (!Util::isForkStateInstr(instr)) {
+  if (checkInstr && !Util::isForkStateInstr(instr)) {
     errs() << "pathId is inconsistent: " << pathId << "\n";
     dumpTrace(trace, "PathSlicer::getLatestBrOrExtCall");
     stat.printDynInstr(dynInstr, "PathSlicer::getLatestBrOrExtCall last one");
@@ -422,7 +422,7 @@ DynInstr *PathSlicer::getLatestBrOrExtCall(void *pathId) {
 
 // Returning -1 is legal, klee states from klee_init_env().
 size_t PathSlicer::getLatestBrOrExtCallIdx(void *pathId) {
-  DynInstr *dynInstr = getLatestBrOrExtCall(pathId);
+  DynInstr *dynInstr = getLatestBrOrExtCall(pathId, true);
   if (!dynInstr)
     return (size_t)-1;
   else

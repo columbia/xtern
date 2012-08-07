@@ -107,7 +107,7 @@ namespace tern {
 
     void dumpTrace(DynInstrVector *trace, const char *tag);
 
-    DynInstr *getLatestBrOrExtCall(void *pathId);
+    DynInstr *getLatestBrOrExtCall(void *pathId, bool checkInstr = false);
 
   public:
         static char ID;
