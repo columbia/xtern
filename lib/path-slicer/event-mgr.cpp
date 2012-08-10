@@ -183,7 +183,7 @@ void EventMgr::printDBG() {
   DenseSet<Function *>::iterator itr1(eventFuncs.begin());
   for (; itr1 != eventFuncs.end(); ++itr1) {
     Function *f = *itr1;
-    errs() << "EventMgr::printDBG eventFuncs: " << f->getNameStr() << "\n";
+    errs() << "EventMgr::printDBG eventFuncs: " << f->getNameStr() << "\n\n";
   }
 
   // print mayCallEventFuncs.
@@ -191,7 +191,7 @@ void EventMgr::printDBG() {
   DenseSet<Function *>::iterator itr2(mayCallEventFuncs.begin());
   for (; itr2 != mayCallEventFuncs.end(); ++itr2) {
     Function *f = *itr2;
-    errs() << "EventMgr::printDBG mayCallEventFuncs: " << f->getNameStr() << "\n";
+    errs() << "EventMgr::printDBG mayCallEventFuncs: " << f->getNameStr() << "\n\n";
   }
 
   // print mayCallEventInstrs.
@@ -199,7 +199,7 @@ void EventMgr::printDBG() {
   DenseSet<Instruction *>::iterator itr3(mayCallEventInstrs.begin());
   for (; itr3 != mayCallEventInstrs.end(); ++itr3) {
     Instruction *instr = *itr3;
-    errs() << "EventMgr::printDBG mayCallEventInstrs: " << *(instr) << "\n";
+    errs() << "EventMgr::printDBG mayCallEventInstrs: " << *(instr) << "\n\n";
   }
 
   errs() << BAN;
@@ -264,7 +264,7 @@ bool EventMgr::isIgnoredEventCall(Instruction *call, Function *event) {
     argOffset++;  // The "1" offset is the called function.
     Value *oprd = call->getOperand(argOffset);  
     errs() << "EventMgr::isIgnoredEventCall oprd: " << *oprd << "\n";
-    if  (isStdErrOrOut(call->getParent(), oprd)) {
+    if  (isStdErrOrOut(oprd)) {
       errs() << "EventMgr::isIgnoredEventCall IGNORED event: " << *call << "\n";
       return true;
     }
@@ -274,20 +274,18 @@ bool EventMgr::isIgnoredEventCall(Instruction *call, Function *event) {
   return false;  
 }
 
-/* Statically and conservatively (soundly) check whether a value v is @stderr or @stdout.
-  Iff the value v is a @stderr or @stdout from current basic block, returns true. */
-bool EventMgr::isStdErrOrOut(BasicBlock *curBB, Value *v) {
+/* Statically and conservatively (soundly) check whether a value v is @stderr or @stdout. */
+bool EventMgr::isStdErrOrOut(Value *v) {
   Instruction *instr = dyn_cast<Instruction>(v);
   if (instr) {
-    BasicBlock *bb = instr->getParent();
-    if (bb != curBB || instr->getNumOperands() == 0)
+    if (instr->getNumOperands() == 0)
       return false;
     Value *oprd0 = instr->getOperand(0);
     if (Util::isLoad(instr)) {
        if (oprd0->getNameStr() == "stderr" || oprd0->getNameStr() == "stdout")
          return true;
     } else
-      return isStdErrOrOut(curBB, oprd0); /* Recursively look at the first operand,
+      return isStdErrOrOut(oprd0); /* Recursively look at the first operand,
       since sometimes it could be a bit cast instruction and then a load instruction. */
   }
   return false;
