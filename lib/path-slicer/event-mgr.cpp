@@ -97,25 +97,30 @@ bool EventMgr::isEventCall(Instruction *instr) {
   return false;
 }
 
-void EventMgr::DFSCollectMayCallEventFuncs(Function *f) {
-  mayCallEventFuncs.insert(f);
+void EventMgr::DFSCollectMayCallEventFuncs(Function *f, bool isTop) {
+  if (!isTop)
+    mayCallEventFuncs.insert(f);
   InstList css = CG->get_call_sites(f);
   fprintf(stderr, "EventMgr::DFSCollectMayCallEventFuncs traverse function %s, callsite " SZ "\n",
     f->getNameStr().c_str(), css.size());
   for (size_t i = 0; i < css.size(); ++i) {
     if (isIgnoredEventCall(css[i], f))
       continue;
+    mayCallEventInstrs.insert(css[i]);
     Function *caller = css[i]->getParent()->getParent();
     //errs() << "EventMgr::DFSCollectMayCallEventFuncs callsite caller " << caller->getNameStr() << ":" << *(css[i]) << "\n";
     if (mayCallEventFuncs.count(caller) == 0) {
-      parent[caller] = f;
-      DFSCollectMayCallEventFuncs(caller);
+      DFSCollectMayCallEventFuncs(caller, false);
     }
   }
 }
 
 bool EventMgr::mayCallEvent(Function *f) {
   return mayCallEventFuncs.count(f);
+}
+
+bool EventMgr::mayCallEvent(Instruction *instr) {
+  return isEventCall(instr) || mayCallEventInstrs.count(instr);
 }
 
 bool EventMgr::eventBetween(BranchInst *prevInstr, Instruction *postInstr) {
@@ -136,13 +141,8 @@ bool EventMgr::eventBetween(BranchInst *prevInstr, Instruction *postInstr) {
       continue;
     // cerr << "Visited BB: " << bi->getNameStr() << endl;
     for (BasicBlock::iterator ii = bi->begin(); ii != bi->end(); ++ii) {
-      if (is_call(ii) && !is_intrinsic_call(ii)) {
-        vector<Function *> called_funcs = CG->get_called_functions(ii);
-        for (size_t i = 0; i < called_funcs.size(); ++i) {
-          if (mayCallEvent(called_funcs[i]))
-            return true;
-        }
-      }
+      if (is_call(ii) && !is_intrinsic_call(ii) && mayCallEvent(ii))
+        return true;
     }
   }
   return false;
@@ -163,20 +163,46 @@ void EventMgr::DFS(BasicBlock *x, BasicBlock *sink) {
 }
 
 void EventMgr::traverse_call_graph(Module &M) {
+  mayCallEventInstrs.clear();
   mayCallEventFuncs.clear();
-  parent.clear();
   DenseSet<Function *>::iterator itr(eventFuncs.begin());
   for (; itr != eventFuncs.end(); ++itr) {
     collectStaticEventCalls(*itr);
-    DFSCollectMayCallEventFuncs(*itr);
+    DFSCollectMayCallEventFuncs(*itr, true);
+  }
+  printDBG();
+}
+
+void EventMgr::printDBG() {
+  // print eventCallSites.
+  errs() << BAN;
+  printEventCalls();
+
+  // print eventFuncs.
+  errs() << BAN;
+  DenseSet<Function *>::iterator itr1(eventFuncs.begin());
+  for (; itr1 != eventFuncs.end(); ++itr1) {
+    Function *f = *itr1;
+    errs() << "EventMgr::printDBG eventFuncs: " << f->getNameStr() << "\n";
   }
 
-  // DBG.
-  DenseSet<Function *>::iterator itrVisited(mayCallEventFuncs.begin());
-  for (; itrVisited != mayCallEventFuncs.end(); ++itrVisited) {
-    Function *f = *itrVisited;
-    errs() << "EventMgr::traverse_call_graph may call event function " << f->getNameStr() << "\n";
+  // print mayCallEventFuncs.
+  errs() << BAN;
+  DenseSet<Function *>::iterator itr2(mayCallEventFuncs.begin());
+  for (; itr2 != mayCallEventFuncs.end(); ++itr2) {
+    Function *f = *itr2;
+    errs() << "EventMgr::printDBG mayCallEventFuncs: " << f->getNameStr() << "\n";
   }
+
+  // print mayCallEventInstrs.
+  errs() << BAN;
+  DenseSet<Instruction *>::iterator itr3(mayCallEventInstrs.begin());
+  for (; itr3 != mayCallEventInstrs.end(); ++itr3) {
+    Instruction *instr = *itr3;
+    errs() << "EventMgr::printDBG mayCallEventInstrs: " << *(instr) << "\n";
+  }
+
+  errs() << BAN;
 }
 
 bool EventMgr::runOnModule(Module &M) {
@@ -191,7 +217,6 @@ size_t EventMgr::numEventCallSites() {
 }
 
 void EventMgr::printEventCalls() {
-  DenseSet<Instruction *>::iterator itr(eventCallSites.begin());
   for (Module::iterator f = module->begin(), fe = module->end(); f != fe; ++f)
     for (Function::iterator b = f->begin(), be = f->end(); b != be; ++b)
       for (BasicBlock::iterator i = b->begin(), ie = b->end(); i != ie; ++i) {

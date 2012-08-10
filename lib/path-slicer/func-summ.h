@@ -45,6 +45,8 @@ namespace tern {
     CacheUtil extStoreCache;
 
   protected:
+    bool mayCallEvent(const llvm::Function *f);
+
 
   public:
     FuncSumm();
@@ -58,8 +60,9 @@ namespace tern {
     /* Event functions. */
     /* The initEvents() must be called before run() on this func-summ, since event-func will
     be run before func-summ is run. */
-    bool mayCallEvent(const llvm::Function *f);
+    /* Given a dynamic instructioin and its called function f, whether the internal function f may call events. The f must be an internal function. */
     bool mayCallEvent(DynInstr *dynInstr);
+	
     bool eventBetween(llvm::BranchInst *prevInstr, llvm::Instruction *postInstr);
 
     /* Since uclibc would be linked in, some functions such as memcpy() would become internal

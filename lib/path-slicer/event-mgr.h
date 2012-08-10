@@ -26,25 +26,39 @@ namespace tern {
     static char ID;
 
   protected:
-    typedef llvm::DenseMap<const llvm::Instruction *, FuncList> SiteFuncMapping;
-    typedef llvm::DenseMap<const llvm::Function *, InstList> FuncSiteMapping;
-		
-    llvm::DenseMap<llvm::Function *, llvm::Function *> parent; // Used in DFS
-    llvm::DenseSet<llvm::Function *> mayCallEventFuncs;
-    DenseMap<BasicBlock *, bool> bbVisited;
-    llvm::DenseSet<llvm::Function *> eventFuncs;
-    llvm::DenseSet<llvm::Instruction *> eventCallSites;
     klee::Checker *checker;
     llvm::CallGraphFP *CG;
+	
+    typedef llvm::DenseMap<const llvm::Instruction *, FuncList> SiteFuncMapping;
+    typedef llvm::DenseMap<const llvm::Function *, InstList> FuncSiteMapping;		
+
+    /* Internal functions which may call events (events calling with std* are ignored). */
+    llvm::DenseSet<llvm::Function *> mayCallEventFuncs; 
+
+    /* Event functions such as fopen, fclose(). These functions must be external. */
+    llvm::DenseSet<llvm::Function *> eventFuncs; 
+
+    /* Call instructions which call non-ignored events. */
+    llvm::DenseSet<llvm::Instruction *> eventCallSites; 
+
+    /* Call Instructions which may call events in eventCallSites (but excluding eventCallSites).
+    E.g., call foo(), and foo() calls fopen(), so "call foo()" is in. */
+    llvm::DenseSet<llvm::Instruction *> mayCallEventInstrs; 
+	
+    DenseMap<BasicBlock *, bool> bbVisited;
 
     bool is_exit_block(llvm::BasicBlock *bb);
-    void DFSCollectMayCallEventFuncs(llvm::Function *f);
+    void DFSCollectMayCallEventFuncs(llvm::Function *f, bool isTop);
     void DFS(llvm::BasicBlock *x, llvm::BasicBlock *sink);
     void traverse_call_graph(llvm::Module &M);
     void setupEvents(llvm::Module &M);
     void collectStaticEventCalls(llvm::Function *event);
     static bool isIgnoredEventCall(llvm::Instruction *call, llvm::Function *event);
     static bool isStdErrOrOut(llvm::BasicBlock *curBB, llvm::Value *v);
+    void printDBG();
+
+    /* Whether an instruction may call events. It can be a direct call to an event, or can be calling an internal function which may contain event calls. */
+    bool mayCallEvent(llvm::Instruction *instr);
 
   public:
     EventMgr();
@@ -52,7 +66,10 @@ namespace tern {
     void initCallGraph(llvm::CallGraphFP *CG);
     virtual void getAnalysisUsage(llvm::AnalysisUsage &AU) const;
     virtual bool runOnModule(llvm::Module &M);
+
+    /* Whether an internal function f may call events. The f must be an internal function. */
     bool mayCallEvent(llvm::Function *f);
+	
     bool eventBetween(llvm::BranchInst *prevInstr, llvm::Instruction *postInstr);
     bool isEventCall(llvm::Instruction *instr);
     void output(const llvm::Module &M) const;

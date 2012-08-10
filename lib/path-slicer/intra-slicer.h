@@ -72,6 +72,8 @@ namespace tern {
     bool writtenBetween(DynBrInstr *dynBrInstr, DynInstr *dynPostInstr);
     bool phiDefBetween(DynBrInstr *dynBrInstr, DynInstr *dynPostInstr);
     bool mayWriteFunc(DynInstr *dynInstr, DynCallInstr *caller);
+
+    /* Given a dynamic instructioin and its called function f, whether the internal function f may call events. The f must be an internal function. */
     bool mayCallEvent(DynCallInstr *caller);
 
     /* Find previous dynamic branch instruction in the trace with the same thread id. */
