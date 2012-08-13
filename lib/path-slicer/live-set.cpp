@@ -12,11 +12,12 @@ LiveSet::~LiveSet() {
 
 }
 
-void LiveSet::init(AliasMgr *aliasMgr, InstrIdMgr *idMgr, Stat *stat, FuncSumm *funcSumm) {
+void LiveSet::init(AliasMgr *aliasMgr, InstrIdMgr *idMgr, Stat *stat, FuncSumm *funcSumm, CallStackMgr *ctxMgr) {
   this->aliasMgr = aliasMgr;
   this->idMgr = idMgr;
   this->stat = stat;
   this->funcSumm = funcSumm;
+  this->ctxMgr = ctxMgr;
 }
 
 size_t LiveSet::virtRegsSize() {
@@ -74,6 +75,15 @@ bool LiveSet::regIn(DynOprd *dynOprd) {
   CtxVPair p = std::make_pair(
     dynOprd->getDynInstr()->getCallingCtx(), 
     dynOprd->getStaticValue());
+  
+  if (DBG) {
+    Instruction *instr = idMgr->getOrigInstr(dynOprd->getDynInstr());
+    if (instr && Util::isCall(instr)) {
+      printVirtReg(p, "LiveSet::regIn the checked register");
+      printVirtRegs("LiveSet::regIn the virt registers");
+    }
+  }
+
   return (DS_IN(p, virtRegs));
 }
 
@@ -216,5 +226,26 @@ bool LiveSet::phiDefBetween(CallCtx *ctx, InstrDenseSet *phiSet) {
       return true;
   }
   return false;
+}
+
+void LiveSet::printVirtRegs(const char *tag) {
+  CtxVDenseSet::iterator itr(virtRegs.begin());
+  errs() << BAN;
+  for (; itr != virtRegs.end(); ++itr)
+    printVirtReg(*itr, tag);
+}
+
+void LiveSet::printVirtReg(CtxVPair &virtReg, const char *tag) {
+  //assert(virtReg.second != NULL);
+  CallCtx *ctx = virtReg.first;
+  Value *v = virtReg.second;
+  errs() << "Liveset::printVirtReg: tag: " << tag << ": Ctx: " << ctx << ": ";
+  ctxMgr->printCallStack(ctx);
+  errs() << "Value: " << v << ": ";
+  if (v)
+    errs() << *v << "\n\n";
+  else
+    errs() << "NULL VIRT REGISTER!!" << "\n\n";
+  errs() << BAN;
 }
 

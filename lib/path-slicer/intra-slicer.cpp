@@ -90,7 +90,7 @@ void IntraSlicer::init(ExecutionState *state, OprdSumm *oprdSumm, FuncSumm *func
   curIndex = startIndex;
   live.clear();
   slice.clear();
-  live.init(aliasMgr, idMgr, stat, funcSumm);
+  live.init(aliasMgr, idMgr, stat, funcSumm, ctxMgr);
 }
 
 void IntraSlicer::takeStore(DynInstr *dynInstr, uchar reason) {
@@ -141,7 +141,13 @@ bool IntraSlicer::regOverWritten(DynInstr *dynInstr) {
 bool IntraSlicer::retRegOverWritten(DynRetInstr *dynRetInstr) {
   DynInstr *dynCallInstr = (DynInstr *)(dynRetInstr->getDynCallInstr());
   assert(dynCallInstr);
-  return regOverWritten(dynCallInstr);
+  bool result = regOverWritten(dynCallInstr);
+  if (DBG) {
+    stat->printDynInstr(dynRetInstr, "IntraSlicer::retRegOverWritten the ret instr");
+    stat->printDynInstr(dynCallInstr, "IntraSlicer::retRegOverWritten the caller of the ret instr");
+    errs() << "IntraSlicer::retRegOverWritten result " << result << "\n\n";
+  }
+  return result;
 }
 
 bool IntraSlicer::eventBetween(DynBrInstr *dynBrInstr, DynInstr *dynPostInstr) {

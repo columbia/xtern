@@ -32,6 +32,7 @@ namespace tern {
 
   protected:
     void printTidToCallStackMap();
+    CallCtx *findCtxInPool(CallCtx &ctx);
 
   public:
     CallStackMgr();
@@ -48,6 +49,10 @@ namespace tern {
     /* For each loaded dynamic instruction, update the per-thread "current" call stack. */
     void updateCallStack(DynInstr *dynInstr);
     void printCallStack(DynInstr *dynInstr);
+    void printCallStack(CallCtx *ctx);
+
+    /* Verify the consistency of the ctx pool: all contexts with the same seq must share the same context pointers. */
+    void verifyCtxPool();
   };
 }
 

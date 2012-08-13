@@ -63,34 +63,19 @@ void CallStackMgr::updateCallStack(DynInstr *dynInstr) {
 
   // Update current ctx.
   size_t curSize = curSeq->size();
+  if (ctxPool.count(curSize) == 0)
+    ctxPool[curSize] = new DenseSet<vector<int> * >;
   if (curSize == 0) {
     tidToCurCtxMap[tid] = *(ctxPool[0]->begin());
     return;
   }
-  if (ctxPool.count(curSize) == 0)
-    ctxPool[curSize] = new DenseSet<vector<int> * >;
-  DenseSet<vector<int> * > *curPool = ctxPool[curSize];
 
   if (NORMAL_SLICING) {
+    // Check whether current ctx is in the ctxPool.
     vector<int> ctx;
     for (size_t i = 0; i < curSize; i++)
       ctx.push_back(curSeq->at(i)->getOrigInstrId());
-
-    DenseSet<vector<int> * >::iterator itr(curPool->begin());
-    bool found = false;
-    for (; itr != curPool->begin(); ++itr) {
-      vector<int> *curCtx = *itr;
-      for (int i = curSize-1; i >= 0; i--) { // From from tail to begin, easier to break, should be faster.
-        if (curCtx->at(i) != ctx.at(i))
-          break;
-        else if (i == 0) {  // If all matched, mark found as true.
-          found = true;
-          tidToCurCtxMap[tid] = curCtx;
-        }
-      }
-      if (found)  // If found, break and return.
-        break;
-    }
+    CallCtx *found = findCtxInPool(ctx);
 
     // If not found, create new ctx and add to pool.
     if (!found) {
@@ -98,7 +83,8 @@ void CallStackMgr::updateCallStack(DynInstr *dynInstr) {
       ctxPool[curSize]->insert(newCtx);
       for (size_t i = 0; i < curSize; i++)
         newCtx->push_back(ctx.at(i));
-    }
+    } else
+      tidToCurCtxMap[tid] = found;
   } else if (NORMAL_SLICING) {
     // TBD.
   } else if (RANGE_SLICING) {
@@ -137,14 +123,70 @@ DynCallInstr *CallStackMgr::getCaller(DynInstr *dynInstr) {
     return tidToCallSeqMap[tid]->back();
 }
 
-void CallStackMgr::printCallStack(DynInstr *dynInstr) {
-  vector<int> *ctx = dynInstr->getCallingCtx();
-  if (NORMAL_SLICING) {
-    for (size_t i = 0; i < ctx->size(); i++) {
-      errs() << "Ctx[" << i << "]: ID: " << ctx->at(i)
-        << ": " << *(idMgr->getOrigInstrCtx(ctx->at(i))) << "\n";
+CallCtx *CallStackMgr::findCtxInPool(CallCtx &ctx) {
+  size_t curSize = ctx.size();
+  assert(curSize > 0);
+  DenseSet<vector<int> * > *curPool = ctxPool[curSize];
+  assert(curPool);
+  DenseSet<vector<int> * >::iterator itr(curPool->begin());
+  for (; itr != curPool->end(); ++itr) {
+    vector<int> *curCtx = *itr;
+    assert(curCtx->size() == ctx.size());
+    for (int i = curSize-1; i >= 0; i--) { // From from tail to begin, easier to break, should be faster.
+      if (curCtx->at(i) != ctx.at(i))
+        break;
+      else if (i == 0) {  // If all matched, return this ctx.
+        return curCtx;
+      }
     }
   }
+  return NULL;
+}
+
+void CallStackMgr::verifyCtxPool() {
+  llvm::DenseMap<int, llvm::DenseSet<std::vector<int> * > *>::iterator sizeItr(ctxPool.begin());
+  // For each size.
+  for (; sizeItr != ctxPool.end(); ++sizeItr) {
+    size_t curSize = sizeItr->first;
+    if (DBG)
+      errs() << "CallStackMgr::verifyCtxPool is checking ctx size " << curSize << ".\n";
+    DenseSet<vector<int> * > *curPool = sizeItr->second;
+    assert(curPool);
+    assert(curPool->size() > 0);
+    DenseSet<vector<int> * >::iterator itr(curPool->begin());
+    CallCtx *firstCtx = *itr;
+    ++itr;
+    for (; itr != curPool->end(); ++itr) {
+      vector<int> *curCtx = *itr;
+      if (DBG) {
+        errs() << "CallStackMgr::verifyCtxPool is comparing ctx " << firstCtx << " and " << curCtx << ".\n";
+        printCallStack(firstCtx);
+        printCallStack(curCtx);
+      }
+      assert(curCtx->size() == curSize);
+      for (int i = curSize-1; i >= 0; i--) { // From from tail to begin, easier to break, should be faster.
+        if (curCtx->at(i) != firstCtx->at(i))
+          break;
+        else if (i == 0) {  // If there is the same ctx pointer with same ctx seq, assert false.
+          assert(false);
+        }
+      }
+    }
+  }
+}
+
+void CallStackMgr::printCallStack(CallCtx *ctx) {
+  errs() << "\nCtx size: " << ctx->size() << ": \n";
+  for (size_t i = 0; i < ctx->size(); i++) {
+    errs() << "Ctx[" << i << "]: ID: " << ctx->at(i)
+      << ": " << stat->printInstr(idMgr->getOrigInstrCtx(ctx->at(i))) << "\n";
+  }
+}
+
+void CallStackMgr::printCallStack(DynInstr *dynInstr) {
+  vector<int> *ctx = dynInstr->getCallingCtx();
+  if (NORMAL_SLICING)
+    printCallStack(ctx);
 }
 
 

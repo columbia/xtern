@@ -54,7 +54,7 @@ namespace tern {
     void setupEvents(llvm::Module &M);
     void collectStaticEventCalls(llvm::Function *event);
     static bool isIgnoredEventCall(llvm::Instruction *call, llvm::Function *event);
-    static bool isStdErrOrOut(llvm::Value *v);
+    static bool isStdErrOrOut(llvm::BasicBlock *curBB, llvm::Value *v);
     void printDBG();
 
     /* Whether an instruction may call events. It can be a direct call to an event, or can be calling an internal function which may contain event calls. */

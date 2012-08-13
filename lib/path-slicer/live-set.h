@@ -14,6 +14,7 @@
 #include "alias-mgr.h"
 #include "instr-id-mgr.h"
 #include "func-summ.h"
+#include "callstack-mgr.h"
 
 namespace tern {  
   struct LiveSet {
@@ -22,6 +23,7 @@ namespace tern {
     AliasMgr *aliasMgr;
     InstrIdMgr *idMgr;
     FuncSumm *funcSumm;
+    CallStackMgr *ctxMgr;
 
     /** Store all the virtual registers, they are only calling context plus the value pointer 
           of virtual registers. **/
@@ -42,11 +44,13 @@ namespace tern {
 
   protected:
     void addReg(CallCtx *ctx, llvm::Value *v);
+    void printVirtRegs(const char *tag);
+    void printVirtReg(CtxVPair &virtReg, const char *tag);
 
   public:
     LiveSet();
     ~LiveSet();
-    void init(AliasMgr *aliasMgr, InstrIdMgr *idMgr, Stat *stat, FuncSumm *funcSumm);
+    void init(AliasMgr *aliasMgr, InstrIdMgr *idMgr, Stat *stat, FuncSumm *funcSumm, CallStackMgr *ctxMgr);
     size_t virtRegsSize();
     size_t loadInstrsSize();
     void clear();

@@ -339,6 +339,9 @@ void KleeTraceUtil::preProcess(DynInstrVector *trace) {
     if (DBG)
       stat->printDynInstr(dynInstr, __func__, true);
   }
+
+  // After the preprocessing, check call stack consistency.
+  ctxMgr->verifyCtxPool();
 }
 
 /* NOTE: directly freeing the dynamic instructions is incorrect, since some 
