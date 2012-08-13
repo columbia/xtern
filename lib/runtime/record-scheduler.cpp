@@ -814,6 +814,8 @@ void RRScheduler::childForkReturn() {
 }
 
 
+RRScheduler::~RRScheduler() {}
+
 RRScheduler::RRScheduler()
 {
   for(unsigned i=0; i<MaxThreads; ++i)
