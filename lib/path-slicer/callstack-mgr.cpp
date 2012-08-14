@@ -167,8 +167,8 @@ void CallStackMgr::verifyCtxPool() {
       for (int i = curSize-1; i >= 0; i--) { // From from tail to begin, easier to break, should be faster.
         if (curCtx->at(i) != firstCtx->at(i))
           break;
-        else if (i == 0) {  // If there is the same ctx pointer with same ctx seq, assert false.
-          assert(false);
+        else if (i == 0) {  // If there is the same ctx pointer with same ctx seq, fail.
+          FAIL("CallStackMgr::verifyCtxPool");
         }
       }
     }

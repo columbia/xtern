@@ -60,6 +60,7 @@
 #include "taken-flags.h"
 
 #define BUF_SIZE 1024
+#define FAIL(tag) std::cerr<<"\n\nPATH_SLICER_FAILURE: "<<tag<<"\n\n";abort(); 
 
 #endif
 

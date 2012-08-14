@@ -99,7 +99,7 @@ void InstrIdMgr::checkInstrMapConsistency(const char *tag) {
               Tag mismatch [%s].\n", (void *)instr, tag);
             errs() << "F: " << instr->getParent()->getParent()->getNameStr()
             	<< ": BB: " << instr->getParent()->getNameStr() << ": Instr: " << *(instr) << "\n";
-            exit(1);
+            FAIL("InstrIdMgr::checkInstrMapConsistency internal");
           }
         }
 
@@ -112,7 +112,7 @@ void InstrIdMgr::checkInstrMapConsistency(const char *tag) {
               Tag mismatch %s.\n", (void *)instr, tag);
             errs() << "F: " << instr->getParent()->getParent()->getNameStr()
             	<< ": BB: " << instr->getParent()->getNameStr() << ": Instr: " << *(instr) << "\n";
-            exit(1);
+            FAIL("InstrIdMgr::checkInstrMapConsistency external");
           }
         }
       }
