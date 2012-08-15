@@ -262,8 +262,8 @@ const char *Stat::printInstr(const llvm::Instruction *instr, bool withFileLoc) {
   if (!instr) {
     return "Stat::printInstr NULL static instr!!\n";
   }
-  if (DM_IN(instr, buf)) {
-    return buf[instr]->str().c_str();
+  if (DM_IN(instr, instrCache)) {
+    return instrCache[instr]->str().c_str();
   } else {
     std::string *str = new std::string;
     llvm::raw_string_ostream *newStream = new llvm::raw_string_ostream(*str);
@@ -272,7 +272,28 @@ const char *Stat::printInstr(const llvm::Instruction *instr, bool withFileLoc) {
     (*newStream) << "F: " << Util::getFunction(instr)->getNameStr()
       << ": BB: " << Util::getBasicBlock(instr)->getNameStr() << ": ";
     instr->print(*newStream);
-    buf[instr] = newStream;
+    instrCache[instr] = newStream;
+    newStream->flush();
+    return str->c_str();
+  }
+}
+
+const char *Stat::printValue(const llvm::Value *v) {
+  if (isa<Instruction>(v))
+    return printInstr(dyn_cast<Instruction>(v));
+  
+  if (!v) {
+    return "Stat::printValue NULL static value!!\n";
+  }
+  if (DM_IN(v, valueCache)) {
+    return valueCache[v]->str().c_str();
+  } else {
+    std::string *str = new std::string;
+    llvm::raw_string_ostream *newStream = new llvm::raw_string_ostream(*str);
+    //if (withFileLoc)
+      //printFileLoc(*newStream, instr);
+    v->print(*newStream);
+    valueCache[v] = newStream;
     newStream->flush();
     return str->c_str();
   }

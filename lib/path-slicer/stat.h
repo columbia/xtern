@@ -63,7 +63,8 @@ namespace tern {
     InstrIdMgr *idMgr;
     CallStackMgr *ctxMgr;
     FuncSumm *funcSumm;
-    llvm::DenseMap<const llvm::Instruction *, llvm::raw_string_ostream * > buf;
+    llvm::DenseMap<const llvm::Instruction *, llvm::raw_string_ostream * > instrCache;
+    llvm::DenseMap<const llvm::Value *, llvm::raw_string_ostream * > valueCache;
     llvm::Module *origModule;
 
     /* The set of static instructions and executed instructions in a module. */
@@ -182,7 +183,8 @@ namespace tern {
     ~Stat();
     void init(InstrIdMgr *idMgr, CallStackMgr *ctxMgr, FuncSumm *funcSumm, AliasMgr *aliasMgr);
     void printStat(const char *tag);
-    const char *printInstr(const llvm::Instruction *instr, bool withFileLoc = false);    
+    const char *printInstr(const llvm::Instruction *instr, bool withFileLoc = false);
+    const char *printValue(const llvm::Value *v);
     void printDynInstr(DynInstr *dynInstr, const char *tag,
       bool withFileLoc = false);
     void printDynInstr(llvm::raw_ostream &S, DynInstr *dynInstr, const char *tag,

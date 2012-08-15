@@ -242,10 +242,7 @@ void LiveSet::printVirtReg(CtxVPair &virtReg, const char *tag) {
   errs() << "Liveset::printVirtReg: tag: " << tag << ": Ctx: " << ctx << ": ";
   ctxMgr->printCallStack(ctx);
   errs() << "Value: " << v << ": ";
-  if (v)
-    errs() << *v << "\n\n";
-  else
-    errs() << "NULL VIRT REGISTER!!" << "\n\n";
+  errs() << stat->printValue(v) << "\n";
   errs() << BAN;
 }
 
