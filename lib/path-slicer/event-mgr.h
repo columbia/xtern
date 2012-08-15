@@ -39,11 +39,14 @@ namespace tern {
     llvm::DenseSet<llvm::Function *> eventFuncs; 
 
     /* Call instructions which call non-ignored events. */
-    llvm::DenseSet<llvm::Instruction *> eventCallSites; 
+    llvm::DenseSet<llvm::Instruction *> eventCallSites;
+
+    /* Ignored event callsites. */
+    llvm::DenseSet<llvm::Instruction *> ignoredCallSites;
 
     /* Call Instructions which may call events in eventCallSites (but excluding eventCallSites).
     E.g., call foo(), and foo() calls fopen(), so "call foo()" is in. */
-    llvm::DenseSet<llvm::Instruction *> mayCallEventInstrs; 
+    llvm::DenseSet<llvm::Instruction *> mayCallEventInstrs;
 	
     DenseMap<BasicBlock *, bool> bbVisited;
 

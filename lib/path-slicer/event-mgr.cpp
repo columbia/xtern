@@ -106,7 +106,8 @@ void EventMgr::DFSCollectMayCallEventFuncs(Function *f, bool isTop) {
   for (size_t i = 0; i < css.size(); ++i) {
     if (isIgnoredEventCall(css[i], f))
       continue;
-    mayCallEventInstrs.insert(css[i]);
+    if (!isTop)
+      mayCallEventInstrs.insert(css[i]);
     Function *caller = css[i]->getParent()->getParent();
     //errs() << "EventMgr::DFSCollectMayCallEventFuncs callsite caller " << caller->getNameStr() << ":" << *(css[i]) << "\n";
     if (mayCallEventFuncs.count(caller) == 0) {
@@ -178,6 +179,14 @@ void EventMgr::printDBG() {
   errs() << BAN;
   printEventCalls();
 
+  // print ignoredCallSites.
+  errs() << BAN;
+  DenseSet<Instruction *>::iterator itr0(ignoredCallSites.begin());
+  for (; itr0 != ignoredCallSites.end(); ++itr0) {
+    Instruction *instr = *itr0;
+    errs() << "EventMgr::printDBG ignoredCallSites: " << *(instr) << "\n";
+  }
+
   // print eventFuncs.
   errs() << BAN;
   DenseSet<Function *>::iterator itr1(eventFuncs.begin());
@@ -232,8 +241,10 @@ void EventMgr::printEventCalls() {
 void EventMgr::collectStaticEventCalls(Function *event) {
   InstList css = CG->get_call_sites(event);
   for (size_t i = 0; i < css.size(); ++i) {
-    if (isIgnoredEventCall(css[i], event))
+    if (isIgnoredEventCall(css[i], event)) {
+      ignoredCallSites.insert(css[i]);
       continue;
+    }
     eventCallSites.insert(css[i]);
   }
 }
