@@ -1,3 +1,6 @@
+#include <map>
+using namespace std;
+
 #include "macros.h"
 #include "target-mgr.h"
 using namespace tern;
@@ -62,12 +65,21 @@ klee::Checker::ResultType TargetMgr::getTargetMask(DynInstr *dynInstr) {
 }
 
 void TargetMgr::printTargets(void *pathId, const char *tag) {
+  std::map<size_t, DynInstr *> targetMap;
   if (!hasTarget(pathId))
     return;
+  errs() << BAN;
   llvm::DenseSet<DynInstr *> *pathTargets = targets[pathId];
   llvm::DenseSet<DynInstr *>::iterator itr = pathTargets->begin();
-  for (; itr != pathTargets->end(); ++itr)
-    stat->printDynInstr(*itr, tag);
+  for (; itr != pathTargets->end(); ++itr) {
+    DynInstr *dynInstr = *itr;
+    targetMap[dynInstr->getIndex()] = dynInstr;
+  }
+
+  std::map<size_t, DynInstr *>::iterator mapItr;
+  for (mapItr = targetMap.begin(); mapItr != targetMap.end(); ++mapItr)
+    stat->printDynInstr(mapItr->second, tag);
+  errs() << BAN;
 }
 
 size_t TargetMgr::sizeOfTargets(void *pathId) {
