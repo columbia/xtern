@@ -97,7 +97,6 @@ void TxtLogger::logSync(unsigned insid, unsigned short sync,
 
   switch(sync) {
     // log nothing, mostly for sched point. 
-  case syncfunc::accept:
   case syncfunc::accept4:
   case syncfunc::recv:
   case syncfunc::recvfrom:
@@ -138,7 +137,6 @@ void TxtLogger::logSync(unsigned insid, unsigned short sync,
   case syncfunc::pthread_mutex_trylock:
   case syncfunc::sem_trywait:
   case syncfunc::sem_timedwait:
-  case syncfunc::connect: //  fd, ret
   case syncfunc::pthread_rwlock_tryrdlock:  //  rwlock, ret
   case syncfunc::pthread_rwlock_trywrlock:
   case syncfunc::pthread_rwlock_unlock:  //  rwlock, ret
@@ -156,6 +154,7 @@ void TxtLogger::logSync(unsigned insid, unsigned short sync,
     // log three sync vars
   case syncfunc::pthread_cond_timedwait:  //  cv, mu, ret
   case syncfunc::read:  //  sig, fd, ret
+  case syncfunc::accept:  //  sock(ret), from_port, to_port
   case syncfunc::write: //  sig, fd, ret
     {
       //  notice "<<" operator is explained from right to left.
@@ -167,6 +166,22 @@ void TxtLogger::logSync(unsigned insid, unsigned short sync,
         << " 0x" << a
         << " 0x" << b
         << " 0x" << c
+        << dec;
+    }
+    break;
+  case syncfunc::connect: //  fd, from_port, to_port, ret
+    {
+      //  notice "<<" operator is explained from right to left.
+      uint64_t a = va_arg(args, uint64_t);
+      uint64_t b = va_arg(args, uint64_t);
+      uint64_t c = va_arg(args, uint64_t);
+      uint64_t d = va_arg(args, uint64_t);
+
+    ouf << hex
+        << " 0x" << a
+        << " 0x" << b
+        << " 0x" << c
+        << " 0x" << d
         << dec;
     }
     break;
@@ -420,9 +435,7 @@ void TestLogger::logSync(unsigned insid, unsigned short sync,
   va_start(args, after);
   switch(sync) {
     // log nothing, mostly for sched point. 
-  case syncfunc::accept:
   case syncfunc::accept4:
-  case syncfunc::connect:
   case syncfunc::recv:
   case syncfunc::recvfrom:
   case syncfunc::recvmsg:
@@ -478,6 +491,7 @@ void TestLogger::logSync(unsigned insid, unsigned short sync,
     break;
     // log three sync vars
   case syncfunc::pthread_cond_timedwait:
+  case syncfunc::accept:  //  sock(ret), from_port, to_port
     {
       //  notice "<<" operator is explained from right to left.
       uint64_t a = va_arg(args, uint64_t);
@@ -488,6 +502,22 @@ void TestLogger::logSync(unsigned insid, unsigned short sync,
         << " 0x" << a
         << " 0x" << b
         << " 0x" << c
+        << dec;
+    }
+    break;
+  case syncfunc::connect:
+    {
+      //  notice "<<" operator is explained from right to left.
+      uint64_t a = va_arg(args, uint64_t);
+      uint64_t b = va_arg(args, uint64_t);
+      uint64_t c = va_arg(args, uint64_t);
+      uint64_t d = va_arg(args, uint64_t);
+
+    ouf << hex
+        << " 0x" << a
+        << " 0x" << b
+        << " 0x" << c
+        << " 0x" << d
         << dec;
     }
     break;

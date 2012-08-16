@@ -52,6 +52,9 @@
 #include <map>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/socket.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
 
 // FIXME: these should be in tern/config.h
 #if !defined(_POSIX_C_SOURCE) || (_POSIX_C_SOURCE<199309L)
@@ -283,7 +286,14 @@ void RecorderRT<RecordSerializer>::idle_sleep(void) {
       sched_wakeup_time.tv_sec + sched_block_time.tv_sec, \
       sched_wakeup_time.tv_nsec + sched_block_time.tv_nsec \
       }; \
-    Logger::the->logSync(ins, (syncop), block_turn, app_time, syscall_time, sched_time, true, __VA_ARGS__); \
+    Logger::the->logSync(ins, (syncop), block_turn, app_time, syscall_time, sched_time, false, __VA_ARGS__); \
+    _S::getTurn(); \
+    int second_turn = _S::incTurnCount(); \
+    _S::putTurn(); \
+    memset(&app_time, 0, sizeof(app_time)); \
+    memset(&syscall_time, 0, sizeof(syscall_time)); \
+    sched_time = update_time();  \
+    Logger::the->logSync(ins, (syncop), second_turn, app_time, syscall_time, sched_time, true, __VA_ARGS__); \
   } \
   errno = backup_errno; 
 
@@ -1368,7 +1378,14 @@ int RecorderRT<_S>::__accept(unsigned ins, int &error, int sockfd, struct sockad
 {
   BLOCK_TIMER_START;
   int ret = Runtime::__accept(ins, error, sockfd, cliaddr, addrlen);
-  BLOCK_TIMER_END(syncfunc::accept, (uint64_t) ret);
+  int to_port = ((struct sockaddr_in *)cliaddr)->sin_port;
+
+  struct sockaddr_in servaddr;
+  socklen_t len = sizeof(servaddr);
+  getsockname(sockfd, (struct sockaddr *)&servaddr, &len);
+  int from_port = servaddr.sin_port;
+
+  BLOCK_TIMER_END(syncfunc::accept, (uint64_t)ret, (uint64_t)from_port, (uint64_t) to_port);
   return ret;
 }
 
@@ -1385,8 +1402,14 @@ template <typename _S>
 int RecorderRT<_S>::__connect(unsigned ins, int &error, int sockfd, const struct sockaddr *serv_addr, socklen_t addrlen)
 {
   BLOCK_TIMER_START;
+  int from_port = ((const struct sockaddr_in*) serv_addr)->sin_port;
   int ret = Runtime::__connect(ins, error, sockfd, serv_addr, addrlen);
-  BLOCK_TIMER_END(syncfunc::connect, (uint64_t) sockfd, (uint64_t) ret);
+  struct sockaddr_in cliaddr;
+  socklen_t len = sizeof(cliaddr);
+  getsockname(sockfd, (struct sockaddr *)&cliaddr, &len);
+  int to_port = cliaddr.sin_port;
+
+  BLOCK_TIMER_END(syncfunc::connect, (uint64_t) sockfd, (uint64_t) from_port, (uint64_t) to_port, (uint64_t) ret);
   return ret;
 }
 
