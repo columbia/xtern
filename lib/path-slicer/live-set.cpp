@@ -40,7 +40,7 @@ void LiveSet::clear() {
 void LiveSet::addReg(CallCtx *ctx, Value *v) {
   if (!Util::isConstant(v)) { // Discard it if it is a LLVM Constant.
     if (DBG)
-      errs() << "LiveSet::addReg <" << (void *)v << ">: " << *v << "\n\n";
+      errs() << "LiveSet::addReg <" << (void *)v << ">: " << stat->printValue(v) << "\n\n";
     CtxVPair p = std::make_pair(ctx, v);
     virtRegs.insert(p);
     if (Util::isPHI(v))
@@ -92,7 +92,7 @@ void LiveSet::addInnerUsedRegs(CallCtx *intCtx, User *user) {
   for(unsigned i = 0; i < numOperands; i++) {
     Value *oprd = user->getOperand(i);
     if (DBG)
-      errs() << "LiveSet::addInnerUsedRegs handles oprd " << *oprd << "\n";
+      errs() << "LiveSet::addInnerUsedRegs handles oprd " << stat->printValue(oprd) << "\n";
     ConstantExpr *opInner = dyn_cast<ConstantExpr>(oprd);
     if (opInner)
       addInnerUsedRegs(intCtx, opInner);
@@ -110,8 +110,8 @@ void LiveSet::addUsedRegs(DynInstr *dynInstr) {
     ConstantExpr *opInner = dyn_cast<ConstantExpr>(oprd);
     if(opInner) {
       if (DBG)
-        errs() << "LiveSet::addUsedRegs handles nested instruction " << *instr << "\n"
-          << "Oprd " << *oprd << "\n";
+        errs() << "LiveSet::addUsedRegs handles nested instruction " << stat->printInstr(instr) << "\n"
+          << "Oprd " << stat->printValue(oprd) << "\n";
       addInnerUsedRegs(intCtx, opInner);
     } else // Only need to add this reg when it is not a LLVM Constant.
       addReg(intCtx, oprd);
