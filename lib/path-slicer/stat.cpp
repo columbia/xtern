@@ -226,11 +226,13 @@ void Stat::printFinalFormatResults() {
   std::string pruneType = MarkPrunedOnly?"Mark":"Real";
   std::string finishResult = finished?"Yes":"No";
   std::string keyTag = "*";
+  char *gv = getenv(DSYM_GIT_VERSIONS);
+  std::string gitVersions = gv?gv:"N/A";
   std::cerr << "\n\n" << "FORMAT ITEMS:    "
     << "|| App || Checker || Mark/Real prune || Finished || All time (sec) || Path slicer time "
     << "|| Init time || Pruned states || All states (paths) "
     << "|| \\# Tests || \\# Instrs exed || \\# Not pruned Instrs exed || \\# Not pruned internal Instrs exed "
-    << "|| \\# Static Instrs exed || \\# Static Instrs || \\# Static exed events || \\# Static events (no fp) || \\# Chkr errs || Note ||\n"
+    << "|| \\# Static Instrs exed || \\# Static Instrs || \\# Static exed events || \\# Static events (no fp) || \\# Chkr errs || Version || Note ||\n"
     << "FORMAT RESULTS:    ";
   std::cerr << "| " << origModule->getModuleIdentifier();
   std::cerr << " | " << UseOneChecker;
@@ -250,6 +252,7 @@ void Stat::printFinalFormatResults() {
   std::cerr << " | " << std::dec << eventCalls.size();
   std::cerr << " | " << std::dec << funcSumm->numEventCallSites();
   std::cerr << " | " << std::dec << numChkrErrs;
+  std::cerr << " | " << gitVersions;
   std::cerr << " | " << "tbd";
   //TBA
   
