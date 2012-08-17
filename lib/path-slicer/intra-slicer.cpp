@@ -150,7 +150,7 @@ bool IntraSlicer::retRegOverWritten(DynRetInstr *dynRetInstr) {
   return result;
 }
 
-bool IntraSlicer::eventBetween(DynBrInstr *dynBrInstr, DynInstr *dynPostInstr) {
+bool IntraSlicer::intraProcEventBetween(DynBrInstr *dynBrInstr, DynInstr *dynPostInstr) {
   Instruction *prevInstr = idMgr->getOrigInstr((DynInstr *)dynBrInstr);
   BranchInst *branch = dyn_cast<BranchInst>(prevInstr);
   assert(branch);
@@ -159,13 +159,17 @@ bool IntraSlicer::eventBetween(DynBrInstr *dynBrInstr, DynInstr *dynPostInstr) {
     postInstr = idMgr->getOrigInstr((DynInstr *)dynPostInstr);
   else
     postInstr = cfgMgr->getStaticPostDom(prevInstr);
-  bool result = funcSumm->eventBetween(branch, postInstr);
+  bool result = funcSumm->intraProcEventBetween(branch, postInstr);
   if (DBG) {
-    errs() << "\n\nIntraSlicer::eventBetween result " << result << ":\n";
-    errs() << "IntraSlicer::eventBetween prevInstr: " << stat->printInstr(prevInstr) << "\n";
-    errs() << "IntraSlicer::eventBetween postInstr: " << stat->printInstr(postInstr) << "\n\n\n";
+    errs() << "\n\nIntraSlicer::intraProcEventBetween result " << result << ":\n";
+    errs() << "IntraSlicer::intraProcEventBetween prevInstr: " << stat->printInstr(prevInstr) << "\n";
+    errs() << "IntraSlicer::intraProcEventBetween postInstr: " << stat->printInstr(postInstr) << "\n\n\n";
   }
   return result;
+}
+
+bool IntraSlicer::interProcEventBetween(DynBrInstr *dynBrInstr, DynInstr *dynPostInstr) {
+  return intraProcEventBetween(dynBrInstr, dynPostInstr);
 }
 
 bool IntraSlicer::writtenBetween(DynBrInstr *dynBrInstr, DynInstr *dynPostInstr) {
@@ -295,7 +299,7 @@ void IntraSlicer::handleBranch(DynInstr *dynInstr) {
     }
 
     BEGINTIME(stat->intraBrEvBetSt);
-    bool result2 = eventBetween(brInstr, head);
+    bool result2 = intraProcEventBetween(brInstr, head);
     ENDTIME(stat->intraBrEvBetTime, stat->intraBrEvBetSt, stat->intraBrEvBetEnd);
     if (result2) {
       takeBr(brInstr, TakenFlags::INTRA_BR_EVENT_BETWEEN);
@@ -443,11 +447,11 @@ void IntraSlicer::handleProcessExitCall(DynInstr *exitCall) {
       an exit call must be the last instruction in a trace, so the slice and live set must be empty at this point,
       so nothing could be written between. **/
       Instruction *instr = idMgr->getOrigInstr(cur);
-      if (Util::isBr(instr) && eventBetween((DynBrInstr *)cur, postInstr)) {
+      if (Util::isBr(instr) && interProcEventBetween((DynBrInstr *)cur, postInstr)) {
         if (DBG) {
-          stat->printDynInstr(caller, "IntraSlicer::handleProcessExitCall: eventBetween: caller");
-          stat->printDynInstr(cur, "IntraSlicer::handleProcessExitCall: eventBetween: cur");
-          stat->printDynInstr(postInstr, "IntraSlicer::handleProcessExitCall: eventBetween: postInstr");
+          stat->printDynInstr(caller, "IntraSlicer::handleProcessExitCall: interProcEventBetween: caller");
+          stat->printDynInstr(cur, "IntraSlicer::handleProcessExitCall: interProcEventBetween: cur");
+          stat->printDynInstr(postInstr, "IntraSlicer::handleProcessExitCall: interProcEventBetween: postInstr");
         }
         takeBr(cur, TakenFlags::INTRA_BR_EVENT_BETWEEN_CALLER_N_POST);
         return;

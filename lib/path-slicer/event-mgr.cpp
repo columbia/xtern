@@ -124,7 +124,7 @@ bool EventMgr::mayCallEvent(Instruction *instr) {
   return isEventCall(instr) || mayCallEventInstrs.count(instr);
 }
 
-bool EventMgr::eventBetween(BranchInst *prevInstr, Instruction *postInstr) {
+bool EventMgr::intraProcEventBetween(BranchInst *prevInstr, Instruction *postInstr) {
   Function *func = Util::getFunction(prevInstr);
   BasicBlock *postDomBB = NULL;
   if (postInstr)

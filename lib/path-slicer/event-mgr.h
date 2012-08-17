@@ -73,7 +73,7 @@ namespace tern {
     /* Whether an internal function f may call events. The f must be an internal function. */
     bool mayCallEvent(llvm::Function *f);
 	
-    bool eventBetween(llvm::BranchInst *prevInstr, llvm::Instruction *postInstr);
+    bool intraProcEventBetween(llvm::BranchInst *prevInstr, llvm::Instruction *postInstr);
     bool isEventCall(llvm::Instruction *instr);
     void output(const llvm::Module &M) const;
     size_t numEventCallSites();

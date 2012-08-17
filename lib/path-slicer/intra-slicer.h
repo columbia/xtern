@@ -68,7 +68,8 @@ namespace tern {
     void delRegOverWritten(DynInstr *dynInstr);
     bool regOverWritten(DynInstr *dynInstr);
     bool retRegOverWritten(DynRetInstr *dynRetInstr);
-    bool eventBetween(DynBrInstr *dynBrInstr, DynInstr *dynPostInstr);
+    bool interProcEventBetween(DynBrInstr *dynBrInstr, DynInstr *dynPostInstr);
+    bool intraProcEventBetween(DynBrInstr *dynBrInstr, DynInstr *dynPostInstr);
     bool writtenBetween(DynBrInstr *dynBrInstr, DynInstr *dynPostInstr);
     bool phiDefBetween(DynBrInstr *dynBrInstr, DynInstr *dynPostInstr);
     bool mayWriteFunc(DynInstr *dynInstr, DynCallInstr *caller);

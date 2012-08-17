@@ -62,8 +62,8 @@ bool FuncSumm::mayCallEvent(DynInstr *dynInstr) {
   return mayCallEvent(f);
 }
 
-bool FuncSumm::eventBetween(llvm::BranchInst *prevInstr, llvm::Instruction *postInstr) {
-  return EM->eventBetween(prevInstr, postInstr);
+bool FuncSumm::intraProcEventBetween(llvm::BranchInst *prevInstr, llvm::Instruction *postInstr) {
+  return EM->intraProcEventBetween(prevInstr, postInstr);
 }
 
 bool FuncSumm::isInternalCall(const Instruction *instr) {

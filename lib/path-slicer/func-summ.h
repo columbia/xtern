@@ -63,7 +63,7 @@ namespace tern {
     /* Given a dynamic instructioin and its called function f, whether the internal function f may call events. The f must be an internal function. */
     bool mayCallEvent(DynInstr *dynInstr);
 	
-    bool eventBetween(llvm::BranchInst *prevInstr, llvm::Instruction *postInstr);
+    bool intraProcEventBetween(llvm::BranchInst *prevInstr, llvm::Instruction *postInstr);
 
     /* Since uclibc would be linked in, some functions such as memcpy() would become internal
     after this linking. But we only care about "guest" LLVM code in slicing. So, these functions are
