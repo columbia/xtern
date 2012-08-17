@@ -225,12 +225,18 @@ size_t EventMgr::numEventCallSites() {
   return eventCallSites.size();
 }
 
-void EventMgr::printEventCalls() {
+void EventMgr::printEventCalls(llvm::DenseSet<const Instruction *> *exedEvents) {
   for (Module::iterator f = module->begin(), fe = module->end(); f != fe; ++f)
     for (Function::iterator b = f->begin(), be = f->end(); b != be; ++b)
       for (BasicBlock::iterator i = b->begin(), ie = b->end(); i != ie; ++i) {
         Instruction *instr = i;
         if (eventCallSites.count(instr) > 0) {
+          if (exedEvents) {
+            if (exedEvents->count(instr))
+              errs() << "[Exed] ";
+            else
+              errs() << "[NOT-exed] ";
+          }
   	      errs() << "EventMgr::printEventCalls static " << Util::printNearByFileLoc(instr)
            << " " << f->getNameStr() << ":" 
            << b->getNameStr() << ":" << *(instr) << "\n\n";

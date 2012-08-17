@@ -160,8 +160,8 @@ size_t FuncSumm::numEventCallSites() {
   return EM->numEventCallSites();
 }
 
-void FuncSumm::printEventCalls() {
-  return EM->printEventCalls();
+void FuncSumm::printEventCalls(llvm::DenseSet<const Instruction *> *exedEvents) {
+  return EM->printEventCalls(exedEvents);
 }
 
 

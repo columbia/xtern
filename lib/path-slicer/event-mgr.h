@@ -77,7 +77,7 @@ namespace tern {
     bool isEventCall(llvm::Instruction *instr);
     void output(const llvm::Module &M) const;
     size_t numEventCallSites();
-    void printEventCalls();
+    void printEventCalls(llvm::DenseSet<const Instruction *> *exedEvents = NULL);
   };
 }
 

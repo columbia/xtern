@@ -523,7 +523,7 @@ void Stat::printEventCalls() {
   errs() << BAN;
   
   // Print all static event calls.
-  funcSumm->printEventCalls();
+  funcSumm->printEventCalls(&eventCalls);
   errs() << BAN;
 }
 

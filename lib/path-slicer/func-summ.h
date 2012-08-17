@@ -96,7 +96,7 @@ namespace tern {
 	/* Whether an instruction calls to an event. */
     bool isEventCall(DynCallInstr *callInstr);
     size_t numEventCallSites();
-    void printEventCalls();
+    void printEventCalls(llvm::DenseSet<const Instruction *> *exedEvents = NULL);
 
   };
 

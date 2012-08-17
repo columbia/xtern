@@ -91,8 +91,8 @@ void LiveSet::addInnerUsedRegs(CallCtx *intCtx, User *user) {
   unsigned numOperands = user->getNumOperands();
   for(unsigned i = 0; i < numOperands; i++) {
     Value *oprd = user->getOperand(i);
-    if (DBG)
-      errs() << "LiveSet::addInnerUsedRegs handles oprd " << stat->printValue(oprd) << "\n";
+    //if (DBG)
+      //errs() << "LiveSet::addInnerUsedRegs handles oprd " << stat->printValue(oprd) << "\n";
     ConstantExpr *opInner = dyn_cast<ConstantExpr>(oprd);
     if (opInner)
       addInnerUsedRegs(intCtx, opInner);
@@ -109,9 +109,9 @@ void LiveSet::addUsedRegs(DynInstr *dynInstr) {
     Value *oprd = instr->getOperand(i);
     ConstantExpr *opInner = dyn_cast<ConstantExpr>(oprd);
     if(opInner) {
-      if (DBG)
+      /*if (DBG)
         errs() << "LiveSet::addUsedRegs handles nested instruction " << stat->printInstr(instr) << "\n"
-          << "Oprd " << stat->printValue(oprd) << "\n";
+          << "Oprd " << stat->printValue(oprd) << "\n";*/
       addInnerUsedRegs(intCtx, opInner);
     } else // Only need to add this reg when it is not a LLVM Constant.
       addReg(intCtx, oprd);
