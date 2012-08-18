@@ -223,6 +223,8 @@ std::string Util::printFileLoc(const Instruction *instr, const char *tag) {
 std::string Util::printNearByFileLoc(const Instruction *instr) {
   static const int distance = 5; // 5 basicblocks distance.
   std::string tag = "L";
+  if (!instr)
+    return "NULL INSTR";
   if (instr->getMetadata("dbg"))
     return printFileLoc(instr, tag.c_str());
   else {

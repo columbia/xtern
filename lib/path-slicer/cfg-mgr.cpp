@@ -96,6 +96,7 @@ BasicBlock *CfgMgr::findNearestCommonPostDominator(PostDominatorTree &PDT,
   return NULL;
 }
 
+#if 0
 Instruction *CfgMgr::getStaticPostDom(Instruction *prevInstr) {
   /*static long numPostDomQuery;
   static long numPostDomHit;
@@ -129,4 +130,4 @@ Instruction *CfgMgr::getStaticPostDom(Instruction *prevInstr) {
     neareastPostDomInst[prevInstr] = NULL;
   return neareastPostDomInst[prevInstr];
 }
-
+#endif

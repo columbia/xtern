@@ -412,7 +412,10 @@ void Stat::collectExed(DynInstr *dynInstr) {
     memOpStat.collectMemOpStat((DynMemInstr *)dynInstr);*/
 }
 
-void Stat::collectExplored(llvm::Instruction *instr) {
+void Stat::collectExplored(DynInstr *dynInstr) {
+  Instruction *instr = NULL;
+  if (dynInstr)
+    instr = idMgr->getOrigInstr(dynInstr);
   if (pathFreq.count(instr) == 0)
     pathFreq[instr] = 1;
   else
@@ -420,25 +423,12 @@ void Stat::collectExplored(llvm::Instruction *instr) {
 }
 
 void Stat::printExplored() {
-  long numInternal = 0;
-  long numExternal = 0;
-  DenseMapIterator<Instruction *, int> itr(pathFreq.begin());
-  for (; itr != pathFreq.end(); itr++) {
-    Instruction *instr = itr->first;
-    assert(instr);
-    Function *f = Util::getFunction(instr);
-    BasicBlock *bb = Util::getBasicBlock(instr);
-    std::string property = (funcSumm->isInternalFunction(f))?"INTERNAL":"EXTERNAL";
-    errs() << "Stat::printExplored: F (" << property << "): " << f->getNameStr()
-      << ": BB: " << bb->getNameStr()
-      << ": EXPLORED FREQ: " << itr->second << "\n";
-    if (funcSumm->isInternalFunction(f))
-      numInternal += itr->second;
-    else
-      numExternal += itr->second;      
-  }
-  errs() << "TOTAL EXPLORED FREQ: " << "(INTERNAL: " << numInternal
-    << ", EXTERNAL: " << numExternal << ")" << "\n";
+  errs() << BAN;
+  DenseMapIterator<llvm::Instruction *, int> itr(pathFreq.begin());
+  for (; itr != pathFreq.end(); itr++)
+    errs() << "Stat::printExplored [Freq: " << itr->second << "]: "
+    << Util::printNearByFileLoc(itr->first) << " " << printInstr(itr->first) << "\n\n";
+  errs() << BAN;
 }
 
 void Stat::printModule(std::string outputDir) {

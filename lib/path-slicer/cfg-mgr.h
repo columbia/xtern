@@ -36,7 +36,7 @@ namespace tern {
     virtual void getAnalysisUsage(llvm::AnalysisUsage &AU) const;
     virtual bool runOnModule(llvm::Module &M);    
     bool postDominate(llvm::Instruction *prevInstr, llvm::Instruction *postInstr);
-    llvm::Instruction *getStaticPostDom(llvm::Instruction *prevInstr);
+    //llvm::Instruction *getStaticPostDom(llvm::Instruction *prevInstr);
     llvm::Instruction *getFirstInstr();
   };
 }

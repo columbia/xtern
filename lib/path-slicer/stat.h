@@ -203,7 +203,7 @@ namespace tern {
     void collectExed(DynInstr *dynInstr);
 
     /* Utility for explored path frequency. */
-    void collectExplored(llvm::Instruction *instr);
+    void collectExplored(DynInstr *dynInstr);
     void printExplored();
 
     void printModule(std::string outputDir);

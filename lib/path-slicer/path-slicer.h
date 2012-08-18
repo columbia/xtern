@@ -142,9 +142,6 @@ namespace tern {
     size_t getLatestBrOrExtCallIdx(void *pathId);
     
 
-    /* Collect path exploration stats. */
-    void collectExplored(llvm::Instruction *instr);
-
     bool isInternalFunction(llvm::Function *f);
 
     void getKLEEFinalStat(unsigned numInstrs, unsigned numCoveredInstrs,

@@ -150,6 +150,9 @@ bool IntraSlicer::retRegOverWritten(DynRetInstr *dynRetInstr) {
   return result;
 }
 
+  /* The postInstr passed to funcSumm can be NULL, which is legal, and means 
+  starting from the dynBrInstr, do traversal until hitting return or exit() 
+  instruction of current function. */
 bool IntraSlicer::intraProcEventBetween(DynBrInstr *dynBrInstr, DynInstr *dynPostInstr) {
   Instruction *prevInstr = idMgr->getOrigInstr((DynInstr *)dynBrInstr);
   BranchInst *branch = dyn_cast<BranchInst>(prevInstr);
@@ -157,8 +160,6 @@ bool IntraSlicer::intraProcEventBetween(DynBrInstr *dynBrInstr, DynInstr *dynPos
   Instruction *postInstr = NULL;
   if (dynPostInstr) /* dynPostInstr can be NULL because sometimes we start from empty target. */
     postInstr = idMgr->getOrigInstr((DynInstr *)dynPostInstr);
-  else
-    postInstr = cfgMgr->getStaticPostDom(prevInstr);
   bool result = funcSumm->intraProcEventBetween(branch, postInstr);
   if (DBG) {
     errs() << "\n\nIntraSlicer::intraProcEventBetween result " << result << ":\n";
@@ -169,6 +170,7 @@ bool IntraSlicer::intraProcEventBetween(DynBrInstr *dynBrInstr, DynInstr *dynPos
 }
 
 bool IntraSlicer::interProcEventBetween(DynBrInstr *dynBrInstr, DynInstr *dynPostInstr) {
+  // TBD. How to handle it when the prev instr is a call, not a branch?
   return intraProcEventBetween(dynBrInstr, dynPostInstr);
 }
 

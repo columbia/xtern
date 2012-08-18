@@ -72,6 +72,7 @@ PathSlicer::~PathSlicer() {
     stat.printModule(this->outputDir);
   if (DBG)
     stat.printSymQueryStat();
+  stat.printExplored();
   stat.printStat("PathSlicer::calStat FINAL");
   stat.printEventCalls();
   stat.printFinalFormatResults();
@@ -286,7 +287,6 @@ void PathSlicer::calStat(void *pathId, set<size_t> &rmBrs, set<size_t> &rmCalls)
   interSlicer.calStat();
   intraSlicer.calStat(pathId, rmBrs, rmCalls);
   stat.printStat("PathSlicer::calStat");
-  stat.printExplored();
   errs() << BAN;
 }
 
@@ -324,6 +324,13 @@ void PathSlicer::record(void *pathId, void *instr, void *state, void *f) {
 
 void PathSlicer::copyTrace(void *newPathId, void *curPathId) {
   //fprintf(stderr, "PathSlicer::copyTrace new %p, cur %p\n", (void *)newPathId, (void *)curPathId);
+
+  /* Collect path exploration stat. Do this within copyTrace() because this 
+  function is always involved whenever a state is forked. */
+  DynInstr *dynInstr = getLatestBrOrExtCall(curPathId);
+  stat.collectExplored(dynInstr);
+
+  // Copy trace.
   assert (!DM_IN(newPathId, allPathTraces));
   if (!DM_IN(curPathId, allPathTraces))
     return;
@@ -430,10 +437,6 @@ size_t PathSlicer::getLatestBrOrExtCallIdx(void *pathId) {
     return (size_t)-1;
   else
     return dynInstr->getIndex();
-}
-
-void PathSlicer::collectExplored(llvm::Instruction *instr) {
-  stat.collectExplored(instr);
 }
 
 void PathSlicer::collectStatesStat(void *pathId) {

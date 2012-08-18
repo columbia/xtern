@@ -126,7 +126,7 @@ bool EventMgr::mayCallEvent(Instruction *instr) {
 
 bool EventMgr::intraProcEventBetween(BranchInst *prevInstr, Instruction *postInstr) {
   Function *func = Util::getFunction(prevInstr);
-  BasicBlock *postDomBB = NULL;
+  BasicBlock *postDomBB = NULL;  // The passed in 'postInstr' can be NULL, which is legal.
   if (postInstr)
     postDomBB = Util::getBasicBlock(postInstr);
   
