@@ -424,10 +424,28 @@ void Stat::collectExplored(DynInstr *dynInstr) {
 
 void Stat::printExplored() {
   errs() << BAN;
-  DenseMapIterator<llvm::Instruction *, int> itr(pathFreq.begin());
-  for (; itr != pathFreq.end(); itr++)
-    errs() << "Stat::printExplored [Freq: " << itr->second << "]: "
-    << Util::printNearByFileLoc(itr->first) << " " << printInstr(itr->first) << "\n\n";
+  size_t numPrinted = 0;
+  bool finished = false;
+
+  // Print in ascending order.
+  for (int i = 1; i < 1e6; i++) {
+    DenseMapIterator<llvm::Instruction *, int> itr(pathFreq.begin());
+    for (; itr != pathFreq.end(); itr++) {
+      if (itr->second == i) {
+        errs() << "Stat::printExplored [Freq: " << itr->second << "]: "
+          << Util::printNearByFileLoc(itr->first) << " " << printInstr(itr->first) << "\n\n"; 
+        numPrinted++;
+        if (numPrinted == pathFreq.size()) {
+          finished = true;
+          break;
+        }
+      }
+    }
+    if (finished)
+      break;
+  }
+  if (!finished)
+    errs() << "WARN: some states are not printed.\n\n"; 
   errs() << BAN;
 }
 
