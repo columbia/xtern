@@ -323,12 +323,15 @@ void PathSlicer::record(void *pathId, void *instr, void *state, void *f) {
 }
 
 void PathSlicer::copyTrace(void *newPathId, void *curPathId) {
-  //fprintf(stderr, "PathSlicer::copyTrace new %p, cur %p\n", (void *)newPathId, (void *)curPathId);
 
   /* Collect path exploration stat. Do this within copyTrace() because this 
   function is always involved whenever a state is forked. */
   DynInstr *dynInstr = getLatestBrOrExtCall(curPathId);
   stat.collectExplored(dynInstr);
+  if (DBG) {
+    fprintf(stderr, "PathSlicer::copyTrace current state %p forks a new state %p\n", (void *)curPathId, (void *)newPathId);
+    stat.printDynInstr(dynInstr, "PathSlicer::copyTrace fork state instr");
+  }
 
   // Copy trace.
   assert (!DM_IN(newPathId, allPathTraces));
