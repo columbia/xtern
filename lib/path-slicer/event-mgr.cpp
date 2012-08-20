@@ -34,8 +34,9 @@ EventMgr::~EventMgr() {
     fprintf(stderr, "EventMgr::~EventMgr\n");
 }
 
-void EventMgr::initCallGraph(llvm::CallGraphFP *CG) {
+void EventMgr::init(llvm::CallGraphFP *CG, Stat *stat) {
   this->CG = CG;
+  this->stat = stat;
 }
 
 void EventMgr::getAnalysisUsage(AnalysisUsage &AU) const {
@@ -147,6 +148,41 @@ bool EventMgr::intraProcEventBetween(BranchInst *prevInstr, Instruction *postIns
     }
   }
   return false;
+}
+
+bool EventMgr::intraProcMayReachEvent(llvm::Instruction *instr) {
+  bool result = false;
+  BasicBlock *bb = Util::getBasicBlock(instr);
+  BasicBlock::iterator itr = instr;
+  BranchInst *br = NULL;
+
+  // First.
+  ++itr;
+  for (; itr != bb->end(); ++itr) {
+    Instruction *cur = itr;
+    if (Util::isCall(cur) && mayCallEvent(cur)) {
+      if (DBG) {
+        errs() << "EventMgr::intraProcMayReachEvent intraProcEventBetween cur " << stat->printInstr(cur) << "\n\n";
+        errs() << "EventMgr::intraProcMayReachEvent mayCallEvent checked current bb result 1\n\n";
+      }
+      result = true;
+      goto finish;
+    }
+  }
+
+  // Second.
+  br = dyn_cast<BranchInst>(&(bb->back()));
+  if (br) {
+    result= intraProcEventBetween(br, NULL);
+    if (DBG) {
+      errs() << "EventMgr::intraProcMayReachEvent intraProcEventBetween br " << stat->printInstr(br) << "\n\n";
+      errs() << "EventMgr::intraProcMayReachEvent intraProcEventBetween result " << result << ".\n\n";
+    }
+  }
+  
+finish:
+  SERRS << "EventMgr::intraProcMayReachEvent result " << result << ".\n";
+  return result;
 }
 
 void EventMgr::DFS(BasicBlock *x, BasicBlock *sink) {

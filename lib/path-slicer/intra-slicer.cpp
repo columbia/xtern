@@ -169,9 +169,32 @@ bool IntraSlicer::intraProcEventBetween(DynBrInstr *dynBrInstr, DynInstr *dynPos
   return result;
 }
 
-bool IntraSlicer::interProcEventBetween(DynBrInstr *dynBrInstr, DynInstr *dynPostInstr) {
-  // TBD. How to handle it when the prev instr is a call, not a branch?
-  return intraProcEventBetween(dynBrInstr, dynPostInstr);
+bool IntraSlicer::interProcEventBetween(DynBrInstr *dynBrInstr, DynInstr *dynPostInstr, DynCallInstr *caller) {
+  DynInstr *curPrev = ( DynInstr *)dynBrInstr;
+  DynCallInstr *parent = caller;
+  assert(dynPostInstr);
+  if (intraProcEventBetween(( DynBrInstr *)curPrev, dynPostInstr)) {
+    SERRS << "IntraSlicer::interProcEventBetween intraProcEventBetween return true!\n\n";
+    return true;
+  }
+  else {
+    /* As long as parent is not main(), then go back to parent caller 
+        recursively to check intraProcMayReachEvent(). */
+    while (parent != NULL) {
+      curPrev = parent;
+      parent = ((DynCallInstr *)curPrev)->getCaller();
+      if (DBG) {
+        stat->printDynInstr(curPrev, "IntraSlicer::interProcEventBetween intraProcMayReachEvent, curPrev");
+        stat->printDynInstr(parent, "IntraSlicer::interProcEventBetween intraProcMayReachEvent, parent");
+      }
+      if (funcSumm->intraProcMayReachEvent(idMgr->getOrigInstr(curPrev))) {
+        SERRS << "IntraSlicer::interProcEventBetween intraProcMayReachEvent return true!\n\n";
+        return true;
+      }
+    }
+  }
+  SERRS << "IntraSlicer::interProcEventBetween return false!\n\n";
+  return false;
 }
 
 bool IntraSlicer::writtenBetween(DynBrInstr *dynBrInstr, DynInstr *dynPostInstr) {
@@ -418,6 +441,7 @@ void IntraSlicer::handleProcessExitCall(DynInstr *exitCall) {
   DynInstr *cur = NULL;
 
   while (true) {
+    bool checkedInterProc = false;
     // The inner loop to backward and look at instructions between the caller and the postInstr.
     while (!empty()) {
       cur = delTraceTail(tid);
@@ -449,14 +473,23 @@ void IntraSlicer::handleProcessExitCall(DynInstr *exitCall) {
       an exit call must be the last instruction in a trace, so the slice and live set must be empty at this point,
       so nothing could be written between. **/
       Instruction *instr = idMgr->getOrigInstr(cur);
-      if (Util::isBr(instr) && interProcEventBetween((DynBrInstr *)cur, postInstr)) {
-        if (DBG) {
-          stat->printDynInstr(caller, "IntraSlicer::handleProcessExitCall: interProcEventBetween: caller");
-          stat->printDynInstr(cur, "IntraSlicer::handleProcessExitCall: interProcEventBetween: cur");
-          stat->printDynInstr(postInstr, "IntraSlicer::handleProcessExitCall: interProcEventBetween: postInstr");
+      if (Util::isBr(instr)) {
+        bool shouldTake = false;
+        if (!checkedInterProc) {
+          shouldTake = interProcEventBetween((DynBrInstr *)cur, postInstr, caller);
+          checkedInterProc = true;
+        } else 
+          shouldTake = intraProcEventBetween((DynBrInstr *)cur, postInstr);
+
+        if (shouldTake) {
+          if (DBG) {
+            stat->printDynInstr(caller, "IntraSlicer::handleProcessExitCall: interProcEventBetween: caller");
+            stat->printDynInstr(cur, "IntraSlicer::handleProcessExitCall: interProcEventBetween: cur");
+            stat->printDynInstr(postInstr, "IntraSlicer::handleProcessExitCall: interProcEventBetween: postInstr");
+          }
+          takeBr(cur, TakenFlags::INTRA_BR_EVENT_BETWEEN_CALLER_N_POST);
+          return;
         }
-        takeBr(cur, TakenFlags::INTRA_BR_EVENT_BETWEEN_CALLER_N_POST);
-        return;
       }
     }
 

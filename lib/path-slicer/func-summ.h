@@ -11,6 +11,7 @@
 #include "event-mgr.h"
 #include "dyn-instrs.h"
 #include "cache-util.h"
+#include "stat.h"
 
 namespace tern {
   // TBD: should move the internal function list from path slicer to here.
@@ -28,6 +29,7 @@ namespace tern {
   private:
     InstrIdMgr *idMgr;
     EventMgr *EM;
+    Stat *stat;
 
 #if 0    
     /* Set of events such as lock()/unlock(), or fopen()/fclose(). */
@@ -52,7 +54,7 @@ namespace tern {
     FuncSumm();
     ~FuncSumm();
 
-    void init(InstrIdMgr *idMgr, EventMgr *EM);
+    void init(InstrIdMgr *idMgr, Stat *stat, EventMgr *EM);
 
     virtual void getAnalysisUsage(AnalysisUsage &AU) const;
     virtual bool runOnFunction(Function &F);
@@ -98,6 +100,9 @@ namespace tern {
     size_t numEventCallSites();
     void printEventCalls(llvm::DenseSet<const Instruction *> *exedEvents = NULL);
 
+    /* Starting from the passed in dyn instr, go over the cfg of current function (intra-proc)
+    until hitting return or exit(), see whether may reach any event. */
+    bool intraProcMayReachEvent(llvm::Instruction *instr);
   };
 
 }

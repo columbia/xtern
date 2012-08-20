@@ -119,14 +119,14 @@ void PathSlicer::init(llvm::Module &M) {
   cgPM->run(*origModule);
 
   /* Init event manager. */
-  evMgr.initCallGraph(&CG);
+  evMgr.init(&CG, &stat);
   PassManager *eventPM = new PassManager;
   Util::addTargetDataToPM(origModule, eventPM);
   eventPM->add(&evMgr);
   eventPM->run(*origModule);
   
   /* Init function summary. */
-  funcSumm.init(&idMgr, &evMgr);
+  funcSumm.init(&idMgr, &stat, &evMgr);
   PassManager *funcPM = new PassManager;
   Util::addTargetDataToPM(origModule, funcPM);
   funcPM->add(&funcSumm);

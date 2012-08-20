@@ -19,6 +19,8 @@
 #include "common/typedefs.h"
 #include "klee/BasicCheckers.h"
 
+#include "stat.h"
+
 namespace tern {
   struct EventMgr: public llvm::ModulePass {	
   public:
@@ -28,6 +30,7 @@ namespace tern {
   protected:
     klee::Checker *checker;
     llvm::CallGraphFP *CG;
+    Stat *stat;
 	
     typedef llvm::DenseMap<const llvm::Instruction *, FuncList> SiteFuncMapping;
     typedef llvm::DenseMap<const llvm::Function *, InstList> FuncSiteMapping;		
@@ -66,7 +69,7 @@ namespace tern {
   public:
     EventMgr();
     ~EventMgr();
-    void initCallGraph(llvm::CallGraphFP *CG);
+    void init(llvm::CallGraphFP *CG, Stat *stat);
     virtual void getAnalysisUsage(llvm::AnalysisUsage &AU) const;
     virtual bool runOnModule(llvm::Module &M);
 
@@ -78,6 +81,10 @@ namespace tern {
     void output(const llvm::Module &M) const;
     size_t numEventCallSites();
     void printEventCalls(llvm::DenseSet<const Instruction *> *exedEvents = NULL);
+
+    /* Starting from the passed in static instr, go over the cfg of current function (intra-proc)
+    until hitting return or exit(), see whether may reach any event. */
+    bool intraProcMayReachEvent(llvm::Instruction *instr);
   };
 }
 

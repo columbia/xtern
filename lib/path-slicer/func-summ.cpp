@@ -20,8 +20,9 @@ FuncSumm::~FuncSumm() {
   }
 }
 
-void FuncSumm::init(InstrIdMgr *idMgr, EventMgr *EM) {
+void FuncSumm::init(InstrIdMgr *idMgr, Stat *stat, EventMgr *EM) {
   this->idMgr = idMgr;
+  this->stat = stat;
   this->EM = EM;
 }
 
@@ -64,6 +65,11 @@ bool FuncSumm::mayCallEvent(DynInstr *dynInstr) {
 
 bool FuncSumm::intraProcEventBetween(llvm::BranchInst *prevInstr, llvm::Instruction *postInstr) {
   return EM->intraProcEventBetween(prevInstr, postInstr);
+}
+
+
+bool FuncSumm::intraProcMayReachEvent(llvm::Instruction *instr) {
+  return EM->intraProcMayReachEvent(instr);
 }
 
 bool FuncSumm::isInternalCall(const Instruction *instr) {
