@@ -14,6 +14,29 @@ How to build xtern with dynamic hook module.
 
 You can test the build by running 'make test_sc' in $XTERN_ROOT/dync_hook
 
+Using LLVM Instrumentation
+==========================
+First you need setup LLVM from git repository following the instructions.
+Where: git@repair.cs.columbia.edu:llvm
+Maybe you also need setup TERN from git repository
+Where: git@repair.cs.columbia.edu:tern
+
+Build the xtern modules.
+0. add $XTERN_ROOT into environment variables. make sure LLVM is correctly setup in debug mode. copy all the files from $LLVM_ROOT/llvm-obj/Debug/bin/ to $LLVM_ROOT/install/bin/
+1. create $XTERN_ROOT/obj, go to obj.
+2. do config as following.
+> ./../configure --with-llvmsrc=$LLVM_ROOT/llvm-2.7/ --with-llvmobj=$LLVM_ROOT/llvm-obj/ --with-llvmgccdir=$LLVM_ROOT/install/bin/
+3. run "make ENABLE_OPTIMIZED=0" in obj directory.
+
+Then you should obtain xtern tools executables in $XTERN_ROOT/obj/Debug/bin/. There should you find tern-instr.
+
+Run application with LLVM-xtern.
+0. Compile the application to LLVM bytecode, for example, app.bc
+1. Run './tern-instr -S app.bc -s app'. Then you should get app-analysis.ll, app-record.ll and app-replay.ll.
+2. Run 'llc -o app-record.s app-record.ll'. Then you should obtain app-record.s
+3. Run 'g++ -o app-record app-record.s tern_utils.cpp -L$XTERN_ROOT/obj/Debug/lib -lruntime -lcommon -lpthread -lcrypt -rt <any other libraries you need>' 
+4. Now you should obtain 'app-record', which is the application's executable with instrumentation of xtern library.
+
 Testsuite (xtern/test)
 ======================
 
