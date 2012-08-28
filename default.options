@@ -67,6 +67,9 @@ pthread_tryjoin = 1
 # whether to turn on epoch approach, only supported for RR scheduler.
 epoch_mode = 0
 
+# if we should try to sync the global clock and logic clock
+sync_global_clock = 1
+
 # set epoch length, measured in microsecond = 1e-6 second
 epoch_length = 100
 
