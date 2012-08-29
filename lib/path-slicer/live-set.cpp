@@ -246,3 +246,11 @@ void LiveSet::printVirtReg(CtxVPair &virtReg, const char *tag) {
   errs() << BAN;
 }
 
+bool LiveSet::isLoadErrnoInstr(DynInstr *dynInstr) {
+   Instruction *instr = idMgr->getOrigInstr(dynInstr);
+  if (Util::isLoad(instr))
+    return Util::isErrnoAddr(instr->getOperand(0));
+  else
+    return false;
+}
+

@@ -46,6 +46,7 @@ namespace tern {
     void addReg(CallCtx *ctx, llvm::Value *v);
     void printVirtRegs(const char *tag);
     void printVirtReg(CtxVPair &virtReg, const char *tag);
+    bool isLoadErrnoInstr(DynInstr *dynInstr);
 
   public:
     LiveSet();

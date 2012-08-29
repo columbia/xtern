@@ -534,7 +534,8 @@ void IntraSlicer::handleMem(DynInstr *dynInstr) {
     SERRS << "IntraSlicer::handleMem reason1 " 
       << reason1 << ", reason2 " << reason2 << "\n";
     if (reason1 || reason2) {
-      if (reason2)
+      // If reason2, then the dest reg is defined by the load ptr oprd, so we delete the dest reg.
+      if (reason2) 
         delRegOverWritten(loadInstr);
       DynOprd loadPtrOprd(loadInstr, instr->getOperand(0), 0);
       live.addReg(&loadPtrOprd);
