@@ -394,6 +394,8 @@ void IntraSlicer::handleRet(DynInstr *dynInstr) {
   ENDTIME(stat->intraRetTime, stat->intraRetSt, stat->intraRetEnd);
 }
 
+/* Todo: a possible optimization is: whenever taking a callsite, we can remove 
+ the "formal" argument registers with calling contexts from the virt register set. */
 void IntraSlicer::handleCall(DynInstr *dynInstr) {
   BEGINTIME(stat->intraCallSt);
   DynCallInstr *callInstr = (DynCallInstr*)dynInstr;
