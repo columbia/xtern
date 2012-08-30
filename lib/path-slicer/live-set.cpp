@@ -39,7 +39,7 @@ void LiveSet::clear() {
 }
 
 void LiveSet::addReg(CallCtx *ctx, Value *v) {
-  if (!Util::isConstant(v)) {//Discard it if it is a LLVM Constant
+  if (!Util::isConstant(v)) { //Discard it if it is a LLVM Constant
     if (DBG)
       errs() << "LiveSet::addReg <" << (void *)v << ">: " << stat->printValue(v) << "\n\n";
     CtxVPair p = std::make_pair(ctx, v);
@@ -51,7 +51,7 @@ void LiveSet::addReg(CallCtx *ctx, Value *v) {
 
 void LiveSet::addReg(DynOprd *dynOprd) {
   Value *v = dynOprd->getStaticValue();
-  if (!Util::isConstant(v)) {//Discard it if it is a LLVM Constant
+  if (!Util::isConstant(v)) { //Discard it if it is a LLVM Constant
     CtxVPair p = std::make_pair(dynOprd->getDynInstr()->getCallingCtx(), v);
     virtRegs.insert(p);
     if (Util::isPHI(v))
