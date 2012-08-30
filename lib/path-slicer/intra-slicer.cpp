@@ -413,7 +413,7 @@ void IntraSlicer::handleCall(DynInstr *dynInstr) {
     slice.add(dynInstr, TakenFlags::INTRA_NON_MEM); 
   } else {
     if (regOverWritten(dynInstr))
-      takeExternalCall(dynInstr, TakenFlags::INTRA_EXT_CALL_REG_OW);
+      takeExternalCall(dynInstr, TakenFlags::INTRA_EXT_CALL_REG_OW);// delRegOverWritten() is called in this function.
     else {
       Instruction *instr = idMgr->getOrigInstr(dynInstr);
       if (funcSumm->extFuncHasSumm(instr)) {
@@ -422,6 +422,11 @@ void IntraSlicer::handleCall(DynInstr *dynInstr) {
         const bdd bddOfLive = live.getAllLoadMem();
         if ((storeSumm & bddOfLive) != bddfalse)
           takeExternalCall(dynInstr, TakenFlags::INTRA_EXT_CALL_MOD_LIVE);
+      } else if (live.loadErrnoInstrIn()) { // Handle errno with external calls.
+        takeExternalCall(dynInstr, TakenFlags::INTRA_EXT_CALL_MOD_ERRNO);
+        live.delLoadErrnoInstr();
+        if (DBG)
+          stat->printDynInstr(dynInstr, "IntraSlicer::handleCall() external call modify errno");
       }
     }
   }

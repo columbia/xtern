@@ -31,6 +31,7 @@ size_t LiveSet::loadInstrsSize() {
 void LiveSet::clear() {
   virtRegs.clear();
   phiVirtRegs.clear();
+  loadErrnoInstr = NULL;
   loadInstrs.clear();
   extCallLoadInstrs.clear();
   allLoadMem = bddfalse;
@@ -38,7 +39,7 @@ void LiveSet::clear() {
 }
 
 void LiveSet::addReg(CallCtx *ctx, Value *v) {
-  if (!Util::isConstant(v)) { // Discard it if it is a LLVM Constant.
+  if (!Util::isConstant(v)) {//Discard it if it is a LLVM Constant
     if (DBG)
       errs() << "LiveSet::addReg <" << (void *)v << ">: " << stat->printValue(v) << "\n\n";
     CtxVPair p = std::make_pair(ctx, v);
@@ -49,8 +50,8 @@ void LiveSet::addReg(CallCtx *ctx, Value *v) {
 }
 
 void LiveSet::addReg(DynOprd *dynOprd) {
-  if (!Util::isConstant(dynOprd)) { // Discard it if it is a LLVM Constant.
-    Value *v = dynOprd->getStaticValue();
+  Value *v = dynOprd->getStaticValue();
+  if (!Util::isConstant(v)) {//Discard it if it is a LLVM Constant
     CtxVPair p = std::make_pair(dynOprd->getDynInstr()->getCallingCtx(), v);
     virtRegs.insert(p);
     if (Util::isPHI(v))
@@ -118,22 +119,40 @@ void LiveSet::addUsedRegs(DynInstr *dynInstr) {
   }
 }
 
+void LiveSet::cleanLoadMemBdd() {
+  allLoadMem = extCallLoadMem = bddfalse;
+}
+
 void LiveSet::addLoadMem(DynInstr *dynInstr) {
   ASSERT(!DS_IN(dynInstr, loadInstrs));
+  if (isLoadErrnoInstr(dynInstr)) {
+    loadErrnoInstr = dynInstr;
+    if (DBG)
+      stat->printDynInstr(loadErrnoInstr, "LiveSet::addLoadMem update loadErrnoInstr");
+  }
   loadInstrs.insert(dynInstr);
-  allLoadMem = extCallLoadMem = bddfalse;
+  cleanLoadMemBdd();
 }
 
 void LiveSet::addExtCallLoadMem(DynInstr *dynInstr) {
   ASSERT(!DS_IN(dynInstr, extCallLoadInstrs));
   extCallLoadInstrs.insert(dynInstr);  
-  allLoadMem = extCallLoadMem = bddfalse;
+  cleanLoadMemBdd();
 }
 
 void LiveSet::delLoadMem(DynInstr *dynInstr) {
   ASSERT(DS_IN(dynInstr, loadInstrs));
   loadInstrs.erase(dynInstr);
-  allLoadMem = extCallLoadMem = bddfalse;
+  cleanLoadMemBdd();
+}
+
+void LiveSet::delLoadErrnoInstr() {
+  ASSERT(loadErrnoInstr);
+  if (DBG)
+    stat->printDynInstr(loadErrnoInstr, "LiveSet::delLoadErrnoInstr");
+  delLoadMem(loadErrnoInstr);
+  loadErrnoInstr = NULL;
+  cleanLoadMemBdd();
 }
 
 DenseSet<DynInstr *> &LiveSet::getAllLoadInstrs() {
@@ -252,5 +271,9 @@ bool LiveSet::isLoadErrnoInstr(DynInstr *dynInstr) {
     return Util::isErrnoAddr(instr->getOperand(0));
   else
     return false;
+}
+
+bool LiveSet::loadErrnoInstrIn() {
+  return (loadErrnoInstr != NULL);
 }
 

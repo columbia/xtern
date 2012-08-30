@@ -34,6 +34,7 @@ namespace tern {
     CtxVDenseSet phiVirtRegs;
 
     /** Store all the load instructions. **/
+    DynInstr *loadErrnoInstr;
     llvm::DenseSet<DynInstr *> loadInstrs;
     llvm::DenseSet<DynInstr *> extCallLoadInstrs;
     bdd allLoadMem;
@@ -47,6 +48,7 @@ namespace tern {
     void printVirtRegs(const char *tag);
     void printVirtReg(CtxVPair &virtReg, const char *tag);
     bool isLoadErrnoInstr(DynInstr *dynInstr);
+    void cleanLoadMemBdd();
 
   public:
     LiveSet();
@@ -97,6 +99,12 @@ namespace tern {
     /** Given a calling context and a set of phi intructions, see whether this combination is in the phiVirtRegs,,
     if yes, it means phi-definition-between. **/
     bool phiDefBetween(CallCtx *ctx, InstrDenseSet *phiSet);
+
+    /** Whether a load errno instruction is in the live set. **/
+    bool loadErrnoInstrIn();
+
+    /** Delete the "latest" load errno instruction from live set. **/
+    void delLoadErrnoInstr();
   };
 }
 
