@@ -143,6 +143,8 @@ void LiveSet::addExtCallLoadMem(DynInstr *dynInstr) {
 void LiveSet::delLoadMem(DynInstr *dynInstr) {
   ASSERT(DS_IN(dynInstr, loadInstrs));
   loadInstrs.erase(dynInstr);
+  if (loadErrnoInstr == dynInstr) // If the current removed dyn instr is load errno instr, set it to be NULL too.
+    loadErrnoInstr = NULL;
   cleanLoadMemBdd();
 }
 
@@ -151,7 +153,6 @@ void LiveSet::delLoadErrnoInstr() {
   if (DBG)
     stat->printDynInstr(loadErrnoInstr, "LiveSet::delLoadErrnoInstr");
   delLoadMem(loadErrnoInstr);
-  loadErrnoInstr = NULL;
   cleanLoadMemBdd();
 }
 
