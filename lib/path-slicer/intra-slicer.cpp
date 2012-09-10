@@ -425,8 +425,8 @@ void IntraSlicer::handleCall(DynInstr *dynInstr) {
       } else if (live.loadErrnoInstrIn()) { // Handle errno with external calls.
         takeExternalCall(dynInstr, TakenFlags::INTRA_EXT_CALL_MOD_ERRNO);
         live.delLoadErrnoInstr();
-        if (DBG)
-          stat->printDynInstr(dynInstr, "IntraSlicer::handleCall() external call modify errno");
+        //if (DBG)
+        stat->printDynInstr(dynInstr, "IntraSlicer::handleCall() external call modify errno");
       }
     }
   }
