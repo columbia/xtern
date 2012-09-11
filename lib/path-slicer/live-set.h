@@ -100,8 +100,8 @@ namespace tern {
     if yes, it means phi-definition-between. **/
     bool phiDefBetween(CallCtx *ctx, InstrDenseSet *phiSet);
 
-    /** Whether a load errno instruction is in the live set. **/
-    bool loadErrnoInstrIn();
+    /** Get the load errno instr. **/
+    DynInstr *getLoadErrnoInstr();
 
     /** Delete the "latest" load errno instruction from live set. **/
     void delLoadErrnoInstr();

@@ -412,22 +412,37 @@ void IntraSlicer::handleCall(DynInstr *dynInstr) {
     // Currently set the reason to non mem, real reason depends on its return instr.
     slice.add(dynInstr, TakenFlags::INTRA_NON_MEM); 
   } else {
+    Instruction *instr = idMgr->getOrigInstr(dynInstr);
     if (regOverWritten(dynInstr))
       takeExternalCall(dynInstr, TakenFlags::INTRA_EXT_CALL_REG_OW);// delRegOverWritten() is called in this function.
-    else {
-      Instruction *instr = idMgr->getOrigInstr(dynInstr);
-      if (funcSumm->extFuncHasSumm(instr)) {
-        bdd storeSumm = bddfalse;
-        oprdSumm->getExtCallStoreSumm(callInstr, storeSumm);
-        const bdd bddOfLive = live.getAllLoadMem();
-        if ((storeSumm & bddOfLive) != bddfalse)
-          takeExternalCall(dynInstr, TakenFlags::INTRA_EXT_CALL_MOD_LIVE);
-      } else if (live.loadErrnoInstrIn()) { // Handle errno with external calls.
-        takeExternalCall(dynInstr, TakenFlags::INTRA_EXT_CALL_MOD_ERRNO);
-        live.delLoadErrnoInstr();
-        //if (DBG)
-        stat->printDynInstr(dynInstr, "IntraSlicer::handleCall() external call modify errno");
-      }
+    else if (funcSumm->extFuncHasSumm(instr)) {
+      bdd storeSumm = bddfalse;
+      oprdSumm->getExtCallStoreSumm(callInstr, storeSumm);
+      const bdd bddOfLive = live.getAllLoadMem();
+      if ((storeSumm & bddOfLive) != bddfalse)
+        takeExternalCall(dynInstr, TakenFlags::INTRA_EXT_CALL_MOD_LIVE);
+    }
+    
+    // If the external call is not taken yet, handle errno with external calls.
+    if (!dynInstr->isTaken() && live.getLoadErrnoInstr()) { 
+      takeExternalCall(dynInstr, TakenFlags::INTRA_EXT_CALL_MOD_ERRNO);
+      stat->printDynInstr(dynInstr, "IntraSlicer::handleCall() external call modify errno");
+    }
+
+    /* If the external call is taken by any of the above three reasons, and a load errno instr is in live set, then
+    delete the load instr from live set. Ignore errno addr here. */
+    if (dynInstr->isTaken() && !Util::isErrnoAddr(instr) && live.getLoadErrnoInstr()) {
+      //if (DBG) {
+        Instruction *loadErrnoInstr = idMgr->getOrigInstr(live.getLoadErrnoInstr());   
+        stat->printDynInstr(live.getLoadErrnoInstr(), "IntraSlicer::handleCall() load errno instr");
+        errs() << "IntraSlicer::handleCall() external call BB: "
+          << Util::getBasicBlock(instr)->getName() << ": location: "
+          << Util::printNearByFileLoc(instr) << "\n";
+        errs() << "IntraSlicer::handleCall() load errno instr BB: "
+          << Util::getBasicBlock(loadErrnoInstr)->getName() << ": location: "
+          << Util::printNearByFileLoc(loadErrnoInstr) << "\n";
+      //}
+      live.delLoadErrnoInstr();
     }
   }
 

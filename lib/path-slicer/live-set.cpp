@@ -274,7 +274,7 @@ bool LiveSet::isLoadErrnoInstr(DynInstr *dynInstr) {
     return false;
 }
 
-bool LiveSet::loadErrnoInstrIn() {
-  return (loadErrnoInstr != NULL);
+DynInstr *LiveSet::getLoadErrnoInstr() {
+  return loadErrnoInstr;
 }
 
