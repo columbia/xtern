@@ -424,14 +424,15 @@ void IntraSlicer::handleCall(DynInstr *dynInstr) {
     }
     
     // If the external call is not taken yet, handle errno with external calls.
-    if (!dynInstr->isTaken() && live.getLoadErrnoInstr()) { 
+    if (!dynInstr->isTaken() && live.getLoadErrnoInstr() &&
+      funcSumm->extCallMayModErrno((DynCallInstr *)dynInstr)) { 
       takeExternalCall(dynInstr, TakenFlags::INTRA_EXT_CALL_MOD_ERRNO);
       stat->printDynInstr(dynInstr, "IntraSlicer::handleCall() external call modify errno");
     }
 
     /* If the external call is taken by any of the above three reasons, and a load errno instr is in live set, then
     delete the load instr from live set. Ignore errno addr here. */
-    if (dynInstr->isTaken() && !Util::isErrnoAddr(instr) && live.getLoadErrnoInstr()) {
+    if (dynInstr->isTaken() && live.getLoadErrnoInstr() && !Util::isErrnoAddr(instr)) {
       //if (DBG) {
         Instruction *loadErrnoInstr = idMgr->getOrigInstr(live.getLoadErrnoInstr());   
         stat->printDynInstr(live.getLoadErrnoInstr(), "IntraSlicer::handleCall() load errno instr");

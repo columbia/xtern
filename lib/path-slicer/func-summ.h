@@ -90,6 +90,10 @@ namespace tern {
     bool extFuncHasStoreSumm(llvm::Instruction *instr);
     bool extFuncHasSumm(llvm::Instruction *instr);
 
+    /* Whether an external call may modify errno. */
+    bool extCallMayModErrno(DynCallInstr *dynCallInstr);
+
+
     /* Given a static instruction (must be a function call) and the formal argument offset,
     whether the argument has load/store summary. */
     bool isExtFuncSummLoad(llvm::Instruction *instr, unsigned argOffset);

@@ -96,6 +96,32 @@ bool FuncSumm::isInternalFunction(const Function *f) {
   return result;
 }
 
+/* Currently we used a string matching rather than a list of functions as the 
+summary, because this appraoch is faster, and enough for use for all our applications.
+
+I have checked the documents of all APIs in this cstring, none of the str* or 
+mem* functions would modify errno.
+http://www.cplusplus.com/reference/clibrary/cstring/
+ 
+I have also checked the documents of all APIs in this cstrlib, for all the ato
+* and str* functions, only strtod, strtol, and strtoul may modify errno.
+http://www.cplusplus.com/reference/clibrary/cstdlib/
+*/
+bool FuncSumm::extCallMayModErrno(DynCallInstr *dynCallInstr) {
+  assert(!isInternalCall(dynCallInstr));
+  Function *called = dynCallInstr->getCalledFunc();
+  std::string name = called->getNameStr();
+  if (name.find("str") == 0) {
+    if (name == "strtod" || name == "strtol" || name == "strtoul") // Only these 3 str* functions may modify errno.
+      return true;
+    else
+      return false;
+  } else if (name.find("mem") == 0) {
+    return false;
+  } else
+    return true; // conservative.
+}
+
 bool FuncSumm::extFuncHasLoadSumm(llvm::Instruction *instr) {
   assert(isa<CallInst>(instr));
   CallInst *ci = cast<CallInst>(instr);
