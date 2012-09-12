@@ -433,7 +433,7 @@ void IntraSlicer::handleCall(DynInstr *dynInstr) {
     /* If the external call is taken by any of the above three reasons, and a load errno instr is in live set, then
     delete the load instr from live set. Ignore errno addr here. */
     if (dynInstr->isTaken() && live.getLoadErrnoInstr() && !Util::isErrnoAddr(instr)) {
-      //if (DBG) {
+      if (DBG) {
         Instruction *loadErrnoInstr = idMgr->getOrigInstr(live.getLoadErrnoInstr());   
         stat->printDynInstr(live.getLoadErrnoInstr(), "IntraSlicer::handleCall() load errno instr");
         errs() << "IntraSlicer::handleCall() external call BB: "
@@ -442,7 +442,7 @@ void IntraSlicer::handleCall(DynInstr *dynInstr) {
         errs() << "IntraSlicer::handleCall() load errno instr BB: "
           << Util::getBasicBlock(loadErrnoInstr)->getName() << ": location: "
           << Util::printNearByFileLoc(loadErrnoInstr) << "\n";
-      //}
+      }
       live.delLoadErrnoInstr();
     }
   }
