@@ -1,0 +1,14 @@
+#!/bin/bash
+
+if [ -z $1 ]; then
+        # No version number
+        echo "Usage: <version number: e.g. 0.4.1>"
+        exit 1
+fi
+
+VER=$1
+tar zxvf $APPS_DIR/sys/aget-$VER.tar.gz
+cd aget-$VER
+patch -p1 < ../for-dbug-1.patch
+make CFLAGS='-D_GNU_SOURCE -g -w'
+

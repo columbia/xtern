@@ -67,7 +67,7 @@ diff -ruN aget-0.4.1/main.c modified-aget-0.4.1/main.c
  	struct hist_data h;
  	int retlog;
  
-+  pthread_mutex_init(&bwritten_mutex, NULL);
++	pthread_mutex_init(&bwritten_mutex, NULL);
 +
  	/* Allocate heap for download request	
  	 * struct request stores all the information that might be
