@@ -7,6 +7,8 @@ if [ -z $1 ]; then
 fi
 
 VER=$1
+cd $XTERN_ROOT/apps/aget
+rm -rf aget-$VER 
 tar zxvf $APPS_DIR/sys/aget-$VER.tar.gz
 cd aget-$VER
 patch -p1 < ../for-dbug-1.patch
