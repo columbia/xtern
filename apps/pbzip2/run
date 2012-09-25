@@ -1,0 +1,7 @@
+#!/bin/bash
+
+cd $XTERN_ROOT/apps/pbzip2
+rm -rf out serializer.log
+tar cvf input.tar pbzip2-1.1.5
+LD_PRELOAD=$XTERN_ROOT/dync_hook/interpose.so $XTERN_ROOT/apps/pbzip2/pbzip2 \
+-p8 -rkvf input.tar
