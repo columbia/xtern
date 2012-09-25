@@ -8,7 +8,8 @@ fi
 
 VER=$1
 cd $XTERN_ROOT/apps/pbzip2
-rm -rf pbzip2-$VER 
+rm -rf pbzip2-$VER
 tar zxvf $APPS_DIR/sys/pbzip2-$VER.tar.gz
 cd pbzip2-$VER
+patch -p1 < ../for-dbug-1.patch
 make
