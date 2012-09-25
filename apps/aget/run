@@ -1,0 +1,6 @@
+#!/bin/bash
+
+cd $XTERN_ROOT/apps/aget
+rm -rf out serializer.log
+LD_PRELOAD=$XTERN_ROOT/dync_hook/interpose.so $XTERN_ROOT/apps/aget/aget -f -n8 \
+http://systems.cs.columbia.edu/files/wpid-peregrine-sosp11.pdf
