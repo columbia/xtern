@@ -2,5 +2,9 @@
 
 cd $XTERN_ROOT/apps/aget
 rm -rf out serializer.log
-LD_PRELOAD=$XTERN_ROOT/dync_hook/interpose.so $XTERN_ROOT/apps/aget/aget -f -n8 \
-http://systems.cs.columbia.edu/files/wpid-peregrine-sosp11.pdf
+LD_PRELOAD=$XTERN_ROOT/dync_hook/interpose.so $XTERN_ROOT/apps/aget/aget -f -n4 \
+http://www.cs.columbia.edu/~heming/unlink/llvm-2.7.tgz
+#http://systems.cs.columbia.edu/files/wpid-peregrine-sosp11.pdf
+
+# Draw time chart.
+$XTERN_ROOT/eval/draw-time-chart.pl ./out
