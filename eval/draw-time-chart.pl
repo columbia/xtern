@@ -89,7 +89,7 @@ sub updateGlobalTime {
 						if ($doneTids{$checkedTid} eq 1) { # Pick the latest done thread, use its time as base time of current thread.
 							$baseTime = $fields2[2];
 							$tidFirstEvent = 1;
-							print "Tid $curTid (turn $turnKey) setup a basetime $baseTime from tid $checkedTid (turn $turn)\n";
+							#print "Tid $curTid (turn $turnKey) setup a basetime $baseTime from tid $checkedTid (turn $turn)\n";
 							last;
 						}
 					}
@@ -145,7 +145,7 @@ sub drawTimeChart {
 
 $curDir = `pwd`;
 parseSchedule(@ARGV[0]);
-print $curDir."\n";
+#print $curDir."\n";
 chdir($curDir);
 updateGlobalTime();
 drawTimeChart();
