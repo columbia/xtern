@@ -65,6 +65,8 @@ void initTid() {
     internal_mutex_lock(&lock);
     self_tid = num_threads;
     num_threads++;
+    if (num_threads == 1) // To match the idle thread in xtern.
+      num_threads++;
     internal_mutex_unlock(&lock);
     struct timespec tmp;
     update_time(&tmp); // Init my_time.

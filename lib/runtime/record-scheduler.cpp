@@ -568,8 +568,6 @@ int RRScheduler::fireTimeouts()
       dprintf("RRScheduler: %d timed out (%p, %u)\n",
               tid, waits[tid].chan, waits[tid].timeout);
       waits[tid].reset(ETIMEDOUT);
-      fprintf(stderr, "RRScheduler::fireTimeouts self %d, fired timeout tid %d\n", 
-      self(), tid);
       waitq.erase(prv);
       runq.push_back(tid);
       ++ timedout;
@@ -781,7 +779,6 @@ void RRScheduler::signal(void *chan, bool all)
     if(waits[tid].chan == chan) {
       dprintf("RRScheduler: %d signals %d(%p)\n", self(), tid, chan);
       waits[tid].reset();
-       fprintf(stderr, "RRScheduler::signal tid %d\n", tid);
       waitq.erase(prv);
       runq.push_back(tid);
       if(!all)
@@ -904,11 +901,9 @@ ostream& RRScheduler::dump(ostream& o)
 }
 
 void FCFSScheduler::getTurn() {  
-  //fprintf(stderr, "\n\nFCFSScheduler::getTurn start, self %d\n\n", self());
   pthread_mutex_lock(&fcfs_lock);
   //  fake
   runq.push_front(self());
-  //fprintf(stderr, "\n\nFCFSScheduler::getTurn end, self %d\n\n", self());
 }
 
 void FCFSScheduler::putTurn(bool at_thread_end) {  
@@ -922,7 +917,6 @@ void FCFSScheduler::putTurn(bool at_thread_end) {
   }
 
   next(at_thread_end);
-  //fprintf(stderr, "\n\nFCFSScheduler::putTurn end, self %d\n\n", self());
 }
 
 FCFSScheduler::FCFSScheduler()
@@ -946,14 +940,6 @@ void FCFSScheduler::next(bool at_thread_end)
   pthread_mutex_unlock(&fcfs_lock);
 }
 
-void printQueue(std::list<int> &q, const char *tag) {
-  fprintf(stderr, "\n\nprintQueue %s: ", tag); 
-  std::list<int>::iterator itr;
-  for (itr = q.begin(); itr != q.end(); itr++)
-    fprintf(stderr, "tid %d, ", *itr);
-  fprintf(stderr, "\n\n");
-}
-
 void FCFSScheduler::signal(void *chan, bool all)
 {
   list<int>::iterator prv, cur;
@@ -963,20 +949,13 @@ void FCFSScheduler::signal(void *chan, bool all)
   dprintf("RRScheduler: %d: %s %p\n",
           self(), (all?"broadcast":"signal"), chan);
 
-  printQueue(waitq, "before signal");
-
   // use delete-safe way of iterating the list in case @all is true
   for(cur=waitq.begin(); cur!=waitq.end();) {
     prv = cur ++;
 
     int tid = *prv;
     assert(tid >=0 && tid < Scheduler::nthread);
-      fprintf(stderr, "Pself %u (tid %d) checks tid %d with chan %p\n", 
-      (unsigned)pthread_self(), self(), tid, (void *)chan);
-
     if(waits[tid].chan == chan) {
-      fprintf(stderr, "Pself %u wake up tid %d with chan %p\n", 
-      (unsigned)pthread_self(), tid, (void *)chan);
       dprintf("RRScheduler: %d signals %d(%p)\n", self(), tid, chan);
       waits[tid].reset();
       waitq.erase(prv);
@@ -988,8 +967,6 @@ void FCFSScheduler::signal(void *chan, bool all)
     }
   }
   SELFCHECK;
-  printQueue(waitq, "after signal");
-  prv = cur = waitq.end();
 }
 
 int FCFSScheduler::wait(void *chan, unsigned nturn)
@@ -1001,12 +978,10 @@ int FCFSScheduler::wait(void *chan, unsigned nturn)
   waits[tid].chan = chan;
   waits[tid].timeout = nturn;
   waitq.push_back(tid);
-  fprintf(stderr, "Tid %d is added to waitq with chan %p\n", tid, (void *)chan);
 
   next();
 
   sem_wait(&waits[tid].sem); // added from RRScheduler's wait()
-  fprintf(stderr, "Tid %d is waken up from waitq with chan %p\n", tid, (void *)chan);
 
   getTurn();
   return waits[tid].status;
