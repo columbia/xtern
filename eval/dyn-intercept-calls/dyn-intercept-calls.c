@@ -28,6 +28,7 @@
 //#define DEBUGF(a...)	if (debug) { fprintf(stderr, "%s: %s(): ", PROJECT_TAG, __FUNCTION__); fprintf(stderr, ##a); }
 
 #define OPERATION_START initTid(); \
+  updateTurn(); \
   struct timespec app_time; \
   update_time(&app_time);
   //fprintf(stderr, "function %s start, pthread self %d\n", __FUNCTION__, self());
@@ -35,7 +36,6 @@
 #define OPERATION_END \
   struct timespec syscall_time; \
   update_time(&syscall_time); \
-  updateTurnAfterOp(); \
   logOp(__FUNCTION__, self_tid, self_turn, &app_time, &syscall_time);
   //fprintf(stderr, "function %s ends, pthread self %d\n", __FUNCTION__, self());
 
@@ -67,11 +67,11 @@ void initTid() {
     num_threads++;
     internal_mutex_unlock(&lock);
     struct timespec tmp;
-    update_time(&tmp);
+    update_time(&tmp); // Init my_time.
   }
 }
 
-void updateTurnAfterOp() {
+void updateTurn() {
   internal_mutex_lock(&lock);
   self_turn = turn;
   turn++;
@@ -92,7 +92,7 @@ void time_diff(const struct timespec *start, const struct timespec *end, struct 
 void update_time(struct timespec *ret)
 {
   struct timespec start_time;
-  clock_gettime(CLOCK_MONOTONIC_RAW , &start_time);
+  clock_gettime(CLOCK_REALTIME , &start_time);
   time_diff(&my_time, &start_time, ret);
   my_time.tv_sec = start_time.tv_sec;
   my_time.tv_nsec = start_time.tv_nsec;
@@ -175,7 +175,7 @@ int pthread_create(pthread_t *thread, const pthread_attr_t *attr, void *(*start_
   int ret = fp_pthread_create(thread, attr, start_routine, arg);
   int cur_errno = errno;
   OPERATION_END;
-  usleep(1); // Sleep for a while in order to make the child thread run first, this is to make thread id deterministic. Not a guarantee (and not need to).
+  //usleep(1); // Sleep for a while in order to make the child thread run first, this is to make thread id deterministic. Not a guarantee (and not need to).
   errno = cur_errno;
   return ret;
 }
