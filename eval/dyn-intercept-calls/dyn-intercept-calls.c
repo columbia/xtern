@@ -21,17 +21,22 @@
 #include <time.h>
 #include <sys/time.h>
 #include <assert.h>
+#include <sys/socket.h>
 
 #define PROJECT_TAG "XTERN"
 #define RESOLVE(x)	if (!fp_##x && !(fp_##x = dlsym(RTLD_NEXT, #x))) { fprintf(stderr, #x"() not found!\n"); exit(-1); }
 
 //#define DEBUGF(a...)	if (debug) { fprintf(stderr, "%s: %s(): ", PROJECT_TAG, __FUNCTION__); fprintf(stderr, ##a); }
 
+
+//  fprintf(stderr, "START: %s: %s(): tid %d\n", PROJECT_TAG, __FUNCTION__, self()); \
+
 #define OPERATION_START initTid(); \
   updateTurn(); \
   struct timespec app_time; \
   update_time(&app_time);
-  //fprintf(stderr, "function %s start, pthread self %d\n", __FUNCTION__, self());
+
+//  fprintf(stderr, "END: %s: %s(): tid %d\n\n", PROJECT_TAG, __FUNCTION__, self()); \
 
 #define OPERATION_END \
   struct timespec syscall_time; \
@@ -112,6 +117,7 @@ void logOp(const char *op, int tid, int self_turn, struct timespec *app_time, st
     (double)app_time->tv_sec + ((double)app_time->tv_nsec)/1000000000.0,
      (double)syscall_time->tv_sec + ((double)syscall_time->tv_nsec)/1000000000.0,
     tid);
+  fflush(log);
 }
 
 static int (*fp_pthread_mutex_lock)(pthread_mutex_t *mutex);
@@ -168,6 +174,17 @@ int pthread_mutex_init(pthread_mutex_t *mutex, const pthread_mutexattr_t *attr) 
   OPERATION_END;
   errno = cur_errno;
   return ret;
+}
+
+static int (*fp_pthread_mutex_destroy)(pthread_mutex_t *mutex);
+int pthread_mutex_destroy(pthread_mutex_t *mutex) {
+  OPERATION_START;
+  RESOLVE(pthread_mutex_destroy);
+  int ret = fp_pthread_mutex_destroy(mutex);
+  int cur_errno = errno;
+  OPERATION_END;
+  errno = cur_errno;
+  return ret;  
 }
 
 static int (*fp_pthread_create)(pthread_t *thread, const pthread_attr_t *attr, void *(*start_routine) (void *), void *arg);
@@ -229,6 +246,17 @@ int pthread_cond_wait(pthread_cond_t *cond, pthread_mutex_t *mutex) {
   return ret;
 }
 
+static int (*fp_pthread_cond_destroy)(pthread_cond_t *cond);
+int pthread_cond_destroy(pthread_cond_t *cond) {
+  OPERATION_START;
+  RESOLVE(pthread_cond_destroy);
+  int ret = fp_pthread_cond_destroy(cond);
+  int cur_errno = errno;
+  OPERATION_END;
+  errno = cur_errno;
+  return ret;  
+}
+
 static int (*fp_pthread_cond_timedwait)(pthread_cond_t *cond, pthread_mutex_t *mutex, const struct timespec *abstime);
 int pthread_cond_timedwait(pthread_cond_t *cond, pthread_mutex_t *mutex, const struct timespec *abstime) {
   OPERATION_START;
@@ -262,4 +290,37 @@ int pthread_cond_broadcast(pthread_cond_t *cond) {
   return ret;
 }
 
+//int socket(int domain, int type, int protocol);
+
+//ssize_t send(int socket, const void *buffer, size_t length, int flags);
+
+//ssize_t sendto(int socket, const void *message, size_t length, int flags, const struct sockaddr *dest_addr, socklen_t dest_len);
+
+//ssize_t sendmsg(int socket, const struct msghdr *message, int flags);
+
+//ssize_t recv(int socket, void *buffer, size_t length, int flags);
+
+//ssize_t recvfrom(int socket, void *restrict buffer, size_t length, int flags, struct sockaddr *restrict address, socklen_t *restrict address_len);
+
+//ssize_t recvmsg(int socket, struct msghdr *message, int flags);
+
+//int select(int nfds, fd_set *restrict readfds, fd_set *restrict writefds, fd_set *restrict errorfds, struct timeval *restrict timeout);
+
+//ssize_t pread(int fildes, void *buf, size_t nbyte, off_t offset); 
+
+//ssize_t read(int fildes, void *buf, size_t nbyte);
+
+//ssize_t pwrite(int fildes, const void *buf, size_t nbyte, off_t offset); 
+
+//ssize_t write(int fildes, const void *buf, size_t nbyte);
+
+//int connect(int socket, const struct sockaddr *address, socklen_t address_len);
+
+//int accept(int socket, struct sockaddr *restrict address, socklen_t *restrict address_len);
+
+//int bind(int socket, const struct sockaddr *address, socklen_t address_len);
+
+//int listen(int socket, int backlog);
+
+//int shutdown(int socket, int how);
 
