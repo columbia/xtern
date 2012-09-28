@@ -190,6 +190,7 @@ int RecorderRT<_S>::relTimeToTurn(const struct timespec *reltime)
   ns = reltime->tv_sec;
   ns = ns * (1000000000) + reltime->tv_nsec;
   ret = time2turn(ns);
+  fprintf(stderr, "realTimeToTurn, %lld ns, turn %d\n", (long long)ns, ret);
 
   // if result too small or negative, return only (5 * nthread + 1)
   ret = (ret < 5 * _S::nthread + 1) ? (5 * _S::nthread + 1) : ret;
@@ -995,11 +996,13 @@ int RecorderRT<_S>::pthreadBarrierDestroy(unsigned ins, int &error,
 template <typename _S>
 int RecorderRT<_S>::pthreadCondWait(unsigned ins, int &error, 
                                     pthread_cond_t *cv, pthread_mutex_t *mu){
+  fprintf(stderr, "pthreadCondWait starts, self %d\n", (unsigned)pthread_self());
   SCHED_TIMER_START;
   pthread_mutex_unlock(mu);
   _S::signal(mu);
 
   SCHED_TIMER_FAKE_END(syncfunc::pthread_cond_wait, (uint64_t)cv, (uint64_t)mu);
+  fprintf(stderr, "pthreadCondWait ends, self %d\n", (unsigned)pthread_self());
   
   _S::wait(cv);
   sched_time = update_time();
@@ -1008,14 +1011,14 @@ int RecorderRT<_S>::pthreadCondWait(unsigned ins, int &error,
   error = errno;
   
   SCHED_TIMER_END(syncfunc::pthread_cond_wait, (uint64_t)cv, (uint64_t)mu);
-
+  fprintf(stderr, "pthreadCondWait exits, self %d\n", (unsigned)pthread_self());
   return 0;
 }
 
 template <typename _S>
 int RecorderRT<_S>::pthreadCondTimedWait(unsigned ins, int &error, 
     pthread_cond_t *cv, pthread_mutex_t *mu, const struct timespec *abstime){
-
+  fprintf(stderr, "pthreadCondTimedWait starts, self %d\n", (unsigned)pthread_self());
   int saved_ret = 0;
 
   if(abstime == NULL)
@@ -1032,18 +1035,26 @@ int RecorderRT<_S>::pthreadCondTimedWait(unsigned ins, int &error,
   SCHED_TIMER_START;
   pthread_mutex_unlock(mu);
 
+  fprintf(stderr, "pthreadCondTimedWait fake start, self %d\n", (unsigned)pthread_self());
   SCHED_TIMER_FAKE_END(syncfunc::pthread_cond_timedwait, (uint64_t)cv, (uint64_t)mu, (uint64_t) 0);
+  fprintf(stderr, "pthreadCondTimedWait fake end, self %d\n", (unsigned)pthread_self());
+
 
   _S::signal(mu);
   unsigned timeout = _S::getTurnCount() + relTimeToTurn(&rel_time);
+  fprintf(stderr, "pthreadCondTimedWait before wait, var %p, self %d\n", (void *)cv, (unsigned)pthread_self());
   saved_ret = ret = _S::wait(cv, timeout);
+  fprintf(stderr, "pthreadCondTimedWait after wait, var %p, self %d\n", (void *)cv, (unsigned)pthread_self());
   dprintf("timedwait return = %d, after %d turns\n", ret, _S::getTurnCount() - nturn);
 
   sched_time = update_time();
   errno = error;
+  fprintf(stderr, "pthreadCondTimedWait before lock helper, self %d\n", (unsigned)pthread_self());
   pthreadMutexLockHelper(mu);
+  fprintf(stderr, "pthreadCondTimedWait after lock helper, self %d\n", (unsigned)pthread_self());
   error = errno;
   SCHED_TIMER_END(syncfunc::pthread_cond_timedwait, (uint64_t)cv, (uint64_t)mu, (uint64_t) saved_ret);
+  fprintf(stderr, "pthreadCondTimedWait exits, self %d\n", (unsigned)pthread_self());
 
   return saved_ret;
 }
@@ -1052,7 +1063,9 @@ template <typename _S>
 int RecorderRT<_S>::pthreadCondSignal(unsigned ins, int &error, pthread_cond_t *cv){
 
   SCHED_TIMER_START;
+  fprintf(stderr, "pthreadCondSignal starts, var %p, self %d\n", (void *)cv, (unsigned)pthread_self());
   _S::signal(cv);
+  fprintf(stderr, "pthreadCondSignal ends, var %p, self %d\n", (void *)cv, (unsigned)pthread_self());
   SCHED_TIMER_END(syncfunc::pthread_cond_signal, (uint64_t)cv);
 
   return 0;
@@ -1061,7 +1074,9 @@ int RecorderRT<_S>::pthreadCondSignal(unsigned ins, int &error, pthread_cond_t *
 template <typename _S>
 int RecorderRT<_S>::pthreadCondBroadcast(unsigned ins, int &error, pthread_cond_t*cv){
   SCHED_TIMER_START;
+  fprintf(stderr, "pthreadCondBroadcast starts, var %p, self %d\n", (void *)cv, (unsigned)pthread_self());
   _S::signal(cv, /*all=*/true);
+  fprintf(stderr, "pthreadCondBroadcast ends, var %p, self %d\n", (void *)cv, (unsigned)pthread_self());
   SCHED_TIMER_END(syncfunc::pthread_cond_broadcast, (uint64_t)cv);
   return 0;
 }
