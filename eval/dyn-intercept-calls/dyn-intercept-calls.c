@@ -106,9 +106,9 @@ void logOp(const char *op, int tid, int self_turn, struct timespec *app_time, st
     log = fopen(buf, "w");
     assert(log);
   }
-  fprintf(log, "%s n/a %d %ld.%ld %ld.%ld 0.0 %d n/a\n", op, self_turn,
-    (long)app_time->tv_sec, (long)app_time->tv_nsec,
-    (long)syscall_time->tv_sec, (long)syscall_time->tv_nsec,
+  fprintf(log, "%s n/a %d %f %f 0.0 %d n/a\n", op, self_turn,
+    (double)app_time->tv_sec + ((double)app_time->tv_nsec)/1000000000.0,
+     (double)syscall_time->tv_sec + ((double)syscall_time->tv_nsec)/1000000000.0,
     tid);
 }
 
