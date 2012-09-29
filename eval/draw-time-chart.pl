@@ -7,7 +7,7 @@ $numThreads = 0;
 %totalEvents;
 %tids;
 $curDir;
-$threadMargin = "                                        "; # 40 blanks.
+$threadMargin = "                                                  "; # 40 blanks.
 
 sub parseSchedule {
 	my $dirPath = $_[0];
@@ -41,6 +41,7 @@ sub parseSchedule {
 			next if ($line =~ m/^op/);
 			@fields1 = split(/ /, $line);
 			$op = $fields1[0];
+			$instrId = $fields1[1];
 			$turn = $fields1[2];
 			$appTime = $fields1[3];
 			$syscallTime = $fields1[4];
@@ -53,7 +54,7 @@ sub parseSchedule {
 			$curTidTime = $curTidTime + $appTime + $syscallTime + $schedTime;;
 			
 			#print "$turn:$tid:$appTime\n";
-			$totalEvents{$turn} = $tid.":".$op.":".$curTidTime;
+			$totalEvents{$turn} = $tid.":".$op.":".$curTidTime.":".$instrId;
 		}
 		close(LOG);
 	}
@@ -79,6 +80,7 @@ sub updateGlobalTime {
 			my $tid = $fields[0];
 			my $op = $fields[1];
 			my $time = $fields[2];
+			my $instrId = $fields[3];
 			if ($curTid == $tid) {
 				if ($tidFirstEvent == 0) {
 					my $turn = $turnKey;
@@ -97,7 +99,7 @@ sub updateGlobalTime {
 
 				# Convert per-thread time to global time.
 				$time = $baseTime + $time;
-				$totalEvents{$turnKey} = $tid.":".$op.":".$time;
+				$totalEvents{$turnKey} = $tid.":".$op.":".$time.":".$instrId;
 			}
 		}
 
@@ -110,6 +112,7 @@ sub drawTimeChart {
 	my $tid;
 	my $op;
 	my $finishTime;
+	my $instrId;
 	my $i;
 	
 	open(CHART, ">"."../time-chart.txt");
@@ -129,6 +132,7 @@ sub drawTimeChart {
 		$tid = $fields[0];
 		$op = $fields[1];
 		$finishTime = $fields[2];
+		$instrId = $fields[3];
 
 		# Print thread margin.
 		if ($tid > 0) {
@@ -136,7 +140,7 @@ sub drawTimeChart {
 				print CHART $threadMargin;
 			}
 		}
-		print CHART $op." : ".$finishTime."\n";
+		print CHART $op."(".$instrId.")"." ".$finishTime."\n";
 		
 	}
 
