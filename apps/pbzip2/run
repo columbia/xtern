@@ -13,7 +13,7 @@ $XTERN_ROOT/eval/draw-time-chart.pl ./out-rr
 mv time-chart.txt rr-time-chart.txt
 
 # Run non-det and draw time chart.
-LD_PRELOAD=$XTERN_ROOT/eval/dyn-intercept-calls/dyn-intercept-calls.so $APP $INPUT
+LD_PRELOAD=$XTERN_ROOT/eval/rand-intercept/rand-intercept.so $APP $INPUT
 mv out out-random
 $XTERN_ROOT/eval/draw-time-chart.pl ./out-random
 mv time-chart.txt random-time-chart.txt
