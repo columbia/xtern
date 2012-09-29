@@ -22,30 +22,12 @@
 #include <sys/time.h>
 #include <assert.h>
 #include <sys/socket.h>
+#include <execinfo.h>
 
 #define PROJECT_TAG "XTERN"
 #define RESOLVE(x)	if (!fp_##x && !(fp_##x = dlsym(RTLD_NEXT, #x))) { fprintf(stderr, #x"() not found!\n"); exit(-1); }
 
 //#define DEBUGF(a...)	if (debug) { fprintf(stderr, "%s: %s(): ", PROJECT_TAG, __FUNCTION__); fprintf(stderr, ##a); }
-
-
-//  fprintf(stderr, "START: %s: %s(): tid %d\n", PROJECT_TAG, __FUNCTION__, self()); \
-
-#define OPERATION_START initTid(); \
-  updateTurn(); \
-  struct timespec app_time; \
-  update_time(&app_time);
-
-//  fprintf(stderr, "END: %s: %s(): tid %d\n\n", PROJECT_TAG, __FUNCTION__, self()); \
-
-#define OPERATION_END \
-  struct timespec syscall_time; \
-  update_time(&syscall_time); \
-  logOp(__FUNCTION__, self_tid, self_turn, &app_time, &syscall_time);
-  //fprintf(stderr, "function %s ends, pthread self %d\n", __FUNCTION__, self());
-
-// Debug flag.
-//static int debug = 1;
 
 // Per thread variables.
 static int num_threads = 0;
@@ -53,8 +35,29 @@ static int turn = 0;
 static __thread int self_turn = -1;
 static __thread int self_tid = -1;
 static __thread struct timespec my_time;
+static __thread int entered_sys = 0; // Avoid recursively enter backtrace(), since backtrace() will call pthread_mutex_lock().
 static __thread FILE *log = NULL;
 static pthread_mutex_t lock;
+
+//  fprintf(stderr, "START: %s: %s(): tid %d\n", PROJECT_TAG, __FUNCTION__, self());
+
+#define OPERATION_START initTid(); \
+  updateTurn(); \
+  struct timespec app_time; \
+  update_time(&app_time);
+
+//  fprintf(stderr, "END: %s: %s(): tid %d\n\n", PROJECT_TAG, __FUNCTION__, self());
+
+#define OPERATION_END \
+  struct timespec syscall_time; \
+  update_time(&syscall_time); \
+  if (!entered_sys) { \
+    entered_sys = 1; \
+    void *eip = get_eip(); \
+    logOp(__FUNCTION__, eip, self_tid, self_turn, &app_time, &syscall_time); \
+    entered_sys = 0; \
+  } 
+  //fprintf(stderr, "function %s ends, pthread self %d\n", __FUNCTION__, self());
 
 void update_time(struct timespec *ret);
 int internal_mutex_lock(pthread_mutex_t *mutex);
@@ -105,7 +108,15 @@ void update_time(struct timespec *ret)
   my_time.tv_nsec = start_time.tv_nsec;
 }
 
-void logOp(const char *op, int tid, int self_turn, struct timespec *app_time, struct timespec *syscall_time) {
+void *get_eip()
+{
+  void *tracePtrs[20];
+  int ret = backtrace(tracePtrs, 20);
+  assert(ret >= 0);
+  return tracePtrs[2];  //  this is ret_eip of my caller
+}
+
+void logOp(const char *op, void *eip, int tid, int self_turn, struct timespec *app_time, struct timespec *syscall_time) {
   if (!log) {
     mkdir("./out", 0777);
     char buf[1024] = {0};
@@ -113,7 +124,7 @@ void logOp(const char *op, int tid, int self_turn, struct timespec *app_time, st
     log = fopen(buf, "w");
     assert(log);
   }
-  fprintf(log, "%s n/a %d %f %f 0.0 %d n/a\n", op, self_turn,
+  fprintf(log, "%s %p %d %f %f 0.0 %d n/a\n", op, eip, self_turn,
     (double)app_time->tv_sec + ((double)app_time->tv_nsec)/1000000000.0,
      (double)syscall_time->tv_sec + ((double)syscall_time->tv_nsec)/1000000000.0,
     tid);

@@ -1,4 +1,4 @@
 all:: install
 
 install::
-	gcc -Wall -nostartfiles -fpic -shared -o dyn-intercept-calls.so dyn-intercept-calls.c -ldl -lpthread -lrt
+	gcc -rdynamic -Wall -shared -fpic -o dyn-intercept-calls.so dyn-intercept-calls.c -lpthread -lrt -ldl
