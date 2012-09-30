@@ -5,9 +5,16 @@ cd $XTERN_ROOT/apps/bdb_rep
 rm -rf db-$VER perf install
 tar zxvf $APPS_DIR/sys/db-$VER.tar.gz
 tar zxvf $APPS_DIR/sys/bdb-perf.tar.gz
+
+# Build bdb.
 cd db-$VER/build_unix
 ../dist/configure --enable-posixmutexes --prefix=$XTERN_ROOT/apps/bdb_rep/install
 make && make install
+
+# Build benchmark.
+cd XTERN_ROOT/apps/bdb_rep/perf
+patch -p1 < ../fix-benchmark.patch
+make
 
 #build_dir=$PWD
 #cp -r $XTERN_ROOT/apps/bdb_rep/db-$VER/src/dbinc/ $XTERN_ROOT/apps/bdb_rep/install/include/
