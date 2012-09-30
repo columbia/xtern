@@ -223,10 +223,15 @@ int pthread_join(pthread_t thread, void **retval) {
 
 static void (*fp_pthread_exit)(void *retval);
 void pthread_exit(void *retval) {
-  OPERATION_START;
-  RESOLVE(pthread_exit);
-  OPERATION_END;
-  //int ret = 
+  if (entered_sys == 0) { // This is a little bit tricky, if not do this, deadlock...
+    OPERATION_START;
+    RESOLVE(pthread_exit);
+    OPERATION_END;
+    //int ret = 
+    fprintf(stderr, "intercept: pthread exit %d, tid %d\n", (int)pthread_self(), self());
+    //fp_pthread_exit(retval);
+    entered_sys = 1;
+  }
   fp_pthread_exit(retval);
   //int cur_errno = errno;
   //errno = cur_errno;
@@ -309,7 +314,16 @@ int pthread_cond_broadcast(pthread_cond_t *cond) {
 
 //ssize_t sendmsg(int socket, const struct msghdr *message, int flags);
 
-//ssize_t recv(int socket, void *buffer, size_t length, int flags);
+static int (*fp_recv)(int socket, void *buffer, size_t length, int flags);
+ssize_t recv(int socket, void *buffer, size_t length, int flags) {
+  OPERATION_START;
+  RESOLVE(recv);
+  int ret = fp_recv(socket, buffer, length, flags);
+  int cur_errno = errno;
+  OPERATION_END;
+  errno = cur_errno;
+  return ret;
+}
 
 //ssize_t recvfrom(int socket, void *restrict buffer, size_t length, int flags, struct sockaddr *restrict address, socklen_t *restrict address_len);
 
