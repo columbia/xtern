@@ -223,19 +223,13 @@ int pthread_join(pthread_t thread, void **retval) {
 
 static void (*fp_pthread_exit)(void *retval);
 void pthread_exit(void *retval) {
-  if (entered_sys == 0) { // This is a little bit tricky, if not do this, deadlock...
+  if (entered_sys == 0) { // This is a little bit tricky, if not do this, deadlock, since pthread_exit() will call pthread_mutex_lock...
     OPERATION_START;
     RESOLVE(pthread_exit);
     OPERATION_END;
-    //int ret = 
-    fprintf(stderr, "intercept: pthread exit %d, tid %d\n", (int)pthread_self(), self());
-    //fp_pthread_exit(retval);
     entered_sys = 1;
   }
   fp_pthread_exit(retval);
-  //int cur_errno = errno;
-  //errno = cur_errno;
-  //return ret;
 }
 
 //int pthread_cancel(pthread_t thread);
