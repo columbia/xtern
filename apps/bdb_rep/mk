@@ -12,7 +12,7 @@ cd db-$VER/build_unix
 make && make install
 
 # Build benchmark.
-cd XTERN_ROOT/apps/bdb_rep/perf
+cd $XTERN_ROOT/apps/bdb_rep/perf
 patch -p1 < ../fix-benchmark.patch
 make
 
