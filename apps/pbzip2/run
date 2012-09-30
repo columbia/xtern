@@ -9,8 +9,8 @@ then
         ROUTINE=$1
 fi
 
-tar cvf input.tar $LLVM_ROOT/install/bin/llvm-ar &> /dev/null
 APP=$XTERN_ROOT/apps/pbzip2/pbzip2
+tar cvf input.tar $LLVM_ROOT/install/bin/llc &> /dev/null
 
 if [ $ROUTINE = "--compress" ];
 then
@@ -18,7 +18,7 @@ then
 else
 	if [ $ROUTINE = "--decompress" ];
 	then
-		$APP -p16 -rkvf input.tar &> /dev/null
+		$APP -p2 -rkvf input.tar &> /dev/null
 		INPUT="-p2 -dkvf input.tar.bz2"
 	else
 		echo "Wrong routine: $ROUTINE, exiting...";
@@ -32,10 +32,11 @@ mv out out-rr
 $XTERN_ROOT/eval/draw-time-chart.pl ./out-rr
 mv time-chart.txt rr-time-chart.txt
 
-sleep 1;
+sleep 2;
 
 # Run non-det and draw time chart.
 LD_PRELOAD=$XTERN_ROOT/eval/rand-intercept/rand-intercept.so $APP $INPUT
 mv out out-random
 $XTERN_ROOT/eval/draw-time-chart.pl ./out-random
 mv time-chart.txt random-time-chart.txt
+

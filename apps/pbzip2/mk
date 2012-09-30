@@ -12,5 +12,6 @@ rm -rf pbzip2-$VER
 tar zxvf $APPS_DIR/sys/pbzip2-$VER.tar.gz
 cd pbzip2-$VER
 patch -p1 < ../for-dbug-1.patch
+patch -p1 < ../add-dbg-flag.patch
 make
 mv pbzip2 ../
