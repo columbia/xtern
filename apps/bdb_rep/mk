@@ -11,16 +11,19 @@ cd db-$VER/build_unix
 ../dist/configure CFLAGS="-O3 -g" CXXFLAGS="-O3 -g" --enable-posixmutexes --prefix=$XTERN_ROOT/apps/bdb_rep/install
 make && make install
 
-# Build benchmark.
+# Build perf benchmark.
 cd $XTERN_ROOT/apps/bdb_rep/perf
 patch -p1 < ../fix-perf.patch
 make
+mv t $XTERN_ROOT/apps/bdb_rep/perf-test
 
-#build_dir=$PWD
-#cp -r $XTERN_ROOT/apps/bdb_rep/db-$VER/src/dbinc/ $XTERN_ROOT/apps/bdb_rep/install/include/
-#cd $XTERN_ROOT/apps/bdb_rep/db-$VER/examples/c/ex_rep
-#cp $dbtern_root/rep_makefile_normal Makefile
-#make DB_INSTALL=$dbtern_root/install -j2 
-#cp rep_mgr $dbtern_root/
-#cp rep_base $dbtern_root/
+# Build statis benchmark.
+cd $XTERN_ROOT/apps/bdb_rep/
+tar zxvf statis-benchmarks.tar.gz
+cd statis-benchmarks
+patch -p1 < ../fix-statis-benchmarks.patch
+cd berkeleyDB
+make
+mv bdbHashThreaded $XTERN_ROOT/apps/bdb_rep/
+
 

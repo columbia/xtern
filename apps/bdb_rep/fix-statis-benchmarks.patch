@@ -1,0 +1,9 @@
+diff -ruN statis-benchmarks/berkeleyDB/Makefile statis-benchmarks-mod/berkeleyDB/Makefile
+--- statis-benchmarks/berkeleyDB/Makefile	1969-12-31 19:00:00.000000000 -0500
++++ statis-benchmarks-mod/berkeleyDB/Makefile	2012-10-01 17:53:40.431712575 -0400
+@@ -0,0 +1,5 @@
++all: bdbHashThreaded
++
++bdbHashThreaded: bdbHashThreaded.c genericBerkeleyDBCode.c genericBerkeleyDBCode.h
++	gcc bdbHashThreaded.c -o bdbHashThreaded \
++	-g -I$(XTERN_ROOT)/apps/bdb_rep/install/include -L$(XTERN_ROOT)/apps/bdb_rep/install/lib -ldb-5.3 -lrt
