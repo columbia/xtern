@@ -1,6 +1,6 @@
 diff -ruN perf/Makefile perf-mod/Makefile
 --- perf/Makefile	2005-06-22 14:55:58.000000000 -0400
-+++ perf-mod/Makefile	2012-09-30 16:55:33.946928651 -0400
++++ perf-mod/Makefile	2012-10-01 00:03:08.894010731 -0400
 @@ -1,8 +1,8 @@
  
  t: t.c
@@ -14,7 +14,7 @@ diff -ruN perf/Makefile perf-mod/Makefile
  	rm -rf ./TESTDIR
 diff -ruN perf/t.c perf-mod/t.c
 --- perf/t.c	2006-06-28 19:15:47.000000000 -0400
-+++ perf-mod/t.c	2012-09-30 16:49:11.390942348 -0400
++++ perf-mod/t.c	2012-10-01 00:04:03.074008775 -0400
 @@ -12,6 +12,8 @@
  #endif
  
@@ -39,6 +39,15 @@ diff -ruN perf/t.c perf-mod/t.c
  
  void cleanup(void);
  void op_ds(u_int, int);
+@@ -318,7 +326,7 @@
+ 	else
+ 		++progname;
+ 
+-	ops = 1000000;
++	ops = 1000; // Heming: have to reduce the input scale temporarily, otherwise a "cache allocation failure" would occur.
+ 
+ 	while ((ch = getopt(argc, argv, "d:k:o:p:")) != EOF)
+ 		switch (ch) {
 @@ -364,7 +372,7 @@
  	op_tds(ops, 0, 0);
  	res("Transactional Data Store (read):", ops);
