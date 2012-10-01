@@ -2,41 +2,24 @@
 
 cd $XTERN_ROOT/apps/pbzip2
 rm -rf out* serializer.log
-
-ROUTINE="--compress"
-if [ $1"X" != "X" ];
-then
-        ROUTINE=$1
-fi
-
-APP=$XTERN_ROOT/apps/pbzip2/pbzip2
-tar cvf input.tar $LLVM_ROOT/install/bin/llc &> /dev/null
-
-if [ $ROUTINE = "--compress" ];
-then
-	INPUT="-p2 -rkvf input.tar"
-else
-	if [ $ROUTINE = "--decompress" ];
-	then
-		$APP -p2 -rkvf input.tar &> /dev/null
-		INPUT="-p2 -dkvf input.tar.bz2"
-	else
-		echo "Wrong routine: $ROUTINE, exiting...";
-		exit 1;
-	fi
-fi
+INIT_ENV_CMD="rm -rf TESTDIR"
+APP=$XTERN_ROOT/apps/bdb_rep/perf/t
+INPUT=""
+export LD_LIBRARY_PATH=$XTERN_ROOT/apps/bdb_rep/install/lib:$LD_LIBRARY_PATH
 
 # Run with xtern and draw time chart.
-LD_PRELOAD=$XTERN_ROOT/dync_hook/interpose.so $APP $INPUT
+$INIT_ENV_CMD;
+LD_PRELOAD=$XTERN_ROOT/dync_hook/interpose.so time $APP $INPUT
 mv out out-rr
-$XTERN_ROOT/eval/draw-time-chart.pl ./out-rr
-mv time-chart.txt rr-time-chart.txt
+#$XTERN_ROOT/eval/draw-time-chart.pl ./out-rr
+#mv time-chart.txt rr-time-chart.txt
 
 sleep 2;
 
 # Run non-det and draw time chart.
-LD_PRELOAD=$XTERN_ROOT/eval/rand-intercept/rand-intercept.so $APP $INPUT
+$INIT_ENV_CMD;
+LD_PRELOAD=$XTERN_ROOT/eval/rand-intercept/rand-intercept.so time $APP $INPUT
 mv out out-random
-$XTERN_ROOT/eval/draw-time-chart.pl ./out-random
-mv time-chart.txt random-time-chart.txt
+#$XTERN_ROOT/eval/draw-time-chart.pl ./out-random
+#mv time-chart.txt random-time-chart.txt
 
