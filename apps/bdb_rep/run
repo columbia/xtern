@@ -1,16 +1,15 @@
 #!/bin/bash
 
-cd $XTERN_ROOT/apps/pbzip2
+cd $XTERN_ROOT/apps/bdb_rep
 rm -rf out* serializer.log
-INIT_ENV_CMD="rm -rf TESTDIR"
-APP=$XTERN_ROOT/apps/bdb_rep/perf/t
-INPUT=""
-export LD_LIBRARY_PATH=$XTERN_ROOT/apps/bdb_rep/install/lib:$LD_LIBRARY_PATH
+INIT_ENV_CMD="rm -rf TXNAPP"
+APP=$XTERN_ROOT/apps/bdb_rep/bdbHashThreaded
+INPUT="2 50 0 1" # 2 child thread, 100 insertions, and etc.
 
 # Run with xtern and draw time chart.
-$INIT_ENV_CMD;
-LD_PRELOAD=$XTERN_ROOT/dync_hook/interpose.so time $APP $INPUT
-mv out out-rr
+#$INIT_ENV_CMD;
+#LD_PRELOAD=$XTERN_ROOT/dync_hook/interpose.so time $APP $INPUT
+#mv out out-rr
 #$XTERN_ROOT/eval/draw-time-chart.pl ./out-rr
 #mv time-chart.txt rr-time-chart.txt
 
@@ -20,6 +19,6 @@ sleep 2;
 $INIT_ENV_CMD;
 LD_PRELOAD=$XTERN_ROOT/eval/rand-intercept/rand-intercept.so time $APP $INPUT
 mv out out-random
-#$XTERN_ROOT/eval/draw-time-chart.pl ./out-random
-#mv time-chart.txt random-time-chart.txt
+$XTERN_ROOT/eval/draw-time-chart.pl ./out-random
+mv time-chart.txt random-time-chart.txt
 
