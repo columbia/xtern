@@ -104,10 +104,12 @@ struct RecorderRT: public Runtime, public _Scheduler {
   int usleep(unsigned insid, int &error, useconds_t usec);
   int nanosleep(unsigned insid, int &error, const struct timespec *req, struct timespec *rem);
   int __pthread_rwlock_rdlock(unsigned ins, int &error, pthread_rwlock_t *rwlock);
-  int ___pthread_rwlock_wrlock(unsigned ins, int &error, pthread_rwlock_t *rwlock);
-  int ___pthread_rwlock_tryrdlock(unsigned ins, int &error, pthread_rwlock_t *rwlock);
-  int ___pthread_rwlock_trywrlock(unsigned ins, int &error, pthread_rwlock_t *rwlock);
-  int ___pthread_rwlock_unlock(unsigned ins, int &error, pthread_rwlock_t *rwlock);
+  int __pthread_rwlock_wrlock(unsigned ins, int &error, pthread_rwlock_t *rwlock);
+  int __pthread_rwlock_tryrdlock(unsigned ins, int &error, pthread_rwlock_t *rwlock);
+  int __pthread_rwlock_trywrlock(unsigned ins, int &error, pthread_rwlock_t *rwlock);
+  int __pthread_rwlock_unlock(unsigned ins, int &error, pthread_rwlock_t *rwlock);
+  int __pthread_rwlock_destroy(unsigned ins, int &error, pthread_rwlock_t *rwlock);
+  int __pthread_rwlock_init(unsigned ins, int &error, pthread_rwlock_t *rwlock, const pthread_rwlockattr_t * attr);
 
   RecorderRT(): _Scheduler() {
     int ret;

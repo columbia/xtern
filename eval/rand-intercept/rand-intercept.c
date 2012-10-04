@@ -300,6 +300,105 @@ int pthread_cond_broadcast(pthread_cond_t *cond) {
   return ret;
 }
 
+static int (*fp_pthread_rwlock_trywrlock)(pthread_rwlock_t *rwlock);
+int pthread_rwlock_trywrlock(pthread_rwlock_t *rwlock) {
+  OPERATION_START;
+  RESOLVE(pthread_rwlock_trywrlock);
+  int ret = fp_pthread_rwlock_trywrlock(rwlock);
+  int cur_errno = errno;
+  OPERATION_END;
+  errno = cur_errno;
+  return ret;
+}
+
+static int (*fp_pthread_rwlock_wrlock)(pthread_rwlock_t *rwlock);
+int pthread_rwlock_wrlock(pthread_rwlock_t *rwlock) {
+  OPERATION_START;
+  RESOLVE(pthread_rwlock_wrlock);
+  int ret = fp_pthread_rwlock_wrlock(rwlock);
+  int cur_errno = errno;
+  OPERATION_END;
+  errno = cur_errno;
+  return ret;
+}
+
+static int (*fp_pthread_rwlock_rdlock)(pthread_rwlock_t *rwlock);
+int pthread_rwlock_rdlock(pthread_rwlock_t *rwlock) {
+  OPERATION_START;
+  RESOLVE(pthread_rwlock_rdlock);
+  int ret = fp_pthread_rwlock_rdlock(rwlock);
+  int cur_errno = errno;
+  OPERATION_END;
+  errno = cur_errno;
+  return ret;
+}
+
+static int (*fp_pthread_rwlock_tryrdlock)(pthread_rwlock_t *rwlock);
+int pthread_rwlock_tryrdlock(pthread_rwlock_t *rwlock) {
+  OPERATION_START;
+  RESOLVE(pthread_rwlock_tryrdlock);
+  int ret = fp_pthread_rwlock_tryrdlock(rwlock);
+  int cur_errno = errno;
+  OPERATION_END;
+  errno = cur_errno;
+  return ret;
+}
+
+static int (*fp_pthread_rwlock_unlock)(pthread_rwlock_t *rwlock);
+int pthread_rwlock_unlock(pthread_rwlock_t *rwlock) {
+  OPERATION_START;
+  RESOLVE(pthread_rwlock_unlock);
+  int ret = fp_pthread_rwlock_unlock(rwlock);
+  int cur_errno = errno;
+  OPERATION_END;
+  errno = cur_errno;
+  return ret;
+}
+
+static int (*fp_pthread_rwlock_destroy)(pthread_rwlock_t *rwlock);
+int pthread_rwlock_destroy(pthread_rwlock_t *rwlock) {
+  OPERATION_START;
+  RESOLVE(pthread_rwlock_destroy);
+  int ret = fp_pthread_rwlock_destroy(rwlock);
+  int cur_errno = errno;
+  OPERATION_END;
+  errno = cur_errno;
+  return ret;
+}
+
+static int (*fp_pthread_rwlock_init)(pthread_rwlock_t *rwlock, const pthread_rwlockattr_t *attr);
+int pthread_rwlock_init(pthread_rwlock_t * rwlock, const pthread_rwlockattr_t * attr) {
+  OPERATION_START;
+  RESOLVE(pthread_rwlock_init);
+  int ret = fp_pthread_rwlock_init(rwlock, attr);
+  int cur_errno = errno;
+  OPERATION_END;
+  errno = cur_errno;
+  return ret;
+}
+
+static int (*fp_pthread_rwlock_timedwrlock)(pthread_rwlock_t *rwlock, const struct timespec *abs_timeout);
+int pthread_rwlock_timedwrlock(pthread_rwlock_t *rwlock, const struct timespec *abs_timeout) {
+  OPERATION_START;
+  RESOLVE(pthread_rwlock_timedwrlock);
+  int ret = fp_pthread_rwlock_timedwrlock(rwlock, abs_timeout);
+  int cur_errno = errno;
+  OPERATION_END;
+  errno = cur_errno;
+  return ret;
+}
+
+static int (*fp_pthread_rwlock_timedrdlock)(pthread_rwlock_t *rwlock, const struct timespec *abs_timeout);
+int pthread_rwlock_timedrdlock(pthread_rwlock_t *rwlock, const struct timespec *abs_timeout) {
+  OPERATION_START;
+  RESOLVE(pthread_rwlock_timedrdlock);
+  int ret = fp_pthread_rwlock_timedrdlock(rwlock, abs_timeout);
+  int cur_errno = errno;
+  OPERATION_END;
+  errno = cur_errno;
+  return ret;
+}
+
 //int socket(int domain, int type, int protocol);
 
 //ssize_t send(int socket, const void *buffer, size_t length, int flags);

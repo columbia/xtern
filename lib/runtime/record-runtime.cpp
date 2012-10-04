@@ -340,7 +340,7 @@ void RecorderRT<_S>::threadBegin(void) {
   
   app_time.tv_sec = app_time.tv_nsec = 0;
   Logger::threadBegin(_S::self());
-  
+
   SCHED_TIMER_END(syncfunc::tern_thread_begin, (uint64_t)th);
 }
 
@@ -544,7 +544,7 @@ int RecorderRT<_S>::__pthread_rwlock_rdlock(unsigned ins, int &error, pthread_rw
 }
 
 template <typename _S>
-int RecorderRT<_S>::___pthread_rwlock_wrlock(unsigned ins, int &error, pthread_rwlock_t *rwlock)
+int RecorderRT<_S>::__pthread_rwlock_wrlock(unsigned ins, int &error, pthread_rwlock_t *rwlock)
 {
   SCHED_TIMER_START;
   errno = error;
@@ -555,7 +555,7 @@ int RecorderRT<_S>::___pthread_rwlock_wrlock(unsigned ins, int &error, pthread_r
 }
 
 template <typename _S>
-int RecorderRT<_S>::___pthread_rwlock_tryrdlock(unsigned ins, int &error, pthread_rwlock_t *rwlock)
+int RecorderRT<_S>::__pthread_rwlock_tryrdlock(unsigned ins, int &error, pthread_rwlock_t *rwlock)
 {
   SCHED_TIMER_START;
   errno = error;
@@ -566,7 +566,7 @@ int RecorderRT<_S>::___pthread_rwlock_tryrdlock(unsigned ins, int &error, pthrea
 }
 
 template <typename _S>
-int RecorderRT<_S>::___pthread_rwlock_trywrlock(unsigned ins, int &error, pthread_rwlock_t *rwlock)
+int RecorderRT<_S>::__pthread_rwlock_trywrlock(unsigned ins, int &error, pthread_rwlock_t *rwlock)
 {
   SCHED_TIMER_START;
   errno = error;
@@ -577,7 +577,7 @@ int RecorderRT<_S>::___pthread_rwlock_trywrlock(unsigned ins, int &error, pthrea
 }
 
 template <typename _S>
-int RecorderRT<_S>::___pthread_rwlock_unlock(unsigned ins, int &error, pthread_rwlock_t *rwlock)
+int RecorderRT<_S>::__pthread_rwlock_unlock(unsigned ins, int &error, pthread_rwlock_t *rwlock)
 {
   int ret;
   SCHED_TIMER_START;
@@ -589,6 +589,26 @@ int RecorderRT<_S>::___pthread_rwlock_unlock(unsigned ins, int &error, pthread_r
  
   SCHED_TIMER_END(syncfunc::pthread_rwlock_unlock, (uint64_t)rwlock, (uint64_t) ret);
 
+  return ret;
+}
+
+template <typename _S>
+int RecorderRT<_S>::__pthread_rwlock_destroy(unsigned ins, int &error, pthread_rwlock_t *rwlock) {
+  SCHED_TIMER_START;
+  errno = error;
+  int ret = pthread_rwlock_destroy(rwlock); 
+  error = errno;
+  SCHED_TIMER_END(syncfunc::pthread_rwlock_destroy, (uint64_t)rwlock, (uint64_t) ret);
+  return ret;
+}
+
+template <typename _S>
+int RecorderRT<_S>::__pthread_rwlock_init(unsigned ins, int &error, pthread_rwlock_t *rwlock, const pthread_rwlockattr_t *attr) {
+  SCHED_TIMER_START;
+  errno = error;
+  int ret = pthread_rwlock_init(rwlock, attr); 
+  error = errno;
+  SCHED_TIMER_END(syncfunc::pthread_rwlock_init, (uint64_t)rwlock, attr, (uint64_t) ret);
   return ret;
 }
 
