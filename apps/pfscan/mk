@@ -1,0 +1,10 @@
+#!/bin/bash
+
+VER=1.0
+cd $XTERN_ROOT/apps/pfscan
+rm -rf pfscan-$VER 
+tar zxvf $APPS_DIR/sys/pfscan-$VER.tar.gz
+cd pfscan-$VER
+make lnx
+cd ..
+mv pfscan-$VER/pfscan .
