@@ -5,7 +5,7 @@ How to build xtern with dynamic hook module.
 0. add $XTERN_ROOT into environment variables. make sure LLVM is correctly setup in debug mode. copy all the files from $LLVM_ROOT/llvm-obj/Debug/bin/ to $LLVM_ROOT/install/bin/
 1. create $XTERN_ROOT/obj, go to obj.
 2. do config as following. that's because xtern uses LLVM makefile.common
-> ./../configure --with-llvmsrc=$LLVM_ROOT/llvm-2.7/ --with-llvmobj=$LLVM_ROOT/llvm-obj/ --with-llvmgccdir=$LLVM_ROOT/install/bin/
+> ./../configure --with-llvmsrc=$LLVM_ROOT/llvm-2.7/ --with-llvmobj=$LLVM_ROOT/llvm-obj/ --with-llvmgccdir=$LLVM_ROOT/install/bin/ --prefix=$XTERN_ROOT/install
 2.5 run "make ENABLE_OPTIMIZED=0" in obj directory. it fails this time. 
 3. edit obj/lib/Makefile, and remove "instr" and "analysis"
 4. edit obj/lib/runtime/Makefile, and remove the line of MODULE_NAME
