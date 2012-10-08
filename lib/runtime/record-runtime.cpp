@@ -512,9 +512,21 @@ int RecorderRT<_S>::pthreadMutexLockHelper(pthread_mutex_t *mu, unsigned timeout
 }
 
 template <typename _S>
-int RecorderRT<_S>::pthreadRWLockHelper(pthread_rwlock_t *rwlock, unsigned timeout) {
+int RecorderRT<_S>::pthreadRWLockWrLockHelper(pthread_rwlock_t *rwlock, unsigned timeout) {
   int ret;
   while((ret=pthread_rwlock_trywrlock(rwlock))) {
+    assert(ret==EBUSY && "failed sync calls are not yet supported!");
+    ret = wait(rwlock, timeout);
+    if(ret == ETIMEDOUT)
+      return ETIMEDOUT;
+  }
+  return 0;
+}
+
+template <typename _S>
+int RecorderRT<_S>::pthreadRWLockRdLockHelper(pthread_rwlock_t *rwlock, unsigned timeout) {
+  int ret;
+  while((ret=pthread_rwlock_tryrdlock(rwlock))) {
     assert(ret==EBUSY && "failed sync calls are not yet supported!");
     ret = wait(rwlock, timeout);
     if(ret == ETIMEDOUT)
@@ -538,7 +550,7 @@ int RecorderRT<_S>::__pthread_rwlock_rdlock(unsigned ins, int &error, pthread_rw
 {
   SCHED_TIMER_START;
   errno = error;
-  pthreadRWLockHelper(rwlock);  //  FIXME use wrlock for all rdlock currently
+  pthreadRWLockRdLockHelper(rwlock);
   error = errno;
   SCHED_TIMER_END(syncfunc::pthread_rwlock_rdlock, (uint64_t)rwlock);
   return 0;
@@ -549,7 +561,7 @@ int RecorderRT<_S>::__pthread_rwlock_wrlock(unsigned ins, int &error, pthread_rw
 {
   SCHED_TIMER_START;
   errno = error;
-  pthreadRWLockHelper(rwlock);
+  pthreadRWLockWrLockHelper(rwlock);
   error = errno;
   SCHED_TIMER_END(syncfunc::pthread_rwlock_wrlock, (uint64_t)rwlock);
   return 0;

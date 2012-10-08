@@ -140,7 +140,8 @@ protected:
   int relTimeToTurn(const struct timespec *reltime);
 
   int pthreadMutexLockHelper(pthread_mutex_t *mutex, unsigned timeout = Scheduler::FOREVER);
-  int pthreadRWLockHelper(pthread_rwlock_t *rwlock, unsigned timeout = Scheduler::FOREVER);
+  int pthreadRWLockWrLockHelper(pthread_rwlock_t *rwlock, unsigned timeout = Scheduler::FOREVER);
+  int pthreadRWLockRdLockHelper(pthread_rwlock_t *rwlock, unsigned timeout = Scheduler::FOREVER);
   
   /// for each pthread barrier, track the count of the number and number
   /// of threads arrived at the barrier
