@@ -30,15 +30,15 @@ Serializer::Serializer():
 }
 
 unsigned Serializer::incTurnCount(void) { 
-  if ((int) turnCount < INF && idle_done)
-    turnCount = INF;
+  //if ((int) turnCount < INF && idle_done)
+    //turnCount = INF;
   int ret = turnCount++;  
   fprintf(logger, "%d %d\n", (int) self(), ret);
   return ret;
 }
 
 unsigned Serializer::getTurnCount(void) { 
-  if ((int) turnCount < INF && idle_done)
-    turnCount = INF;
+  //if ((int) turnCount < INF && idle_done)
+    //turnCount = INF;
   return turnCount - 1; 
 }

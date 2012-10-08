@@ -232,6 +232,9 @@ void RecorderRT<_S>::idle_sleep(void) {
   _S::getTurn();
   int turn = _S::incTurnCount();
   assert(turn >= 0);
+  timespec ts;
+  Logger::the->logSync(0, syncfunc::tern_idle, turn, ts, ts, ts, true);
+
 /*  while (_S::runq.size() == 1 && _S::waitq.empty())
   {
     if (_S::wakeup_flag)
@@ -254,8 +257,6 @@ void RecorderRT<_S>::idle_sleep(void) {
   } */ 
   _S::putTurn();
 
-  timespec ts;
-  Logger::the->logSync(0, syncfunc::tern_idle, turn, ts, ts, ts, true);
 #endif
 }
 

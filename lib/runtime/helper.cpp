@@ -77,7 +77,7 @@ pthread_mutex_t idle_mutex;
 void *idle_thread(void *)
 {
   while (true) {
-    int x;
+    volatile int x;
     pthread_mutex_lock(&idle_mutex);
     x = idle_done;
     pthread_mutex_unlock(&idle_mutex);
