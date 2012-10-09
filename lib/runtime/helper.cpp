@@ -16,6 +16,7 @@
 #include "tern/options.h"
 
 using namespace tern;
+#define IDLE_MUTEX_INS 0xdeadbeaf
 
 extern "C" {
 
@@ -78,11 +79,10 @@ void *idle_thread(void *)
 {
   while (true) {
     volatile int x;
-    pthread_mutex_lock(&idle_mutex);
+    tern_pthread_mutex_lock(IDLE_MUTEX_INS, &idle_mutex);
     x = idle_done;
-    pthread_mutex_unlock(&idle_mutex);
+    tern_pthread_mutex_unlock(IDLE_MUTEX_INS, &idle_mutex);
     if (x) break;
-    //tern_usleep(0xdeadbeef, options::idle_sleep_length);
     tern_idle_sleep();
   }
   return NULL;
@@ -119,7 +119,7 @@ void __tern_prog_begin(void) {
   //  use tern_pthread_create because we want to fake the eip
   if (options::launch_idle_thread)
   {
-    pthread_mutex_init(&idle_mutex, NULL);
+    tern_pthread_mutex_init(IDLE_MUTEX_INS, &idle_mutex, NULL);
     tern_pthread_create(0xdead0000, &idle_th, NULL, idle_thread, NULL);
   }
   assert(Space::isApp() && "__tern_prog_begin must end in app space");
@@ -137,9 +137,9 @@ void __tern_prog_end (void) {
 
   // terminate the idle thread because it references the runtime which we
   // are about to free
-  pthread_mutex_lock(&idle_mutex);
+  tern_pthread_mutex_lock(IDLE_MUTEX_INS, &idle_mutex);
   idle_done = 1;    //  do this in threadEnd where protected by mutex
-  pthread_mutex_unlock(&idle_mutex);
+  tern_pthread_mutex_unlock(IDLE_MUTEX_INS, &idle_mutex);
 
   //  use tern_pthread_join because we want to fake the eip
   if (options::launch_idle_thread)

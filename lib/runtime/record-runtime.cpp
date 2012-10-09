@@ -479,11 +479,11 @@ template <typename _S>
 int RecorderRT<_S>::pthreadMutexInit(unsigned ins, int &error, pthread_mutex_t *mutex, const  pthread_mutexattr_t *mutexattr)
 {
   int ret;
-  //SCHED_TIMER_START;
+  SCHED_TIMER_START;
   errno = error;
   ret = pthread_mutex_init(mutex, mutexattr);
   error = errno;
-  //SCHED_TIMER_END(syncfunc::pthread_mutex_init, (uint64_t)ret);
+  SCHED_TIMER_END(syncfunc::pthread_mutex_init, (uint64_t)ret);
   return ret;
 }
 
