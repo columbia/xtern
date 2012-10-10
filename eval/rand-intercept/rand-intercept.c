@@ -39,14 +39,11 @@ static __thread int entered_sys = 0; // Avoid recursively enter backtrace(), sin
 static __thread FILE *log = NULL;
 static pthread_mutex_t lock;
 
-//  fprintf(stderr, "START: %s: %s(): tid %d\n", PROJECT_TAG, __FUNCTION__, self());
-
 #define OPERATION_START initTid(); \
   updateTurn(); \
   struct timespec app_time; \
-  update_time(&app_time);
-
-//  fprintf(stderr, "END: %s: %s(): tid %d\n\n", PROJECT_TAG, __FUNCTION__, self());
+  update_time(&app_time);// \
+  //fprintf(stderr, "START: %s: %s(): tid %d\n", PROJECT_TAG, __FUNCTION__, self());
 
 #define OPERATION_END \
   struct timespec syscall_time; \
@@ -56,8 +53,8 @@ static pthread_mutex_t lock;
     void *eip = get_eip(); \
     logOp(__FUNCTION__, eip, self_tid, self_turn, &app_time, &syscall_time); \
     entered_sys = 0; \
-  } 
-  //fprintf(stderr, "function %s ends, pthread self %d\n", __FUNCTION__, self());
+  }// \
+  //fprintf(stderr, "END: %s: %s(): tid %d\n", PROJECT_TAG, __FUNCTION__, self());
 
 void update_time(struct timespec *ret);
 int internal_mutex_lock(pthread_mutex_t *mutex);
