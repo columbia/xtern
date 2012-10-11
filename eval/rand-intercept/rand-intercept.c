@@ -39,7 +39,8 @@ static __thread FILE *log = NULL;
 static pthread_mutex_t lock;
 
 
-#define OPERATION_START initTid(); \
+#define OPERATION_START \
+  initTid(); \
   void *eip; \
   struct timespec app_time; \
   if (DO_LOGGING) { \
