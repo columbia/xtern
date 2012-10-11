@@ -26,8 +26,7 @@
 
 #define PROJECT_TAG "XTERN"
 #define RESOLVE(x)	if (!fp_##x && !(fp_##x = dlsym(RTLD_NEXT, #x))) { fprintf(stderr, #x"() not found!\n"); exit(-1); }
-
-//#define DEBUGF(a...)	if (debug) { fprintf(stderr, "%s: %s(): ", PROJECT_TAG, __FUNCTION__); fprintf(stderr, ##a); }
+#define DO_LOGGING 1 // If it is 1, enable logging (logging sync ops, and updating times).
 
 // Per thread variables.
 static int num_threads = 0;
@@ -39,23 +38,27 @@ static __thread int entered_sys = 0; // Avoid recursively enter backtrace(), sin
 static __thread FILE *log = NULL;
 static pthread_mutex_t lock;
 
+
 #define OPERATION_START initTid(); \
-  updateTurn(); \
   void *eip; \
   struct timespec app_time; \
-  update_time(&app_time);// \
-  //fprintf(stderr, "START: %s: %s(): tid %d\n", PROJECT_TAG, __FUNCTION__, self());
+  if (DO_LOGGING) { \
+    updateTurn(); \
+    update_time(&app_time); \
+  }
+  //fprintf(stderr, "START: %s: %s(): tid %d\n", PROJECT_TAG, __FUNCTION__, self()); \
+
 
 #define OPERATION_END \
   struct timespec syscall_time; \
-  update_time(&syscall_time); \
-  if (!entered_sys) { \
+  if (DO_LOGGING && !entered_sys) { \
     entered_sys = 1; \
+    update_time(&syscall_time); \
     eip = get_eip(); \
     logOp(__FUNCTION__, eip, self_tid, self_turn, &app_time, &syscall_time); \
     entered_sys = 0; \
-  }// \
-  //fprintf(stderr, "END: %s: %s(): tid %d\n", PROJECT_TAG, __FUNCTION__, self());
+  }
+
 
 void update_time(struct timespec *ret);
 int internal_mutex_lock(pthread_mutex_t *mutex);
