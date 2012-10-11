@@ -41,6 +41,7 @@ static pthread_mutex_t lock;
 
 #define OPERATION_START initTid(); \
   updateTurn(); \
+  void *eip; \
   struct timespec app_time; \
   update_time(&app_time);// \
   //fprintf(stderr, "START: %s: %s(): tid %d\n", PROJECT_TAG, __FUNCTION__, self());
@@ -50,7 +51,7 @@ static pthread_mutex_t lock;
   update_time(&syscall_time); \
   if (!entered_sys) { \
     entered_sys = 1; \
-    void *eip = get_eip(); \
+    eip = get_eip(); \
     logOp(__FUNCTION__, eip, self_tid, self_turn, &app_time, &syscall_time); \
     entered_sys = 0; \
   }// \
@@ -131,10 +132,12 @@ void logOp(const char *op, void *eip, int tid, int self_turn, struct timespec *a
 static int (*fp_pthread_mutex_lock)(pthread_mutex_t *mutex);
 int pthread_mutex_lock(pthread_mutex_t *mutex) {
   OPERATION_START;
+  //fprintf(stderr, "tid %d before mutex lock %p\n", self(), (void *)mutex);fflush(stderr);
   RESOLVE(pthread_mutex_lock);
   int ret = fp_pthread_mutex_lock(mutex);
   int cur_errno = errno;
   OPERATION_END;
+  //fprintf(stderr, "Self %u, tid %d after mutex locked %p, eip %p\n\n", (unsigned)pthread_self(), self(), (void *)mutex, eip);fflush(stderr);
   errno = cur_errno;
   return ret;
 }
@@ -148,10 +151,12 @@ int internal_mutex_lock(pthread_mutex_t *mutex) {
 static int (*fp_pthread_mutex_unlock)(pthread_mutex_t *mutex);
 int pthread_mutex_unlock(pthread_mutex_t *mutex) {
   OPERATION_START;
+  //fprintf(stderr, "tid %d before mutex un lock %p\n", self(), (void *)mutex);fflush(stderr);
   RESOLVE(pthread_mutex_unlock);
   int ret = fp_pthread_mutex_unlock(mutex);
   int cur_errno = errno;
   OPERATION_END;
+  //fprintf(stderr, "tid %d after mutex un locked %p, eip %p\n\n", self(), (void *)mutex, eip);fflush(stderr);
   errno = cur_errno;
   return ret;
 }
@@ -177,9 +182,11 @@ static int (*fp_pthread_mutex_init)(pthread_mutex_t *mutex, const pthread_mutexa
 int pthread_mutex_init(pthread_mutex_t *mutex, const pthread_mutexattr_t *attr) {
   OPERATION_START;
   RESOLVE(pthread_mutex_init);
+  //fprintf(stderr, "before mutex init %p, %p\n", (void *)mutex, (void *)attr);
   int ret = fp_pthread_mutex_init(mutex, attr);
   int cur_errno = errno;
   OPERATION_END;
+  //fprintf(stderr, "after mutex init %p, %p, eip %p\n\n", (void *)mutex, (void *)attr, eip);
   errno = cur_errno;
   return ret;
 }
@@ -230,25 +237,37 @@ void pthread_exit(void *retval) {
 }
 
 //int pthread_cancel(pthread_t thread);
-
+/*
 static int (*fp_pthread_cond_init)(pthread_cond_t *cond, const pthread_condattr_t *attr);
 int pthread_cond_init(pthread_cond_t *cond, const pthread_condattr_t *attr) {
   OPERATION_START;
+  fprintf(stderr, "before cond init %p, %p\n", (void *)cond, (void *)attr);
   RESOLVE(pthread_cond_init);
   int ret = fp_pthread_cond_init(cond, attr);
   int cur_errno = errno;
   OPERATION_END;
+  fprintf(stderr, "after cond init %p, %p, eip %p, ret %d\n", (void *)cond, (void *)attr, eip, ret);
+  if (ret == EAGAIN)
+    fprintf(stderr, "\n\nEAGAIN\n\n");
+  if (ret == ENOMEM)
+    fprintf(stderr, "\n\nENOMEM\n\n");
+  if (ret == EBUSY)
+    fprintf(stderr, "\n\nEBUSY\n\n");
+  if (ret == EINVAL)
+    fprintf(stderr, "\n\nEINVAL\n\n");
   errno = cur_errno;
   return ret;
 }
-
+*/
 static int (*fp_pthread_cond_wait)(pthread_cond_t *cond, pthread_mutex_t *mutex);
 int pthread_cond_wait(pthread_cond_t *cond, pthread_mutex_t *mutex) {
   OPERATION_START;
+  //fprintf(stderr, "tid %d before cond wait: cond %p, mutex %p\n", self(), (void *)cond, (void *)mutex);fflush(stderr);
   RESOLVE(pthread_cond_wait);
   int ret = fp_pthread_cond_wait(cond, mutex);
   int cur_errno = errno;
   OPERATION_END;
+  //fprintf(stderr, "tid %d after cond wait: cond %p, mutex %p, eip %p\n\n", self(), (void *)cond, (void *)mutex, eip);fflush(stderr);
   errno = cur_errno;
   return ret;
 }
