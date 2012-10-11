@@ -4,7 +4,6 @@ VER=5.3.15
 cd $XTERN_ROOT/apps/bdb_rep
 rm -rf db-$VER perf install statis-benchmarks
 tar zxvf $APPS_DIR/sys/db-$VER.tar.gz
-tar zxvf $APPS_DIR/sys/bdb-perf.tar.gz
 
 # Build bdb.
 cd db-$VER/build_unix
@@ -13,10 +12,10 @@ cd db-$VER/build_unix
 make && make install
 
 # Build perf benchmark.
-cd $XTERN_ROOT/apps/bdb_rep/perf
-patch -p1 < ../fix-perf.patch
-make
-mv t $XTERN_ROOT/apps/bdb_rep/perf-test
+#cd $XTERN_ROOT/apps/bdb_rep/perf
+#patch -p1 < ../fix-perf.patch
+#make
+#mv t $XTERN_ROOT/apps/bdb_rep/perf-test
 
 # Build statis benchmark.
 cd $XTERN_ROOT/apps/bdb_rep/
@@ -25,6 +24,14 @@ cd statis-benchmarks
 patch -p1 < ../fix-statis-benchmarks.patch
 cd berkeleyDB
 make
-mv bdbHashThreaded $XTERN_ROOT/apps/bdb_rep/
+cd $XTERN_ROOT/apps/bdb_rep/
+mv statis-benchmarks/berkeleyDB/bdbHashThreaded .
 
+# Build 3n+1 benchmark, a fine-grained one.
+cd $XTERN_ROOT/apps/bdb_rep/
+tar zxvf libdb-3n.tar.gz
+cd libdb-3n
+g++ -O3 -g bench3n.cpp -o bench3n -I$XTERN_ROOT/apps/bdb_rep/install/include $XTERN_ROOT/apps/bdb_rep/install/lib/libdb.a -lpthread
+cd $XTERN_ROOT/apps/bdb_rep/
+mv libdb-3n/bench3n .
 
