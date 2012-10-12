@@ -129,8 +129,8 @@ sub drawTimeChart {
 	# Variables to draw time gaps.
 	my $factor50 = 50;
 	my $factor1K = 1000;
-	my $gapSep50 = "========================";
-	my $gapSep1K = "^^^^^^^^^^^^^^^^^^^^^^^^";
+	my $gapSep50 = "===========";
+	my $gapSep1K = $gapSep50."^^^^^^^^^^^";
 	my %curTime;
 	my %prevTime;
 	my %prevPrevTime;
