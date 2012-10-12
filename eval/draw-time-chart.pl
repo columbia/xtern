@@ -107,6 +107,17 @@ sub updateGlobalTime {
 	}
 }
 
+# Print thread margin, CHART must be open when call this function.
+sub printThreadMargin {
+	my $tid = $_[0];
+	my $i;
+	if ($tid > 0) {
+		for ($i = 0; $i < $tid-1; $i++) {
+			print CHART $threadMargin;
+		}
+	}
+}
+
 sub drawTimeChart {
 	my @fields;
 	my $tid;
@@ -114,8 +125,22 @@ sub drawTimeChart {
 	my $finishTime;
 	my $instrId;
 	my $i;
-	
-	open(CHART, ">"."../time-chart.txt");
+
+	# Variables to draw time gaps.
+	my $factor50 = 50;
+	my $factor1K = 1000;
+	my $gapSep50 = "========================";
+	my $gapSep1K = "^^^^^^^^^^^^^^^^^^^^^^^^";
+	my %curTime;
+	my %prevTime;
+	my %prevPrevTime;
+	my $gap = 0;
+	# Init.
+	for $key ( sort {$a<=>$b} keys %tids) {
+		$curTime{$key} = 0;
+		$prevTime{$key} = 0;
+		$prevPrevTime{$key} = 0;
+	}
 
 	# Print thread header.
 	for $key ( sort {$a<=>$b} keys %tids) {
@@ -134,17 +159,27 @@ sub drawTimeChart {
 		$finishTime = $fields[2];
 		$instrId = $fields[3];
 
-		# Print thread margin.
-		if ($tid > 0) {
-			for ($i = 0; $i < $tid-1; $i++) {
-				print CHART $threadMargin;
+		# Update gap-variables, and print them if there is a big time gap.
+		$prevPrevTime{$tid} = $prevTime{$tid};
+		$prevTime{$tid} = $curTime{$tid};
+		$curTime{$tid} = $finishTime;
+		if (($curTime{$tid} - $prevTime{$tid}) > 0 && ($prevTime{$tid} - $prevPrevTime{$tid}) > 0) {
+			$gap = ($curTime{$tid} - $prevTime{$tid})/($prevTime{$tid} - $prevPrevTime{$tid});
+			if ($gap > $factor50 && $gap < $factor1K) {
+				printThreadMargin($tid);
+				print CHART $gapSep50.":".$gap."\n";
+			} else {
+				if ($gap > $factor1K) {
+					printThreadMargin($tid);
+					print CHART $gapSep1K.":".$gap."\n";
+				}
 			}
 		}
-		print CHART $op."(".$instrId.")"." ".$finishTime."\n";
-		
-	}
 
-	close(CHART);
+		# Print op stat.
+		printThreadMargin($tid);
+		print CHART $op."(".$instrId.")"." ".$finishTime."\n";	
+	}
 }
 
 $curDir = `pwd`;
@@ -152,6 +187,8 @@ parseSchedule(@ARGV[0]);
 #print $curDir."\n";
 chdir($curDir);
 updateGlobalTime();
-drawTimeChart();
 
+open(CHART, ">"."../time-chart.txt");
+drawTimeChart();
+close(CHART);
 
