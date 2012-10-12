@@ -112,8 +112,8 @@ void update_time(struct timespec *ret)
 
 void *get_eip()
 {
-  void *tracePtrs[20];
-  int ret = backtrace(tracePtrs, 20);
+  void *tracePtrs[3];
+  int ret = backtrace(tracePtrs, 3);
   assert(ret >= 0);
   return tracePtrs[2];  //  this is ret_eip of my caller
 }
