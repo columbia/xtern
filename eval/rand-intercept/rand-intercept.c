@@ -112,9 +112,12 @@ void update_time(struct timespec *ret)
 
 void *get_eip()
 {
-  void *tracePtrs[4];
-  int ret = backtrace(tracePtrs, 4);
+  void *tracePtrs[5];
+  int ret = backtrace(tracePtrs, 5);
   assert(ret >= 0);
+  /* For most of applications, returning the [2] is fine, which shows the locations calling sync op.
+  But for some applications that use sync wrapper (e.g., __db_pthread_mutex_lock in bdb), we can manually
+  modify this to return tracePtrs[3], which could help us easily identify the location calling the sync wrappers. */
   return tracePtrs[2];  //  this is ret_eip of my caller
 }
 
