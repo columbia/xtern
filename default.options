@@ -96,3 +96,6 @@ non_block_recv = 0
 
 # if we should launch a monitor
 launch_monitor = 0
+
+# if turned on, sync operations will be logged.
+log_sync = 1
