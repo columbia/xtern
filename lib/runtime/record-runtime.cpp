@@ -233,7 +233,8 @@ void RecorderRT<_S>::idle_sleep(void) {
   int turn = _S::incTurnCount();
   assert(turn >= 0);
   timespec ts;
-  Logger::the->logSync(0, syncfunc::tern_idle, turn, ts, ts, ts, true);
+  if (options::log_sync)
+    Logger::the->logSync(0, syncfunc::tern_idle, turn, ts, ts, ts, true);
 
 /*  while (_S::runq.size() == 1 && _S::waitq.empty())
   {
@@ -287,14 +288,16 @@ void RecorderRT<RecordSerializer>::idle_sleep(void) {
       sched_wakeup_time.tv_sec + sched_block_time.tv_sec, \
       sched_wakeup_time.tv_nsec + sched_block_time.tv_nsec \
       }; \
-    Logger::the->logSync(ins, (syncop), block_turn, app_time, syscall_time, sched_time, false, __VA_ARGS__); \
+    if (options::log_sync) \
+      Logger::the->logSync(ins, (syncop), block_turn, app_time, syscall_time, sched_time, false, __VA_ARGS__); \
     _S::getTurn(); \
     int second_turn = _S::incTurnCount(); \
     _S::putTurn(); \
     memset(&app_time, 0, sizeof(app_time)); \
     memset(&syscall_time, 0, sizeof(syscall_time)); \
     sched_time = update_time();  \
-    Logger::the->logSync(ins, (syncop), second_turn, app_time, syscall_time, sched_time, true, __VA_ARGS__); \
+    if (options::log_sync) \
+      Logger::the->logSync(ins, (syncop), second_turn, app_time, syscall_time, sched_time, true, __VA_ARGS__); \
   } \
   errno = backup_errno; 
 
@@ -308,7 +311,8 @@ void RecorderRT<RecordSerializer>::idle_sleep(void) {
   int backup_errno = errno; \
   timespec syscall_time = update_time(); \
   nturn = _S::incTurnCount(); \
-  Logger::the->logSync(ins, (syncop), nturn = _S::getTurnCount(), app_time, syscall_time, sched_time, true, __VA_ARGS__);
+  if (options::log_sync) \
+    Logger::the->logSync(ins, (syncop), nturn = _S::getTurnCount(), app_time, syscall_time, sched_time, true, __VA_ARGS__);
    
 #define SCHED_TIMER_END(syncop, ...) \
   SCHED_TIMER_END_COMMON(syncop, __VA_ARGS__); \
@@ -323,7 +327,8 @@ void RecorderRT<RecordSerializer>::idle_sleep(void) {
 #define SCHED_TIMER_FAKE_END(syncop, ...) \
   nturn = _S::incTurnCount(); \
   timespec fake_time = update_time(); \
-  Logger::the->logSync(ins, syncop, nturn, app_time, fake_time, sched_time, /* before */ false, __VA_ARGS__); 
+  if (options::log_sync) \
+    Logger::the->logSync(ins, syncop, nturn, app_time, fake_time, sched_time, /* before */ false, __VA_ARGS__); 
   
 template <typename _S>
 void RecorderRT<_S>::threadBegin(void) {
