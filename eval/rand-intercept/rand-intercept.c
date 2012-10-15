@@ -112,12 +112,30 @@ void update_time(struct timespec *ret)
 
 void *get_eip()
 {
-  void *tracePtrs[5];
-  int ret = backtrace(tracePtrs, 5);
+  const int SIZE = 5;
+  void *tracePtrs[SIZE];
+  int ret = backtrace(tracePtrs, SIZE);
   assert(ret >= 0);
+#if 0
   /* For most of applications, returning the [2] is fine, which shows the locations calling sync op.
   But for some applications that use sync wrapper (e.g., __db_pthread_mutex_lock in bdb), we can manually
   modify this to return tracePtrs[3], which could help us easily identify the location calling the sync wrappers. */
+  if (tracePtrs[3] == 0x4336db) {
+    fprintf(stderr, "\n6db: Tid %d: EIP: %p <- %p <- %p <- %p <- %p : <- %p <- %p <- %p <- %p <- %p <- %p\n\n",
+      self(),
+      tracePtrs[3], tracePtrs[4], tracePtrs[5], tracePtrs[6], tracePtrs[7],
+      tracePtrs[8], tracePtrs[9], tracePtrs[10], tracePtrs[11], tracePtrs[12],
+      tracePtrs[13]);
+  }
+  if (tracePtrs[3] == 0x004e1d46) {
+    fprintf(stderr, "\nd46: Tid %d: EIP: %p <- %p <- %p <- %p <- %p : <- %p <- %p <- %p <- %p <- %p : <- %p <- %p <- %p <- %p <- %p\n\n",
+      self(),
+      tracePtrs[3], tracePtrs[4], tracePtrs[5], tracePtrs[6], tracePtrs[7],
+      tracePtrs[8], tracePtrs[9], tracePtrs[10], tracePtrs[11], tracePtrs[12],
+      tracePtrs[13],  tracePtrs[14],  tracePtrs[15],  tracePtrs[16],  tracePtrs[17]);
+  }
+  return tracePtrs[3];
+#endif
   return tracePtrs[2];  //  this is ret_eip of my caller
 }
 
