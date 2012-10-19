@@ -2,26 +2,28 @@
 extern "C" FUNC_RET_TYPE FUNC_NAME(ARGS_WITH_NAME){
   typedef FUNC_RET_TYPE (*orig_func_type)(ARGS_WITHOUT_NAME);
 
-  orig_func_type orig_func;
+  static orig_func_type orig_func;
 
   void * handle;
   FUNC_RET_TYPE ret;
 
-  if(!(handle=dlopen("LIB_PATH", RTLD_LAZY))) {
-    perror("dlopen");
-    puts("here dlopen");
-    abort();
+  if (!orig_func) {
+    if(!(handle=dlopen("LIB_PATH", RTLD_LAZY))) {
+      perror("dlopen");
+      puts("here dlopen");
+      abort();
+    }
+
+    orig_func = (orig_func_type) dlsym(handle, "FUNC_NAME");
+
+    if(dlerror()) {
+      perror("dlsym");
+      puts("here dlsym");
+      abort();
+    }
+
+    dlclose(handle);
   }
-
-  orig_func = (orig_func_type) dlsym(handle, "FUNC_NAME");
-
-  if(dlerror()) {
-    perror("dlsym");
-    puts("here dlsym");
-    abort();
-  }
-
-  dlclose(handle);
 
 #ifdef __USE_TERN_RUNTIME
   if (Space::isApp() && options::DMT) {
