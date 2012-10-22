@@ -1,0 +1,29 @@
+#!/bin/bash
+
+if [ "$APPS_DIR" = "" ]; then
+	echo '$APPS_DIR not defined, do `export APPS_DIR=`'
+	exit 1
+fi
+
+if [ -z $1 ]; then
+	# No version number
+	echo "Usage: <version number: e.g. 104>"
+	exit 1
+fi
+VER=$1
+
+# remove previous build
+rm -rf ringpaxos-src-rev$VER
+unzip $APPS_DIR/sys/ringpaxos-src-rev$VER.zip
+rm -rf __MACOSX
+
+tar zxvf $APPS_DIR/sys/libevent-1.4.14b-stable.tar.gz
+# install libevent
+cd libevent-1.4.14b-stable
+./configure --prefix=$APPS_DIR/libpaxos/
+make
+make install
+
+# install bdb
+cd ../../bdb
+./mk
