@@ -8,6 +8,10 @@ $numThreads = 0;
 %tids;
 $curDir;
 $threadMargin = "                                                  "; # 40 blanks.
+$skipTid1 = 1;
+if (scalar(@ARGV) >= 2 && @ARGV[1] eq "--keep-tid1") {
+	$skipTid1 = 0;
+}
 
 sub parseSchedule {
 	my $dirPath = $_[0];
@@ -31,7 +35,9 @@ sub parseSchedule {
 		@fields1 = split(/-/, $file);
 		@fields2 = split(/\./, $fields1[2]);
 		$tid = $fields2[0];
-		next if ($tid eq 1);
+		if ($skipTid1 eq 1) {
+			next if ($tid eq 1);
+		}
 		$curTidTime = 0;
 		$tids{$tid} = 1;
 
@@ -70,7 +76,9 @@ sub updateGlobalTime {
 	for $key ( sort {$a<=>$b} keys %tids) {
 		my $curTid = $key;
 		next if ($curTid eq 0);
-		next if ($tid eq 1);
+		if ($skipTid1 eq 1) {
+			next if ($tid eq 1);
+		}
 
 		my $tidFirstEvent = 0;
 		my $baseTime = 0;
@@ -112,8 +120,14 @@ sub printThreadMargin {
 	my $tid = $_[0];
 	my $i;
 	if ($tid > 0) {
-		for ($i = 0; $i < $tid-1; $i++) {
-			print CHART $threadMargin;
+		if ($skipTid1 eq 1) {
+			for ($i = 0; $i < $tid-1; $i++) {
+				print CHART $threadMargin;
+			}
+		} else{
+			for ($i = 0; $i < $tid; $i++) {
+				print CHART $threadMargin;
+			}
 		}
 	}
 }

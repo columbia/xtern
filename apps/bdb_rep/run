@@ -12,7 +12,8 @@ echo "Running $APP $INPUT ..."
 $INIT_ENV_CMD;
 LD_PRELOAD=$XTERN_ROOT/dync_hook/interpose.so time $APP $INPUT
 mv out out-rr
-$XTERN_ROOT/eval/draw-time-chart.pl ./out-rr
+# Since in this bdb local.options, we do not start idle thread, so we must keep tid1.
+$XTERN_ROOT/eval/draw-time-chart.pl ./out-rr --keep-tid1
 mv time-chart.txt rr-time-chart.txt
 
 sleep 2;

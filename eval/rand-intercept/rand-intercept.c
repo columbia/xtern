@@ -136,7 +136,7 @@ void *get_eip()
   }
   return tracePtrs[3];
 #endif
-  return tracePtrs[2];  //  this is ret_eip of my caller
+  return tracePtrs[3];  //  this is ret_eip of my caller
 }
 
 void logOp(const char *op, void *eip, int tid, int self_turn, struct timespec *app_time, struct timespec *syscall_time) {
