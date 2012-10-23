@@ -1,46 +1,42 @@
 #!/bin/bash
 
 VER=5.3.15
-DB_DIR=$XTERN_ROOT/apps/bdb_rep/db-$VER
-cd $XTERN_ROOT/apps/bdb_rep
+APP_DIR=$XTERN_ROOT/apps/bdb_rep/
+DB_SRC_DIR=$APP_DIR/db-$VER
+cd $APP_DIR
 rm -rf db-$VER perf install statis-benchmarks
 tar zxvf $APPS_DIR/sys/db-$VER.tar.gz
 
 # Build bdb.
 cd db-$VER/build_unix
 # The "--with-mutex=POSIX/pthreads" is a must, otherwise the __db_pthread_mutex_lock() will not be compiled into the library and few mutexes will be invoked.
-../dist/configure CFLAGS="-O3 -g" CXXFLAGS="-O3 -g" --enable-posixmutexes --with-mutex=POSIX/pthreads --prefix=$XTERN_ROOT/apps/bdb_rep/install
+../dist/configure CFLAGS="-O3 -g" CXXFLAGS="-O3 -g" --enable-posixmutexes --with-mutex=POSIX/pthreads --prefix=$APP_DIR/install
 make && make install
 
 # Build bdb rep.
-cp -r $DB_DIR/src/dbinc/ $DB_DIR/install/include/
-cd $DB_DIR/examples/c/ex_rep
-cp $DB_DIR/rep_makefile_normal Makefile
-make DB_INSTALL=$dbtern_root/install -j2 
-cp rep_mgr $dbtern_root/
-cp rep_base $dbtern_root/
-
-# Build perf benchmark.
-#cd $XTERN_ROOT/apps/bdb_rep/perf
-#patch -p1 < ../fix-perf.patch
-#make
-#mv t $XTERN_ROOT/apps/bdb_rep/perf-test
+cp -r $DB_SRC_DIR/src/dbinc/ $APP_DIR/install/include/
+cd $DB_SRC_DIR/examples/c/ex_rep
+cp $APP_DIR/rep_makefile_normal Makefile
+make
+cp rep_mgr $APP_DIR
+cp rep_base $APP_DIR
+cd $APP_DIR
 
 # Build statis benchmark.
-cd $XTERN_ROOT/apps/bdb_rep/
+cd $APP_DIR
 tar zxvf statis-benchmarks.tar.gz
 cd statis-benchmarks
 patch -p1 < ../fix-statis-benchmarks.patch
 cd berkeleyDB
 make
-cd $XTERN_ROOT/apps/bdb_rep/
+cd $APP_DIR
 mv statis-benchmarks/berkeleyDB/bdbHashThreaded .
 
 # Build 3n+1 benchmark, a fine-grained one.
-cd $XTERN_ROOT/apps/bdb_rep/
+cd $APP_DIR
 tar zxvf libdb-3n.tar.gz
 cd libdb-3n
-g++ -O3 -g bench3n.cpp -o bench3n -I$XTERN_ROOT/apps/bdb_rep/install/include $XTERN_ROOT/apps/bdb_rep/install/lib/libdb.a -lpthread
-cd $XTERN_ROOT/apps/bdb_rep/
+g++ -O3 -g bench3n.cpp -o bench3n -I$APP_DIR/install/include $APP_DIR/install/lib/libdb.a -lpthread
+cd $APP_DIR
 mv libdb-3n/bench3n .
 
