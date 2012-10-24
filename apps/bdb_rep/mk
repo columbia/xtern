@@ -16,7 +16,7 @@ make && make install
 # Build bdb rep.
 cp -r $DB_SRC_DIR/src/dbinc/ $APP_DIR/install/include/
 cd $DB_SRC_DIR/examples/c/ex_rep/base
-patch < $APP_DIR/bugs/00-bdb_rep_connect_race.patch
+#patch < $APP_DIR/bugs/00-bdb_rep_connect_race.patch
 cd $DB_SRC_DIR/examples/c/ex_rep
 cp $APP_DIR/rep_makefile_normal Makefile
 make
