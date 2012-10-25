@@ -2,6 +2,7 @@
 
 cd $XTERN_ROOT/apps/bdb_rep
 rm -rf out* data* rep*.log master* slave* rr-* random-*
+killall -9 rep_mgr
 PRELOAD_LIB=""
 SCHED=""
 
@@ -28,7 +29,7 @@ runRep(){
 	sleep 20
 
 	ps -a | grep rep_mgr
-	killall -9 rep_mgr
+	#killall -9 rep_mgr
 }
 
 SCHED="rr"
