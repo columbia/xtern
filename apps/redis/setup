@@ -5,14 +5,9 @@ if [ "$APPS_DIR" = "" ]; then
 	exit 1
 fi
 
-if [ -z $1 ]; then
-	# No version number
-	echo "Usage: <version number: e.g. 2.4.11>"
-	exit 1
-fi
-VER=$1
+VER=2.4.11
 
 # remove previous build
-rm -rf redis-$VER
+rm -rf redis-$VER redis-benchmark redis-server
 tar zxvf $APPS_DIR/sys/redis-$VER.tar.gz
 
