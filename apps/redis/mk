@@ -1,0 +1,30 @@
+#!/bin/bash
+
+if [ "$APPS_DIR" = "" ]; then
+	echo '$APPS_DIR not defined, do `export APPS_DIR=`'
+	exit 1
+fi
+
+if [ -z $1 ]; then
+	# No version number
+	echo "Usage: <version number: e.g. 2.4.11> <number of jobs>"
+	exit 1
+fi
+VER=$1
+JOBS=$2
+
+cd redis-$VER
+echo -e "\033[22;31mchange directory to $PWD\033[0m"
+
+# compile
+echo -e "\033[22;31mCompiling\033[0m"
+if [ "$JOBS" = "" ]; then
+    make FORCE_LIBC_MALLOC=yes    
+else
+    make FORCE_LIBC_MALLOC=yes -j $JOBS
+fi
+
+
+# copy redis-server and benchmark tool
+cp src/redis-server ../
+cp src/redis-benchmark ../
