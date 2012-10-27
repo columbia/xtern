@@ -12,7 +12,7 @@ runRedis(){
 	sleep 5
 
 	# Start the benchmark (client). Can change workload here.
-	./redis-benchmark > benchmark-$SCHED.log 2>&1
+	./redis-benchmark -n 100000 > benchmark-$SCHED.log 2>&1
 	sleep 2
 	mv out out-$SCHED
 	$XTERN_ROOT/eval/draw-time-chart.pl ./out-$SCHED
