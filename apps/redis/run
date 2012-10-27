@@ -1,23 +1,33 @@
 #!/bin/bash
 
-if [ "$APPS_DIR" = "" ]; then
-	echo '$APPS_DIR not defined, do `export APPS_DIR=`'
-	exit 1
-fi
+cd $XTERN_ROOT/apps/redis
+rm -rf out* *.log rr-* random-*
+killall -9 redis-server redis-benchmark &> /dev/null
+PRELOAD_LIB=""
+SCHED=""
 
-VER=2.4.11
-JOBS=$1
+runRedis(){
+	# Start the server.
+	LD_PRELOAD=$PRELOAD_LIB ./redis-server redis-threads.conf > server-$SCHED.log 2>&1 &
+	sleep 5
 
-cd redis-$VER
+	# Start the benchmark (client). Can change workload here.
+	./redis-benchmark > benchmark-$SCHED.log 2>&1
+	sleep 2
+	mv out out-$SCHED
+	$XTERN_ROOT/eval/draw-time-chart.pl ./out-$SCHED
+	mv time-chart.txt $SCHED-time-chart.txt
 
-# compile
-if [ "$JOBS" = "" ]; then
-    make FORCE_LIBC_MALLOC=yes    
-else
-    make FORCE_LIBC_MALLOC=yes -j $JOBS
-fi
+	# Clean.
+	killall -9 redis-server &> /dev/null
+}
 
+#SCHED="rr"
+#PRELOAD_LIB=$XTERN_ROOT/dync_hook/interpose.so
+#echo "Running redis with $PRELOAD_LIB..."
+#runRep;
 
-# copy redis-server and benchmark tool
-cp src/redis-server ../
-cp src/redis-benchmark ../
+SCHED="random"
+PRELOAD_LIB=$XTERN_ROOT/eval/rand-intercept/rand-intercept.so
+echo "Running redis with $PRELOAD_LIB..."
+runRedis;
