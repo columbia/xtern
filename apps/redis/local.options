@@ -50,7 +50,7 @@ set_mutex_errorcheck = 0
 
 # this number set the conversion between physical time and turn number. 
 # notice better to set this number of a 32-bit integer.
-nanosec_per_turn = 5000
+nanosec_per_turn = 3000
 
 # whether we schedule on output operations like write, send and so. 
 schedule_write = 0

@@ -641,7 +641,7 @@ void RRScheduler::next(bool at_thread_end)
       // Current thread must be the last thread and it is existing, otherwise we wake up the idle thread.
       if (at_thread_end && waitq.empty()) {
         return;
-      } else
+      } else if (options::launch_idle_thread && self() != 1) // If I am not the idle thread, then wake up the idle thread.
         wakeUpIdleThread();
     }
   }
@@ -685,7 +685,7 @@ void RRScheduler::idleThreadCondWait() {
   waits[tid].timeout = FOREVER;
   waitq.push_back(tid);
   assert(tid == runq.front());
-  next(true);
+  next();
   pthread_cond_wait(&idle_cond, &idle_mutex);
 }
 

@@ -10,6 +10,7 @@ SCHED=""
 runRedis(){
 	# Start the server.
 	LD_PRELOAD=$PRELOAD_LIB ./redis-server redis-threads.conf > server-$SCHED.log 2>&1 &
+	#LD_PRELOAD=$PRELOAD_LIB ./redis-server > server-$SCHED.log 2>&1 &
 	sleep 5
 
 	# Start the benchmark (client). Can change workload here.
