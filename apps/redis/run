@@ -3,6 +3,7 @@
 cd $XTERN_ROOT/apps/redis
 rm -rf out* *.log rr-* random-*
 killall -9 redis-server redis-benchmark &> /dev/null
+killall -9 redis-server redis-benchmark &> /dev/null
 PRELOAD_LIB=""
 SCHED=""
 
@@ -15,8 +16,8 @@ runRedis(){
 	./redis-benchmark -n 100000 > benchmark-$SCHED.log 2>&1
 	sleep 2
 	mv out out-$SCHED
-	$XTERN_ROOT/eval/draw-time-chart.pl ./out-$SCHED
-	mv time-chart.txt $SCHED-time-chart.txt
+	#$XTERN_ROOT/eval/draw-time-chart.pl ./out-$SCHED
+	#mv time-chart.txt $SCHED-time-chart.txt
 
 	# Clean.
 	killall -9 redis-server &> /dev/null
