@@ -620,6 +620,13 @@ void tern_idle_sleep()
   Space::exitSys();
 }
 
+void tern_idle_cond_wait()
+{
+  Space::enterSys();
+  Runtime::the->idle_cond_wait();
+  Space::exitSys();
+}
+
 pid_t tern_fork(unsigned ins)
 {
   int error = errno;

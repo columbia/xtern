@@ -74,6 +74,7 @@ int __tern_pthread_create(pthread_t *thread,  const pthread_attr_t *attr,
 volatile int idle_done = 0;
 pthread_t idle_th;
 pthread_mutex_t idle_mutex;
+pthread_cond_t idle_cond;
 
 void *idle_thread(void *)
 {
@@ -81,6 +82,8 @@ void *idle_thread(void *)
     volatile int x;
     tern_pthread_mutex_lock(IDLE_MUTEX_INS, &idle_mutex);
     x = idle_done;
+    if (!idle_done)
+      tern_idle_cond_wait();
     tern_pthread_mutex_unlock(IDLE_MUTEX_INS, &idle_mutex);
     if (x) break;
     tern_idle_sleep();
@@ -127,7 +130,6 @@ void __tern_prog_begin(void) {
 
 //  SYS -> SYS
 void __tern_prog_end (void) {
-
   assert(prog_began && "__tern_prog_begin() not called "\
          "or __tern_prog_end() already called!");
 
@@ -140,6 +142,13 @@ void __tern_prog_end (void) {
   tern_pthread_mutex_lock(IDLE_MUTEX_INS, &idle_mutex);
   idle_done = 1;    //  do this in threadEnd where protected by mutex
   tern_pthread_mutex_unlock(IDLE_MUTEX_INS, &idle_mutex);
+  tern_pthread_cond_signal(IDLE_MUTEX_INS, &idle_cond);
+
+  Space::enterSys();
+  pthread_mutex_lock(&idle_mutex);
+  pthread_cond_signal(&idle_cond);
+  pthread_mutex_unlock(&idle_mutex);
+  Space::exitSys();
 
   //  use tern_pthread_join because we want to fake the eip
   if (options::launch_idle_thread)

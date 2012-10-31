@@ -45,6 +45,9 @@ static void *monitor(void *arg)
   return 0;
 }
 
+extern pthread_mutex_t idle_mutex;
+extern pthread_cond_t idle_cond;
+
 void RRSchedulerCV::detect_blocking_threads(void)
 {
 /*
@@ -635,10 +638,11 @@ void RRScheduler::next(bool at_thread_end)
     }
 
     if(runq.empty()) {
-      // current thread must be the last thread and it is existing
-      assert(at_thread_end && waitq.empty()
-             && "all threads wait; deadlock!");
-      return;
+      // Current thread must be the last thread and it is existing, otherwise we wake up the idle thread.
+      if (at_thread_end && waitq.empty()) {
+        return;
+      } else
+        wakeUpIdleThread();
     }
   }
 
@@ -650,6 +654,39 @@ void RRScheduler::next(bool at_thread_end)
   dprintf("RRScheduler: next is %d\n", next_tid);
   SELFCHECK;
   sem_post(&waits[next_tid].sem);
+}
+
+void RRScheduler::wakeUpIdleThread() {
+  int idleTid = 1, tid = -1;
+  list<int>::iterator prv, cur;
+  // use delete-safe way of iterating the list
+  for(cur=waitq.begin(); cur!=waitq.end();) {
+    prv = cur ++;
+
+    tid = *prv;
+    assert(tid >=0 && tid < Scheduler::nthread);
+    if(tid == idleTid) {
+      waits[tid].reset();
+      waitq.erase(prv);
+      runq.push_back(tid);
+      break;
+    }
+  }
+  assert(tid == idleTid);
+  pthread_mutex_lock(&idle_mutex);
+  pthread_cond_signal(&idle_cond);
+  pthread_mutex_unlock(&idle_mutex);
+}
+
+void RRScheduler::idleThreadCondWait() {
+  int tid = self();
+  assert(tid>=0 && tid < Scheduler::nthread);
+  waits[tid].chan = (void *)&idle_cond;
+  waits[tid].timeout = FOREVER;
+  waitq.push_back(tid);
+  assert(tid == runq.front());
+  next(true);
+  pthread_cond_wait(&idle_cond, &idle_mutex);
 }
 
 //@before without turn

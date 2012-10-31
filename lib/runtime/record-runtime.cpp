@@ -143,9 +143,9 @@ void InstallRuntime() {
     Runtime::the = rt;
   } else if (options::runtime_type == "FCFS") {
     Runtime::the = new RecorderRT<FCFSScheduler>;
-  } else if (options::runtime_type == "Replay") {
+  }/* else if (options::runtime_type == "Replay") {
     Runtime::the = new RecorderRT<ReplaySchedulerSem>;
-  }
+  }*/
   assert(Runtime::the && "can't create runtime!");
   clockManager = tern::ClockManager(time(NULL) * (uint64_t)1000000000);
 }
@@ -259,6 +259,20 @@ void RecorderRT<_S>::idle_sleep(void) {
   _S::putTurn();
 
 #endif
+}
+
+template <typename _S>
+void RecorderRT<_S>::idle_cond_wait(void) {
+  _S::getTurn();
+  int turn = _S::incTurnCount();
+  assert(turn >= 0);
+
+  /* Currently idle thread must be in runq since it has grabbed the idle_mutex,
+    so >=2 means there is at least one real thread in runq as well. */
+  if (_S::runq.size() >= 2)
+    _S::idleThreadCondWait();
+  else
+    _S::putTurn();
 }
 
 /*
@@ -1038,7 +1052,6 @@ int RecorderRT<_S>::pthreadCondWait(unsigned ins, int &error,
   _S::signal(mu);
 
   SCHED_TIMER_FAKE_END(syncfunc::pthread_cond_wait, (uint64_t)cv, (uint64_t)mu);
-  
   _S::wait(cv);
   sched_time = update_time();
   errno = error;
@@ -1046,7 +1059,6 @@ int RecorderRT<_S>::pthreadCondWait(unsigned ins, int &error,
   error = errno;
   
   SCHED_TIMER_END(syncfunc::pthread_cond_wait, (uint64_t)cv, (uint64_t)mu);
-
   return 0;
 }
 
@@ -1689,8 +1701,18 @@ int RecorderRT<_S>::__sigwait(unsigned ins, int &error, const sigset_t *set, int
 template <typename _S>
 char *RecorderRT<_S>::__fgets(unsigned ins, int &error, char *s, int size, FILE *stream)
 {
-//  if (options::RR_ignore_rw_regular_file)
-//    return Runtime::__fgets(ins, error, s, size, stream);
+  // Heming: follow a similar way as in __read() of ignoring scheduling fgets for regular files.
+  bool ignore = false;
+  if (options::RR_ignore_rw_regular_file) {
+    int fd = fileno(stream);
+    struct stat st;
+    fstat(fd, &st);
+    if (S_IFREG == (st.st_mode & S_IFMT))
+      ignore = true;
+  }
+  if (ignore)
+     return Runtime::__fgets(ins, error, s, size, stream);
+
   BLOCK_TIMER_START;
   char * ret = Runtime::__fgets(ins, error, s, size, stream);
   BLOCK_TIMER_END(syncfunc::fgets, (uint64_t) ret);

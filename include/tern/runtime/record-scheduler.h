@@ -137,6 +137,8 @@ protected:
   bool wakeup_flag;
   pthread_mutex_t wakeup_mutex;
   void check_wakeup();
+  void wakeUpIdleThread();
+  void idleThreadCondWait();
 };
 
 struct FCFSScheduler: public RRScheduler {

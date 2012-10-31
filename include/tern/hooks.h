@@ -18,6 +18,7 @@ extern "C" {
 
   //  used by idle thread to skip empty rounds
   void tern_idle_sleep();
+  void tern_idle_cond_wait();
 
   /// hooks that users insert translate into these
   void tern_symbolic_real(unsigned insid, void *addr,
