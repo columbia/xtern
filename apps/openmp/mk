@@ -1,0 +1,30 @@
+#!/bin/bash
+
+if [ "$APPS_DIR" = "" ]; then
+	echo '$APPS_DIR not defined, do `export APPS_DIR=`'
+	exit 1
+fi
+
+VER=4.5.4
+echo "\nWe are compiling gcc-$VER by ourselves. We hope you have installed the same version of gcc on your machine, because we are going to use some libraries of it.\n";
+cd $XTERN_ROOT/apps/openmp
+rm -rf gcc-$VER install *.a
+tar zxvf $APPS_DIR/sys/gcc-$VER.tar.gz
+
+# compile gcc
+cd gcc-$VER
+mkdir obj
+cd obj
+../configure --prefix=$XTERN_ROOT/apps/openmp/install --disable-linux-futex --enable-languages=c,c++
+# A hack, uses some libraries from the built version. Currently I can not build a crti.o due to multi-architecture issue.
+LIBRARY_PATH=/usr/lib/x86_64-linux-gnu make -j4
+make install
+
+
+# copy redis-server and benchmark tool
+cd $XTERN_ROOT/apps/openmp
+rm *.a
+ln -s $XTERN_ROOT/apps/openmp/install/lib64/libgomp.a
+ln -s $XTERN_ROOT/apps/openmp/install/lib64/libstdc++.a
+g++ -g  rand-shuf.cpp -o rand-serial
+g++ -g -D_GLIBCXX_PARALLEL -static-libgcc -L. -fopenmp rand-shuf.cpp -o rand-para
