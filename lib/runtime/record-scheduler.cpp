@@ -641,6 +641,9 @@ void RRScheduler::next(bool at_thread_end)
       // Current thread must be the last thread and it is existing, otherwise we wake up the idle thread.
       if (at_thread_end && waitq.empty()) {
         return;
+      } else if (at_thread_end && !waitq.empty() && self() == 0) {
+        fprintf(stderr, "WARNING: main thread exits with some children threads alive (e.g., openmp).\n");
+        return;
       } else if (options::launch_idle_thread && self() != 1) // If I am not the idle thread, then wake up the idle thread.
         wakeUpIdleThread();
     }

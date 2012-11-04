@@ -47,7 +47,7 @@ static pthread_mutex_t lock;
     updateTurn(); \
     update_time(&app_time); \
   }
-  //fprintf(stderr, "START: %s: %s(): tid %d\n", PROJECT_TAG, __FUNCTION__, self()); \
+  //fprintf(stderr, "START: %s: %s(): tid %d\n", PROJECT_TAG, __FUNCTION__, self());
 
 
 #define OPERATION_END \

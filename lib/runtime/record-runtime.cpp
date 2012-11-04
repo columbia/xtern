@@ -331,7 +331,7 @@ void RecorderRT<RecordSerializer>::idle_sleep(void) {
 #define SCHED_TIMER_END(syncop, ...) \
   SCHED_TIMER_END_COMMON(syncop, __VA_ARGS__); \
   _S::putTurn();\
-  errno = backup_errno; 
+  errno = backup_errno;
 
 #define SCHED_TIMER_THREAD_END(syncop, ...) \
   SCHED_TIMER_END_COMMON(syncop, __VA_ARGS__); \
