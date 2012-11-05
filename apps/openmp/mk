@@ -23,7 +23,6 @@ make install
 
 # copy redis-server and benchmark tool
 cd $XTERN_ROOT/apps/openmp
-rm *.a
 ln -s $XTERN_ROOT/apps/openmp/install/lib64/libgomp.a
 ln -s $XTERN_ROOT/apps/openmp/install/lib64/libstdc++.a
 g++ -g  rand-shuf.cpp -o rand-serial
