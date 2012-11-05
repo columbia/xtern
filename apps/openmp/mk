@@ -13,6 +13,7 @@ tar zxvf $APPS_DIR/sys/gcc-$VER.tar.gz
 
 # compile gcc
 cd gcc-$VER
+patch -p1 < ../disable-sync-builtins.patch
 mkdir obj
 cd obj
 ../configure --prefix=$XTERN_ROOT/apps/openmp/install --disable-linux-futex --enable-languages=c,c++
