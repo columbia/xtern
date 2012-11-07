@@ -7,27 +7,29 @@
 #
 
 OMPC        = gcc
-CFLAGS      = -O3 -fopenmp   ### -Wall -pedantic
+CFLAGS      = -O3 -g -D_GLIBCXX_PARALLEL -static-libgcc -L. -fopenmp   ### -Wall -pedantic
 
 OMPCC       = g++
-CCFLAGS     = -O3 -fopenmp   ### -Wall -pedantic 
+CCFLAGS     = -O3 -g -D_GLIBCXX_PARALLEL -static-libgcc -L. -fopenmp   ### -Wall -pedantic 
 
 LFLAGS      = -lm 
 
 ALL =   omp_hello \
 	omp_num_threads \
 	omp_shared  \
-	omp_lastprivate  \
 	omp_reduction  \
 	omp_sections  \
 	omp_critical \
 	omp_for \
 	omp_get_env_info \
-	omp_threadprivate  \
-	omp_matrixmult \
-	omp_pi  \
-	pi_rect  \
-	pi_trap
+	omp_threadprivate
+
+#	pi_rect  \
+#	pi_trap
+
+#	omp_pi  \
+#	omp_matrixmult \
+#	omp_lastprivate  \
 
 .PHONY:  all
 all:  $(ALL)
