@@ -22,9 +22,21 @@ LIBRARY_PATH=/usr/lib/x86_64-linux-gnu make -j4
 make install
 
 
-# copy redis-server and benchmark tool
+# Build the random shuffle benchmark.
 cd $XTERN_ROOT/apps/openmp
 ln -s $XTERN_ROOT/apps/openmp/install/lib64/libgomp.a
 ln -s $XTERN_ROOT/apps/openmp/install/lib64/libstdc++.a
 g++ -g  rand-shuf.cpp -o rand-serial
 g++ -g -D_GLIBCXX_PARALLEL -static-libgcc -L. -fopenmp rand-shuf.cpp -o rand-para
+
+# Build the parallel for benchmark.
+g++ -fopenmp -fno-builtin -L. examples/ex-for.cpp -o ex-for
+
+# Build some other examples.
+cd ex
+ln -s $XTERN_ROOT/apps/openmp/install/lib64/libgomp.a
+ln -s $XTERN_ROOT/apps/openmp/install/lib64/libstdc++.a
+make
+cd ..
+
+# TBD.
