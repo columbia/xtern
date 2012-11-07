@@ -38,7 +38,7 @@ int main (int argc, char *argv[]) {
 	for (i=0; i<N; i++) {
 	  c[i] = a[i] + b[i];
 	}
-	sleep(tid+2);  /* Delay the thread for a few seconds */
+	//sleep(tid+2);  /* Delay the thread for a few seconds */
 	/* End of first section */
       }
 #pragma omp section
@@ -47,7 +47,7 @@ int main (int argc, char *argv[]) {
 	for (i=0; i<N; i++) {
 	  d[i] = a[i] * b[i];
 	}
-	sleep(tid+2);   /* Delay the thread for a few seconds */
+	//sleep(tid+2);   /* Delay the thread for a few seconds */
       } /* End of second section */
       
     }  /* end of sections */
