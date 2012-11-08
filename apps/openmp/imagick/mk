@@ -6,7 +6,9 @@ if [ "$APPS_DIR" = "" ]; then
 fi
 
 VER=6.8.0-4
-echo "\n\nPlease make sure you have run the `mk` in $XTERN_ROOT/apps/openmp before you build imagick.\n\n"
+echo ""
+echo "Please make sure you have run the 'mk' in $XTERN_ROOT/apps/openmp before you build imagick."
+echo ""
 sleep 2
 cd $XTERN_ROOT/apps/openmp/imagick
 rm -rf ImageMagick-$VER install *.a
@@ -19,11 +21,15 @@ cd ImageMagick-$VER
 patch -p1 < ../link-static-libgomp.patch
 mkdir obj
 cd obj
-../configure --prefix=$XTERN_ROOT/apps/openmp/imagick/install --disable-shared --enable-static
+../configure --prefix=$XTERN_ROOT/apps/openmp/imagick/install --disable-shared --enable-static &> config.results
 make
 make install
 
+# Don't know why we have to clean and recompile and then we could link in the static libgomp. Weird.
+make distclean
+../configure --prefix=$XTERN_ROOT/apps/openmp/imagick/install --disable-shared --enable-static &> config.results
 make
-cd ..
+make install
 
 # TBD.
+
