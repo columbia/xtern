@@ -1,0 +1,9 @@
+#!/bin/bash
+
+BIN_DIR=$XTERN_ROOT/apps/openmp/imagick/install/bin/
+PRELOAD_LIB=$XTERN_ROOT/dync_hook/interpose.so
+
+# TBD. Add a photo.
+cd $XTERN_ROOT/apps/openmp/imagick/
+time LD_PRELOAD=$PRELOAD_LIB $BIN_DIR/convert photo.jpg -sharpen 0x1 reconstruct.jpg
+	
