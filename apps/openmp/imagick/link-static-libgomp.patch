@@ -1,0 +1,39 @@
+diff -ruN ImageMagick-6.8.0-4/configure ImageMagick-6.8.0-4-mod/configure
+--- ImageMagick-6.8.0-4/configure	2012-11-01 07:25:49.000000000 -0400
++++ ImageMagick-6.8.0-4-mod/configure	2012-11-08 13:45:24.490642695 -0500
+@@ -5069,7 +5069,7 @@
+   CFLAGS=$ac_save_CFLAGS
+ elif test $ac_cv_prog_cc_g = yes; then
+   if test "$GCC" = yes; then
+-    CFLAGS="-g -O2"
++    CFLAGS="-g -O2 -static-libgcc -L$prefix/../"
+   else
+     CFLAGS="-g"
+   fi
+@@ -6197,7 +6197,7 @@
+   CFLAGS=$ac_save_CFLAGS
+ elif test $ac_cv_prog_cc_g = yes; then
+   if test "$GCC" = yes; then
+-    CFLAGS="-g -O2"
++    CFLAGS="-g -O2 -static-libgcc -L$prefix/../"
+   else
+     CFLAGS="-g"
+   fi
+@@ -6672,7 +6672,7 @@
+   CXXFLAGS=$ac_save_CXXFLAGS
+ elif test $ac_cv_prog_cxx_g = yes; then
+   if test "$GXX" = yes; then
+-    CXXFLAGS="-g -O2"
++    CXXFLAGS="-g -O2 -fopenmp -static-libgcc -L$prefix/../"
+   else
+     CXXFLAGS="-g"
+   fi
+@@ -24977,7 +24977,7 @@
+   CXXFLAGS=$ac_save_CXXFLAGS
+ elif test $ac_cv_prog_cxx_g = yes; then
+   if test "$GXX" = yes; then
+-    CXXFLAGS="-g -O2"
++    CXXFLAGS="-g -O2 -fopenmp -static-libgcc -L$prefix/../"
+   else
+     CXXFLAGS="-g"
+   fi

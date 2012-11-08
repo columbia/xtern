@@ -5,37 +5,24 @@ if [ "$APPS_DIR" = "" ]; then
 	exit 1
 fi
 
-VER=4.5.4
-echo "\nWe are compiling gcc-$VER by ourselves. We hope you have installed the same version of gcc on your machine, because we are going to use some libraries of it.\n";
-cd $XTERN_ROOT/apps/openmp
-rm -rf gcc-$VER install *.a
-tar zxvf $APPS_DIR/sys/gcc-$VER.tar.gz
+VER=6.8.0-4
+echo "\n\nPlease make sure you have run the `mk` in $XTERN_ROOT/apps/openmp before you build imagick.\n\n"
+sleep 2
+cd $XTERN_ROOT/apps/openmp/imagick
+rm -rf ImageMagick-$VER install *.a
+tar zxvf $APPS_DIR/sys/ImageMagick-$VER.tar.gz
+ln -s $XTERN_ROOT/apps/openmp/install/lib64/libgomp.a
+ln -s $XTERN_ROOT/apps/openmp/install/lib64/libstdc++.a
 
-# compile gcc
-cd gcc-$VER
-#patch -p1 < ../disable-sync-builtins.patch
+# compile ImageMagick
+cd ImageMagick-$VER
+patch -p1 < ../link-static-libgomp.patch
 mkdir obj
 cd obj
-../configure --prefix=$XTERN_ROOT/apps/openmp/install --disable-linux-futex --enable-languages=c,c++
-# A hack, uses some libraries from the built version. Currently I can not build a crti.o due to multi-architecture issue.
-LIBRARY_PATH=/usr/lib/x86_64-linux-gnu make -j4
+../configure --prefix=$XTERN_ROOT/apps/openmp/imagick/install --disable-shared --enable-static
+make
 make install
 
-
-# Build the random shuffle benchmark.
-cd $XTERN_ROOT/apps/openmp
-ln -s $XTERN_ROOT/apps/openmp/install/lib64/libgomp.a
-ln -s $XTERN_ROOT/apps/openmp/install/lib64/libstdc++.a
-g++ -g  rand-shuf.cpp -o rand-serial
-g++ -g -D_GLIBCXX_PARALLEL -static-libgcc -L. -fopenmp rand-shuf.cpp -o rand-para
-
-# Build the parallel for benchmark.
-g++ -fopenmp -fno-builtin -L. examples/ex-for.cpp -o ex-for
-
-# Build some other examples.
-cd ex
-ln -s $XTERN_ROOT/apps/openmp/install/lib64/libgomp.a
-ln -s $XTERN_ROOT/apps/openmp/install/lib64/libstdc++.a
 make
 cd ..
 
