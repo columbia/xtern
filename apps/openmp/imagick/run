@@ -1,9 +1,53 @@
 #!/bin/bash
 
 BIN_DIR=$XTERN_ROOT/apps/openmp/imagick/install/bin/
-PRELOAD_LIB=$XTERN_ROOT/dync_hook/interpose.so
 
-# TBD. Add a photo.
+# TBD. Add a photo, please refer to the readme.txt.
 cd $XTERN_ROOT/apps/openmp/imagick/
-time LD_PRELOAD=$PRELOAD_LIB $BIN_DIR/convert photo.jpg -sharpen 0x1 reconstruct.jpg
+rm -rf out*
+
+runImagickCmds(){
+	# Run the convert command to sharpen a picture. This command has large overhead when running with XTERN (~200%).
+	CMD="$BIN_DIR/convert photo.jpg -sharpen 0x1 reconstruct.jpg"
+	echo "Running $CMD..."
+	time LD_PRELOAD=$PRELOAD_LIB $CMD &> out1.txt
+	mv out out-1-$SCHED
+
+	# Compare two pictures, store the diff into a png picture.
+	CMD="$BIN_DIR/compare -compose src photo.jpg reconstruct.jpg diff.png"
+	echo "Running $CMD..."
+	time LD_PRELOAD=$PRELOAD_LIB $CMD &> out2.txt
+	mv out out-2-$SCHED
+
+	# Run the mogrify command to resize a picture.
+	cp photo.jpg rose.jpg
+	CMD="$BIN_DIR/mogrify -resize 50% rose.jpg"
+	echo "Running $CMD..."
+	time LD_PRELOAD=$PRELOAD_LIB $CMD &> out3.txt
+	mv out out-3-$SCHED
+
+	# Another compare command. This command has very small overhead when running with XTERN.
+	CMD="$BIN_DIR/compare photo.jpg reconstruct.jpg diff.png"
+	echo "Running $CMD..."
+	time LD_PRELOAD=$PRELOAD_LIB $CMD &> out4.txt
+	mv out out-4-$SCHED
+}
+
+
+SCHED="rr"
+PRELOAD_LIB=$XTERN_ROOT/dync_hook/interpose.so
+echo "Running imagick commands with $PRELOAD_LIB..."
+runImagickCmds;
+
+
+SCHED="random"
+PRELOAD_LIB=""
+echo "Running imagick commands with $PRELOAD_LIB..."
+runImagickCmds;
+
+
+# TBD. There are other imagick commands too, but either they are related to a x server, or they are trivial (e.g., only print some stat info),
+# or I have not figured out a command to run them.
+
+# TBD. Try to add more command.
 	
