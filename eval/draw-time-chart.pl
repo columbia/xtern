@@ -23,6 +23,7 @@ sub parseSchedule {
 	my $syscallTime = 0;
 	my $schedTime = 0;
 	my $curTidTime = 0;
+	my $waitTurnTime = 0;
 	my @fields1;
 	my @fields2;
 	
@@ -57,10 +58,11 @@ sub parseSchedule {
 			$syscallTime =~ s/:/\./g;
 			$schedTime =~ s/:/\./g;
 
-			$curTidTime = $curTidTime + $appTime + $syscallTime + $schedTime;;
+			$curTidTime = $curTidTime + $appTime + $syscallTime + $schedTime;
+			$waitTurnTime = $schedTime;
 			
 			#print "$turn:$tid:$appTime\n";
-			$totalEvents{$turn} = $tid.":".$op.":".$curTidTime.":".$instrId;
+			$totalEvents{$turn} = $tid.":".$op.":".$curTidTime.":".$instrId.":".$waitTurnTime;
 		}
 		close(LOG);
 	}
@@ -89,6 +91,7 @@ sub updateGlobalTime {
 			my $op = $fields[1];
 			my $time = $fields[2];
 			my $instrId = $fields[3];
+			my $waitTurnTime = $fields[4];
 			if ($curTid == $tid) {
 				if ($tidFirstEvent == 0) {
 					my $turn = $turnKey;
@@ -107,7 +110,7 @@ sub updateGlobalTime {
 
 				# Convert per-thread time to global time.
 				$time = $baseTime + $time;
-				$totalEvents{$turnKey} = $tid.":".$op.":".$time.":".$instrId;
+				$totalEvents{$turnKey} = $tid.":".$op.":".$time.":".$instrId.":".$waitTurnTime;
 			}
 		}
 
@@ -138,6 +141,7 @@ sub drawTimeChart {
 	my $op;
 	my $finishTime;
 	my $instrId;
+	my $waitTurnTime;
 	my $i;
 
 	# Variables to draw time gaps.
@@ -172,6 +176,7 @@ sub drawTimeChart {
 		$op = $fields[1];
 		$finishTime = $fields[2];
 		$instrId = $fields[3];
+		$waitTurnTime = $fields[4];
 
 		# Update gap-variables, and print them if there is a big time gap.
 		$prevPrevTime{$tid} = $prevTime{$tid};
@@ -192,7 +197,7 @@ sub drawTimeChart {
 
 		# Print op stat.
 		printThreadMargin($tid);
-		print CHART $op."(".$instrId.")"." ".$finishTime."\n";	
+		print CHART $op."(".$instrId.")"." ".$finishTime." ".$waitTurnTime."\n";	
 	}
 }
 
