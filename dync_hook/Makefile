@@ -10,7 +10,7 @@ FLAG=`date +%F\#%T`
 #TERN_LIBS=-L$(XTERN_ROOT)/obj/$(BuildMode)/lib/  -lanalysis -linstr -lruntime
 TERN_LIBS=-L$(XTERN_ROOT)/obj/$(BuildMode)/lib/ -lruntime -lcommon 
 #TERN_LIBS=
-#TERN_LIBS=$(XTERN_ROOT)/obj/$(BuildMode)/lib/libruntime.a
+#TERN_LIBS=$(XTERN_ROOT)/install/lib/libruntime.a $(XTERN_ROOT)/install/lib/libcommon.a
 CFLAGS= -g $(INC_DIRS)
 CXXFLAGS= -g $(INC_DIRS)
 PREFIX=LD_PRELOAD=$(XTERN_ROOT)/dync_hook/interpose.so

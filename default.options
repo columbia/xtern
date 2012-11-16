@@ -99,3 +99,8 @@ launch_monitor = 0
 
 # if turned on, sync operations will be logged.
 log_sync = 1
+
+# the algorithm to enforce turn, options are:
+# 1.  semaphore      semaphore.
+# 2.  hybrid              busy wait flag + cond wait.
+enforce_turn_type = semaphore

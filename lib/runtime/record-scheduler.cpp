@@ -11,6 +11,7 @@
 #include <stdlib.h>
 #include <cstring>
 #include <algorithm>
+#include <sched.h>
 #include "tern/options.h"
 
 using namespace std;
@@ -47,6 +48,8 @@ static void *monitor(void *arg)
 
 extern pthread_mutex_t idle_mutex;
 extern pthread_cond_t idle_cond;
+
+pthread_mutex_t turn_mutex;
 
 void RRSchedulerCV::detect_blocking_threads(void)
 {
@@ -541,6 +544,45 @@ void SeededRRScheduler::reorderRunq(void)
   runq.push_front(tid);
 }
 
+void RRScheduler::wait_t::wait() {
+  if (options::enforce_turn_type == "semaphore") {
+    sem_wait(&sem);
+  } else {
+    /** by default, 3e4. This would cause the busy loop to loop for around 10 ms 
+    on my machine, or 14 ms on bug00. This is one order of magnitude bigger
+    than context switch time (1ms). **/
+    const long waitCnt = 3e4;
+    volatile long i = 0;
+    while (!wakenUp && i < waitCnt) {
+      sched_yield();
+      i++;
+    }
+    if (!wakenUp) {
+      pthread_mutex_lock(&turn_mutex);
+      while (!wakenUp) {/** This can save the context switch overhead. **/
+        fprintf(stderr, "RRScheduler::wait_t::wait before cond wait, tid %d\n", self());
+        pthread_cond_wait(&cond, &turn_mutex);
+        fprintf(stderr, "RRScheduler::wait_t::wait after cond wait, tid %d\n", self());
+      }
+      wakenUp = false;
+      pthread_mutex_unlock(&turn_mutex);
+    } else {
+      wakenUp = false;
+    }
+  }
+}
+
+void RRScheduler::wait_t::post() {
+  if (options::enforce_turn_type == "semaphore") {
+    sem_post(&sem);
+  } else {
+    pthread_mutex_lock(&turn_mutex);
+    wakenUp = true;
+    pthread_cond_signal(&cond);
+    pthread_mutex_unlock(&turn_mutex);
+  }
+}
+
 //@before with turn
 //@after with turn
 unsigned RRScheduler::nextTimeout()
@@ -656,7 +698,7 @@ void RRScheduler::next(bool at_thread_end)
   assert(next_tid>=0 && next_tid < Scheduler::nthread);
   dprintf("RRScheduler: next is %d\n", next_tid);
   SELFCHECK;
-  sem_post(&waits[next_tid].sem);
+  waits[next_tid].post();
 }
 
 void RRScheduler::wakeUpIdleThread() {
@@ -699,7 +741,7 @@ void RRScheduler::getTurn()
   int tid = self();
   assert(tid>=0 && tid < Scheduler::nthread);
   timemark[tid] = -1;  //  back to system space
-  sem_wait(&waits[tid].sem);
+  waits[tid].wait();
   dprintf("RRScheduler: %d gets turn\n", self());
   SELFCHECK;
 }
@@ -864,11 +906,12 @@ RRScheduler::RRScheduler()
   // main thread
   assert(self() == MainThreadTid && "tid hasn't been initialized!");
   runq.push_back(self());
-  sem_post(&waits[MainThreadTid].sem);
+  waits[MainThreadTid].post();
 
   wakeup_queue.clear();
   wakeup_flag = 0;
   pthread_mutex_init(&wakeup_mutex, NULL);
+  pthread_mutex_init(&turn_mutex, NULL);
 
   if (options::RR_skip_zombie)
   {

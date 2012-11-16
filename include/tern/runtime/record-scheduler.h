@@ -22,6 +22,8 @@
 #include <semaphore.h>
 #include "tern/runtime/scheduler.h"
 
+extern pthread_mutex_t turn_mutex;
+
 namespace tern {
 
 /// whoever comes first run; nondeterministic
@@ -70,23 +72,29 @@ protected:
 /// need to scan the mixed wait queue.
 struct RRScheduler: public Scheduler {
   typedef Scheduler Parent;
-
+  
   struct wait_t {
+    pthread_cond_t cond;
     sem_t    sem;
     void*    chan;
     unsigned timeout;
     int      status; // return value of wait()
+    volatile bool wakenUp;
 
     void reset(int st=0) {
       chan = NULL;
       timeout = FOREVER;
       status = st;
+      wakenUp = false;
     }
 
     wait_t() {
+      pthread_cond_init(&cond, NULL);
       sem_init(&sem, 0, 0);
       reset(0);
-    }
+    }    
+    void wait();
+    void post();
   };
 
   virtual void getTurn();
@@ -124,8 +132,6 @@ protected:
   // MAYBE: can use a thread-local wait struct for each thread if it
   // improves performance
   wait_t waits[MaxThreads];
-
-  pthread_mutex_t begin_lock;
 
   //  for monitor
   pthread_t monitor_th;
