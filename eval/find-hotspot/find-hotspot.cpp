@@ -82,42 +82,42 @@ bool FindHotspot::runOnModule(Module &M) {
 
 
 void FindHotspot::addBackEdgeStat(SmallVector<std::pair<const BasicBlock*,const BasicBlock*>, 32> &back_edges) {
-for (size_t i = 0; i < back_edges.size(); ++i) {
-				BasicBlock *x = (BasicBlock *)((long)back_edges[i].first);
-                BasicBlock *y = (BasicBlock *)((long)back_edges[i].second);
-                Function *f = x->getParent();
-				BasicBlock *bb = BasicBlock::Create(f->getContext(), "", f);
-				bb->setName("xtern_backedge_to_" + y->getNameStr());
+  for (size_t i = 0; i < back_edges.size(); ++i) {
+    BasicBlock *x = (BasicBlock *)((long)back_edges[i].first);
+    BasicBlock *y = (BasicBlock *)((long)back_edges[i].second);
+    Function *f = x->getParent();
+    BasicBlock *bb = BasicBlock::Create(f->getContext(), "", f);
+    bb->setName("xtern_backedge_to_" + y->getNameStr());
 
-                // Add the instrumented function.
-                Value *patched = CallInst::Create(backedge_stat, ConstantInt::get(int_type, (int)i), "", bb);
-                assert(patched);
+    // Add the instrumented function.
+    Value *patched = CallInst::Create(backedge_stat, ConstantInt::get(int_type, (int)i), "", bb);
+    assert(patched);
 
-                // Set its sucessor to y
-				BranchInst::Create(y, bb);
+    // Set its sucessor to y
+    BranchInst::Create(y, bb);
         
-				// Modify new_x's successor
-				TerminatorInst *ti = x->getTerminator();
-				assert(ti);
-                unsigned idx = 0;
-                for (succ_iterator it = succ_begin(x); it != succ_end(x); ++it, ++idx) {
-                  BasicBlock *z = *it;
-                  if (z == y)
-                    ti->setSuccessor(idx, bb);
-                }
+    // Modify new_x's successor
+    TerminatorInst *ti = x->getTerminator();
+    assert(ti);
+    unsigned idx = 0;
+    for (succ_iterator it = succ_begin(x); it != succ_end(x); ++it, ++idx) {
+      BasicBlock *z = *it;
+      if (z == y)
+        ti->setSuccessor(idx, bb);
+    }
 
-				// Modify PHI nodes of y;
-				// For y, replace the incoming edge from x with from the back-edge BB
-				for (BasicBlock::iterator ii = y->begin(); PHINode *phi = dyn_cast<PHINode>(ii); ++ii) {
-					// Only replace the first one, because there may be multiple edges
-					for (unsigned j = 0; j < phi->getNumIncomingValues(); ++j) {
-						if (phi->getIncomingBlock(j) == x) {
-							phi->setIncomingBlock(j, bb);
-							break;
-						}
-					}
-				}
-			}
+    // Modify PHI nodes of y;
+    // For y, replace the incoming edge from x with from the back-edge BB
+    for (BasicBlock::iterator ii = y->begin(); PHINode *phi = dyn_cast<PHINode>(ii); ++ii) {
+      // Only replace the first one, because there may be multiple edges
+      for (unsigned j = 0; j < phi->getNumIncomingValues(); ++j) {
+        if (phi->getIncomingBlock(j) == x) {
+            phi->setIncomingBlock(j, bb);
+          break;
+        }
+      }
+    }
+  }
 }
 
 
