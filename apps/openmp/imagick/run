@@ -43,6 +43,25 @@ runImagickCmds(){
 	mv out out-$i-$SCHED
 	$XTERN_ROOT/eval/draw-time-chart.pl ./out-$i-$SCHED --keep-tid1
 	mv time-chart.txt $i-time-chart.txt
+
+	# Another compare command. This command has very small overhead when running with XTERN.
+	CMD="$BIN_DIR/compare -channel red -metric PSNR photo.jpg reconstruct.jpg difference.png"
+	echo "Running $CMD..."
+	i=5
+	time LD_PRELOAD=$PRELOAD_LIB $CMD &> out$is.txt
+	mv out out-$i-$SCHED
+	$XTERN_ROOT/eval/draw-time-chart.pl ./out-$i-$SCHED --keep-tid1
+	mv time-chart.txt $i-time-chart.txt
+
+
+	# Another compare command. This command has 100% overhead when running with XTERN.
+	CMD="$BIN_DIR/montage photo.jpg reconstruct.jpg frame.jpg"
+	echo "Running $CMD..."
+	i=6
+	time LD_PRELOAD=$PRELOAD_LIB $CMD &> out$is.txt
+	mv out out-$i-$SCHED
+	$XTERN_ROOT/eval/draw-time-chart.pl ./out-$i-$SCHED --keep-tid1
+	mv time-chart.txt $i-time-chart.txt
 }
 
 

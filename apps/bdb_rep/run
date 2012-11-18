@@ -5,8 +5,8 @@ rm -rf out* serializer.log TXN
 mkdir TXN
 INIT_ENV_CMD="rm -rf TXN/*"
 APP=$XTERN_ROOT/apps/bdb_rep/bench3n
-NTHREADS=8
-NPARTITIONS=16
+NTHREADS=4
+NPARTITIONS=8
 INPUT="-c 300000 -t $NTHREADS -nosynctxn -logbufsize 100 -partition $NPARTITIONS -n 3000 TXN"                  # 2 child threads, etc. Refer to: http://libdb.wordpress.com/3n1/
 echo "Running $APP $INPUT ..."
 

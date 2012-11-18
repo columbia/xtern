@@ -84,7 +84,7 @@ void *get_eip()
     //printf( "%s\n", funcNames[2] );
     //printf(stderr, "reteip: %p\n", tracePtrs[1]);
   } else
-    return tracePtrs[3];  //  this is ret_eip of my caller
+    return tracePtrs[2];  //  this is ret_eip of my caller
 }
 
 #define HOOK_MUTEX_COND
