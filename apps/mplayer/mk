@@ -14,7 +14,7 @@ tar zxvf $APPS_DIR/sys/MPlayer-$VER.tar.gz
 #sudo apt-get install libmp3lame-dev
 
 # Input command (with any mpg file from this link: http://www.fileformat.info/format/mpeg/sample/index.htm).
-#./mencoder delta.mpg -o output.avi -oac mp3lame -lameopts abr:br=56 -srate 22050  -ovc lavc -lavcopts threads=4
+#./mencoder input.mpg -o output.avi -oac mp3lame -ovc lavc -lavcopts threads=4
 
 # Old command.
 # Build mplayer. Most of the configuration options are used to avoid executing asm, which is not supported in KLEE.
@@ -24,7 +24,7 @@ tar zxvf $APPS_DIR/sys/MPlayer-$VER.tar.gz
 #        --disable-sse --disable-sse2 --disable-ssse3 --disable-vstream
 
 cd MPlayer-$VER
-./configure --disable-mplayer --yasm=
+./configure --disable-mplayer --yasm= --extra-cflags="-g"
 make
 mv mencoder ../
 cd ../
