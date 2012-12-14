@@ -169,6 +169,13 @@ int RecorderRT<_S>::absTimeToTurn(const struct timespec *abstime)
 
 int time2turn(uint64_t nsec)
 {
+  if (!options::launch_idle_thread) {
+    fprintf(stderr, "WARN: converting phyiscal time to logical time \
+      without launcing idle thread. Please set 'launch_idle_thread' to 1 and then \
+      rerun.\n");
+    exit(1);
+  }
+
   const uint64_t MAX_REL = (1000000); // maximum number of turns to wait
 
   uint64_t ret64 = nsec / options::nanosec_per_turn;
@@ -193,12 +200,6 @@ int RecorderRT<_S>::relTimeToTurn(const struct timespec *reltime)
 
   // if result too small or negative, return only (5 * nthread + 1)
   ret = (ret < 5 * _S::nthread + 1) ? (5 * _S::nthread + 1) : ret;
-
-  // these are obsolete
-  // int tmp = rand() % 100 * _S::nthread;
-  // return tmp;
-  // return MAX_REL;
-
   dprintf("computed turn = %d\n", ret);
   return ret;
 }

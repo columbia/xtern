@@ -668,27 +668,14 @@ void RRScheduler::next(bool at_thread_end)
   check_wakeup();
 
   if(runq.empty()) {
-    // if there are any timed-waiting threads, we can fast forward the
-    // turn to wake up these threads
-    unsigned next_timeout = nextTimeout();
-    if(next_timeout != FOREVER) {
-      // fast-forward turn
-      dprintf("RRScheduler: fast-forward turn from %u to %u\n",
-              turnCount, next_timeout+1);
-      turnCount = next_timeout + 1;
-      fireTimeouts();
-    }
-
-    if(runq.empty()) {
-      // Current thread must be the last thread and it is existing, otherwise we wake up the idle thread.
-      if (at_thread_end && waitq.empty()) {
-        return;
-      } else if (at_thread_end && !waitq.empty() && self() == 0) {
-        fprintf(stderr, "WARNING: main thread exits with some children threads alive (e.g., openmp).\n");
-        return;
-      } else if (options::launch_idle_thread && self() != 1) // If I am not the idle thread, then wake up the idle thread.
-        wakeUpIdleThread();
-    }
+    // Current thread must be the last thread and it is existing, otherwise we wake up the idle thread.
+    if (at_thread_end && waitq.empty()) {
+      return;
+    } else if (at_thread_end && !waitq.empty() && self() == 0) {
+      fprintf(stderr, "WARNING: main thread exits with some children threads alive (e.g., openmp).\n");
+      return;
+    } else if (options::launch_idle_thread && self() != 1) // If I am not the idle thread, then wake up the idle thread.
+      wakeUpIdleThread();
   }
 
   assert(!runq.empty());

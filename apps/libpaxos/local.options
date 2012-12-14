@@ -1,0 +1,106 @@
+# This configuration file is used to generate options.h and options.cpp.
+# Execute lib/common/get_opt.pl to obtain the options codes like:
+#   get_opt.pl <default.options path> <options.h directory path> <options.cpp path>
+# 
+# In the runtime, a dump.options will be generated to backup options.
+# Also, you can create a local.options file to modify the options value
+# at runtime.
+
+# determine whether DMT system is turned on or not. 
+DMT = 1
+
+# determine network operations (including blocking functions) are hooked or not. 
+schedule_network  = 0
+
+# the runtime scheduler algorithm, options are:
+# 1.  FCFS    first come first serve
+# 2.  RR      round-robin
+# 3.  Replay  replay
+runtime_type = RR
+replay_log_dir = replay
+
+# seed for seeded round-robin scheduler
+scheduler_seed = 0x12345 
+
+# determine the output log format, options are:
+# 1.  bin     binary log of instructions
+# 2.  txt     text log of synchronizations
+log_type = txt      
+
+# default output directory                   
+output_dir = ./out 
+
+# if turned on, RR scheduler will skip thread which is blocked.
+RR_skip_zombie = 0
+
+# define the timeout threshold to skip as zombie thread in RR, in ms
+RR_skip_threshold = 100
+
+# if turned on, dynamic library will obtain eip
+dync_geteip = 0
+
+# if turned on, dynamic library will use signature of the whole stack instead of eip, DEPTH_LIMIT=20
+whole_stack_eip_signature = 0
+
+# if turned on, record-schedule will do sleep, otherwise simple bypass sleep.
+exec_sleep = 0
+
+# if turned on, mutex_init will automatically set attr to PTHREAD_MUTEX_ERRORCHECK
+set_mutex_errorcheck = 0
+
+# this number set the conversion between physical time and turn number. 
+# notice better to set this number of a 32-bit integer.
+nanosec_per_turn = 800
+
+# whether we schedule on output operations like write, send and so. 
+schedule_write = 0
+
+# whether we ignore read/write to regular files
+RR_ignore_rw_regular_file = 1
+
+# determine whether we start an idle thread to avoid empty runq 
+launch_idle_thread = 1
+
+# whether or not to use pthread_tryjoin_np to join a thread
+pthread_tryjoin = 1
+
+# whether to turn on epoch approach, only supported for RR scheduler.
+epoch_mode = 0
+
+# if we should try to sync the global clock and logic clock
+sync_global_clock = 1
+
+# set epoch length, measured in microsecond = 1e-6 second
+epoch_length = 100
+
+# blocking threads are added back every (x) turns, only works for RR  
+wakeup_period = 100
+
+# set the length of turns to delay if a blocking function times out, measured in microseconds, must be less than 1 second
+# default value is 10 milisecond (very large)
+blocked_timeout_delay = 10000
+
+# adjust timeout to make virtual clock and real clock consistent
+adjust_timeout_for_vc = 1
+
+# determine whether or not put process ID in the logfilename
+pid_in_logfilename = 1
+
+# for replayer: whether read log from tid-* or from serializer.log, options are:
+# 1. recorder
+# 2. serializer
+replay_log_type = serializer
+
+# if set all sockets as non-block and enforce maximum recv buffer.
+non_block_recv = 0
+
+# if we should launch a monitor
+launch_monitor = 0
+
+# if turned on, sync operations will be logged.
+log_sync = 0
+
+# the algorithm to enforce turn, options are:
+# 1.  semaphore      semaphore.
+# 2.  hybrid              busy wait flag + cond wait.
+enforce_turn_type = semaphore
