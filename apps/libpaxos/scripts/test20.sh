@@ -26,10 +26,10 @@ done
 function launch_acceptor () {
 	local acc_id=$1
 	local launchcmd="$acceptor_bin $acc_id $config_file"
-    if [ $acc_id -eq 1 ]; then
-    #if true; then
+    #if [ $acc_id -eq 1 ]; then
+    if true; then
     #if false; then
-	    echo "LD_PRELOAD=$XTERN_ROOT/dync_hook/interpose.so $launchcmd"
+	echo "LD_PRELOAD=$XTERN_ROOT/dync_hook/interpose.so $launchcmd"
         (LD_PRELOAD=$XTERN_ROOT/dync_hook/interpose.so $launchcmd &> accept$acc_id.log) &
     else
         echo "$launchcmd"
@@ -40,25 +40,35 @@ function launch_acceptor () {
 
 function launch_learner () {
     let "learner_count += 1";
-	local launchcmd="$learner_bin $config_file"
-	echo "$launchcmd"
-	expect_unbuffer $launchcmd 1>&2 > learner$learner_count.log &
-	sleep 1;
+    local launchcmd="$learner_bin $config_file"
+    if true; then
+	echo "LD_PRELOAD=$XTERN_ROOT/dync_hook/interpose.so $launchcmd"
+        (LD_PRELOAD=$XTERN_ROOT/dync_hook/interpose.so $launchcmd &> learner$learner_count.log) &
+    else
+        echo "$launchcmd"
+        expect_unbuffer $launchcmd 1>&2 > learner$learner_count.log &
+    fi
+    sleep 1;
 }
 
 function launch_client () {
     let "client_count += 1";
-	local launchcmd="$client_bin $config_file "
+    local launchcmd="$client_bin $config_file "
+    if true; then
+	echo "LD_PRELOAD=$XTERN_ROOT/dync_hook/interpose.so $launchcmd"
+        (LD_PRELOAD=$XTERN_ROOT/dync_hook/interpose.so $launchcmd &> client$client_count.log) &
+    else
 	echo "$launchcmd"
 	expect_unbuffer $launchcmd 1>&2 > client$client_count.log &
+    fi
 	sleep 1;
 }
 
 ######################################################################
 
-killall acceptor > /dev/null
-killall client_learner > /dev/null
-killall client_proposer > /dev/null
+killall acceptor &> /dev/null
+killall client_learner &> /dev/null
+killall client_proposer &> /dev/null
 
 bin_check
 
