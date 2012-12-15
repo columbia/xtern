@@ -51,15 +51,16 @@ runLibPaxos(){
 	sleep $SECONDS;
 	echo "Results:";
 	cat ./acceptor1.log | grep Recv
-	killall -9 acceptor client_learner client_proposer &> /dev/null
+	`killall -9 acceptor client_learner client_proposer &> /dev/null`
+	sleep 2
 }
 
 SCHED="rr"
 PRELOAD_LIB=$XTERN_ROOT/dync_hook/interpose.so
-echo "Running redis with $PRELOAD_LIB..."
+echo "Running libpaxos with $PRELOAD_LIB..."
 runLibPaxos;
 
-#SCHED="random"
-#PRELOAD_LIB=""
-#echo "Running redis with $PRELOAD_LIB..."
-#runLibPaxos;
+SCHED="random"
+PRELOAD_LIB=""
+echo "Running libpaxos non-det..."
+runLibPaxos;
