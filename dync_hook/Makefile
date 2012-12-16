@@ -24,7 +24,7 @@ xternruntime:
 
 interpose.so: template.cpp spec_hooks.cpp hook.cpp
 	gcc -fPIC -rdynamic hook.cpp $(CFLAGS) -c -o interpose.o
-	gcc $(CFLAGS) -shared -Wl,-soname,interpose.so interpose.o -o interpose.so -ldl $(STD_LIBS)
+	gcc $(CFLAGS) -shared -Wl,-soname,interpose.so interpose.o -o interpose.so -ldl $(TERN_LIBS) $(STD_LIBS)
 
 %.o: %.cpp
 	$(CXX) $(INCLUDES) $(CXXFLAGS) -c $
