@@ -786,7 +786,7 @@ int RecorderRT<_S>::pthreadBarrierWait(unsigned ins, int &error,
     _S::getTurn();
   } else {
     ret = 0;
-    --_S::turnCount;  //  in _S::wait will increase it again.
+    //--_S::turnCount;  //  in _S::wait will increase it again. Heming 2012-Dec-17: do not decrement turnCount, dangerous and not necessary.
     _S::wait(barrier);
   }
   sched_time = update_time();
