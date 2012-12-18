@@ -13,6 +13,6 @@ expr uses a very large system socket buffer size).
 > cd $APPS_DIR/libpaxos/scripts/
 > sudo sysctl -w net.core.rmem_max=8388608
 > sudo sysctl -w net.core.wmem_max=8388608
-> ./test.sh
+> ./run.sh
 
-The test.sh may take a few minutes to run.
+The run.sh may take a few minutes to run.
