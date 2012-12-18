@@ -10,6 +10,7 @@ How to build xtern with dynamic hook module.
 3. edit obj/lib/Makefile, and remove "instr" and "analysis"
 4. edit obj/lib/runtime/Makefile, and remove the line of MODULE_NAME
 5. do "make ENABLE_OPTIMIZED=0"
+
 6. goto $XTERN_ROOT/dync_hook and run 'make'.
 
 You can test the build by running 'make test_sc' in $XTERN_ROOT/dync_hook
