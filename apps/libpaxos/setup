@@ -5,12 +5,9 @@ if [ "$APPS_DIR" = "" ]; then
 	exit 1
 fi
 
-if [ -z $1 ]; then
-	# No version number
-	echo "Usage: <version number: e.g. 104>"
-	exit 1
-fi
-VER=$1
+VER=104
+
+cd $XTERN_ROOT/apps/libpaxos
 
 # remove previous build
 rm -rf ringpaxos-src-rev$VER
@@ -20,10 +17,10 @@ rm -rf __MACOSX
 tar zxvf $APPS_DIR/sys/libevent-1.4.14b-stable.tar.gz
 # install libevent
 cd libevent-1.4.14b-stable
-./configure --prefix=$APPS_DIR/libpaxos/
+./configure --prefix=$XTERN_ROOT/apps/libpaxos/
 make
 make install
 
 # install bdb
-cd ../../bdb
+cd $APPS_DIR/bdb
 ./mk

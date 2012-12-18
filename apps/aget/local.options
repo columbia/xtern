@@ -10,7 +10,7 @@
 DMT = 1
 
 # determine network operations (including blocking functions) are hooked or not. 
-schedule_network  = 0
+schedule_network  = 1
 
 # the runtime scheduler algorithm, options are:
 # 1.  FCFS    first come first serve
@@ -50,7 +50,7 @@ set_mutex_errorcheck = 0
 
 # this number set the conversion between physical time and turn number. 
 # notice better to set this number of a 32-bit integer.
-nanosec_per_turn = 3000
+nanosec_per_turn = 100000
 
 # whether we schedule on output operations like write, send and so. 
 schedule_write = 0
@@ -59,7 +59,7 @@ schedule_write = 0
 RR_ignore_rw_regular_file = 1
 
 # determine whether we start an idle thread to avoid empty runq 
-launch_idle_thread = 0
+launch_idle_thread = 1
 
 # whether or not to use pthread_tryjoin_np to join a thread
 pthread_tryjoin = 1
@@ -78,7 +78,7 @@ wakeup_period = 100
 
 # set the length of turns to delay if a blocking function times out, measured in microseconds, must be less than 1 second
 # default value is 10 milisecond (very large)
-blocked_timeout_delay = 100000
+blocked_timeout_delay = 10000
 
 # adjust timeout to make virtual clock and real clock consistent
 adjust_timeout_for_vc = 1
@@ -99,3 +99,8 @@ launch_monitor = 0
 
 # if turned on, sync operations will be logged.
 log_sync = 0
+
+# the algorithm to enforce turn, options are:
+# 1.  semaphore      semaphore.
+# 2.  hybrid              busy wait flag + cond wait.
+enforce_turn_type = semaphore

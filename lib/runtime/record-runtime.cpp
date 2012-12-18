@@ -169,6 +169,13 @@ int RecorderRT<_S>::absTimeToTurn(const struct timespec *abstime)
 
 int time2turn(uint64_t nsec)
 {
+  if (!options::launch_idle_thread) {
+    fprintf(stderr, "WARN: converting phyiscal time to logical time \
+      without launcing idle thread. Please set 'launch_idle_thread' to 1 and then \
+      rerun.\n");
+    exit(1);
+  }
+
   const uint64_t MAX_REL = (1000000); // maximum number of turns to wait
 
   uint64_t ret64 = nsec / options::nanosec_per_turn;
@@ -193,12 +200,6 @@ int RecorderRT<_S>::relTimeToTurn(const struct timespec *reltime)
 
   // if result too small or negative, return only (5 * nthread + 1)
   ret = (ret < 5 * _S::nthread + 1) ? (5 * _S::nthread + 1) : ret;
-
-  // these are obsolete
-  // int tmp = rand() % 100 * _S::nthread;
-  // return tmp;
-  // return MAX_REL;
-
   dprintf("computed turn = %d\n", ret);
   return ret;
 }
@@ -785,7 +786,7 @@ int RecorderRT<_S>::pthreadBarrierWait(unsigned ins, int &error,
     _S::getTurn();
   } else {
     ret = 0;
-    --_S::turnCount;  //  in _S::wait will increase it again.
+    //--_S::turnCount;  //  in _S::wait will increase it again. Heming 2012-Dec-17: do not decrement turnCount, dangerous and not necessary.
     _S::wait(barrier);
   }
   sched_time = update_time();
@@ -1428,12 +1429,15 @@ int RecorderRT<_S>::__accept(unsigned ins, int &error, int sockfd, struct sockad
 {
   BLOCK_TIMER_START;
   int ret = Runtime::__accept(ins, error, sockfd, cliaddr, addrlen);
-  int to_port = ((struct sockaddr_in *)cliaddr)->sin_port;
-
-  struct sockaddr_in servaddr;
-  socklen_t len = sizeof(servaddr);
-  getsockname(sockfd, (struct sockaddr *)&servaddr, &len);
-  int from_port = servaddr.sin_port;
+  int from_port = 0;
+  int to_port = 0;
+  if (options::log_sync) {
+    to_port = ((struct sockaddr_in *)cliaddr)->sin_port;
+    struct sockaddr_in servaddr;
+    socklen_t len = sizeof(servaddr);
+    getsockname(sockfd, (struct sockaddr *)&servaddr, &len);
+    from_port = servaddr.sin_port;
+  }
 
   BLOCK_TIMER_END(syncfunc::accept, (uint64_t)ret, (uint64_t)from_port, (uint64_t) to_port);
   return ret;
@@ -1452,12 +1456,16 @@ template <typename _S>
 int RecorderRT<_S>::__connect(unsigned ins, int &error, int sockfd, const struct sockaddr *serv_addr, socklen_t addrlen)
 {
   BLOCK_TIMER_START;
-  int from_port = ((const struct sockaddr_in*) serv_addr)->sin_port;
   int ret = Runtime::__connect(ins, error, sockfd, serv_addr, addrlen);
-  struct sockaddr_in cliaddr;
-  socklen_t len = sizeof(cliaddr);
-  getsockname(sockfd, (struct sockaddr *)&cliaddr, &len);
-  int to_port = cliaddr.sin_port;
+  int from_port = 0;
+  int to_port = 0;
+  if (options::log_sync) {
+    from_port = ((const struct sockaddr_in*) serv_addr)->sin_port;
+    struct sockaddr_in cliaddr;
+    socklen_t len = sizeof(cliaddr);
+    getsockname(sockfd, (struct sockaddr *)&cliaddr, &len);
+    to_port = cliaddr.sin_port;
+  }
 
   BLOCK_TIMER_END(syncfunc::connect, (uint64_t) sockfd, (uint64_t) from_port, (uint64_t) to_port, (uint64_t) ret);
   return ret;
@@ -1466,8 +1474,10 @@ int RecorderRT<_S>::__connect(unsigned ins, int &error, int sockfd, const struct
 static uint64_t hash(const char *buffer, int len)
 {
   uint64_t ret = 0; 
-  for (int i = 0; i < len; ++i)
-    ret = ret * 103 + (int) buffer[i];
+  if (options::log_sync) {
+    for (int i = 0; i < len; ++i)
+      ret = ret * 103 + (int) buffer[i];
+  }
   return ret;
 }
 

@@ -5,12 +5,7 @@ if [ "$APPS_DIR" = "" ]; then
 	exit 1
 fi
 
-if [ -z $1 ]; then
-	# No version number
-	echo "Usage: <version number: e.g. 104>"
-	exit 1
-fi
-VER=$1
+VER=104
 
 cp Makefile.inc ringpaxos-src-rev$VER/
 cd ringpaxos-src-rev$VER
