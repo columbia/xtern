@@ -16,7 +16,20 @@ struct barrier_t {
   int count;    // barrier count
   int narrived; // number of threads arrived at the barrier
 };
+struct ref_cnt_barrier_t {
+  unsigned count;    // barrier count
+  unsigned nactive;  // number of threads in the linup region (between lineup_starnt and lineup_end).
+  unsigned timeout;  // Number of turns that an operation (at most) has to block.
+  enum PHASE {ARRIVING, LEAVING}; // ARRIVING: we have to wait up to "count" threads arrive or timeout.
+                              // LEAVING: timeout has happened or all threads have arrived.
+  PHASE phase;
+  void setArriving() {phase = ARRIVING;}
+  void setLeaving() {phase = LEAVING;}
+  bool isArriving() {return phase == ARRIVING;}
+  bool isLeaving() {return phase == LEAVING;}
+};
 typedef std::tr1::unordered_map<pthread_barrier_t*, barrier_t> barrier_map;
+typedef std::tr1::unordered_map<unsigned, ref_cnt_barrier_t> refcnt_bar_map;
 
 typedef std::tr1::unordered_map<pthread_t, int> tid_map_t;
 typedef std::tr1::unordered_map<void*, std::list<int> > waiting_tid_t;
@@ -63,6 +76,11 @@ struct RecorderRT: public Runtime, public _Scheduler {
   int semTryWait(unsigned insid, int &error, sem_t *sem);
   int semTimedWait(unsigned insid, int &error, sem_t *sem, const struct timespec *abstime);
   int semPost(unsigned insid, int &error, sem_t *sem);
+
+  // new programming primitives
+  void lineupInit(unsigned opaque_type, unsigned count, unsigned timeout_turns);
+  void lineupStart(unsigned opaque_type);
+  void lineupEnd(unsigned opaque_type);
 
   void symbolic(unsigned insid, int &error, void *addr, int nbytes, const char *name);
 
@@ -147,6 +165,9 @@ protected:
   /// for each pthread barrier, track the count of the number and number
   /// of threads arrived at the barrier
   barrier_map barriers;
+
+  /// for each opaque type, track the its ref counted barrier.
+  refcnt_bar_map refcnt_bars;
 
   /// need these semaphores to assign tid deterministically; see comments
   /// for pthreadCreate() and threadBegin()

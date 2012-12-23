@@ -3,7 +3,7 @@
 #
 LEVEL := .
 
-DIRS := lib tools
+DIRS := lib
 EXTRA_DIST := 
 
 ifeq ($(MAKECMDGOALS),unittests)

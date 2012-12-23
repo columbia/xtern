@@ -126,6 +126,8 @@ void TxtLogger::logSync(unsigned insid, unsigned short sync,
   case syncfunc::nanosleep:
   case syncfunc::pthread_rwlock_rdlock:
   case syncfunc::pthread_rwlock_wrlock:
+  case syncfunc::tern_lineup_start:
+  case syncfunc::tern_lineup_end:
     ouf << hex << " 0x" << va_arg(args, uint64_t) << dec;
     break;
 
@@ -156,6 +158,7 @@ void TxtLogger::logSync(unsigned insid, unsigned short sync,
   case syncfunc::read:  //  sig, fd, ret
   case syncfunc::accept:  //  sock(ret), from_port, to_port
   case syncfunc::write: //  sig, fd, ret
+  case syncfunc::tern_lineup_init:
     {
       //  notice "<<" operator is explained from right to left.
       uint64_t a = va_arg(args, uint64_t);
@@ -499,6 +502,8 @@ void TestLogger::logSync(unsigned insid, unsigned short sync,
   case syncfunc::nanosleep:
   case syncfunc::pthread_rwlock_rdlock:
   case syncfunc::pthread_rwlock_wrlock:
+  case syncfunc::tern_lineup_start:
+  case syncfunc::tern_lineup_end:
     ouf << hex << " 0x" << va_arg(args, uint64_t) << dec;
     break;
 
@@ -529,6 +534,7 @@ void TestLogger::logSync(unsigned insid, unsigned short sync,
   case syncfunc::read:  //  sig, fd, ret
   case syncfunc::accept:  //  sock(ret), from_port, to_port
   case syncfunc::write: //  sig, fd, ret
+  case syncfunc::tern_lineup_init:
     {
       //  notice "<<" operator is explained from right to left.
       uint64_t a = va_arg(args, uint64_t);

@@ -73,6 +73,7 @@ site.exp: Makefile $(LEVEL)/Makefile.config
 	@echo 'set llvmgcc "$(LLVMGCC) -g -O0 -I$(PROJ_SRC_ROOT)/include"' >> site.tmp
 	@echo 'set llvmgxx "$(LLVMGXX) -g -O0 -I$(PROJ_SRC_ROOT)/include"' >> site.tmp
 	@echo 'set ternruntime "-L$(PROJ_OBJ_ROOT)/$(BuildMode)/lib -lruntime -lcommon"' >>site.tmp
+	@echo 'set ternannotlib "-I$(PROJ_SRC_ROOT)/include -L$(PROJ_SRC_ROOT)/dync_hook -lxtern-annot"' >>site.tmp
 	@echo 'set ternbcruntime "$(PROJ_OBJ_ROOT)/$(BuildMode)/lib/runtime.bc $(PROJ_OBJ_ROOT)/$(BuildMode)/lib/common.bc"' >>site.tmp
 	@echo 'set gcc "gcc -w"' >> site.tmp
 

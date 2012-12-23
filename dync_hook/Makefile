@@ -1,4 +1,4 @@
-all: xternruntime interpose.so usermonitor
+all: xternruntime interpose.so libxtern-annot.so usermonitor
 
 BuildMode := Debug
 ENABLE_OPTIMIZED := 0
@@ -25,6 +25,10 @@ xternruntime:
 interpose.so: template.cpp spec_hooks.cpp hook.cpp
 	gcc -fPIC -rdynamic hook.cpp $(CFLAGS) -c -o interpose.o
 	gcc $(CFLAGS) -shared -Wl,-soname,interpose.so interpose.o -o interpose.so -ldl $(TERN_LIBS) $(STD_LIBS)
+
+libxtern-annot.so: xtern-annot.cpp
+	gcc -fPIC -rdynamic xtern-annot.cpp $(CFLAGS) -c -o xtern-annot.o
+	gcc $(CFLAGS) -shared -Wl,-soname,libxtern-annot.so xtern-annot.o -o libxtern-annot.so -ldl $(TERN_LIBS) $(STD_LIBS)
 
 %.o: %.cpp
 	$(CXX) $(INCLUDES) $(CXXFLAGS) -c $

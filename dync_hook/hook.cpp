@@ -91,6 +91,7 @@ void *get_eip()
 #define HOOK_BARRIER
 #define HOOK_SEMAPHORE
 #define HOOK_BLOCKING_FUNCS
+#define HOOK_USER_ANNOTATIONS
 
 //  notice we have not implemented tern_fork yet. so the
 //  hooking code is disabled. 
@@ -138,6 +139,13 @@ void *get_eip()
 #define __SPEC_HOOK_epoll_wait
 #endif
 
+#ifndef HOOK_USER_ANNOTATIONS
+#define __SPEC_HOOK_tern_lineup_init
+#define __SPEC_HOOK_tern_lineup_start
+#define __SPEC_HOOK_tern_lineup_end
+#endif
+
 #include "spec_hooks.cpp"
 #include "template.cpp"
+#include "annotation_hooks.cpp"
 

@@ -18,6 +18,18 @@ extern "C" {
   void tern_task_begin(void *addr, int nbytes, const char *name);
   void tern_task_end(void);
 
+  /// New programming primitives to get better performance without affecting
+  /// logics of applications.
+  void tern_lineup_init(unsigned opaque_type, unsigned count, unsigned timeout_turns);
+  void tern_lineup_start(unsigned opaque_type);
+  void tern_lineup_end(unsigned opaque_type);
+
+  void tern_workload_start(unsigned opaque_type, unsigned workload_hint);
+  void tern_workload_end(unsigned opaque_type);
+
+  void tern_non_det_start();
+  void tern_non_det_end();
+
 #ifdef __cplusplus
 }
 #endif

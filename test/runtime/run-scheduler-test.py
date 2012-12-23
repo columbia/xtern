@@ -27,6 +27,8 @@ parser.add_argument('-projbindir', dest='projbindir', required=True,
                     help='directory where tern tools are located')
 parser.add_argument('-ternruntime', dest='ternruntime', required=True,
                     help='tern x86 runtime')
+parser.add_argument('-ternannotlib', dest='ternannotlib', required=True,
+                    help='tern annotation library')
 parser.add_argument('-ternbcruntime', dest='ternbcruntime', required=True,
                     help='tern bc runtime')
 parser.add_argument('-nondet', dest='nondet', default=False, action='store_true',
@@ -185,40 +187,12 @@ args['t'] = os.path.basename(args['s']) + '.tmp'
 
 # these commands follow the same style as LLVM dejagnu test commands
 cmds = '''
-// RUN: %llvmgcc %s -c -o %t1.ll -S
-// RUN: %projbindir/tern-instr < %t1.ll -o %t2
-// RUN: llvm-dis -f %t2-record.bc
-
-// test the x86 .a libraries
-// RUN: llc -o %t2.s %t2-record.bc
-// RUN: %gxx -o %t2 %t2.s %ternruntime -lpthread -lrt
-// test FCFS scheduler
-// RUN: env TERN_OPTIONS=runtime_type=FCFS:set_mutex_errorcheck=1 ./%t2 | FileCheck %s
-// test RR scheduler
-// RUN: env TERN_OPTIONS=runtime_type=RR:RR_skip_zombie=0:log_type=test:exec_sleep=0:output_dir=%t2.outdir:epoch_mode=0:sync_global_clock=0 ./%t2  | FileCheck %s
-// RUN: env TERN_OPTIONS=runtime_type=RR:set_mutex_errorcheck=1:RR_skip_zombie=0:log_type=test:exec_sleep=0:output_dir=%t2.outdir:epoch_mode=0:sync_global_clock=0 ./%t2  ScheduleCheck
-
-// test SeededRR scheduler
-// RUN: env TERN_OPTIONS=runtime_type=SeededRR:RR_skip_zombie=0:log_type=test:exec_sleep=0:output_dir=%t2.outdir ./%t2  | FileCheck %s
-// RUN: env TERN_OPTIONS=runtime_type=SeededRR:set_mutex_errorcheck=1:RR_skip_zombie=0:log_type=test:exec_sleep=0:output_dir=%t2.outdir ./%t2  ScheduleCheck
-
-// test the LLVM .bc modules
-// XXX: llvm-ld -o %t3 %t2-record.bc %ternbcruntime
-// XXX: llvm-dis -f %t3.bc
-// XXX: llc -o %t3.s %t3.bc
-// XXX: %gxx -o %t3 %t3.s -lpthread -lrt
-// test FCFS scheduler
-// XXX: env TERN_OPTIONS=runtime_type=FCFS ./%t3 | FileCheck %s
-// test RR scheduler
-// XXX: env TERN_OPTIONS=runtime_type=RR:RR_skip_zombie=0:log_type=test:output_dir=%t3.outdir:epoch_mode=0:sync_global_clock=0 ./%t3  | FileCheck %s
-// XXX: env TERN_OPTIONS=runtime_type=RR:RR_skip_zombie=0:log_type=test:output_dir=%t3.outdir:epoch_mode=0:sync_global_clock=0 ./%t3  ScheduleCheck
 
 // test dynamic hooking
-// RUN: %gxx -o %t4 %s -lpthread -lrt
+// RUN: %gxx -o %t4 %s -lpthread -lrt %ternannotlib
 // test FCFS scheduler
 // NOTE: do not use dync_geteip as the lock used by backtrace() may cause
 // a deadlock
-// RUN: env TERN_OPTIONS=runtime_type=FCFS:set_mutex_errorcheck=1:dync_geteip=0 LD_PRELOAD=$XTERN_ROOT/dync_hook/interpose.so ./%t4 | FileCheck %s
 
 // test RR scheduler
 // RUN: env TERN_OPTIONS=runtime_type=RR:set_mutex_errorcheck=1:dync_geteip=0:RR_skip_zombie=0:log_type=test:exec_sleep=0:output_dir=%t2.outdir:epoch_mode=0:sync_global_clock=0 LD_PRELOAD=$XTERN_ROOT/dync_hook/interpose.so  ./%t4 | FileCheck %s
@@ -227,20 +201,15 @@ cmds = '''
 // test RR scheduler in epoch_mode
 // RUN: env TERN_OPTIONS=runtime_type=RR:set_mutex_errorcheck=1:dync_geteip=0:RR_skip_zombie=0:log_type=test:exec_sleep=0:output_dir=%t2.outdir:nanosec_per_turn=100000:epoch_mode=0:epoch_length=100 LD_PRELOAD=$XTERN_ROOT/dync_hook/interpose.so  ./%t4 | FileCheck %s
 // RUN: env TERN_OPTIONS=runtime_type=RR:set_mutex_errorcheck=1:dync_geteip=0:RR_skip_zombie=0:log_type=test:exec_sleep=0:output_dir=%t2.outdir:nanosec_per_turn=100000:epoch_mode=0:epoch_length=100 LD_PRELOAD=$XTERN_ROOT/dync_hook/interpose.so  ./%t4 ScheduleCheck
-
-// test SeededRR scheduler
-// RUN: env TERN_OPTIONS=runtime_type=SeededRR:set_mutex_errorcheck=1:dync_geteip=0:RR_skip_zombie=0:log_type=test:exec_sleep=0:output_dir=%t2.outdir LD_PRELOAD=$XTERN_ROOT/dync_hook/interpose.so  ./%t4 | FileCheck %s
-// RUN: env TERN_OPTIONS=runtime_type=SeededRR:set_mutex_errorcheck=1:dync_geteip=0:RR_skip_zombie=0:log_type=test:exec_sleep=0:output_dir=%t2.outdir LD_PRELOAD=$XTERN_ROOT/dync_hook/interpose.so  ./%t4 ScheduleCheck
 '''
 
 if os.getenv('test_dync_only') != None :
   cmds = '''
 // test dynamic hooking
-// RUN: %gxx -o %t4 %s -lpthread -lrt
+// RUN: %gxx -o %t4 %s -lpthread -lrt %ternannotlib
 // test FCFS scheduler
 // NOTE: do not use dync_geteip as the lock used by backtrace() may cause
 // a deadlock
-// RUN: env TERN_OPTIONS=runtime_type=FCFS:set_mutex_errorcheck=1:dync_geteip=0 LD_PRELOAD=$XTERN_ROOT/dync_hook/interpose.so ./%t4 | FileCheck %s
 
 // test RR scheduler in epoch_mode
 // RUN: env TERN_OPTIONS=runtime_type=RR:set_mutex_errorcheck=1:dync_geteip=0:RR_skip_zombie=0:log_type=test:exec_sleep=0:output_dir=%t2.outdir:nanosec_per_turn=100000:epoch_mode=0:epoch_length=100 LD_PRELOAD=$XTERN_ROOT/dync_hook/interpose.so  ./%t4 | FileCheck %s
@@ -249,10 +218,6 @@ if os.getenv('test_dync_only') != None :
 // test RR scheduler
 // RUN: env TERN_OPTIONS=runtime_type=RR:set_mutex_errorcheck=1:dync_geteip=0:RR_skip_zombie=0:log_type=test:exec_sleep=0:output_dir=%t2.outdir LD_PRELOAD=$XTERN_ROOT/dync_hook/interpose.so  ./%t4 | FileCheck %s
 // RUN: env TERN_OPTIONS=runtime_type=RR:set_mutex_errorcheck=1:dync_geteip=0:RR_skip_zombie=0:log_type=test:exec_sleep=0:output_dir=%t2.outdir LD_PRELOAD=$XTERN_ROOT/dync_hook/interpose.so  ./%t4 ScheduleCheck
-
-// test SeededRR scheduler
-// RUN: env TERN_OPTIONS=runtime_type=SeededRR:set_mutex_errorcheck=1:dync_geteip=0:RR_skip_zombie=0:log_type=test:exec_sleep=0:output_dir=%t2.outdir LD_PRELOAD=$XTERN_ROOT/dync_hook/interpose.so  ./%t4 | FileCheck %s
-// RUN: env TERN_OPTIONS=runtime_type=SeededRR:set_mutex_errorcheck=1:dync_geteip=0:RR_skip_zombie=0:log_type=test:exec_sleep=0:output_dir=%t2.outdir LD_PRELOAD=$XTERN_ROOT/dync_hook/interpose.so  ./%t4 ScheduleCheck
 '''
 
 for cmd in cmds.splitlines():

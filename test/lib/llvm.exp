@@ -50,7 +50,7 @@ proc substitute { line test tmpFile } {
   global llvmlibdir llvmgcc llvmgxx
   global gcc gxx
   global projlibdir projbindir
-  global ternruntime ternbcruntime
+  global ternruntime ternannotlib ternbcruntime
   set path [file join $srcdir $subdir]
 
   # Substitute all Tcl variables.
@@ -76,6 +76,8 @@ proc substitute { line test tmpFile } {
   regsub -all {%projbindir} $new_line "$projbindir" new_line
   #replace %ternruntime with tern runtime libraries
   regsub -all {%ternruntime} $new_line "$ternruntime" new_line
+  #replace %ternannotlib with tern annotation libraries
+  regsub -all {%ternannotlib} $new_line "$ternannotlib" new_line
   #replace %ternbcruntime with tern runtime libraries in bc
   regsub -all {%ternbcruntime} $new_line "$ternbcruntime" new_line
   #replace %p with path to source,

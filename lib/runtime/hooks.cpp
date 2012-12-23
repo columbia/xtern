@@ -286,6 +286,46 @@ int tern_sem_post(unsigned ins, sem_t *sem) {
   return ret;
 }
 
+void tern_lineup_init_real(unsigned opaque_type, unsigned count, unsigned timeout_turns) {
+  int error = errno;
+  Space::enterSys();
+  Runtime::the->lineupInit(opaque_type, count, timeout_turns);
+  Space::exitSys();
+  errno = error;
+}
+
+void tern_lineup_start_real(unsigned opaque_type) {
+  int error = errno;
+  Space::enterSys();
+  Runtime::the->lineupStart(opaque_type);
+  Space::exitSys();
+  errno = error;
+}
+
+void tern_lineup_end_real(unsigned opaque_type) { 
+  int error = errno;
+  Space::enterSys();
+  Runtime::the->lineupEnd(opaque_type);
+  Space::exitSys();
+  errno = error;
+}
+
+void tern_workload_start(unsigned opaque_type, unsigned workload_hint) {
+  // TBD.
+}
+
+void tern_workload_end(unsigned opaque_type) {
+  // TBD.
+}
+
+void tern_non_det_start() {
+  // TBD.
+}
+
+void tern_non_det_end() {
+  // TBD.
+}
+
 void tern_exit(unsigned ins, int status) {
   assert(0 && "why do we call tern_exit?");
   //  this will be called in __tern_prog_end after exit().

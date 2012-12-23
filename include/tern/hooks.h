@@ -26,6 +26,9 @@ extern "C" {
   void tern_task_begin_real(unsigned insid, void *addr,
                             int nbytes, const char *name);
   void tern_task_end_real(unsigned insid);
+  void tern_lineup_init_real(unsigned opaque_type, unsigned count, unsigned timeout_turns);
+  void tern_lineup_start_real(unsigned opaque_type);
+  void tern_lineup_end_real(unsigned opaque_type);
 
   /// hooks tern automatically inserts.  start with the ones tern provides
   void tern_prog_begin(void);   /// initializes tern internal data
