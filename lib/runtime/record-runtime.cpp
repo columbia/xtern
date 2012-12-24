@@ -1240,6 +1240,7 @@ void RecorderRT<_S>::lineupStart(unsigned opaque_type) {
       if (b.nactive < b.count && b.isArriving()) {
         //fprintf(stderr, "lineupStart: TIMEOUT AND SET LEAVING: tid %d, opaque_type %u, nactive %u\n", _S::self(), opaque_type, b.nactive);
         b.setLeaving();
+        _S::signal(&b, true); // Signal all threads blocking on this barrier.
       }
     } else {
       //fprintf(stderr, "lineupStart: NOT FULL, LEAVING AND NOP: tid %d, opaque_type %u, nactive %u\n", _S::self(), opaque_type, b.nactive);
