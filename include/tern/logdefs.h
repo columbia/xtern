@@ -152,7 +152,6 @@ static inline int NumRecordsForSync(short sync) {
   case syncfunc::pthread_cond_wait:
   case syncfunc::pthread_barrier_wait:
   case syncfunc::pthread_cond_timedwait:
-  case syncfunc::tern_lineup_start:
     return 2;
   }
   return 1;

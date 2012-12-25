@@ -1210,7 +1210,6 @@ template <typename _S>
 void RecorderRT<_S>::lineupStart(unsigned opaque_type) {
   unsigned ins = opaque_type;
   SCHED_TIMER_START;
-  SCHED_TIMER_FAKE_END(syncfunc::tern_lineup_start, (uint64_t)opaque_type); // Log the _first of this operation.
 
   refcnt_bar_map::iterator bi = refcnt_bars.find(opaque_type);
   assert(bi != refcnt_bars.end() && "refcnt barrier is not initialized!");
@@ -1229,8 +1228,6 @@ void RecorderRT<_S>::lineupStart(unsigned opaque_type) {
       // NOP. There could be a case that after timeout happens,
       // all threads arrive, then we just let them do NOP, and deterministic.
     } 
-    _S::putTurn(); // this gives _first and _second different turn numbers.
-    _S::getTurn();
   } else {
     if (b.isArriving()) {
       //fprintf(stderr, "lineupStart: NOT FULL AND WAIT: tid %d, opaque_type %u, nactive %u\n", _S::self(), opaque_type, b.nactive);
@@ -1245,8 +1242,6 @@ void RecorderRT<_S>::lineupStart(unsigned opaque_type) {
     } else {
       //fprintf(stderr, "lineupStart: NOT FULL, LEAVING AND NOP: tid %d, opaque_type %u, nactive %u\n", _S::self(), opaque_type, b.nactive);
       // proceed. NOP.
-     _S::putTurn(); // this gives _first and _second different turn numbers.
-     _S::getTurn();
     }
   }
    
