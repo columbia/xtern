@@ -202,6 +202,9 @@ sub drawTimeChart {
 }
 
 $curDir = `pwd`;
+unless(-d @ARGV[0]){
+    print "Directory @ARGV[0] for schedules does not exist, this is fine, bye...";
+}
 parseSchedule(@ARGV[0]);
 #print $curDir."\n";
 chdir($curDir);

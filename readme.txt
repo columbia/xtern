@@ -10,6 +10,7 @@ How to build xtern (with dynamic hook module).
 4. goto $XTERN_ROOT/dync_hook and run 'make'.
 5. Append $XTERN_ROOT/dync_hook to your LD_LIBRARY_PATH in your ~/.bashrc.
 > export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$XTERN_ROOT/dync_hook
+6. goto $XTERN_ROOT/eva/rand-intercept and run 'make'.
 
 You can test the build by running 'make test_sc' in $XTERN_ROOT/dync_hook
 

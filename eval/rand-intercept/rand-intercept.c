@@ -26,7 +26,7 @@
 
 #define PROJECT_TAG "XTERN"
 #define RESOLVE(x)	if (!fp_##x && !(fp_##x = dlsym(RTLD_NEXT, #x))) { fprintf(stderr, #x"() not found!\n"); exit(-1); }
-#define DO_LOGGING 1 // If it is 1, enable logging (logging sync ops, and updating times).
+#define DO_LOGGING 0 // If it is 1, enable logging (logging sync ops, and updating times).
 
 // Per thread variables.
 static int num_threads = 0;
@@ -77,6 +77,8 @@ void initTid() {
     num_threads++;
     if (num_threads == 1) // To match the idle thread in xtern.
       num_threads++;
+    if (self_tid == 0) // Init the out directory using the main thread.
+      mkdir("./out", 0777);
     internal_mutex_unlock(&lock);
     struct timespec tmp;
     update_time(&tmp); // Init my_time.
