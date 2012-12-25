@@ -26,7 +26,7 @@
 
 #define PROJECT_TAG "XTERN"
 #define RESOLVE(x)	if (!fp_##x && !(fp_##x = dlsym(RTLD_NEXT, #x))) { fprintf(stderr, #x"() not found!\n"); exit(-1); }
-#define DO_LOGGING 0 // If it is 1, enable logging (logging sync ops, and updating times).
+#define DO_LOGGING 1 // If it is 1, enable logging (logging sync ops, and updating times).
 
 // Per thread variables.
 static int num_threads = 0;
