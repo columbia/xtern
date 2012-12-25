@@ -24,7 +24,9 @@ tar zxvf $APPS_DIR/sys/MPlayer-$VER.tar.gz
 #        --disable-sse --disable-sse2 --disable-ssse3 --disable-vstream
 
 cd MPlayer-$VER
-./configure --disable-mplayer --yasm= --extra-cflags="-g"
+patch -p1 < ../add-xtern-annot.patch
+./configure --disable-mplayer --yasm= --extra-cflags="-g \
+  -I$XTERN_ROOT/include -L$XTERN_ROOT/dync_hook -lxtern-annot"
 make
 mv mencoder ../
 cd ../
