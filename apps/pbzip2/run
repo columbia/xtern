@@ -14,12 +14,12 @@ tar cvf input.tar $LLVM_ROOT/install/bin/llc &> /dev/null
 
 if [ $ROUTINE = "--compress" ];
 then
-	INPUT="-p2 -rkvf input.tar"
+	INPUT="-p4 -rkvf input.tar"
 else
 	if [ $ROUTINE = "--decompress" ];
 	then
-		$APP -p2 -rkvf input.tar &> /dev/null
-		INPUT="-p2 -dkvf input.tar.bz2"
+		$APP -p4 -rkvf input.tar &> /dev/null
+		INPUT="-p4 -dkvf input.tar.bz2"
 	else
 		echo "Wrong routine: $ROUTINE, exiting...";
 		exit 1;
