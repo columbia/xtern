@@ -6,15 +6,15 @@
 extern "C" {
 #endif
 
-void tern_lineup_init(unsigned opaque_type, unsigned count, unsigned timeout_turns) {
+void tern_lineup_init(long opaque_type, unsigned count, unsigned timeout_turns) {
   //fprintf(stderr, "Non-deterministic tern_lineup_init\n");
 }
 
-void tern_lineup_start(unsigned opaque_type) {
+void tern_lineup_start(long opaque_type) {
   //fprintf(stderr, "Non-deterministic tern_lineup_start\n");
 }
 
-void tern_lineup_end(unsigned opaque_type) {
+void tern_lineup_end(long opaque_type) {
   //fprintf(stderr, "Non-deterministic tern_lineup_end\n");
 }
 

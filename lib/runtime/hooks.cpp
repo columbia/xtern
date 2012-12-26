@@ -286,7 +286,7 @@ int tern_sem_post(unsigned ins, sem_t *sem) {
   return ret;
 }
 
-void tern_lineup_init_real(unsigned opaque_type, unsigned count, unsigned timeout_turns) {
+void tern_lineup_init_real(long opaque_type, unsigned count, unsigned timeout_turns) {
   int error = errno;
   Space::enterSys();
   Runtime::the->lineupInit(opaque_type, count, timeout_turns);
@@ -294,7 +294,7 @@ void tern_lineup_init_real(unsigned opaque_type, unsigned count, unsigned timeou
   errno = error;
 }
 
-void tern_lineup_start_real(unsigned opaque_type) {
+void tern_lineup_start_real(long opaque_type) {
   int error = errno;
   Space::enterSys();
   Runtime::the->lineupStart(opaque_type);
@@ -302,7 +302,7 @@ void tern_lineup_start_real(unsigned opaque_type) {
   errno = error;
 }
 
-void tern_lineup_end_real(unsigned opaque_type) { 
+void tern_lineup_end_real(long opaque_type) { 
   int error = errno;
   Space::enterSys();
   Runtime::the->lineupEnd(opaque_type);

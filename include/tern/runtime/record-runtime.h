@@ -78,9 +78,9 @@ struct RecorderRT: public Runtime, public _Scheduler {
   int semPost(unsigned insid, int &error, sem_t *sem);
 
   // new programming primitives
-  void lineupInit(unsigned opaque_type, unsigned count, unsigned timeout_turns);
-  void lineupStart(unsigned opaque_type);
-  void lineupEnd(unsigned opaque_type);
+  void lineupInit(long opaque_type, unsigned count, unsigned timeout_turns);
+  void lineupStart(long opaque_type);
+  void lineupEnd(long opaque_type);
 
   void symbolic(unsigned insid, int &error, void *addr, int nbytes, const char *name);
 

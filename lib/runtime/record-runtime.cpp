@@ -1194,9 +1194,8 @@ int RecorderRT<_S>::semPost(unsigned ins, int &error, sem_t *sem){
 }
 
 template <typename _S>
-void RecorderRT<_S>::lineupInit(unsigned opaque_type, unsigned count, unsigned timeout_turns) {
+void RecorderRT<_S>::lineupInit(long opaque_type, unsigned count, unsigned timeout_turns) {
   unsigned ins = opaque_type;
-  //fprintf(stderr, "lineupInit haha %u %u %u\n", opaque_type, count, timeout_turns);
   SCHED_TIMER_START;
   assert(refcnt_bars.find(opaque_type) == refcnt_bars.end() && "refcnt barrier already initialized!");
   refcnt_bars[opaque_type].count = count;
@@ -1207,7 +1206,7 @@ void RecorderRT<_S>::lineupInit(unsigned opaque_type, unsigned count, unsigned t
 }
 
 template <typename _S>
-void RecorderRT<_S>::lineupStart(unsigned opaque_type) {
+void RecorderRT<_S>::lineupStart(long opaque_type) {
   unsigned ins = opaque_type;
   SCHED_TIMER_START;
 
@@ -1215,32 +1214,26 @@ void RecorderRT<_S>::lineupStart(unsigned opaque_type) {
   assert(bi != refcnt_bars.end() && "refcnt barrier is not initialized!");
   ref_cnt_barrier_t &b = bi->second;
   b.nactive++;  
-  //fprintf(stderr, "lineupStart: tid %d, opaque_type %u, nactive %u\n", _S::self(), opaque_type, b.nactive);
 
   if (b.nactive == b.count) {
     if (b.isArriving()) {
       // full, do not reset "nactive", since we are ref-counting barrier..
       b.setLeaving();
-      //fprintf(stderr, "lineupStart: FULL AND SET LEAVING: tid %d, opaque_type %u, nactive %u\n", _S::self(), opaque_type, b.nactive);
       _S::signal(&b, true); // Signal all threads blocking on this barrier.
     } else {
-      //fprintf(stderr, "lineupStart: FULL AND NOP: tid %d, opaque_type %u, nactive %u\n", _S::self(), opaque_type, b.nactive);
       // NOP. There could be a case that after timeout happens,
       // all threads arrive, then we just let them do NOP, and deterministic.
     } 
   } else {
     if (b.isArriving()) {
-      //fprintf(stderr, "lineupStart: NOT FULL AND WAIT: tid %d, opaque_type %u, nactive %u\n", _S::self(), opaque_type, b.nactive);
       _S::wait(&b, _S::getTurnCount() + b.timeout);
      
       // Handle timeout here, since the wait() would call getTurn and still grab the turn.
       if (b.nactive < b.count && b.isArriving()) {
-        //fprintf(stderr, "lineupStart: TIMEOUT AND SET LEAVING: tid %d, opaque_type %u, nactive %u\n", _S::self(), opaque_type, b.nactive);
         b.setLeaving();
         _S::signal(&b, true); // Signal all threads blocking on this barrier.
       }
     } else {
-      //fprintf(stderr, "lineupStart: NOT FULL, LEAVING AND NOP: tid %d, opaque_type %u, nactive %u\n", _S::self(), opaque_type, b.nactive);
       // proceed. NOP.
     }
   }
@@ -1249,17 +1242,14 @@ void RecorderRT<_S>::lineupStart(unsigned opaque_type) {
 }
 
 template <typename _S>
-void RecorderRT<_S>::lineupEnd(unsigned opaque_type) {
+void RecorderRT<_S>::lineupEnd(long opaque_type) {
   unsigned ins = opaque_type;
   SCHED_TIMER_START;
   refcnt_bar_map::iterator bi = refcnt_bars.find(opaque_type);
   assert(bi != refcnt_bars.end() && "refcnt barrier is not initialized!");
   ref_cnt_barrier_t &b = bi->second;
   b.nactive--;
-  //fprintf(stderr, "lineupEnd: tid %d, opaque_type %u, nactive %u\n", _S::self(), opaque_type, b.nactive);
   if (b.nactive == 0 && b.isLeaving()) {
-    //fprintf(stderr, "lineupEnd: EMPTY AND SET ARRIVING: tid %d, opaque_type %u, nactive %u\n", _S::self(), opaque_type, b.nactive);
-    //fprintf(stderr, "\n\n==============================\n\n");
     b.setArriving();
   }
   SCHED_TIMER_END(syncfunc::tern_lineup_end, (uint64_t)opaque_type);

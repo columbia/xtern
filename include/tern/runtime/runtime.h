@@ -60,9 +60,9 @@ struct Runtime {
   virtual int semPost(unsigned insid, int &error, sem_t *sem) = 0;
 
   // new programming primitives
-  virtual void lineupInit(unsigned opaque_type, unsigned count, unsigned timeout_turns) = 0;
-  virtual void lineupStart(unsigned opaque_type) = 0;
-  virtual void lineupEnd(unsigned opaque_type) = 0;
+  virtual void lineupInit(long opaque_type, unsigned count, unsigned timeout_turns) = 0;
+  virtual void lineupStart(long opaque_type) = 0;
+  virtual void lineupEnd(long opaque_type) = 0;
   
 /*
   virtual int __pthread_create(unsigned insid, int &error, pthread_t *th, const pthread_attr_t *a, void *(*func)(void*), void *arg)
