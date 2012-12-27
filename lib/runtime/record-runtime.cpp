@@ -1197,6 +1197,7 @@ template <typename _S>
 void RecorderRT<_S>::lineupInit(long opaque_type, unsigned count, unsigned timeout_turns) {
   unsigned ins = opaque_type;
   SCHED_TIMER_START;
+  //fprintf(stderr, "lineupInit opaque_type %p, count %u, timeout %u\n", (void *)opaque_type, count, timeout_turns);
   assert(refcnt_bars.find(opaque_type) == refcnt_bars.end() && "refcnt barrier already initialized!");
   refcnt_bars[opaque_type].count = count;
   refcnt_bars[opaque_type].nactive = 0;

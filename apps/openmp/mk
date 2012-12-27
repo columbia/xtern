@@ -5,10 +5,11 @@ if [ "$APPS_DIR" = "" ]; then
 	exit 1
 fi
 
+XTERN_ANNOT_LIB="-I$XTERN_ROOT/include -L$XTERN_ROOT/dync_hook -lxtern-annot"
 VER=4.5.4
 echo "\nWe are compiling gcc-$VER by ourselves. We hope you have installed the same version of gcc on your machine, because we are going to use some libraries of it.\n";
 cd $XTERN_ROOT/apps/openmp
-rm -rf gcc-$VER install *.a
+rm -rf gcc-$VER install *.a ex//*.a
 tar zxvf $APPS_DIR/sys/gcc-$VER.tar.gz
 
 # compile gcc
@@ -17,7 +18,7 @@ cd gcc-$VER
 patch -p1 < ../add-xtern-annot.patch
 mkdir obj
 cd obj
-CFLAGS+="-I$XTERN_ROOT/include -L$XTERN_ROOT/dync_hook -lxtern-annot" ../configure \
+CFLAGS+="$XTERN_ANNOT_LIB" ../configure \
 --prefix=$XTERN_ROOT/apps/openmp/install --disable-linux-futex --enable-languages=c,c++ --disable-multilib
 # A hack, uses some libraries from the built version. Currently I can not build a crti.o due to multi-architecture issue.
 LIBRARY_PATH=/usr/lib/x86_64-linux-gnu make -j4
@@ -29,10 +30,12 @@ cd $XTERN_ROOT/apps/openmp
 ln -s $XTERN_ROOT/apps/openmp/install/lib64/libgomp.a
 ln -s $XTERN_ROOT/apps/openmp/install/lib64/libstdc++.a
 g++ -g  rand-shuf.cpp -o rand-serial
-g++ -g -D_GLIBCXX_PARALLEL -static-libgcc -L. -fopenmp rand-shuf.cpp -o rand-para
 
-# Build the parallel for benchmark.
-g++ -fopenmp -fno-builtin -L. examples/ex-for.cpp -o ex-for
+# Heming: we must add "-lgomp" in order to make the compilation pass.
+g++ -g -static-libgcc -static-libstdc++ -D_GLIBCXX_PARALLEL -L. -fopenmp rand-shuf.cpp -o rand-para -lgomp $XTERN_ANNOT_LIB
+
+# Build the parallel for benchmark. Heming: we must add "-lgomp" in order to make the compilation pass.
+g++ -g -static-libgcc -static-libstdc++ -D_GLIBCXX_PARALLEL -L. -fopenmp examples/ex-for.cpp -o ex-for -lgomp $XTERN_ANNOT_LIB
 
 # Build some other examples.
 cd ex

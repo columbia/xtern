@@ -161,9 +161,11 @@ void __tern_prog_end (void) {
 
   assert(Space::isSys());
   tern_prog_end();
-
-  delete tern::Runtime::the;
-  tern::Runtime::the = NULL;
+  
+  // Heming: should not delete the runtime, because at this moment there could 
+  // still be some threads not finished yet (e.g., openmp).
+  //delete tern::Runtime::the;
+  //tern::Runtime::the = NULL;
   assert(Space::isSys() && "__tern_prog_end must end in system space");
 }
 
