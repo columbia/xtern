@@ -15,19 +15,20 @@ rm -rf ImageMagick-$VER install *.a
 tar zxvf $APPS_DIR/sys/ImageMagick-$VER.tar.gz
 ln -s $XTERN_ROOT/apps/openmp/install/lib64/libgomp.a
 ln -s $XTERN_ROOT/apps/openmp/install/lib64/libstdc++.a
+XTERN_ANNOT_LIB="-L$XTERN_ROOT/dync_hook -lxtern-annot"
 
 # compile ImageMagick
 cd ImageMagick-$VER
 patch -p1 < ../link-static-libgomp.patch
 mkdir obj
 cd obj
-../configure --prefix=$XTERN_ROOT/apps/openmp/imagick/install --disable-shared --enable-static &> config.results
+LIBS+="-L$XTERN_ROOT/dync_hook -lxtern-annot" ../configure --prefix=$XTERN_ROOT/apps/openmp/imagick/install --disable-shared --enable-static &> config.results
 make
 make install
 
 # Don't know why we have to clean and recompile and then we could link in the static libgomp. Weird.
 make distclean
-../configure --prefix=$XTERN_ROOT/apps/openmp/imagick/install --disable-shared --enable-static &> config.results
+LIBS+="-L$XTERN_ROOT/dync_hook -lxtern-annot" ../configure --prefix=$XTERN_ROOT/apps/openmp/imagick/install --disable-shared --enable-static &> config.results
 make
 make install
 
