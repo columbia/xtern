@@ -104,3 +104,7 @@ log_sync = 1
 # 1.  semaphore      semaphore.
 # 2.  hybrid              busy wait flag + cond wait.
 enforce_turn_type = semaphore
+
+# if turned on, enforce xtern annotations such as lineup, workload and non_det.
+enforce_annotations = 1
+

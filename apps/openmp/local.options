@@ -59,7 +59,7 @@ schedule_write = 0
 RR_ignore_rw_regular_file = 1
 
 # determine whether we start an idle thread to avoid empty runq 
-launch_idle_thread = 0
+launch_idle_thread = 1
 
 # whether or not to use pthread_tryjoin_np to join a thread
 pthread_tryjoin = 1
@@ -99,3 +99,12 @@ launch_monitor = 0
 
 # if turned on, sync operations will be logged.
 log_sync = 1
+
+# the algorithm to enforce turn, options are:
+# 1.  semaphore      semaphore.
+# 2.  hybrid              busy wait flag + cond wait.
+enforce_turn_type = semaphore
+
+# if turned on, enforce xtern annotations such as lineup, workload and non_det.
+enforce_annotations = 1
+
