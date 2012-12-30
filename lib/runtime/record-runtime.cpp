@@ -1197,19 +1197,21 @@ template <typename _S>
 void RecorderRT<_S>::lineupInit(long opaque_type, unsigned count, unsigned timeout_turns) {
   unsigned ins = opaque_type;
   SCHED_TIMER_START;
-  //fprintf(stderr, "lineupInit opaque_type %p, count %u, timeout %u\n", (void *)opaque_type, count, timeout_turns);
+  fprintf(stderr, "lineupInit opaque_type ENTER %p, count %u, timeout %u\n", (void *)opaque_type, count, timeout_turns);
   assert(refcnt_bars.find(opaque_type) == refcnt_bars.end() && "refcnt barrier already initialized!");
   refcnt_bars[opaque_type].count = count;
   refcnt_bars[opaque_type].nactive = 0;
   refcnt_bars[opaque_type].timeout = timeout_turns;
   refcnt_bars[opaque_type].setArriving();
   SCHED_TIMER_END(syncfunc::tern_lineup_init, (uint64_t)opaque_type, (uint64_t) count, (uint64_t) timeout_turns);
+  fprintf(stderr, "lineupInit opaque_type LEAVE %p, count %u, timeout %u\n", (void *)opaque_type, count, timeout_turns);
 }
 
 template <typename _S>
 void RecorderRT<_S>::lineupStart(long opaque_type) {
   unsigned ins = opaque_type;
   SCHED_TIMER_START;
+  fprintf(stderr, "lineupStart opaque_type %p, tid %d\n", (void *)opaque_type, _S::self());
 
   refcnt_bar_map::iterator bi = refcnt_bars.find(opaque_type);
   assert(bi != refcnt_bars.end() && "refcnt barrier is not initialized!");
@@ -1231,6 +1233,7 @@ void RecorderRT<_S>::lineupStart(long opaque_type) {
      
       // Handle timeout here, since the wait() would call getTurn and still grab the turn.
       if (b.nactive < b.count && b.isArriving()) {
+        //fprintf(stderr, "lineupStart opaque_type %p, tid %d, timeout!\n", (void *)opaque_type, _S::self());
         b.setLeaving();
         _S::signal(&b, true); // Signal all threads blocking on this barrier.
       }

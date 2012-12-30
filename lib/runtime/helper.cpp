@@ -22,7 +22,6 @@ extern "C" {
 
 typedef void * (*thread_func_t)(void*);
 static void *__tern_thread_func(void *arg) {
-
   void **args;
   void *ret_val;
   thread_func_t user_thread_func;

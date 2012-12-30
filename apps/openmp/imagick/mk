@@ -20,16 +20,30 @@ XTERN_ANNOT_LIB="-L$XTERN_ROOT/dync_hook -lxtern-annot"
 # compile ImageMagick
 cd ImageMagick-$VER
 patch -p1 < ../link-static-libgomp.patch
+patch -p1 < ../add-xtern-annot.patch
 mkdir obj
 cd obj
-LIBS+="-L$XTERN_ROOT/dync_hook -lxtern-annot" ../configure --prefix=$XTERN_ROOT/apps/openmp/imagick/install --disable-shared --enable-static &> config.results
-make
+
+C_STATIC_LIB_GOMP="-static-libgcc -L$XTERN_ROOT/apps/openmp/imagick -fopenmp -lgomp"
+CXX_STATIC_LIB_GOMP=$C_STATIC_LIB_GOMP
+#"-static-libgcc -static-libstdc++ -D_GLIBCXX_PARALLEL -L$XTERN_ROOT/apps/openmp/imagick -fopenmp -lgomp"
+
+CFLAGS+="$C_STATIC_LIB_GOMP -I$XTERN_ROOT/include -L$XTERN_ROOT/dync_hook -lxtern-annot" \
+  CXXFLAGS+="$CXX_STATIC_LIB_GOMP -I$XTERN_ROOT/include -L$XTERN_ROOT/dync_hook -lxtern-annot" \
+  LIBS+="$CXX_STATIC_LIB_GOMP -L$XTERN_ROOT/dync_hook -lxtern-annot" \
+  ../configure --prefix=$XTERN_ROOT/apps/openmp/imagick/install --disable-shared --enable-static &> config.results
+
+make V=1
 make install
 
 # Don't know why we have to clean and recompile and then we could link in the static libgomp. Weird.
 make distclean
-LIBS+="-L$XTERN_ROOT/dync_hook -lxtern-annot" ../configure --prefix=$XTERN_ROOT/apps/openmp/imagick/install --disable-shared --enable-static &> config.results
-make
+CFLAGS+="$C_STATIC_LIB_GOMP -I$XTERN_ROOT/include -L$XTERN_ROOT/dync_hook -lxtern-annot" \
+  CXXFLAGS+="$CXX_STATIC_LIB_GOMP -I$XTERN_ROOT/include -L$XTERN_ROOT/dync_hook -lxtern-annot" \
+  LIBS+="$CXX_STATIC_LIB_GOMP -L$XTERN_ROOT/dync_hook -lxtern-annot" \
+  ../configure --prefix=$XTERN_ROOT/apps/openmp/imagick/install --disable-shared --enable-static &> config.results
+
+make V=1
 make install
 
 # TBD.
