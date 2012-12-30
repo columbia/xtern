@@ -20,11 +20,11 @@ XTERN_ANNOT_LIB="-L$XTERN_ROOT/dync_hook -lxtern-annot"
 # compile ImageMagick
 cd ImageMagick-$VER
 patch -p1 < ../link-static-libgomp.patch
-patch -p1 < ../add-xtern-annot.patch
+patch -p1 < ../add-convert-xtern-annot.patch
 mkdir obj
 cd obj
 
-C_STATIC_LIB_GOMP="-static-libgcc -L$XTERN_ROOT/apps/openmp/imagick -fopenmp -lgomp"
+C_STATIC_LIB_GOMP="-g -O2 -static-libgcc -L$XTERN_ROOT/apps/openmp/imagick -fopenmp -lgomp"
 CXX_STATIC_LIB_GOMP=$C_STATIC_LIB_GOMP
 #"-static-libgcc -static-libstdc++ -D_GLIBCXX_PARALLEL -L$XTERN_ROOT/apps/openmp/imagick -fopenmp -lgomp"
 
