@@ -19,7 +19,6 @@ XTERN_ANNOT_LIB="-L$XTERN_ROOT/dync_hook -lxtern-annot"
 
 # compile ImageMagick
 cd ImageMagick-$VER
-patch -p1 < ../link-static-libgomp.patch
 patch -p1 < ../add-convert-xtern-annot.patch
 mkdir obj
 cd obj
