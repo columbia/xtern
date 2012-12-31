@@ -551,7 +551,12 @@ void RRScheduler::wait_t::wait() {
     /** by default, 3e4. This would cause the busy loop to loop for around 10 ms 
     on my machine, or 14 ms on bug00. This is one order of magnitude bigger
     than context switch time (1ms). **/
-    const long waitCnt = 3e4;
+    /**
+    2012-12-30: changed it to 4e4. By using a mencoder to convert a mpg file on bug00,
+    using 4e4 only has 902 broken busy wait events, while using 3e4 has 13814.
+    On bug00 the lib/runtime module is compiled with llvm optimized, I think.
+    **/
+    const long waitCnt = 4e4;
     volatile long i = 0;
     while (!wakenUp && i < waitCnt) {
       sched_yield();
