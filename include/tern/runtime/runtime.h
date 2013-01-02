@@ -17,6 +17,7 @@ struct Runtime {
   virtual void threadBegin() {}
   virtual void threadEnd(unsigned insid) {}
   virtual void idle_sleep() {}
+  virtual void idle_cond_wait() {}
   
   // thread
   virtual int pthreadCreate(unsigned insid, int &error, pthread_t *th, pthread_attr_t *a,

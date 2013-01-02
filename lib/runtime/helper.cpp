@@ -16,6 +16,7 @@
 #include "tern/options.h"
 
 using namespace tern;
+#define IDLE_MUTEX_INS 0xdeadbeaf
 
 extern "C" {
 
@@ -72,10 +73,19 @@ int __tern_pthread_create(pthread_t *thread,  const pthread_attr_t *attr,
  */
 volatile int idle_done = 0;
 pthread_t idle_th;
+pthread_mutex_t idle_mutex;
+pthread_cond_t idle_cond;
+
 void *idle_thread(void *)
 {
-  while (!idle_done) {
-    //tern_usleep(0xdeadbeef, options::idle_sleep_length);
+  while (true) {
+    volatile int x;
+    tern_pthread_mutex_lock(IDLE_MUTEX_INS, &idle_mutex);
+    x = idle_done;
+    if (!idle_done)
+      tern_idle_cond_wait();
+    tern_pthread_mutex_unlock(IDLE_MUTEX_INS, &idle_mutex);
+    if (x) break;
     tern_idle_sleep();
   }
   return NULL;
@@ -111,23 +121,34 @@ void __tern_prog_begin(void) {
 
   //  use tern_pthread_create because we want to fake the eip
   if (options::launch_idle_thread)
+  {
+    tern_pthread_mutex_init(IDLE_MUTEX_INS, &idle_mutex, NULL);
     tern_pthread_create(0xdead0000, &idle_th, NULL, idle_thread, NULL);
+  }
   assert(Space::isApp() && "__tern_prog_begin must end in app space");
 }
 
 //  SYS -> SYS
 void __tern_prog_end (void) {
-
   assert(prog_began && "__tern_prog_begin() not called "\
          "or __tern_prog_end() already called!");
-  prog_began = false;
 
+  prog_began = false;
   //fprintf(stderr, "%08d calls __tern_prog_end\n", (int) pthread_self());
   assert(Space::isApp() && "__tern_prog_end must start in app space");
 
   // terminate the idle thread because it references the runtime which we
   // are about to free
-  idle_done = 1;
+  tern_pthread_mutex_lock(IDLE_MUTEX_INS, &idle_mutex);
+  idle_done = 1;    //  do this in threadEnd where protected by mutex
+  tern_pthread_mutex_unlock(IDLE_MUTEX_INS, &idle_mutex);
+  tern_pthread_cond_signal(IDLE_MUTEX_INS, &idle_cond);
+
+  Space::enterSys();
+  pthread_mutex_lock(&idle_mutex);
+  pthread_cond_signal(&idle_cond);
+  pthread_mutex_unlock(&idle_mutex);
+  Space::exitSys();
 
   //  use tern_pthread_join because we want to fake the eip
   if (options::launch_idle_thread)
@@ -137,6 +158,7 @@ void __tern_prog_end (void) {
   }
 
   tern_thread_end(-1); // main thread ends
+
   assert(Space::isSys());
   tern_prog_end();
 

@@ -1,0 +1,17 @@
+#!/bin/bash
+
+#if [ -z $1 ]; then
+#        # No version number
+#        echo "Usage: <version number: e.g. 1.1.5>"
+#        exit 1
+#fi
+
+VER=1.1.5
+cd $XTERN_ROOT/apps/pbzip2
+rm -rf pbzip2-$VER
+tar zxvf $APPS_DIR/sys/pbzip2-$VER.tar.gz
+cd pbzip2-$VER
+patch -p1 < ../for-dbug-1.patch
+patch -p1 < ../add-dbg-flag.patch
+make
+mv pbzip2 ../

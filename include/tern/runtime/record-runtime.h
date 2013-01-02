@@ -6,6 +6,7 @@
 
 #include <tr1/unordered_map>
 #include "tern/runtime/runtime.h"
+#include "tern/runtime/monitor.h"
 #include "tern/runtime/record-scheduler.h"
 #include <time.h>
 
@@ -28,6 +29,7 @@ struct RecorderRT: public Runtime, public _Scheduler {
   void threadBegin(void);
   void threadEnd(unsigned insid);
   void idle_sleep();
+  void idle_cond_wait();
 
   // thread
   int pthreadCreate(unsigned insid, int &error, pthread_t *thread,  pthread_attr_t *attr,
@@ -103,10 +105,12 @@ struct RecorderRT: public Runtime, public _Scheduler {
   int usleep(unsigned insid, int &error, useconds_t usec);
   int nanosleep(unsigned insid, int &error, const struct timespec *req, struct timespec *rem);
   int __pthread_rwlock_rdlock(unsigned ins, int &error, pthread_rwlock_t *rwlock);
-  int ___pthread_rwlock_wrlock(unsigned ins, int &error, pthread_rwlock_t *rwlock);
-  int ___pthread_rwlock_tryrdlock(unsigned ins, int &error, pthread_rwlock_t *rwlock);
-  int ___pthread_rwlock_trywrlock(unsigned ins, int &error, pthread_rwlock_t *rwlock);
-  int ___pthread_rwlock_unlock(unsigned ins, int &error, pthread_rwlock_t *rwlock);
+  int __pthread_rwlock_wrlock(unsigned ins, int &error, pthread_rwlock_t *rwlock);
+  int __pthread_rwlock_tryrdlock(unsigned ins, int &error, pthread_rwlock_t *rwlock);
+  int __pthread_rwlock_trywrlock(unsigned ins, int &error, pthread_rwlock_t *rwlock);
+  int __pthread_rwlock_unlock(unsigned ins, int &error, pthread_rwlock_t *rwlock);
+  int __pthread_rwlock_destroy(unsigned ins, int &error, pthread_rwlock_t *rwlock);
+  int __pthread_rwlock_init(unsigned ins, int &error, pthread_rwlock_t *rwlock, const pthread_rwlockattr_t * attr);
 
   RecorderRT(): _Scheduler() {
     int ret;
@@ -114,6 +118,19 @@ struct RecorderRT: public Runtime, public _Scheduler {
     assert(!ret && "can't initialize semaphore!");
     ret = sem_init(&thread_begin_done_sem, 0, 0);
     assert(!ret && "can't initialize semaphore!");
+
+    if (options::launch_monitor)
+      monitor = new RuntimeMonitor();
+    else
+      monitor = NULL;
+  }
+
+  ~RecorderRT() {
+    if (monitor)
+    {
+      delete monitor; 
+      monitor = NULL;
+    }
   }
 
 protected:
@@ -124,7 +141,8 @@ protected:
   int relTimeToTurn(const struct timespec *reltime);
 
   int pthreadMutexLockHelper(pthread_mutex_t *mutex, unsigned timeout = Scheduler::FOREVER);
-  int pthreadRWLockHelper(pthread_rwlock_t *rwlock, unsigned timeout = Scheduler::FOREVER);
+  int pthreadRWLockWrLockHelper(pthread_rwlock_t *rwlock, unsigned timeout = Scheduler::FOREVER);
+  int pthreadRWLockRdLockHelper(pthread_rwlock_t *rwlock, unsigned timeout = Scheduler::FOREVER);
   
   /// for each pthread barrier, track the count of the number and number
   /// of threads arrived at the barrier
@@ -134,6 +152,8 @@ protected:
   /// for pthreadCreate() and threadBegin()
   sem_t thread_begin_sem;
   sem_t thread_begin_done_sem;
+
+  RuntimeMonitor *monitor;
 };
 #if 0
 struct RRuntime: public Runtime {

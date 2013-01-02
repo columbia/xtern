@@ -309,7 +309,6 @@ void tern_pthread_exit(unsigned ins, void *retval) {
     // FIXME: Need to call exit() to stop the idle thread here because
     // when the main thread calls pthread_exit(), it may wait for all
     // current threads to finish, before calling __tern_prog_end().
-    usleep(500);
     exit(0);
   }
   assert(Space::isSys());
@@ -618,6 +617,13 @@ void tern_idle_sleep()
 {
   Space::enterSys();
   Runtime::the->idle_sleep();
+  Space::exitSys();
+}
+
+void tern_idle_cond_wait()
+{
+  Space::enterSys();
+  Runtime::the->idle_cond_wait();
   Space::exitSys();
 }
 

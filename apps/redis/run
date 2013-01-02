@@ -1,0 +1,35 @@
+#!/bin/bash
+
+cd $XTERN_ROOT/apps/redis
+rm -rf out* *.log rr-* random-*
+killall -9 redis-server redis-benchmark &> /dev/null
+killall -9 redis-server redis-benchmark &> /dev/null
+PRELOAD_LIB=""
+SCHED=""
+
+runRedis(){
+	# Start the server.
+	LD_PRELOAD=$PRELOAD_LIB ./redis-server redis-threads.conf > server-$SCHED.log 2>&1 &
+	#LD_PRELOAD=$PRELOAD_LIB ./redis-server > server-$SCHED.log 2>&1 &
+	sleep 5
+
+	# Start the benchmark (client). Can change workload here.
+	./redis-benchmark -n 100000 > benchmark-$SCHED.log 2>&1
+	sleep 2
+	mv out out-$SCHED
+	#$XTERN_ROOT/eval/draw-time-chart.pl ./out-$SCHED
+	#mv time-chart.txt $SCHED-time-chart.txt
+
+	# Clean.
+	killall -9 redis-server &> /dev/null
+}
+
+SCHED="rr"
+PRELOAD_LIB=$XTERN_ROOT/dync_hook/interpose.so
+echo "Running redis with $PRELOAD_LIB..."
+runRedis;
+
+SCHED="random"
+PRELOAD_LIB=$XTERN_ROOT/eval/rand-intercept/rand-intercept.so
+echo "Running redis with $PRELOAD_LIB..."
+runRedis;

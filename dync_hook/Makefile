@@ -1,4 +1,4 @@
-all: xternruntime interpose.so
+all: xternruntime interpose.so usermonitor
 
 ENABLE_OPTIMIZED := 0
 INC_DIRS=-I$(TERN_ROOT)/include/ -I$(XTERN_ROOT)/include/ -I$(XTERN_ROOT)/obj/include
@@ -8,20 +8,14 @@ FLAG=`date +%F\#%T`
 #TERN_LIBS=-L$(XTERN_ROOT)/obj/$(BuildMode)/lib/  -lanalysis -linstr -lruntime
 TERN_LIBS=-L$(XTERN_ROOT)/obj/$(BuildMode)/lib/ -lruntime -lcommon 
 #TERN_LIBS=
-#TERN_LIBS=$(XTERN_ROOT)/obj/$(BuildMode)/lib/libruntime.a
+#TERN_LIBS=$(XTERN_ROOT)/install/lib/libruntime.a $(XTERN_ROOT)/install/lib/libcommon.a
+CFLAGS= -g $(INC_DIRS)
+CXXFLAGS= -g $(INC_DIRS)
 PREFIX=LD_PRELOAD=$(XTERN_ROOT)/dync_hook/interpose.so
 #PREFIX=
 
-ifeq ($(ENABLE_OPTIMIZED), 0)
-    BuildMode := Debug
-    CFLAGS= -g $(INC_DIRS)
-    CXXFLAGS= -g $(INC_DIRS)
-else
-    BuildMode := Release
-    CFLAGS= -O3 -g $(INC_DIRS)
-    CXXFLAGS= -O3 -g $(INC_DIRS)
-endif
-
+usermonitor: usermonitor.cpp
+	g++ usermonitor.cpp -o usermonitor
 
 xternruntime: 
 	cd $(XTERN_ROOT)/obj && make ENABLE_OPTIMIZED=$(ENABLE_OPTIMIZED)
@@ -115,7 +109,7 @@ run_yfs: prepare_yfs
 
 fft:
 	rm -rf out
-	LD_PRELOAD=$(XTERN_ROOT)/dync_hook/interpose.so ./FFT -m6 -p8
+	LD_PRELOAD=$(XTERN_ROOT)/dync_hook/interpose.so ./FFT -m24 -p4
 
 eval:
 	cd $(XTERN_ROOT)/apps/ && make -B EXE_PREFIX="env LD_PRELOAD=$(XTERN_ROOT)/dync_hook/interpose.so"

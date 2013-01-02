@@ -1,0 +1,66 @@
+#!/bin/bash
+
+cd $XTERN_ROOT/apps/libpaxos
+rm -rf out* *.log rr-* random-*
+killall -9 acceptor client_learner client_proposer &> /dev/null
+killall -9 acceptor client_learner client_proposer &> /dev/null
+PRELOAD_LIB=""
+SCHED=""
+CONF=""
+if [ -z $1 ]; then
+	CONF="./scripts/test.cfg"
+else
+	CONF=$1
+fi
+NACCEPTORS=`cat $CONF | grep ^acceptor | sort -r | awk '{print $2}' | xargs`
+
+launchAcceptor(){
+	ID=$1
+	CMD="./acceptor $ID $CONF"
+	echo "Running $CMD"
+	LD_PRELOAD=$PRELOAD_LIB $CMD &> acceptor$ID.log &
+	sleep 1;
+}
+
+launchLearner(){
+	ID=$1
+	CMD="./client_learner $CONF"
+	echo "Running $CMD"
+	LD_PRELOAD=$PRELOAD_LIB $CMD &> learner$ID.log &
+	sleep 1;
+}
+
+launchProposer(){
+	CMD="./client_proposer $CONF"
+	echo "Running $CMD"
+	LD_PRELOAD=$PRELOAD_LIB $CMD &> proposer.log &
+	sleep 1;
+}
+
+
+runLibPaxos(){
+	launchLearner 1;
+	launchLearner 2;
+	for N in $NACCEPTORS; do
+		launchAcceptor $N;
+	done
+	launchProposer;
+
+	SECONDS=60;
+	echo "Please wait for $SECONDS s..."
+	sleep $SECONDS;
+	echo "Results:";
+	cat ./acceptor1.log | grep Recv
+	`killall -9 acceptor client_learner client_proposer &> /dev/null`
+	sleep 2
+}
+
+SCHED="rr"
+PRELOAD_LIB=$XTERN_ROOT/dync_hook/interpose.so
+echo "Running libpaxos with $PRELOAD_LIB..."
+runLibPaxos;
+
+SCHED="random"
+PRELOAD_LIB=""
+echo "Running libpaxos non-det..."
+runLibPaxos;

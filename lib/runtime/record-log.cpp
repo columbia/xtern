@@ -97,7 +97,6 @@ void TxtLogger::logSync(unsigned insid, unsigned short sync,
 
   switch(sync) {
     // log nothing, mostly for sched point. 
-  case syncfunc::accept:
   case syncfunc::accept4:
   case syncfunc::recv:
   case syncfunc::recvfrom:
@@ -108,6 +107,7 @@ void TxtLogger::logSync(unsigned insid, unsigned short sync,
   case syncfunc::fgets:
   case syncfunc::fork:
   case syncfunc::wait:
+  case syncfunc::tern_idle:
     break;
     // log one sync var (common case)
   case syncfunc::pthread_mutex_init:
@@ -137,7 +137,6 @@ void TxtLogger::logSync(unsigned insid, unsigned short sync,
   case syncfunc::pthread_mutex_trylock:
   case syncfunc::sem_trywait:
   case syncfunc::sem_timedwait:
-  case syncfunc::connect: //  fd, ret
   case syncfunc::pthread_rwlock_tryrdlock:  //  rwlock, ret
   case syncfunc::pthread_rwlock_trywrlock:
   case syncfunc::pthread_rwlock_unlock:  //  rwlock, ret
@@ -155,6 +154,7 @@ void TxtLogger::logSync(unsigned insid, unsigned short sync,
     // log three sync vars
   case syncfunc::pthread_cond_timedwait:  //  cv, mu, ret
   case syncfunc::read:  //  sig, fd, ret
+  case syncfunc::accept:  //  sock(ret), from_port, to_port
   case syncfunc::write: //  sig, fd, ret
     {
       //  notice "<<" operator is explained from right to left.
@@ -166,6 +166,22 @@ void TxtLogger::logSync(unsigned insid, unsigned short sync,
         << " 0x" << a
         << " 0x" << b
         << " 0x" << c
+        << dec;
+    }
+    break;
+  case syncfunc::connect: //  fd, from_port, to_port, ret
+    {
+      //  notice "<<" operator is explained from right to left.
+      uint64_t a = va_arg(args, uint64_t);
+      uint64_t b = va_arg(args, uint64_t);
+      uint64_t c = va_arg(args, uint64_t);
+      uint64_t d = va_arg(args, uint64_t);
+
+    ouf << hex
+        << " 0x" << a
+        << " 0x" << b
+        << " 0x" << c
+        << " 0x" << d
         << dec;
     }
     break;
@@ -406,34 +422,65 @@ void TestLogger::logSync(unsigned insid, unsigned short sync,
   assert(sync >= syncfunc::first_sync && sync < syncfunc::num_syncs
     && "trying to log unknown synchronization operation!");
 
+  insid = 0;
+
+//  if(!syncfunc::isSync(sync))
+//  {
+    if (sync == syncfunc::tern_thread_begin
+      || sync == syncfunc::tern_thread_end)    //  for tests, i need to know the thread_mapping
+    {
+      va_list args;
+      va_start(args, after);
+      ouf << syncfunc::getName(sync)
+          << " 0x" << hex << insid << dec
+          << ' ' << turn
+          << " " << dec << 0 << ":"
+          << setfill('0') << setw(9) << 0
+          << " " << dec << 0 << ":"
+          << setfill('0') << setw(9) << 0
+          << " " << dec << 0 << ":"
+          << setfill('0') << setw(9) << 0
+          << ' ' << tid
+          << hex << " 0x" << va_arg(args, uint64_t) << dec;
+      va_end(args);
+      ouf << "\n";
+      ouf.flush();
+      return;
+    }
+//    return;
+//  }
+
   const char *suffix = "";
   if(NumRecordsForSync(sync) == 2)
     suffix = (after?"_second":"_first");
 
   ouf << syncfunc::getName(sync) << suffix
+      << " 0x" << hex << setfill('0') << setw(8) << insid << dec
       << ' ' << turn
+      << " " << dec << 0 << ":"
+      << setfill('0') << setw(9) << 0
+      << " " << dec << 0 << ":"
+      << setfill('0') << setw(9) << 0
+      << " " << dec << 0 << ":"
+      << setfill('0') << setw(9) << 0
       << ' ' << tid;
 
   va_list args;
-
   va_start(args, after);
+
   switch(sync) {
     // log nothing, mostly for sched point. 
-  case syncfunc::accept:
   case syncfunc::accept4:
-  case syncfunc::connect:
   case syncfunc::recv:
   case syncfunc::recvfrom:
   case syncfunc::recvmsg:
   case syncfunc::select:
   case syncfunc::epoll_wait:
   case syncfunc::sigwait:
+  case syncfunc::fgets:
   case syncfunc::fork:
   case syncfunc::wait:
-  case syncfunc::send:
-  case syncfunc::sendto:
-  case syncfunc::sendmsg:
-
+  case syncfunc::tern_idle:
     break;
     // log one sync var (common case)
   case syncfunc::pthread_mutex_init:
@@ -450,15 +497,10 @@ void TestLogger::logSync(unsigned insid, unsigned short sync,
   case syncfunc::sleep:
   case syncfunc::usleep:
   case syncfunc::nanosleep:
-  case syncfunc::read:
-  case syncfunc::write:
-  case syncfunc::tern_thread_begin:
-  case syncfunc::tern_thread_end:
-    {
-      uint64_t a = va_arg(args, uint64_t);
-      ouf << hex << " 0x" << a << dec;
-      break;
-    }
+  case syncfunc::pthread_rwlock_rdlock:
+  case syncfunc::pthread_rwlock_wrlock:
+    ouf << hex << " 0x" << va_arg(args, uint64_t) << dec;
+    break;
 
     // log two sync vars for cond_*wait
   case syncfunc::pthread_mutex_timedlock:
@@ -468,6 +510,9 @@ void TestLogger::logSync(unsigned insid, unsigned short sync,
   case syncfunc::pthread_mutex_trylock:
   case syncfunc::sem_trywait:
   case syncfunc::sem_timedwait:
+  case syncfunc::pthread_rwlock_tryrdlock:  //  rwlock, ret
+  case syncfunc::pthread_rwlock_trywrlock:
+  case syncfunc::pthread_rwlock_unlock:  //  rwlock, ret
     {
       //  notice "<<" operator is expanded from right to left.
       uint64_t a = va_arg(args, uint64_t);
@@ -480,7 +525,10 @@ void TestLogger::logSync(unsigned insid, unsigned short sync,
     }
     break;
     // log three sync vars
-  case syncfunc::pthread_cond_timedwait:
+  case syncfunc::pthread_cond_timedwait:  //  cv, mu, ret
+  case syncfunc::read:  //  sig, fd, ret
+  case syncfunc::accept:  //  sock(ret), from_port, to_port
+  case syncfunc::write: //  sig, fd, ret
     {
       //  notice "<<" operator is explained from right to left.
       uint64_t a = va_arg(args, uint64_t);
@@ -494,14 +542,32 @@ void TestLogger::logSync(unsigned insid, unsigned short sync,
         << dec;
     }
     break;
+  case syncfunc::connect: //  fd, from_port, to_port, ret
+    {
+      //  notice "<<" operator is explained from right to left.
+      uint64_t a = va_arg(args, uint64_t);
+      uint64_t b = va_arg(args, uint64_t);
+      uint64_t c = va_arg(args, uint64_t);
+      uint64_t d = va_arg(args, uint64_t);
+
+    ouf << hex
+        << " 0x" << a
+        << " 0x" << b
+        << " 0x" << c
+        << " 0x" << d
+        << dec;
+    }
+    break;
 
   default:
-    cerr << syncfunc::getName(sync) << "\n";
-    assert(0 && "sync not handled");
+    cerr << "sync " << syncfunc::getName(sync) << " is not yet handled!\n";
+    assert(0);
   }
+
   va_end(args);
   ouf << "\n";
   ouf.flush();
+
 }
 
 void TestLogger::flush() {

@@ -66,7 +66,7 @@ void ClockManager::tick()
   struct timespec now; 
   clock_gettime(CLOCK_REALTIME, &now);
   uint64_t rclock = ts2ll(now);
-  if (rclock > next_rclock + WARNING_THRESHOLD)
+  if (rclock > next_rclock + WARNING_THRESHOLD && options::sync_global_clock)
   {
     dprintf("WARNING: tick = %d, delayed %d more than %d macroseconds\n", 
       tickCount,
@@ -76,7 +76,7 @@ void ClockManager::tick()
       rclock, next_rclock);
   }
 
-  if (rclock < next_rclock - WAITING_THRESHOLD)
+  if (rclock < next_rclock - WAITING_THRESHOLD && options::sync_global_clock)
   {
     struct timespec next;
     getClock(next, next_rclock - rclock);

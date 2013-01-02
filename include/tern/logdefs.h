@@ -134,6 +134,21 @@ static inline int NumSyncArgs(short sync) {
 
 static inline int NumRecordsForSync(short sync) {
   switch(sync) {
+  //  blocking functions
+  case syncfunc::accept:
+  case syncfunc::accept4:
+  case syncfunc::connect:
+  case syncfunc::recv:
+  case syncfunc::recvfrom:
+  case syncfunc::recvmsg:
+  case syncfunc::read:
+  case syncfunc::select:
+  case syncfunc::epoll_wait:
+  case syncfunc::sigwait:
+  case syncfunc::fgets:
+  case syncfunc::wait:
+
+  //  logic
   case syncfunc::pthread_cond_wait:
   case syncfunc::pthread_barrier_wait:
   case syncfunc::pthread_cond_timedwait:
@@ -168,8 +183,12 @@ inline short ExtraArgsRec::numArgsInRec() const {
 
 static inline int getLogFilename(char *buf, size_t sz,
                                  int tid, const char* ext) {
-  return snprintf(buf, sz, "%s/tid-%d-%d%s",
+  if (options::pid_in_logfilename)
+    return snprintf(buf, sz, "%s/tid-%d-%d%s",
                   options::output_dir.c_str(), getpid(), tid, ext);
+  else
+    return snprintf(buf, sz, "%s/tid-%d%s",
+                  options::output_dir.c_str(), tid, ext);
 }
 
 } // namespace tern

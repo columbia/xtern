@@ -1,0 +1,44 @@
+#!/bin/bash
+
+VER=5.3.15
+APP_DIR=$XTERN_ROOT/apps/bdb_rep/
+DB_SRC_DIR=$APP_DIR/db-$VER
+cd $APP_DIR
+rm -rf db-$VER perf install statis-benchmarks
+tar zxvf $APPS_DIR/sys/db-$VER.tar.gz
+
+# Build bdb.
+cd db-$VER/build_unix
+# The "--with-mutex=POSIX/pthreads" is a must, otherwise the __db_pthread_mutex_lock() will not be compiled into the library and few mutexes will be invoked.
+../dist/configure CFLAGS="-O3 -g" CXXFLAGS="-O3 -g" --enable-posixmutexes --with-mutex=POSIX/pthreads --prefix=$APP_DIR/install
+make && make install
+
+# Build bdb rep.
+cp -r $DB_SRC_DIR/src/dbinc/ $APP_DIR/install/include/
+cd $DB_SRC_DIR/examples/c/ex_rep/base
+#patch < $APP_DIR/bugs/00-bdb_rep_connect_race.patch
+cd $DB_SRC_DIR/examples/c/ex_rep
+cp $APP_DIR/rep_makefile_normal Makefile
+make
+cp rep_mgr $APP_DIR
+cp rep_base $APP_DIR
+cd $APP_DIR
+
+# Build statis benchmark.
+cd $APP_DIR
+tar zxvf statis-benchmarks.tar.gz
+cd statis-benchmarks
+patch -p1 < ../fix-statis-benchmarks.patch
+cd berkeleyDB
+make
+cd $APP_DIR
+mv statis-benchmarks/berkeleyDB/bdbHashThreaded .
+
+# Build 3n+1 benchmark, a fine-grained one.
+cd $APP_DIR
+tar zxvf libdb-3n.tar.gz
+cd libdb-3n
+g++ -O3 -g bench3n.cpp -o bench3n -I$APP_DIR/install/include $APP_DIR/install/lib/libdb.a -lpthread
+cd $APP_DIR
+mv libdb-3n/bench3n .
+

@@ -14,6 +14,7 @@
 
 #include <list>
 #include <vector>
+#include <map>
 #include <errno.h>
 #include <pthread.h>
 #include <iostream>
@@ -21,29 +22,27 @@
 #include <semaphore.h>
 #include "tern/runtime/scheduler.h"
 
+extern pthread_mutex_t turn_mutex;
+
 namespace tern {
 
 /// whoever comes first run; nondeterministic
 struct RecordSerializer: public Serializer {
   typedef Serializer Parent;
 
-  void getTurn() { pthread_mutex_lock(&lock); }
-  void putTurn(bool at_thread_end = false) {
+  virtual void getTurn() { pthread_mutex_lock(&lock); }
+  virtual void putTurn(bool at_thread_end = false) {
     if(at_thread_end)
       zombify(pthread_self());
     pthread_mutex_unlock(&lock);
   }
 
-  int block() { return getTurnCount(); }	//	no block
-
-  void wakeup() {
-    pthread_mutex_lock(&lock);
-    ouf << ' ' << turnCount;
-    ouf << ' ' << self();
-    ouf << std::endl;
-
-    turnCount++;
-    pthread_mutex_unlock(&lock);
+  int  wait(void *chan, unsigned timeout = Scheduler::FOREVER) {
+    incTurnCount();
+    putTurn();
+    sched_yield();  //  give control to other threads
+    getTurn();
+    return 0;
   }
 
   /// NOTE: This method breaks the Seralizer interface.  Need it to
@@ -73,32 +72,38 @@ protected:
 /// need to scan the mixed wait queue.
 struct RRScheduler: public Scheduler {
   typedef Scheduler Parent;
-
+  
   struct wait_t {
+    pthread_cond_t cond;
     sem_t    sem;
     void*    chan;
     unsigned timeout;
     int      status; // return value of wait()
+    volatile bool wakenUp;
 
     void reset(int st=0) {
       chan = NULL;
       timeout = FOREVER;
       status = st;
+      wakenUp = false;
     }
 
     wait_t() {
+      pthread_cond_init(&cond, NULL);
       sem_init(&sem, 0, 0);
       reset(0);
-    }
+    }    
+    void wait();
+    void post();
   };
 
-  void getTurn();
-  void putTurn(bool at_thread_end = false);
-  int  wait(void *chan, unsigned timeout = Scheduler::FOREVER);
-  void signal(void *chan, bool all=false);
+  virtual void getTurn();
+  virtual void putTurn(bool at_thread_end = false);
+  virtual int  wait(void *chan, unsigned timeout = Scheduler::FOREVER);
+  virtual void signal(void *chan, bool all=false);
 
-  int block(); 
-  void wakeup();
+  virtual int block(); 
+  virtual void wakeup();
 
   unsigned incTurnCount(void);
   unsigned getTurnCount(void);
@@ -116,7 +121,7 @@ protected:
   /// return the next timeout turn number
   unsigned nextTimeout();
   /// pop the @runq and wakes up the thread at the front of @runq
-  void next(bool at_thread_end=false);
+  virtual void next(bool at_thread_end=false);
   /// child classes can override this method to reorder threads in @runq
   virtual void reorderRunq(void) {}
 
@@ -128,8 +133,6 @@ protected:
   // improves performance
   wait_t waits[MaxThreads];
 
-  pthread_mutex_t begin_lock;
-
   //  for monitor
   pthread_t monitor_th;
   int timer;
@@ -140,8 +143,22 @@ protected:
   bool wakeup_flag;
   pthread_mutex_t wakeup_mutex;
   void check_wakeup();
+  void wakeUpIdleThread();
+  void idleThreadCondWait();
 };
 
+struct FCFSScheduler: public RRScheduler {
+public:
+  virtual void getTurn();
+  virtual void putTurn(bool at_thread_end = false);
+  virtual int  wait(void *chan, unsigned timeout = Scheduler::FOREVER);
+  virtual void signal(void *chan, bool all=false);
+  FCFSScheduler();
+  ~FCFSScheduler();
+protected:
+  virtual void next(bool at_thread_end=false);
+  pthread_mutex_t fcfs_lock;
+};
 
 #if 0
 struct RRSchedulerCV: public Scheduler {
@@ -309,8 +326,41 @@ struct SeededRRScheduler: public RRScheduler {
 
 
 /// replay scheduler using semaphores
-struct ReplaySchedulerSem: public Scheduler {
-  // TODO
+struct ReplaySchedulerSem: public RecordSerializer {
+public:
+  ReplaySchedulerSem();
+  ~ReplaySchedulerSem();
+
+  /*  inherent from parent  */
+  virtual void getTurn();
+  virtual void putTurn(bool at_thread_end = false);
+  //int  wait(void *chan, unsigned timeout = Scheduler::FOREVER);
+  //void signal(void *chan, bool all=false);
+  //virtual int block(); 
+  //void wakeup();
+  //unsigned incTurnCount(void);
+  //unsigned getTurnCount(void);
+  //void childForkReturn();
+
+  typedef std::map<std::string, std::string> record_type;
+  struct record_list : public std::vector<record_type>
+  {
+    record_list()
+      : std::vector<record_type>(), pos(0) {}
+    record_type &next() { return (*this)[pos]; }
+    bool has_next() { return pos < (int) this->size(); }
+    void move_next() { ++pos; }
+    int pos;
+  };
+
+protected:
+  sem_t waits[MaxThreads];
+  std::vector<record_list> logdata;
+  void readrecords(FILE * fin, record_list &records);
+
+  bool wakeup_flag;
+  void check_wakeup() {}
+
 };
 
 /// replay scheduler using integer flags

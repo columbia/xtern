@@ -11,6 +11,7 @@
 #include <stdlib.h>
 #include <cstring>
 #include <algorithm>
+#include <sched.h>
 #include "tern/options.h"
 
 using namespace std;
@@ -44,6 +45,11 @@ static void *monitor(void *arg)
   }
   return 0;
 }
+
+extern pthread_mutex_t idle_mutex;
+extern pthread_cond_t idle_cond;
+
+pthread_mutex_t turn_mutex;
 
 void RRSchedulerCV::detect_blocking_threads(void)
 {
@@ -422,7 +428,11 @@ ostream& RRSchedulerCV::dump(ostream& o) {
 
 void RRSchedulerCV::block()
 {
-  if (!options::schedule_network) return;
+  if (!options::schedule_network) 
+  {
+    Serializer::block();
+    return;
+  }
 
 /*
   pthread_mutex_lock(&lock);
@@ -534,6 +544,45 @@ void SeededRRScheduler::reorderRunq(void)
   runq.push_front(tid);
 }
 
+void RRScheduler::wait_t::wait() {
+  if (options::enforce_turn_type == "semaphore") {
+    sem_wait(&sem);
+  } else {
+    /** by default, 3e4. This would cause the busy loop to loop for around 10 ms 
+    on my machine, or 14 ms on bug00. This is one order of magnitude bigger
+    than context switch time (1ms). **/
+    const long waitCnt = 3e4;
+    volatile long i = 0;
+    while (!wakenUp && i < waitCnt) {
+      sched_yield();
+      i++;
+    }
+    if (!wakenUp) {
+      pthread_mutex_lock(&turn_mutex);
+      while (!wakenUp) {/** This can save the context switch overhead. **/
+        fprintf(stderr, "RRScheduler::wait_t::wait before cond wait, tid %d\n", self());
+        pthread_cond_wait(&cond, &turn_mutex);
+        fprintf(stderr, "RRScheduler::wait_t::wait after cond wait, tid %d\n", self());
+      }
+      wakenUp = false;
+      pthread_mutex_unlock(&turn_mutex);
+    } else {
+      wakenUp = false;
+    }
+  }
+}
+
+void RRScheduler::wait_t::post() {
+  if (options::enforce_turn_type == "semaphore") {
+    sem_post(&sem);
+  } else {
+    pthread_mutex_lock(&turn_mutex);
+    wakenUp = true;
+    pthread_cond_signal(&cond);
+    pthread_mutex_unlock(&turn_mutex);
+  }
+}
+
 //@before with turn
 //@after with turn
 unsigned RRScheduler::nextTimeout()
@@ -578,8 +627,8 @@ void RRScheduler::check_wakeup()
   static int check_count = 0;
   if (wakeup_flag && 
     (options::wakeup_period <= 0 || 
-#if 0    
-    turnCount >= options::wakeup_period * check_count
+#if 1
+    (int) turnCount >= (int) options::wakeup_period * check_count
 #else
     !(turnCount % options::wakeup_period)
 #endif
@@ -619,23 +668,14 @@ void RRScheduler::next(bool at_thread_end)
   check_wakeup();
 
   if(runq.empty()) {
-    // if there are any timed-waiting threads, we can fast forward the
-    // turn to wake up these threads
-    unsigned next_timeout = nextTimeout();
-    if(next_timeout != FOREVER) {
-      // fast-forward turn
-      dprintf("RRScheduler: fast-forward turn from %u to %u\n",
-              turnCount, next_timeout+1);
-      turnCount = next_timeout + 1;
-      fireTimeouts();
-    }
-
-    if(runq.empty()) {
-      // current thread must be the last thread and it is existing
-      assert(at_thread_end && waitq.empty()
-             && "all threads wait; deadlock!");
+    // Current thread must be the last thread and it is existing, otherwise we wake up the idle thread.
+    if (at_thread_end && waitq.empty()) {
       return;
-    }
+    } else if (at_thread_end && !waitq.empty() && self() == 0) {
+      fprintf(stderr, "WARNING: main thread exits with some children threads alive (e.g., openmp).\n");
+      return;
+    } else if (options::launch_idle_thread && self() != 1) // If I am not the idle thread, then wake up the idle thread.
+      wakeUpIdleThread();
   }
 
   assert(!runq.empty());
@@ -645,7 +685,40 @@ void RRScheduler::next(bool at_thread_end)
   assert(next_tid>=0 && next_tid < Scheduler::nthread);
   dprintf("RRScheduler: next is %d\n", next_tid);
   SELFCHECK;
-  sem_post(&waits[next_tid].sem);
+  waits[next_tid].post();
+}
+
+void RRScheduler::wakeUpIdleThread() {
+  int idleTid = 1, tid = -1;
+  list<int>::iterator prv, cur;
+  // use delete-safe way of iterating the list
+  for(cur=waitq.begin(); cur!=waitq.end();) {
+    prv = cur ++;
+
+    tid = *prv;
+    assert(tid >=0 && tid < Scheduler::nthread);
+    if(tid == idleTid) {
+      waits[tid].reset();
+      waitq.erase(prv);
+      runq.push_back(tid);
+      break;
+    }
+  }
+  assert(tid == idleTid);
+  pthread_mutex_lock(&idle_mutex);
+  pthread_cond_signal(&idle_cond);
+  pthread_mutex_unlock(&idle_mutex);
+}
+
+void RRScheduler::idleThreadCondWait() {
+  int tid = self();
+  assert(tid>=0 && tid < Scheduler::nthread);
+  waits[tid].chan = (void *)&idle_cond;
+  waits[tid].timeout = FOREVER;
+  waitq.push_back(tid);
+  assert(tid == runq.front());
+  next();
+  pthread_cond_wait(&idle_cond, &idle_mutex);
 }
 
 //@before without turn
@@ -655,7 +728,7 @@ void RRScheduler::getTurn()
   int tid = self();
   assert(tid>=0 && tid < Scheduler::nthread);
   timemark[tid] = -1;  //  back to system space
-  sem_wait(&waits[tid].sem);
+  waits[tid].wait();
   dprintf("RRScheduler: %d gets turn\n", self());
   SELFCHECK;
 }
@@ -667,7 +740,7 @@ int RRScheduler::block()
   assert(tid>=0 && tid < Scheduler::nthread);
   assert(tid == runq.front());
   dprintf("RRScheduler: %d blocks\n", self());
-  int ret = getTurnCount();
+  int ret = incTurnCount();
   next();
   return ret;
 }
@@ -738,6 +811,7 @@ void RRScheduler::putTurn(bool at_thread_end)
 //@after with turn
 int RRScheduler::wait(void *chan, unsigned nturn)
 {
+  incTurnCount();
   int tid = self();
   assert(tid>=0 && tid < Scheduler::nthread);
   assert(tid == runq.front());
@@ -790,16 +864,16 @@ extern ClockManager clockManager;
 //@after with turn
 unsigned RRScheduler::incTurnCount(void)
 {
-  unsigned ret = turnCount++;
+  unsigned ret = Serializer::incTurnCount();
   fireTimeouts();
   check_wakeup();
   clockManager.tick();
-  return idle_done ? (1 << 30) : ret;
+  return ret;
 }
 
 unsigned RRScheduler::getTurnCount(void)
 {
-  return idle_done ? (1 << 30) : turnCount - 1;
+  return Serializer::getTurnCount();
 }
 
 void RRScheduler::childForkReturn() {
@@ -809,6 +883,8 @@ void RRScheduler::childForkReturn() {
 }
 
 
+RRScheduler::~RRScheduler() {}
+
 RRScheduler::RRScheduler()
 {
   for(unsigned i=0; i<MaxThreads; ++i)
@@ -817,11 +893,12 @@ RRScheduler::RRScheduler()
   // main thread
   assert(self() == MainThreadTid && "tid hasn't been initialized!");
   runq.push_back(self());
-  sem_post(&waits[MainThreadTid].sem);
+  waits[MainThreadTid].post();
 
   wakeup_queue.clear();
   wakeup_flag = 0;
   pthread_mutex_init(&wakeup_mutex, NULL);
+  pthread_mutex_init(&turn_mutex, NULL);
 
   if (options::RR_skip_zombie)
   {
@@ -892,3 +969,91 @@ ostream& RRScheduler::dump(ostream& o)
   o << "]\n";
   return o;
 }
+
+void FCFSScheduler::getTurn() {  
+  pthread_mutex_lock(&fcfs_lock);
+  //  fake
+  runq.push_front(self());
+}
+
+void FCFSScheduler::putTurn(bool at_thread_end) {  
+  int tid = self();
+  assert(runq.size() && runq.front() == tid);
+
+  if(at_thread_end) 
+  {
+    signal((void*)pthread_self());
+    Parent::zombify(pthread_self());
+  }
+
+  next(at_thread_end);
+}
+
+FCFSScheduler::FCFSScheduler()
+  : RRScheduler()
+{  
+  pthread_mutex_init(&fcfs_lock, NULL);
+
+  assert(self() == MainThreadTid && "tid hasn't been initialized!");
+  sem_init(&waits[MainThreadTid].sem, 0, 0);  //  clear it
+}
+
+FCFSScheduler::~FCFSScheduler() {  
+  pthread_mutex_destroy(&fcfs_lock);
+}
+
+void FCFSScheduler::next(bool at_thread_end)
+{
+  int tid = self();
+  assert(runq.size() && runq.front() == tid);
+  runq.pop_front();
+  pthread_mutex_unlock(&fcfs_lock);
+}
+
+void FCFSScheduler::signal(void *chan, bool all)
+{
+  list<int>::iterator prv, cur;
+
+  assert(chan && "can't signal/broadcast NULL");
+  assert(self() == runq.front());
+  dprintf("RRScheduler: %d: %s %p\n",
+          self(), (all?"broadcast":"signal"), chan);
+
+  // use delete-safe way of iterating the list in case @all is true
+  for(cur=waitq.begin(); cur!=waitq.end();) {
+    prv = cur ++;
+
+    int tid = *prv;
+    assert(tid >=0 && tid < Scheduler::nthread);
+    if(waits[tid].chan == chan) {
+      dprintf("RRScheduler: %d signals %d(%p)\n", self(), tid, chan);
+      waits[tid].reset();
+      waitq.erase(prv);
+      //runq.push_back(tid);
+
+      sem_post(&waits[tid].sem); //  added for FCFSScheduler
+      if(!all)
+        break;
+    }
+  }
+  SELFCHECK;
+}
+
+int FCFSScheduler::wait(void *chan, unsigned nturn)
+{
+  incTurnCount();
+  int tid = self();
+  assert(tid>=0 && tid < Scheduler::nthread);
+  assert(tid == runq.front());
+  waits[tid].chan = chan;
+  waits[tid].timeout = nturn;
+  waitq.push_back(tid);
+
+  next();
+
+  sem_wait(&waits[tid].sem); // added from RRScheduler's wait()
+
+  getTurn();
+  return waits[tid].status;
+}
+

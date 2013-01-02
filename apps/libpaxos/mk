@@ -1,0 +1,22 @@
+#!/bin/bash
+
+if [ "$APPS_DIR" = "" ]; then
+	echo '$APPS_DIR not defined, do `export APPS_DIR=`'
+	exit 1
+fi
+
+VER=104
+
+cp Makefile.inc ringpaxos-src-rev$VER/
+cd ringpaxos-src-rev$VER
+echo -e "\033[22;31mchange directory to $PWD\033[0m"
+
+
+# compile
+echo -e "\033[22;31mCompiling\033[0m"
+make
+
+cp ring-paxos/acceptor ../
+cp ring-paxos/client_learner ../
+cp ring-paxos/client_proposer ../
+cp ring-paxos/client_proposer_learner ../

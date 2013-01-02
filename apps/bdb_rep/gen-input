@@ -36,3 +36,4 @@ sleep 2
 echo # print quotes
 sleep 2
 echo # print quotes
+echo "quit"

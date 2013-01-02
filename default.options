@@ -15,7 +15,9 @@ schedule_network  = 1
 # the runtime scheduler algorithm, options are:
 # 1.  FCFS    first come first serve
 # 2.  RR      round-robin
+# 3.  Replay  replay
 runtime_type = RR
+replay_log_dir = replay
 
 # seed for seeded round-robin scheduler
 scheduler_seed = 0x12345 
@@ -65,6 +67,9 @@ pthread_tryjoin = 1
 # whether to turn on epoch approach, only supported for RR scheduler.
 epoch_mode = 0
 
+# if we should try to sync the global clock and logic clock
+sync_global_clock = 1
+
 # set epoch length, measured in microsecond = 1e-6 second
 epoch_length = 100
 
@@ -77,3 +82,25 @@ blocked_timeout_delay = 10000
 
 # adjust timeout to make virtual clock and real clock consistent
 adjust_timeout_for_vc = 1
+
+# determine whether or not put process ID in the logfilename
+pid_in_logfilename = 1
+
+# for replayer: whether read log from tid-* or from serializer.log, options are:
+# 1. recorder
+# 2. serializer
+replay_log_type = serializer
+
+# if set all sockets as non-block and enforce maximum recv buffer.
+non_block_recv = 0
+
+# if we should launch a monitor
+launch_monitor = 0
+
+# if turned on, sync operations will be logged.
+log_sync = 1
+
+# the algorithm to enforce turn, options are:
+# 1.  semaphore      semaphore.
+# 2.  hybrid              busy wait flag + cond wait.
+enforce_turn_type = semaphore

@@ -9,7 +9,12 @@
 #include <tr1/unordered_map>
 #include <tr1/unordered_set>
 
+extern "C" {
+extern int idle_done;
+}
+
 namespace tern {
+
 
 /// assign an internal tern tid to each pthread tid; also maintains the
 /// reverse map from pthread tid to tern tid.  This class itself doesn't
@@ -104,7 +109,6 @@ protected:
   int nthread;
 };
 
-
 /// @Serializer defines the interface for a serializer that ensures that
 /// all synchronizations are serialized.  A serializer doesn't attempt to
 /// schedule them.  The nondeterministic recorder runtime and the replay
@@ -122,24 +126,39 @@ struct Serializer: public TidMap {
   /// until @timeout
   ///
   /// @return 0 if wait() is signaled or ETIMEOUT if wait() times out
-  int wait(void *chan, unsigned timeout=FOREVER) { return 0; }
+  virtual int wait(void *chan, unsigned timeout=FOREVER) { 
+    incTurnCount();
+    putTurn();
+    getTurn();
+    return 0; 
+  }
+
+  /// wake up one thread (@all = false) or all threads (@all = true)
+  /// waiting on @chan; must call with turn held.  @chan has the same
+  /// requirement as wait()
+  virtual void signal(void *chan, bool all = false) { }
 
   /// get the turn so that other threads trying to get the turn must wait
-  void getTurn() { }
+  virtual void getTurn() { }
 
   /// give up the turn so that other threads can get the turn.  this
   /// method should also increment turnCount
-  void putTurn(bool at_thread_end=false) { }
+  virtual void putTurn(bool at_thread_end=false) { }
 
   /// inform the serializer that a thread is calling an external blocking
   /// function.
   ///
   /// NOTICE: different delay before @block() should not lead to different
   /// schedule.
-  int block() { return getTurnCount(); }
+  virtual int block() { 
+    getTurn();
+    int ret = incTurnCount(); 
+    putTurn();
+    return ret;
+  }
 
   /// inform the scheduler that a blocking thread has returned.
-  void wakeup() {}
+  virtual void wakeup() {}
 
   /// inform the serializer that thread @new_th is just created; must call
   /// with turn held
@@ -161,11 +180,14 @@ struct Serializer: public TidMap {
   /// each successful getTurn() because a successful getTurn() may not
   /// lead to a real success of a synchronization operation (e.g., see
   /// pthread_mutex_lock() implementation)
-  unsigned incTurnCount(void) { return turnCount++; }
-  unsigned getTurnCount(void) { return turnCount;   }
+  static const int INF = 0x7fffff00;
+  virtual unsigned incTurnCount(void);
+  virtual unsigned getTurnCount(void);
 
-  Serializer(): TidMap(pthread_self()), turnCount(0) {}
+  Serializer();
+  ~Serializer();
 
+  FILE *logger;
   unsigned turnCount; // number of turns so far
 };
 

@@ -129,4 +129,5 @@ DEFTERNUSER(tern_task_begin)
 DEFTERNUSER(tern_task_end)
 DEFTERNAUTO(tern_fix_up)
 DEFTERNAUTO(tern_fix_down)
+DEFTERNAUTO(tern_idle)
 
