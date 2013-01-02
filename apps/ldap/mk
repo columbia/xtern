@@ -1,0 +1,19 @@
+#!/bin/bash
+
+VER=2.4.33
+APP_DIR=$XTERN_ROOT/apps/ldap/
+cd $APP_DIR
+rm -rf install openldap-$VER
+tar zxvf $APPS_DIR/sys/openldap-$VER.tgz
+
+# Build.
+cd openldap-$VER
+mkdir obj
+cd obj
+CFLAGS="-g -O2" CXXFLAGS="-g -O2" ../configure --prefix=$XTERN_ROOT/apps/ldap/install
+make -j4
+make install
+cd $APP_DIR
+cp $APP_DIR/install/etc/openldap/slapd.conf $APP_DIR/install/etc/openldap/slapd.conf.bak
+cp slapd.conf.template $APP_DIR/install/etc/openldap/slapd.conf
+
