@@ -10,7 +10,7 @@
 DMT = 1
 
 # determine network operations (including blocking functions) are hooked or not. 
-schedule_network  = 0
+schedule_network  = 1
 
 # the runtime scheduler algorithm, options are:
 # 1.  FCFS    first come first serve
@@ -37,7 +37,7 @@ RR_skip_zombie = 0
 RR_skip_threshold = 100
 
 # if turned on, dynamic library will obtain eip
-dync_geteip = 0
+dync_geteip = 1
 
 # if turned on, dynamic library will use signature of the whole stack instead of eip, DEPTH_LIMIT=20
 whole_stack_eip_signature = 0
@@ -59,7 +59,7 @@ schedule_write = 0
 RR_ignore_rw_regular_file = 1
 
 # determine whether we start an idle thread to avoid empty runq 
-launch_idle_thread = 0
+launch_idle_thread = 1
 
 # whether or not to use pthread_tryjoin_np to join a thread
 pthread_tryjoin = 1
@@ -98,7 +98,7 @@ non_block_recv = 0
 launch_monitor = 0
 
 # if turned on, sync operations will be logged.
-log_sync = 0
+log_sync = 1
 
 # the algorithm to enforce turn, options are:
 # 1.  semaphore      semaphore.
