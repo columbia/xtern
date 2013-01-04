@@ -104,6 +104,7 @@ time  -p $SLAPDMTREAD -H $URI1 -D "$MANAGERDN" -w $PASSWD \
 	-c $CONN -m $THR -L $OUTER -l $INNER
 	# >> $MTREADOUT 2>&1
 RC=$?
+mv out out-${BACKEND}
 if test $RC != 0 ; then
 	echo "slapd-mtread failed ($RC)!"
 	test $KILLSERVERS != no && kill -HUP $KILLPIDS

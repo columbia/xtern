@@ -1,20 +1,6 @@
-diff -ruN openldap-2.4.33/tests/Makefile.in openldap-2.4.33-modified/tests/Makefile.in
---- openldap-2.4.33/tests/Makefile.in	2012-10-10 08:18:49.000000000 -0400
-+++ openldap-2.4.33-modified/tests/Makefile.in	2013-01-04 16:00:25.498141886 -0500
-@@ -17,8 +17,8 @@
- SUBDIRS= progs
- 
- BUILD_BDB=@BUILD_BDB@
--BUILD_HDB=@BUILD_HDB@
--BUILD_MDB=@BUILD_MDB@
-+#BUILD_HDB=@BUILD_HDB@
-+#BUILD_MDB=@BUILD_MDB@
- BUILD_SQL=@BUILD_SQL@
- 
- # test primary backends (default)
 diff -ruN openldap-2.4.33/tests/scripts/all openldap-2.4.33-modified/tests/scripts/all
 --- openldap-2.4.33/tests/scripts/all	2012-10-10 08:18:49.000000000 -0400
-+++ openldap-2.4.33-modified/tests/scripts/all	2013-01-04 16:00:05.250142610 -0500
++++ openldap-2.4.33-modified/tests/scripts/all	2013-01-04 17:24:47.189960775 -0500
 @@ -31,7 +31,7 @@
  	echo "Result	Test" > $TESTWD/results
  fi
