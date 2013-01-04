@@ -13,10 +13,16 @@ cd obj
 CFLAGS="-g -O0" CXXFLAGS="-g -O0" ../configure --prefix=$XTERN_ROOT/apps/ldap/install
 make -j4
 make install
-cd $APP_DIR
 
 # We use this one because it has debug symbols.
-ln -s $APP_DIR/openldap-$VER/obj/servers/slapd/slapd $APP_DIR//install/libexec/slapd.x86
+cd $APP_DIR
+ln -s $APP_DIR/xtern-test-mt-hot $APP_DIR/openldap-$VER/tests/scripts/xtern-test-mt-hot
+ln -s $APP_DIR/openldap-$VER/obj/servers/slapd/slapd $APP_DIR/install/libexec/slapd.x86
 cp $APP_DIR/install/etc/openldap/slapd.conf $APP_DIR/install/etc/openldap/slapd.conf.bak
 cp slapd.conf.template $APP_DIR/install/etc/openldap/slapd.conf
+
+# Add benchmark.
+cd openldap-$VER
+patch -p1 < ../only-xtern-test-mt-hot.patch
+cd $APP_DIR
 
