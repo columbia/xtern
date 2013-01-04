@@ -94,7 +94,7 @@ echo "======================================================"
 CONN=5
 THR=50
 OUTER=5
-INNER=`expr $TESTLOOPS \* 20`
+INNER=`expr $TESTLOOPS \* 1`
 echo "Testing basic mt-hot search: $THR threads $CONN conns ($OUTER x $INNER) loops..."
 echo $SLAPDMTREAD -H $URI1 -D "$MANAGERDN" -w $PASSWD \
 	-e "$MONITORDN" \
@@ -109,6 +109,8 @@ if test $RC != 0 ; then
 	test $KILLSERVERS != no && kill -HUP $KILLPIDS
 	exit $RC
 fi
+
+return;
 
 # Perform a multi-threaded random DB search using multiple connections
 echo "======================================================"
