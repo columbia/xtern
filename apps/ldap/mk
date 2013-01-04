@@ -17,6 +17,7 @@ make install
 # We use this one because it has debug symbols.
 cd $APP_DIR
 ln -s $APP_DIR/xtern-test-mt-hot $APP_DIR/openldap-$VER/tests/scripts/xtern-test-mt-hot
+ln -s $APP_DIR/local.options $APP_DIR/openldap-$VER/obj/tests/local.options
 ln -s $APP_DIR/openldap-$VER/obj/servers/slapd/slapd $APP_DIR/install/libexec/slapd.x86
 cp $APP_DIR/install/etc/openldap/slapd.conf $APP_DIR/install/etc/openldap/slapd.conf.bak
 cp slapd.conf.template $APP_DIR/install/etc/openldap/slapd.conf

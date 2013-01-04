@@ -36,7 +36,7 @@ mkdir -p $TESTDIR $DBDIR1
 
 echo "Running slapadd to build slapd database..."
 . $CONFFILTER $BACKEND $MONITORDB < $MCONF > $ADDCONF
-$SLAPADD -f $ADDCONF -l $LDIFORDERED
+time -p $SLAPADD -f $ADDCONF -l $LDIFORDERED
 RC=$?
 if test $RC != 0 ; then
 	echo "slapadd failed ($RC)!"
@@ -46,7 +46,7 @@ fi
 echo "Running slapindex to index slapd database..."
 echo "======================================================"
 . $CONFFILTER $BACKEND $MONITORDB < $CONF > $CONF1
-$SLAPINDEX -f $CONF1
+time -p $SLAPINDEX -f $CONF1
 RC=$?
 if test $RC != 0 ; then
 	echo "warning: slapindex failed ($RC)"
@@ -54,8 +54,10 @@ if test $RC != 0 ; then
 fi
 
 echo "Starting slapd on TCP/IP port $PORT1..."
-echo $SLAPD -f $CONF1 -h $URI1 -d $LVL $TIMING
-$SLAPD -f $CONF1 -h $URI1 -d $LVL $TIMING > $LOG1 2>&1 &
+rm -rf out
+echo $PRELOAD_LIB
+echo LD_PRELOAD=$PRELOAD_LIB $SLAPD -f $CONF1 -h $URI1 -d $LVL $TIMING
+LD_PRELOAD=$PRELOAD_LIB $SLAPD -f $CONF1 -h $URI1 -d $LVL $TIMING > $LOG1 2>&1 &
 PID=$!
 if test $WAIT != 0 ; then
     echo PID $PID
@@ -69,7 +71,7 @@ sleep 1
 echo "======================================================"
 echo "Testing basic monitor search..."
 for i in 0 1 2 3 4 5; do
-	$LDAPSEARCH -s base -b "$MONITORDN" -H $URI1 \
+	time -p $LDAPSEARCH -s base -b "$MONITORDN" -H $URI1 \
 		'(objectclass=*)' > /dev/null 2>&1
 	RC=$?
 	if test $RC = 0 ; then
@@ -97,9 +99,10 @@ echo "Testing basic mt-hot search: $THR threads $CONN conns ($OUTER x $INNER) lo
 echo $SLAPDMTREAD -H $URI1 -D "$MANAGERDN" -w $PASSWD \
 	-e "$MONITORDN" \
 	-c $CONN -m $THR -L $OUTER -l $INNER
-$SLAPDMTREAD -H $URI1 -D "$MANAGERDN" -w $PASSWD \
+time  -p $SLAPDMTREAD -H $URI1 -D "$MANAGERDN" -w $PASSWD \
 	-e "$MONITORDN" -f "(objectclass=*)" \
-	-c $CONN -m $THR -L $OUTER -l $INNER >> $MTREADOUT 2>&1
+	-c $CONN -m $THR -L $OUTER -l $INNER
+	# >> $MTREADOUT 2>&1
 RC=$?
 if test $RC != 0 ; then
 	echo "slapd-mtread failed ($RC)!"
@@ -117,7 +120,7 @@ echo "Testing random mt-hot search: $THR threads $CONN conns ($OUTER x $INNER) l
 echo $SLAPDMTREAD -H $URI1 -D "$MANAGERDN" -w $PASSWD \
 	-e "$BASEDN" -f "(objectclass=*)" \
 	-c $CONN -m $THR -L $OUTER -l $INNER
-$SLAPDMTREAD -H $URI1 -D "$MANAGERDN" -w $PASSWD \
+time -p $SLAPDMTREAD -H $URI1 -D "$MANAGERDN" -w $PASSWD \
 	-e "$BASEDN" -f "(objectclass=*)" \
 	-c $CONN -m $THR -L $OUTER -l $INNER >> $MTREADOUT 2>&1
 RC=$?
@@ -138,7 +141,7 @@ fi
 #echo $SLAPDMTREAD -H $URI1 -D "$MANAGERDN" -w $PASSWD \
 #	-e "$BASEDN" -f "(&(!(cn=rwtest*))(objectclass=*))" \
 #	-c $CONN -m $THR -M $WTHR -L $OUTER -l $INNER
-#$SLAPDMTREAD -H $URI1 -D "$MANAGERDN" -w $PASSWD \
+#time -p $SLAPDMTREAD -H $URI1 -D "$MANAGERDN" -w $PASSWD \
 #	-e "$BASEDN" -f "(&(!(cn=rwtest*))(objectclass=*))" \
 #	-c $CONN -m $THR -M $WTHR -L $OUTER -l $INNER >> $MTREADOUT 2>&1
 #RC=$?
