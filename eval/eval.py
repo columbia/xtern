@@ -8,6 +8,7 @@ import errno
 import logging
 import coloroutput
 import re
+import subprocess
 
 def getXternDefaultOptions():
     default = {}
@@ -46,7 +47,7 @@ def getConfigFullPath(config_file):
 
 def readConfigFile(config_file):
     try:
-        newConfig = ConfigParser.ConfigParser( {"REPEATS":100,
+        newConfig = ConfigParser.ConfigParser( {"REPEATS": "100",
                                        "INPUTS": ""} )
         ret = newConfig.read(config_file)
     except ConfigParser.MissingSectionHeaderError as e:
@@ -83,7 +84,7 @@ def mkdir_p(path):
         os.makedirs(path)
     except OSError as exc: # for newer python version; can specify flags
         if exc.errno == errno.EEXIST and os.path.isdir(path):
-            logging.warning("%s already exists")
+            logging.warning("%s already exists" % path)
             pass
         else: raise
 
@@ -130,10 +131,22 @@ def processBench(config, bench):
     
     mkdir_p(dir_name)
     os.chdir(dir_name)
+
     # generate local options
-
-
     generate_local_options(config, bench)
+    inputs = config.get(bench, 'inputs')
+    repeats = config.get(bench, 'repeats')
+    
+    xtern_env = os.environ.copy()
+    xtern_env['LD_PRELOAD'] = "%s/dync_hook/interpose.so" % XTERN_ROOT
+
+    for i in range(int(repeats)):
+        proc = subprocess.Popen(['time', '-p', exec_file] + inputs.split(), stdout=subprocess.PIPE, stderr=subprocess.STDOUT, env=xtern_env)
+        proc.wait()
+        os.system('mv out out.%d' % i)
+        with open('output.%d' % i, 'w') as log_file:
+            log_file.write(proc.stdout.read())
+
     os.chdir("..")
 
 if __name__ == "__main__":
