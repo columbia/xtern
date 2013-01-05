@@ -91,9 +91,9 @@ cat /dev/null > $MTREADOUT
 
 # Perform a basic multi-threaded search using multiple connections
 echo "======================================================"
-CONN=5
-THR=50
-OUTER=5
+CONN=2
+THR=2
+OUTER=100
 INNER=`expr $TESTLOOPS \* 1`
 echo "Testing basic mt-hot search: $THR threads $CONN conns ($OUTER x $INNER) loops..."
 echo $SLAPDMTREAD -H $URI1 -D "$MANAGERDN" -w $PASSWD \
