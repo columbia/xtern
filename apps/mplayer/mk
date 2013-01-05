@@ -8,7 +8,7 @@ fi
 VER=1.1
 cd $XTERN_ROOT/apps/mplayer
 rm -rf MPlayer-$VER install mencoder
-tar zxvf $APPS_DIR/sys/MPlayer-$VER.tar.gz
+tar zxf $APPS_DIR/sys/MPlayer-$VER.tar.gz
 
 # Dep-lib.
 #sudo apt-get install libmp3lame-dev
