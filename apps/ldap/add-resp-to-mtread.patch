@@ -24,8 +24,8 @@ diff -ruN openldap-2.4.33/tests/progs/slapd-mtread.c openldap-2.4.33-modified/te
  	for ( i = 0; i < threads; i++ ) {
 -		snprintf(outstr, BUFSIZ, "RO thread %d pass=%d fail=%d", i,
 -			rt_pass[i], rt_fail[i]);
-+		snprintf(outstr, BUFSIZ, "RO thread %d pass=%d fail=%d resp = %f", i,
-+			rt_pass[i], rt_fail[i], resp_pass[i]);
++		snprintf(outstr, BUFSIZ, "RO thread %d pass=%d fail=%d resp = %f ms", i,
++			rt_pass[i], rt_fail[i], resp_pass[i]*1000.0);
  		tester_error(outstr);
  		if (rt_fail[i] != 0 || rt_pass[i] != ptpass) {
  			snprintf(outstr, BUFSIZ, "FAIL RO thread %d", i);
@@ -35,8 +35,8 @@ diff -ruN openldap-2.4.33/tests/progs/slapd-mtread.c openldap-2.4.33-modified/te
  	for ( i = 0; i < rwthreads; i++ ) {
 -		snprintf(outstr, BUFSIZ, "RW thread %d pass=%d fail=%d", i + MAX_THREAD,
 -			rwt_pass[i], rwt_fail[i]);
-+		snprintf(outstr, BUFSIZ, "RW thread %d pass=%d fail=%d resp = %f", i + MAX_THREAD,
-+			rwt_pass[i], rwt_fail[i], resp_pass[i]);
++		snprintf(outstr, BUFSIZ, "RW thread %d pass=%d fail=%d resp = %f ms", i + MAX_THREAD,
++			rwt_pass[i], rwt_fail[i], resp_pass[i]*1000.0);
  		tester_error(outstr);
  		if (rwt_fail[i] != 0 || rwt_pass[i] != ptpass) {
  			snprintf(outstr, BUFSIZ, "FAIL RW thread %d", i);
@@ -47,7 +47,7 @@ diff -ruN openldap-2.4.33/tests/progs/slapd-mtread.c openldap-2.4.33-modified/te
 +			struct timeval tstart, tend;
 +			gettimeofday(&tstart, NULL);
  			ret = ldap_add_ext_s(ld, dn, &attrp[0], NULL, NULL);
-+			gettimefoday(&tend, NULL);
++			gettimeofday(&tend, NULL);
  			if (ret == LDAP_SUCCESS) {
  				adds++;
  				ret = ldap_delete_ext_s(ld, dn, NULL, NULL);
