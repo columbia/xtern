@@ -69,7 +69,7 @@ def getGitInfo():
                                    git_diff+
                                    '); then echo "dirty"; fi')
     commit_date = commands.getoutput( git_show+
-            '| head -3 | grep "Date:" | sed -e "s/Date:[ \t]*//"' )
+            '| head -4 | grep "Date:" | sed -e "s/Date:[ \t]*//"' )
     date_tz  = re.compile(r'^.* ([+-]\d\d\d\d)$').match(commit_date).group(1)
     date_fmt = ('%%a %%b %%d %%H:%%M:%%S %%Y %s') % date_tz
     import datetime
