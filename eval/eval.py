@@ -67,7 +67,7 @@ def getGitInfo():
     git_diff = 'cd '+XTERN_ROOT+' && git diff --quiet'
     gitstatus = commands.getoutput('if ! ('+
                                    git_diff+
-                                   '); then echo "dirty"; fi')
+                                   '); then echo "_dirty"; fi')
     commit_date = commands.getoutput( git_show+
             '| head -4 | grep "Date:" | sed -e "s/Date:[ \t]*//"' )
     date_tz  = re.compile(r'^.* ([+-]\d\d\d\d)$').match(commit_date).group(1)
@@ -92,7 +92,7 @@ def genRunDir(config_file, git_info):
     from os.path import basename
     config_name = os.path.splitext( basename(config_file) )[0]
     from time import strftime
-    dir_name = config_name + strftime("%Y%b%d_%H%M%S") + '_' + git_info[0] + '_' + git_info[1]
+    dir_name = config_name + strftime("%Y%b%d_%H%M%S") + '_' + git_info[0] + git_info[1]
     mkdir_p(dir_name)
     logging.debug("creating %s" % dir_name)
     return os.path.abspath(dir_name)
@@ -146,6 +146,15 @@ def processBench(config, bench):
         os.system('mv out out.%d' % i)
         with open('output.%d' % i, 'w') as log_file:
             log_file.write(proc.stdout.read())
+
+    # FIXME: performance issue
+    cost = []
+    for i in range(int(repeats)):
+        for line in open('output.%d' % i, 'r'):
+            if re.search('^real ', line):
+                cost += [float(line.split()[1])]
+    logging.info('Average Cost: %f' % (sum(cost)/float(repeats)))
+
 
     os.chdir("..")
 
