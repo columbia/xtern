@@ -5,6 +5,7 @@ Installing xtern
 in your ~/.bashrc. Run "echo $XTERN_ROOT" to make sure it is correct.
 
 1. Go to directory $XTERN_ROOT, and run:
+> cd $XTERN_ROOT
 > ./llvm/build-llvm.sh --optimized
 You may need to install bison and flex on your machine because llvm needs them.
 The "--optimized" flag above is optional, if you are getting performance results,
