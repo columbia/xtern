@@ -1,0 +1,50 @@
+#!/bin/sh -e
+
+VER="2.7" # only works with llvm 2.7 for now
+GCCVER="4.2-$VER"
+MACHINE=`uname -m`
+ROOT=$PWD
+
+debug=1
+for arg in "$@"; do
+    if test "$arg" = "--optimized"; then
+        debug=0
+    fi
+done
+
+if test "$debug" = "1"; then
+    llvm_debug="ENABLE_OPTIMIZED=0"
+    gcc_debug="--enable-checking"
+else
+    llvm_debug="ENABLE_OPTIMIZED=1"
+    gcc_debug="--disable-checking"
+fi
+
+if [ ! -e llvm-$VER.tgz ]
+then
+    echo "Can't find llvm source (llvm-$VER.tgz). Please download from llvm.org."
+    exit 0
+fi
+if [ ! -e llvm-gcc$GCCVER-$MACHINE-linux.tar.bz2 ]
+then
+    echo "Can't find llvm gcc binary (llvm-gcc$GCCVER-$MACHINE-linux.tar.bz2)."\
+         "Please download from llvm.org."
+    exit 0
+fi
+
+# install gcc
+mkdir -p install
+tar xjvf llvm-gcc$GCCVER-$MACHINE-linux.tar.bz2
+(cd llvm-gcc$GCCVER-$MACHINE-linux; tar cf - .) |(cd install; tar xvf -)
+
+# install llvm
+tar xzvf llvm-$VER.tgz
+mkdir -p llvm-obj
+cd llvm-obj
+../llvm-$VER/configure --prefix="$ROOT/install"
+make $llvm_debug
+make $llvm_debug install
+cd ..
+
+echo "Please set environment variable LLVM_ROOT to '$ROOT'"
+echo "and add '$ROOT/install/bin' and '$ROOT/scripts' to your PATH."

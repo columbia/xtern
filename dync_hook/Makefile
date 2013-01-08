@@ -12,7 +12,7 @@ PREFIX=LD_PRELOAD=$(XTERN_ROOT)/dync_hook/interpose.so
 usermonitor: usermonitor.cpp
 	g++ usermonitor.cpp -o usermonitor
 
-xternruntime: 
+xternruntime:
 	cd $(XTERN_ROOT)/obj && make ENABLE_OPTIMIZED=$(ENABLE_OPTIMIZED) install
 
 interpose.so: template.cpp spec_hooks.cpp hook.cpp
