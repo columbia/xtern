@@ -35,7 +35,7 @@ Run "echo $LD_LIBRARY_PATH" to make sure it is correct.
 
 7. Test, if it all passes, then everything has been installed correctly.
 > cd $XTERN_ROOT/obj
-> make ENABLE_OPTIMIZED=0/1 test check
+> make ENABLE_OPTIMIZED=0/1 -C test check
 
 
 
