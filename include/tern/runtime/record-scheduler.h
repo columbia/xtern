@@ -121,7 +121,7 @@ protected:
   /// return the next timeout turn number
   unsigned nextTimeout();
   /// pop the @runq and wakes up the thread at the front of @runq
-  virtual void next(bool at_thread_end=false);
+  virtual void next(bool at_thread_end=false, bool hasPoppedFront = false);
   /// child classes can override this method to reorder threads in @runq
   virtual void reorderRunq(void) {}
 

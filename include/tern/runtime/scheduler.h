@@ -8,6 +8,7 @@
 #include <list>
 #include <tr1/unordered_map>
 #include <tr1/unordered_set>
+#include "run-queue.h"
 
 extern "C" {
 extern int idle_done;
@@ -219,17 +220,21 @@ struct Scheduler: public Serializer {
   void create(pthread_t new_th) {
     assert(self() == runq.front());
     TidMap::create(new_th);
-    runq.push_back(getTid(new_th));
+    int tid = getTid(new_th);
+    runq.createThreadElem(tid);
+    runq.push_back(tid);
   }
 
   void childForkReturn() {
     TidMap::reset(pthread_self());
     waitq.clear();
     runq.clear();
+    runq.createThreadElem(MainThreadTid);
     runq.push_back(MainThreadTid);
   }
 
-  std::list<int>  runq;
+  //std::list<int>  runq;
+  run_queue runq;
   std::list<int>  waitq;
 };
 

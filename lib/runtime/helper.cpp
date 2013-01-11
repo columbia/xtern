@@ -106,9 +106,7 @@ void __tern_prog_begin(void) {
   options::read_options("local.options");
   options::read_env_options();
   options::print_options("dump.options");
-
   tern::InstallRuntime();
-
   // FIXME: the version of uclibc in klee doesn't seem to pick up the
   // functions registered with atexit()
   atexit(__tern_prog_end);

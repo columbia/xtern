@@ -17,6 +17,9 @@
 using namespace std;
 using namespace tern;
 
+//#undef run_queue
+//#define run_queue list<int>
+
 //#define _DEBUG_RECORDER
 
 #ifdef _DEBUG_RECORDER
@@ -168,7 +171,7 @@ void SeededRRScheduler::reorderRunq(void)
   assert(i >=0 && i < (int)runq.size() && "rand.rand() off bound");
   dprintf("SeededRRScheduler: reorder runq so %d is the front (size %d)\n",
           i, (int)runq.size());
-  list<int>::iterator it = runq.begin();
+  run_queue::iterator it = runq.begin();
   while(i--) ++it;
   assert(it != runq.end());
   int tid = *it;
@@ -276,7 +279,7 @@ void RRScheduler::check_wakeup()
     pthread_mutex_lock(&wakeup_mutex);
     dprintf("check_wakeup works at turn %d\n", turnCount);
     dprintf("current runq = ");
-    for (list<int>::iterator it = runq.begin(); it != runq.end(); ++it)
+    for (run_queue::iterator it = runq.begin(); it != runq.end(); ++it)
     {
       dprintf("%d ", *it);
     }
@@ -298,10 +301,11 @@ void RRScheduler::check_wakeup()
 
 //@before with turn
 //@after with turn
-void RRScheduler::next(bool at_thread_end)
+void RRScheduler::next(bool at_thread_end, bool hasPoppedFront)
 {
   int next_tid;
-  runq.pop_front(); // remove self from runq
+  if (!hasPoppedFront)
+    runq.pop_front(); // remove self from runq
 
   check_wakeup();
 
@@ -430,6 +434,7 @@ void RRScheduler::putTurn(bool at_thread_end)
   int tid = self();
   assert(tid>=0 && tid < Scheduler::nthread);
   assert(tid == runq.front());
+  bool hasPoppedFront = false;
 
   timemark[tid] = timer;  //  return to user space at "timer"
 
@@ -438,11 +443,13 @@ void RRScheduler::putTurn(bool at_thread_end)
     Parent::zombify(pthread_self());
     dprintf("RRScheduler: %d ends\n", self());
   } else {
+    runq.pop_front();
+    hasPoppedFront = true;
     runq.push_back(tid);
     dprintf("RRScheduler: %d puts turn\n", self());
   }
 
-  next(at_thread_end);
+  next(at_thread_end, hasPoppedFront);
 }
 
 //@before with turn
@@ -530,6 +537,7 @@ RRScheduler::RRScheduler()
 
   // main thread
   assert(self() == MainThreadTid && "tid hasn't been initialized!");
+  runq.createThreadElem(MainThreadTid);
   runq.push_back(self());
   waits[MainThreadTid].post();
 
@@ -549,10 +557,11 @@ RRScheduler::RRScheduler()
 
 void RRScheduler::selfcheck(void)
 {
+  fprintf(stderr, "RRScheduler::selfcheck tid %d\n", self());
   tr1::unordered_set<int> tids;
 
   // no duplicate tids on runq
-  for(list<int>::iterator th=runq.begin(); th!=runq.end(); ++th) {
+  for(run_queue::iterator th=runq.begin(); th!=runq.end(); ++th) {
     if(*th < 0 || *th > Scheduler::nthread) {
       dump(cerr);
       assert(0 && "invalid tid on runq!");
@@ -580,7 +589,7 @@ void RRScheduler::selfcheck(void)
   // TODO: check that tids have all tids
 
   // threads on runq have NULL chan or non-forever timeout
-  for(list<int>::iterator th=runq.begin(); th!=runq.end(); ++th)
+  for(run_queue::iterator th=runq.begin(); th!=runq.end(); ++th)
     if(waits[*th].chan != NULL || waits[*th].timeout != FOREVER) {
       dump(cerr);
       assert(0 && "thread on runq but has non-NULL chan "\

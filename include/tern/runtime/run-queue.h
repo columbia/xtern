@@ -1,10 +1,15 @@
+#ifndef __TERN_COMMON_RUNTIME_QUEUE_H
+#define __TERN_COMMON_RUNTIME_QUEUE_H
+
 #include <iterator>
 #include <pthread.h>
 #include <assert.h>
 #include <stdio.h>
+#include <string.h>
 
-#define MAX_THREAD_NUM 1000
+#define MAX_THREAD_NUM 1111
 
+namespace tern {
 class run_queue {
   struct runq_elem {
     pthread_spinlock_t spin_lock;
@@ -49,6 +54,10 @@ public:
       return m_rep->tid;
     }
 
+    inline struct runq_elem *operator&() const {
+      return m_rep;
+    }
+
     // This has compilation problem, so switch to the version below.
     // inline pionter operator->() { 
     inline struct runq_elem *operator->() {
@@ -65,12 +74,14 @@ public:
   };
 
   run_queue() {
+    memset(tid_map, 0, sizeof(struct runq_elem *)*MAX_THREAD_NUM);
     clear();
-    for (unsigned i = 0; i < MAX_THREAD_NUM; i++)
-      tid_map[i] = NULL;
   }
 
   struct runq_elem *createThreadElem(int tid) {
+    //fprintf(stderr, "tid %d is called with runq::createThreadElem\n", tid);
+    assert(tid >= 0 && tid < MAX_THREAD_NUM);
+    assert(tid_map[tid] == NULL);
     struct runq_elem *elem = new struct runq_elem;
     pthread_spin_init(&(elem->spin_lock), 0);
     elem->tid = tid;
@@ -82,6 +93,7 @@ public:
   }
 
   void destroyThreadElem(int tid) {
+    print(__FUNCTION__);
     struct runq_elem *elem = tid_map[tid];
     assert(elem);
     tid_map[tid] = NULL;
@@ -98,11 +110,17 @@ public:
   }
 
   void clear() {
+    print(__FUNCTION__);
     head = tail = NULL;
     num_elements = 0;
+    for (int i = 0; i < MAX_THREAD_NUM; i++) // An un-opt version, TBD.
+      if (tid_map[i] != NULL) {
+        tid_map[i]->prev = tid_map[i]->next = NULL;
+      }
   }
 
   bool empty() {
+    print(__FUNCTION__);
     return (size() == 0);
   }
  
@@ -112,34 +130,37 @@ public:
 
   // Complicated, need more check.
   iterator erase (iterator position) {
+    print(__FUNCTION__);
     if (position == end()) {
-      fprintf(stderr, "erase0\n");
       return end();
     } else {
-      fprintf(stderr, "erase1\n");
       struct runq_elem *ret = position->next;
+      struct runq_elem *cur = &position;
 
-      fprintf(stderr, "erase2\n");
       // Connect the "new" prev and next.
       if (position->prev != NULL)
         position->prev->next = position->next;
       if (position->next != NULL)
         position->next->prev = position->prev;
 
-      fprintf(stderr, "erase3\n");
       // Process head and tail.
       if (iterator(head) == position)
         head = position->next;
       if (iterator(tail) == position)
         tail = position->prev;
 
-      fprintf(stderr, "erase4\n");
+      // Clear the position's prev and next.
+      cur->prev = cur->next = NULL;
+
       num_elements--;
       return iterator(ret);
     }
   }
   
   void push_back(int tid) {
+    print(__FUNCTION__);
+    //fprintf(stderr, "push back tid %d\n", tid);
+
     struct runq_elem *elem = tid_map[tid];
     assert(elem);
     if (head == NULL) {
@@ -152,15 +173,18 @@ public:
       tail = elem;
     }
     num_elements++;
+    print(__FUNCTION__);
   }
 
   /* This is a thread run queue, all thread ids are fixed, reference is not allowed! */
   int front() {
+    print(__FUNCTION__);
     assert(head != NULL);
     return head->tid;
   }
 
   void push_front(int tid) {
+    print(__FUNCTION__);
     struct runq_elem *elem = tid_map[tid];
     assert(elem);
     if (head == NULL) {
@@ -173,11 +197,28 @@ public:
   }
 
   void pop_front() {
+    print(__FUNCTION__);
     struct runq_elem *elem = head;
     head = elem->next;
+    elem->prev = elem->next = NULL;
     if (head == NULL) /** If head is empty, then the tail must also be empty. **/
       tail = NULL;
     num_elements--;
   }
+
+  void print(const char *tag) {
+    return;
+    int i = 0;
+    fprintf(stderr, "\n\n OP: %s: q size %u\n", tag, (unsigned)size());
+    for (run_queue::iterator itr = begin(); itr != end(); ++itr) {
+      if (i > MAX_THREAD_NUM)
+        assert(false);
+      fprintf(stderr, "q[%d] = %d, status = %d\n", i, *itr, itr->status);
+      i++;
+    }
+  }
+
 };
+}
+#endif
 
