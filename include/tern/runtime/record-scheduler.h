@@ -131,12 +131,12 @@ protected:
 
   // MAYBE: can use a thread-local wait struct for each thread if it
   // improves performance
-  wait_t waits[MaxThreads];
+  wait_t waits[MAX_THREAD_NUM];
 
   //  for monitor
   pthread_t monitor_th;
   int timer;
-  int timemark[MaxThreads];
+  int timemark[MAX_THREAD_NUM];
 
   //  for wakeup
   std::vector<int> wakeup_queue;
@@ -156,7 +156,7 @@ public:
   FCFSScheduler();
   ~FCFSScheduler();
 protected:
-  virtual void next(bool at_thread_end=false);
+  virtual void next(bool at_thread_end=false, bool hasPoppedFront = false);
   pthread_mutex_t fcfs_lock;
 };
 
@@ -217,7 +217,7 @@ public:
   };
 
 protected:
-  sem_t waits[MaxThreads];
+  sem_t waits[MAX_THREAD_NUM];
   std::vector<record_list> logdata;
   void readrecords(FILE * fin, record_list &records);
 

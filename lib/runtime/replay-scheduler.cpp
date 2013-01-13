@@ -65,7 +65,7 @@ void ReplaySchedulerSem::readrecords(FILE * fin, record_list &records)
 ReplaySchedulerSem::ReplaySchedulerSem()
 {
   //  initialize member variables
-  for (int i = 0; i < MaxThreads; ++i)
+  for (int i = 0; i < MAX_THREAD_NUM; ++i)
     //  keep token at the main thread at the begin
     sem_init(&waits[i], 0, i == 0);   
 

@@ -523,7 +523,7 @@ unsigned RRScheduler::getTurnCount(void)
 
 void RRScheduler::childForkReturn() {
   Parent::childForkReturn();
-  for(int i=0; i<MaxThreads; ++i)
+  for(int i=0; i<MAX_THREAD_NUM; ++i)
     waits[i].reset();
 }
 
@@ -532,7 +532,7 @@ RRScheduler::~RRScheduler() {}
 
 RRScheduler::RRScheduler()
 {
-  for(unsigned i=0; i<MaxThreads; ++i)
+  for(unsigned i=0; i<MAX_THREAD_NUM; ++i)
     sem_init(&waits[i].sem, 0, 0);
 
   // main thread
@@ -649,7 +649,7 @@ FCFSScheduler::~FCFSScheduler() {
   pthread_mutex_destroy(&fcfs_lock);
 }
 
-void FCFSScheduler::next(bool at_thread_end)
+void FCFSScheduler::next(bool at_thread_end, bool hasPoppedFront)
 {
   int tid = self();
   assert(runq.size() && runq.front() == tid);

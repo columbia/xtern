@@ -22,7 +22,7 @@ namespace tern {
 /// synchronize its methods; instead, the callers of these methods must
 /// ensure that the methods are synchronized.
 struct TidMap {
-  enum {MainThreadTid = 0, InvalidTid = -1, MaxThreads = 2000};
+  enum {MainThreadTid = 0, InvalidTid = -1};
 
   typedef std::tr1::unordered_map<pthread_t, int> pthread_to_tern_map;
   typedef std::tr1::unordered_map<int, pthread_t> tern_to_pthread_map;
@@ -228,12 +228,11 @@ struct Scheduler: public Serializer {
   void childForkReturn() {
     TidMap::reset(pthread_self());
     waitq.clear();
-    runq.clear();
+    runq.deep_clear();    
     runq.createThreadElem(MainThreadTid);
     runq.push_back(MainThreadTid);
   }
 
-  //std::list<int>  runq;
   run_queue runq;
   std::list<int>  waitq;
 };
