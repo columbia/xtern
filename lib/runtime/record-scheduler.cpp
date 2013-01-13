@@ -316,7 +316,7 @@ void RRScheduler::next(bool at_thread_end, bool hasPoppedFront)
     } else if (at_thread_end && !waitq.empty() && self() == 0) {
       fprintf(stderr, "WARNING: main thread exits with some children threads alive (e.g., openmp).\n");
       return;
-    } else if (options::launch_idle_thread && self() != 1) // If I am not the idle thread, then wake up the idle thread.
+    } else if (options::launch_idle_thread && self() != IdleThreadTid) // If I am not the idle thread, then wake up the idle thread.
       wakeUpIdleThread();
   }
 
