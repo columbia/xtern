@@ -13,17 +13,36 @@
 
 namespace tern {
 class run_queue {
+   enum THD_STATUS {
+    RUNNABLE,     /** The thread can do any regular pthreads sync operation. **/
+    RUNNING,      /** The thread has got a turn and it should call RRScheduler::block() (getTurn() and then next()),
+                              in order to make the turn being passed smoothly. This GOT_TURN is semantically the "token" of the run queue. **/
+    NWK_STOP      /** The thread is stopped (blocked) on a network operation, and no other thread can pass turn to it. **/
+  };
+  
   struct runq_elem {
+  public:
     pthread_spinlock_t spin_lock;
     int tid;
-    int status;
+    THD_STATUS status;
     struct runq_elem *prev;
     struct runq_elem *next;
-  };  
+
+    runq_elem(int tid) {
+      pthread_spin_init(&spin_lock, 0);
+      this->tid = tid;
+      status = RUNNABLE;
+      prev = next = NULL;
+    }
+  };
+
+  /** Key members of the run queue. We mainly optimize it for read/write of head/tail. **/
   struct runq_elem *head;
   struct runq_elem *tail;
   size_t num_elements;
   struct runq_elem *tid_map[MAX_THREAD_NUM];
+
+  /** This one is useful only when DEBUG_RUN_QUEUE is defined. **/
   std::tr1::unordered_set<void *> elements;
 
 public:
@@ -80,21 +99,23 @@ public:
     deep_clear();
   }
 
-  struct runq_elem *createThreadElem(int tid) {
+  /** Each thread get its own thread element. **/
+  inline struct runq_elem *getMyElem(int myTid) {
+    struct runq_elem *elem = tid_map[myTid];
+    assert(elem && myTid == elem->tid); /** Make sure each thread can only get its own element. **/
+    return elem;
+  }
+  
+  inline struct runq_elem *createThreadElem(int tid) {
     //fprintf(stderr, "tid %d is called with runq::createThreadElem\n", tid);
     assert(tid >= 0 && tid < MAX_THREAD_NUM);
     assert(tid_map[tid] == NULL);
-    struct runq_elem *elem = new struct runq_elem;
-    pthread_spin_init(&(elem->spin_lock), 0);
-    elem->tid = tid;
-    elem->status = 0; // XXX TO BD DONE.
-    elem->prev = NULL;
-    elem->next = NULL;
+    struct runq_elem *elem = new runq_elem(tid);
     tid_map[tid] = elem;
     return elem;
   }
 
-  void destroyThreadElem(int tid) {
+  inline void destroyThreadElem(int tid) {
     print(__FUNCTION__);
     struct runq_elem *elem = tid_map[tid];
     assert(elem);
@@ -103,31 +124,31 @@ public:
     delete elem;
   }
 
-  void dbg_assert_elem_in(struct runq_elem *elem) {
+  inline void dbg_assert_elem_in(struct runq_elem *elem) {
 #ifdef DEBUG_RUN_QUEUE
       assert(elements.find((void *)elem) != elements.end());
 #endif
   }
 
-  void dbg_assert_elem_not_in(struct runq_elem *elem) {
+  inline void dbg_assert_elem_not_in(struct runq_elem *elem) {
 #ifdef DEBUG_RUN_QUEUE
       assert(elements.find((void *)elem) == elements.end());
 #endif
   }
 
-  void dbg_insert_elem(struct runq_elem *elem) {
+  inline void dbg_insert_elem(struct runq_elem *elem) {
 #ifdef DEBUG_RUN_QUEUE
       elements.insert((void *)elem);
 #endif
   }
 
-  void dbg_erase_elem(struct runq_elem *elem) {
+  inline void dbg_erase_elem(struct runq_elem *elem) {
 #ifdef DEBUG_RUN_QUEUE
       elements.erase((void *)elem);
 #endif
   }
 
-  void dbg_clear_all_elems() {
+  inline void dbg_clear_all_elems() {
 #ifdef DEBUG_RUN_QUEUE
       elements.clear();
 #endif
@@ -149,7 +170,7 @@ public:
 
   /** This is a "deep" clear. It not only clears the list, but also the tid_map.
   This function should only be called when handling fork() and a deep clean is requried. **/
-  void deep_clear() {
+  inline void deep_clear() {
     print(__FUNCTION__);
     head = tail = NULL;
     num_elements = 0;
@@ -163,18 +184,18 @@ public:
     }
   }
 
-  bool empty() {
+  inline bool empty() {
     print(__FUNCTION__);
     return (size() == 0);
   }
  
-  size_t size() {
+  inline size_t size() {
     dbg_assert_elem_size(num_elements);
     return num_elements;
   }
 
   // Complicated, need more check.
-  iterator erase (iterator position) {
+  inline iterator erase (iterator position) {
     print(__FUNCTION__);
     if (position == end()) {
       return end();
@@ -204,7 +225,7 @@ public:
     }
   }
   
-  void push_back(int tid) {
+  inline void push_back(int tid) {
     print(__FUNCTION__);
     //fprintf(stderr, "push back tid %d\n", tid);
 
@@ -226,14 +247,14 @@ public:
   }
 
   /* This is a thread run queue, all thread ids are fixed, reference is not allowed! */
-  int front() {
+  inline int front() {
     print(__FUNCTION__);
     assert(head != NULL);
     dbg_assert_elem_in(head);
     return head->tid;
   }
 
-  void push_front(int tid) {
+  inline void push_front(int tid) {
     print(__FUNCTION__);
     struct runq_elem *elem = tid_map[tid];
     assert(elem);
@@ -248,7 +269,7 @@ public:
     num_elements++;
   }
 
-  void pop_front() {
+  inline void pop_front() {
     print(__FUNCTION__);
     struct runq_elem *elem = head;
     dbg_assert_elem_in(elem);
@@ -260,7 +281,7 @@ public:
     num_elements--;
   }
 
-  void print(const char *tag) {
+  inline void print(const char *tag) {
     return;
 #ifdef DEBUG_RUN_QUEUE
       int i = 0;
