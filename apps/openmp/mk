@@ -5,12 +5,12 @@ if [ "$APPS_DIR" = "" ]; then
 	exit 1
 fi
 
-XTERN_ANNOT_LIB="-I$XTERN_ROOT/include -L$XTERN_ROOT/dync_hook -lxtern-annot"
+XTERN_ANNOT_LIB="-I$XTERN_ROOT/include -L$XTERN_ROOT/dync_hook -Wl,--rpath,$XTERN_ROOT/dync_hook -lxtern-annot"
 VER=4.5.4
 echo "\nWe are compiling gcc-$VER by ourselves. We hope you have installed the same version of gcc on your machine, because we are going to use some libraries of it.\n";
 cd $XTERN_ROOT/apps/openmp
 rm -rf gcc-$VER install *.a ex//*.a
-tar zxvf $APPS_DIR/sys/gcc-$VER.tar.gz
+tar zxf $APPS_DIR/sys/gcc-$VER.tar.gz
 
 # compile gcc
 cd gcc-$VER
@@ -20,9 +20,10 @@ mkdir obj
 cd obj
 CFLAGS+="$XTERN_ANNOT_LIB" ../configure \
 --prefix=$XTERN_ROOT/apps/openmp/install --disable-linux-futex --enable-languages=c,c++ --disable-multilib
-# A hack, uses some libraries from the built version. Currently I can not build a crti.o due to multi-architecture issue.
-LIBRARY_PATH=/usr/lib/x86_64-linux-gnu make -j4
-make install
+# If there is any problem with building 'crti.o', try to create a symbolic link as following
+# ln -s /usr/lib/x86_64-linux-gnu /usr/lib64
+make -j64
+make -j64 install
 
 
 # Build the random shuffle benchmark.

@@ -242,7 +242,6 @@ def processBench(config, bench):
     for i in range(int(repeats)):
         sys.stderr.write("\tPROGRESS: %5d/%d\r" % (i+1, int(repeats))) # progress
         proc = subprocess.Popen(xtern_command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True, executable=bash_path )
-        #proc = subprocess.Popen(xtern_command, stdout=sys.stdout, stderr=sys.stdout, shell=True, executable=bash_path )
         proc.wait()
         # move log files into 'xtern' directory
         os.renames('out', 'xtern/out.%d' % i)
@@ -266,14 +265,14 @@ def processBench(config, bench):
     xtern_cost = []
     for i in range(int(repeats)):
         for line in reversed(open('xtern/output.%d' % i, 'r').readlines()):
-            if re.search('^real [0-9]?\.[0-9][0-9]$', line):
+            if re.search('^real [0-9]+\.[0-9][0-9]$', line):
                 xtern_cost += [float(line.split()[1])]
                 break
 
     nondet_cost = []
     for i in range(int(repeats)):
         for line in reversed(open('non-det/output.%d' % i, 'r').readlines()):
-            if re.search('^real [0-9]?\.[0-9][0-9]$', line):
+            if re.search('^real [0-9]+\.[0-9][0-9]$', line):
                 nondet_cost += [float(line.split()[1])]
                 break
 
