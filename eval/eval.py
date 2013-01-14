@@ -68,13 +68,11 @@ def getGitInfo():
     git_show = 'cd '+XTERN_ROOT+' && git show '
     githash = commands.getoutput(git_show+'| head -1 | sed -e "s/commit //"')
     git_diff = 'cd '+XTERN_ROOT+' && git diff --quiet'
-    gitstatus = commands.getoutput('if ! ('+
-                                   git_diff+
-                                   '); then echo "_dirty"; fi')
-    if gitstatus:
-        diff = commands.getoutput('cd ' +XTERN_ROOT+ ' && git diff')
+    diff = commands.getoutput('cd ' +XTERN_ROOT+ ' && git diff')
+    if diff:
+        gitstatus = '_dirty'
     else:
-        diff = ""
+        gitstatus = ''
     commit_date = commands.getoutput( git_show+
             '| head -4 | grep "Date:" | sed -e "s/Date:[ \t]*//"' )
     date_tz  = re.compile(r'^.* ([+-]\d\d\d\d)$').match(commit_date).group(1)
