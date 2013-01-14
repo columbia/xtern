@@ -49,7 +49,8 @@ def readConfigFile(config_file):
     try:
         newConfig = ConfigParser.ConfigParser( {"REPEATS": "100", 
                                                 "INPUTS": "",
-                                                "REQUIRED_FILES": ""} )
+                                                "REQUIRED_FILES": "",
+                                                "DOWNLOAD_FILES": ""} )
         ret = newConfig.read(config_file)
     except ConfigParser.MissingSectionHeaderError as e:
         logging.error(str(e))
@@ -180,6 +181,19 @@ def copy_required_files(app, files):
             return False
     return True
 
+def download_files_from_web(links):
+    #from urllib import urlretrieve
+    import urllib
+    opener = urllib.URLopener()
+    for link in links.split():
+        logging.debug("Downloading file from %s" % link)
+        try:
+            opener.retrieve(link, link.split('/')[-1])
+        except IOError as e:
+            logging.warning(str(e))
+            return False
+    return True
+
 def processBench(config, bench):
     # for each bench, generate running directory
     logging.debug("processing: " + bench)
@@ -205,6 +219,12 @@ def processBench(config, bench):
     if not copy_required_files(apps_name, required_files):
         logging.warning("error in config [%s], skip" % bench)
         return
+
+    # download files if needed
+    download_files = config.get(bench, 'download_files')
+    if not download_files_from_web(download_files):
+        logging.warning("cannot download one of files in config [%s], skip" % bench)
+        return
     
     # run command in shell, currently uses 'bash'
     bash_path = which('bash')
@@ -222,6 +242,7 @@ def processBench(config, bench):
     for i in range(int(repeats)):
         sys.stderr.write("\tPROGRESS: %5d/%d\r" % (i+1, int(repeats))) # progress
         proc = subprocess.Popen(xtern_command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True, executable=bash_path )
+        #proc = subprocess.Popen(xtern_command, stdout=sys.stdout, stderr=sys.stdout, shell=True, executable=bash_path )
         proc.wait()
         # move log files into 'xtern' directory
         os.renames('out', 'xtern/out.%d' % i)
