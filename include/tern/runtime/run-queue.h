@@ -13,6 +13,7 @@
 
 namespace tern {
 class run_queue {
+public:
    enum THD_STATUS {
     RUNNABLE,     /** The thread can do any regular pthreads sync operation. **/
     RUNNING,      /** The thread has got a turn and it should call RRScheduler::block() (getTurn() and then next()),
@@ -36,6 +37,7 @@ class run_queue {
     }
   };
 
+private:
   /** Key members of the run queue. We mainly optimize it for read/write of head/tail. **/
   struct runq_elem *head;
   struct runq_elem *tail;
@@ -99,10 +101,10 @@ public:
     deep_clear();
   }
 
-  /** Each thread get its own thread element. **/
-  inline struct runq_elem *getMyElem(int myTid) {
-    struct runq_elem *elem = tid_map[myTid];
-    assert(elem && myTid == elem->tid); /** Make sure each thread can only get its own element. **/
+  /** Each thread get its own thread element. This is a per-thread array so it is thread-safe. **/
+  inline struct runq_elem *get_my_elem(int my_tid) {
+    struct runq_elem *elem = tid_map[my_tid];
+    assert(elem && my_tid == elem->tid); /** Make sure each thread can only get its own element. **/
     return elem;
   }
   
@@ -252,6 +254,13 @@ public:
     assert(head != NULL);
     dbg_assert_elem_in(head);
     return head->tid;
+  }
+
+  inline struct runq_elem *frontElem() {
+    print(__FUNCTION__);
+    assert(head != NULL);
+    dbg_assert_elem_in(head);
+    return head;
   }
 
   inline void push_front(int tid) {

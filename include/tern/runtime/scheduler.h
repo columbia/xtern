@@ -158,6 +158,18 @@ struct Serializer: public TidMap {
     return ret;
   }
 
+  /// start to fastly and safely do a network block operation (without getting a turn and putting it).
+  /// by default it is NOP (always return false), if any runtime scheduler needs it, just reimplement it.
+  virtual bool nwkBlkStart() {
+    return false;
+  }
+
+  /// finish doing a network block operation.
+  /// by default it is NOP (always return false), if any runtime scheduler needs it, just reimplement it.
+  virtual bool nwkBlkEnd() {
+    return false;
+  }
+
   /// inform the scheduler that a blocking thread has returned.
   virtual void wakeup() {}
 

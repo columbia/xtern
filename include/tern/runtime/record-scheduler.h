@@ -103,6 +103,8 @@ struct RRScheduler: public Scheduler {
   virtual void signal(void *chan, bool all=false);
 
   virtual int block(); 
+  virtual bool nwkBlkStart();
+  virtual bool nwkBlkEnd();
   virtual void wakeup();
 
   unsigned incTurnCount(void);
@@ -128,6 +130,10 @@ protected:
   /// for debugging
   void selfcheck(void);
   std::ostream& dump(std::ostream& o);
+  /// An associated function to assist the fast and safe runq removal mechanism for network operation.
+  /// Return the  ext runnable thread id. If this function returns an invalid tid, it means it is already the end of 
+  /// execution of the program.
+  int nextRunnable(bool at_thread_end = false);
 
   // MAYBE: can use a thread-local wait struct for each thread if it
   // improves performance

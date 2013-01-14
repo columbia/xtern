@@ -304,26 +304,30 @@ void RRScheduler::check_wakeup()
 void RRScheduler::next(bool at_thread_end, bool hasPoppedFront)
 {
   int next_tid;
-  if (!hasPoppedFront)
-    runq.pop_front(); // remove self from runq
+  if (!hasPoppedFront) {
+    // Update the status of the head element.
+    struct run_queue::runq_elem *my = runq.get_my_elem(self());
+    // Current if branch can not be taken (hasPoppedFront is false) if a thread
+    // is doing network operation, so current status must be RUNNING.
+    assert(my->status == run_queue::RUNNING);
+    my->status = run_queue::RUNNABLE;
 
+    // remove self from runq
+    runq.pop_front();
+  }
+  
   check_wakeup();
 
-  if(runq.empty()) {
-    // Current thread must be the last thread and it is existing, otherwise we wake up the idle thread.
-    if (at_thread_end && waitq.empty()) {
-      return;
-    } else if (at_thread_end && !waitq.empty() && self() == 0) {
-      fprintf(stderr, "WARNING: main thread exits with some children threads alive (e.g., openmp).\n");
-      return;
-    } else if (options::launch_idle_thread && self() != IdleThreadTid) // If I am not the idle thread, then wake up the idle thread.
-      wakeUpIdleThread();
-  }
+  next_tid = nextRunnable(at_thread_end);
+  // There are two special cases that: (1) at the thread end, waitq is empty, or 
+  // (2) main thread exits (and waitq can be non-empty, e.g., openmp),
+  // then we do not need to pass turn any more and just return.
+  if (next_tid == InvalidTid)
+    return;
 
-  assert(!runq.empty());
-  reorderRunq();
+  // reorderRunq(); Heming: do not call this function, even it is implemented in seeded 
+  // RR. This reordering is conflicting with RR scheduling (with network).
 
-  next_tid = runq.front();
   assert(next_tid>=0 && next_tid < Scheduler::nthread);
   dprintf("RRScheduler: next is %d\n", next_tid);
   SELFCHECK;
@@ -331,7 +335,7 @@ void RRScheduler::next(bool at_thread_end, bool hasPoppedFront)
 }
 
 void RRScheduler::wakeUpIdleThread() {
-  int idleTid = 1, tid = -1;
+  int tid = -1;
   list<int>::iterator prv, cur;
   // use delete-safe way of iterating the list
   for(cur=waitq.begin(); cur!=waitq.end();) {
@@ -339,14 +343,14 @@ void RRScheduler::wakeUpIdleThread() {
 
     tid = *prv;
     assert(tid >=0 && tid < Scheduler::nthread);
-    if(tid == idleTid) {
+    if(tid == IdleThreadTid) {
       waits[tid].reset();
       waitq.erase(prv);
       runq.push_back(tid);
       break;
     }
   }
-  assert(tid == idleTid);
+  assert(tid == IdleThreadTid);
   pthread_mutex_lock(&idle_mutex);
   pthread_cond_signal(&idle_cond);
   pthread_mutex_unlock(&idle_mutex);
@@ -354,7 +358,7 @@ void RRScheduler::wakeUpIdleThread() {
 
 void RRScheduler::idleThreadCondWait() {
   int tid = self();
-  assert(tid>=0 && tid < Scheduler::nthread);
+  assert(tid == IdleThreadTid);
   waits[tid].chan = (void *)&idle_cond;
   waits[tid].timeout = FOREVER;
   waitq.push_back(tid);
@@ -443,6 +447,16 @@ void RRScheduler::putTurn(bool at_thread_end)
     Parent::zombify(pthread_self());
     dprintf("RRScheduler: %d ends\n", self());
   } else {
+    // Check and modify "my" run queue element. No need to grab element spinlock since I am the head.
+    struct run_queue::runq_elem *my = runq.get_my_elem(tid);
+    if (my->status == run_queue::RUNNING)
+      my->status = run_queue::RUNNABLE;
+    else
+      // A head thread can be calling a network operation later after it is put 
+      // ahead of the queue, so it could also be NWK_STOP.
+      assert(my->status == run_queue::NWK_STOP);
+
+    // Process run queue structure.
     runq.pop_front();
     hasPoppedFront = true;
     runq.push_back(tid);
@@ -537,9 +551,10 @@ RRScheduler::RRScheduler()
 
   // main thread
   assert(self() == MainThreadTid && "tid hasn't been initialized!");
-  runq.createThreadElem(MainThreadTid);
+  struct run_queue::runq_elem *main_elem = runq.createThreadElem(MainThreadTid);
   runq.push_back(self());
-  waits[MainThreadTid].post();
+  waits[MainThreadTid].post(); // Assign an initial turn to main thread.
+  main_elem->status = run_queue::RUNNING;// Assign an initial running state (i.e., turn) to main thread.
 
   wakeup_queue.clear();
   wakeup_flag = 0;
@@ -615,6 +630,85 @@ ostream& RRScheduler::dump(ostream& o)
     o << *th << "(" << waits[*th].chan << "," << waits[*th].timeout << ") ";
   o << "]\n";
   return o;
+}
+
+bool RRScheduler::nwkBlkStart() {
+  // TBD: can this function do per-thread logging (what is the turn count at 
+  // this moment) How did xtern do network op logging without scheduling network?
+
+  bool isHead = true;
+  struct run_queue::runq_elem *elem = runq.get_my_elem(self());
+
+  pthread_spin_lock(&elem->spin_lock);
+  if (elem->status == run_queue::RUNNABLE)
+    isHead = false; // Set isHead to be false so that we do not need to call  ::block() in the record-runtime.
+  else
+    assert(elem->status == run_queue::RUNNING); // Leave isHead to be true so that we need to call ::block() as the next step.
+  /** The self-thread going to block does not modify the linked list of the run queue,
+  instead it only changes its own status. Only the head-thread could modify the linked list
+  of the run queue. So it is safe. **/
+  elem->status = run_queue::NWK_STOP;
+  pthread_spin_unlock(&elem->spin_lock);
+
+  return isHead;
+}
+
+bool RRScheduler::nwkBlkEnd() {
+  // TBD: can this function do per-thread logging (what is the turn count at 
+  // this moment) How did xtern do network op logging without scheduling 
+  // network?
+  struct run_queue::runq_elem *elem = runq.get_my_elem(self());
+  pthread_spin_lock(&elem->spin_lock);
+  assert(elem->status == run_queue::NWK_STOP);
+  elem->status = run_queue::RUNNABLE;
+  pthread_spin_unlock(&elem->spin_lock);
+  return true;
+}
+
+int RRScheduler::nextRunnable(bool at_thread_end) {
+  bool passed = false;
+  
+  struct run_queue::runq_elem *headElem = NULL;
+  while (true) { // This loop is guaranteed to finish.
+    // If run queue is empty, wake up idle thread.
+    if(runq.empty()) {
+      // Current thread must be the last thread and it is existing, otherwise we wake up the idle thread.
+      // There are two special cases that: (1) at the thread end, waitq is empty, or 
+      // (2) main thread exits (and waitq can be non-empty, e.g., openmp),
+      // then just return an invalid tid.
+      if (at_thread_end && waitq.empty()) {
+        return InvalidTid;
+      } else if (at_thread_end && !waitq.empty() && self() == MainThreadTid) {
+        fprintf(stderr, "WARNING: main thread exits with some children threads alive (e.g., openmp).\n");
+        return InvalidTid;
+      } else if (options::launch_idle_thread && self() != IdleThreadTid) // If I am not the idle thread, then wake up the idle thread.
+        wakeUpIdleThread();
+    }
+    assert(!runq.empty());
+
+    // Process one head element.
+    headElem = runq.frontElem();
+    pthread_spin_lock(&headElem->spin_lock);
+    if (headElem->status == run_queue::NWK_STOP) {
+      /** If this thread is blocking, remove it from run queue
+      and find the next one. The head thread is the only thread
+      that could modify the linked list of run queue, so it is safe. **/
+      runq.pop_front();  
+    } else {
+      //fprintf(stderr, "RRScheduler::nextRunnable at_thread_end %d, self %d, headElem tid %d, head status running %d?, self status %d\n",
+        //at_thread_end, self(), headElem->tid, headElem->status == run_queue::RUNNING, runq.get_my_elem(self())->status);
+      assert(headElem->status == run_queue::RUNNABLE);
+      headElem->status = run_queue::RUNNING;
+      passed = true;
+    }
+    pthread_spin_unlock(&headElem->spin_lock);
+ 
+    if (passed)
+      break;
+  }
+
+  assert(headElem);
+  return headElem->tid;
 }
 
 void FCFSScheduler::getTurn() {  
