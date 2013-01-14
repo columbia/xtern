@@ -134,6 +134,24 @@ def which(name, flags=os.X_OK):
             result.append(p)
     return result
 
+def write_stats(xtern, nondet):
+    try:
+        import numpy
+    except ImportError:
+        logging.critical("please install 'numpy' module")
+        sys.exit(1)
+    xtern_avg = numpy.average(xtern)
+    xtern_std = numpy.std(xtern)
+    nondet_avg = numpy.average(nondet)
+    nondet_std = numpy.std(nondet)
+    overhead_avg = (xtern_avg - nondet_avg)/nondet_avg
+    import math
+    overhead_std = overhead_avg*(math.sqrt(2*((nondet_std/nondet_avg)**2) + (xtern_std/xtern_avg)**2))
+    fout = open("stats.txt", "w")
+    fout.write('overhead: {2:.3f}%\n\tavg {0}\n\tstd {1}\n'.format(overhead_avg, overhead_std, overhead_avg*100))
+    fout.write('xtern:\n\tavg {0}\n\tstd {1}\n'.format(xtern_avg, xtern_std))
+    fout.write('non-det:\n\tavg {0}\n\tstd {1}\n'.format(nondet_avg, nondet_std))
+    fout.close()
 
 def processBench(config, bench):
     logging.debug("processing: " + bench)
@@ -151,11 +169,6 @@ def processBench(config, bench):
     inputs = config.get(bench, 'inputs')
     repeats = config.get(bench, 'repeats')
     
-    '''
-    xtern_env = os.environ.copy()
-    xtern_env['LD_PRELOAD'] = "%s/dync_hook/interpose.so" % XTERN_ROOT
-    '''
-
     # run command in shell, currently uses 'bash'
     bash_path = which('bash')
     if not bash_path:
@@ -192,14 +205,22 @@ def processBench(config, bench):
         with open('non-det/output.%d' % i, 'w') as log_file:
             log_file.write(proc.stdout.read())
 
-    # FIXME: performance issue
-    #cost = []
-    #for i in range(int(repeats)):
-    #    for line in reversed(open('output.%d' % i, 'r').readlines()):
-    #        if re.search('^real [0-9]?\.[0-9][0-9]$', line):
-    #            cost += [float(line.split()[1])]
-    #            break
-    #logging.info('Average Cost: %f' % (sum(cost)/float(repeats)))
+    # get stats
+    xtern_cost = []
+    for i in range(int(repeats)):
+        for line in reversed(open('xtern/output.%d' % i, 'r').readlines()):
+            if re.search('^real [0-9]?\.[0-9][0-9]$', line):
+                xtern_cost += [float(line.split()[1])]
+                break
+
+    nondet_cost = []
+    for i in range(int(repeats)):
+        for line in reversed(open('non-det/output.%d' % i, 'r').readlines()):
+            if re.search('^real [0-9]?\.[0-9][0-9]$', line):
+                nondet_cost += [float(line.split()[1])]
+                break
+
+    write_stats(xtern_cost, nondet_cost)
 
     os.chdir("..")
 
