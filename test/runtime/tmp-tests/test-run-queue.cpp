@@ -1,8 +1,9 @@
-#include "test-run-queue.h"
+#include "../../../include/tern/runtime/run-queue.h"
 
 /* A simple test file for the fast thread run queue. */
 
 using namespace std;
+using namespace tern;
 run_queue q;
 
 void print() {
