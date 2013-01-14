@@ -69,6 +69,10 @@ def getGitInfo():
     gitstatus = commands.getoutput('if ! ('+
                                    git_diff+
                                    '); then echo "_dirty"; fi')
+    if gitstatus:
+        diff = commands.getoutput('cd ' +XTERN_ROOT+ ' && git diff')
+    else:
+        diff = ""
     commit_date = commands.getoutput( git_show+
             '| head -4 | grep "Date:" | sed -e "s/Date:[ \t]*//"' )
     date_tz  = re.compile(r'^.* ([+-]\d\d\d\d)$').match(commit_date).group(1)
@@ -78,7 +82,7 @@ def getGitInfo():
     logging.debug( "git 6 digits hash code: " + githash[0:6] )
     logging.debug( "git reposotory status: " + gitstatus)
     logging.debug( "git commit date: " + gitcommitdate)
-    return [githash[0:6], gitstatus, gitcommitdate]
+    return [githash[0:6], gitstatus, gitcommitdate, diff]
 
 def mkdir_p(path):
     try:
@@ -122,6 +126,11 @@ def generate_local_options(config, bench):
     with open("local.options", "w") as option_file:
         option_file.write(output)
 
+def checkExist(file, flags=os.X_OK):
+    if not os.path.exists(file) or not os.path.isfile(file) or not os.access(file, flags):
+        return False
+    return True
+
 # ref: twisted-12.3.0 procutils.py
 def which(name, flags=os.X_OK):
     result = []
@@ -138,7 +147,7 @@ def write_stats(xtern, nondet):
     try:
         import numpy
     except ImportError:
-        logging.critical("please install 'numpy' module")
+        logging.error("please install 'numpy' module")
         sys.exit(1)
     xtern_avg = numpy.average(xtern)
     xtern_std = numpy.std(xtern)
@@ -147,17 +156,20 @@ def write_stats(xtern, nondet):
     overhead_avg = (xtern_avg - nondet_avg)/nondet_avg
     import math
     overhead_std = overhead_avg*(math.sqrt(2*((nondet_std/nondet_avg)**2) + (xtern_std/xtern_avg)**2))
-    fout = open("stats.txt", "w")
-    fout.write('overhead: {2:.3f}%\n\tavg {0}\n\tstd {1}\n'.format(overhead_avg, overhead_std, overhead_avg*100))
-    fout.write('xtern:\n\tavg {0}\n\tstd {1}\n'.format(xtern_avg, xtern_std))
-    fout.write('non-det:\n\tavg {0}\n\tstd {1}\n'.format(nondet_avg, nondet_std))
-    fout.close()
+    with open("stats.txt", "w") as stats:
+        stats.write('overhead: {2:.3f}%\n\tavg {0}\n\tstd {1}\n'.format(overhead_avg, overhead_std, overhead_avg*100))
+        stats.write('xtern:\n\tavg {0}\n\tstd {1}\n'.format(xtern_avg, xtern_std))
+        stats.write('non-det:\n\tavg {0}\n\tstd {1}\n'.format(nondet_avg, nondet_std))
 
 def processBench(config, bench):
     logging.debug("processing: " + bench)
     apps_name, exec_file = extract_apps_exec(bench)
     logging.debug("app = %s" % apps_name)
     logging.debug("executible file = %s" % exec_file)
+    if not checkExist(exec_file, os.X_OK):
+        logging.warning('%s does not exist, skip [%s]' % (exec_file, bench))
+        return
+
     segs = re.sub(r'(\")|(\.)|/|\'', '', bench).split()
     dir_name =  '_'.join(segs)
     
@@ -182,7 +194,6 @@ def processBench(config, bench):
     xtern_command = ' '.join(['time', '-p', XTERN_PRELOAD, exec_file] + inputs.split())
     logging.info("executing '%s'" % xtern_command)
 
-    repeats = 10
     for i in range(int(repeats)):
         sys.stderr.write("\tPROGRESS: %5d/%d\r" % (i+1, int(repeats))) # progress
         proc = subprocess.Popen(xtern_command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True, executable=bash_path )
@@ -260,6 +271,12 @@ if __name__ == "__main__":
         logging.error("Please set the environment variable " + str(e))
         sys.exit(1)
     APPS = os.path.abspath(XTERN_ROOT + "/apps/")
+    if not checkExist("%s/dync_hook/interpose.so" % XTERN_ROOT, os.R_OK):
+        logging.error('thre is no "$XTERN_ROOT/dync_hook/interpose.so"')
+        sys.exit(1)
+    if not checkExist("%s/eval/rand-intercept/rand-intercept.so" % XTERN_ROOT, os.R_OK):
+        logging.error('there is no "$XTERN_ROOT/eval/rand-intercept/rand-intercept.so"')
+        sys.exit(1)
     XTERN_PRELOAD = "LD_PRELOAD=%s/dync_hook/interpose.so" % XTERN_ROOT
     RAND_PRELOAD = "LD_PRELOAD=%s/eval/rand-intercept/rand-intercept.so" % XTERN_ROOT
 
@@ -284,6 +301,11 @@ if __name__ == "__main__":
         if not run_dir:
             continue
         os.chdir(run_dir)
+
+        # write diff file if the repository is dirty
+        if git_info[3]:
+            with open("git_diff", "w") as diff:
+                diff.write(git_info[3])
         
         benchmarks = local_config.sections()
         for benchmark in benchmarks:
