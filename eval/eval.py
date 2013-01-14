@@ -60,6 +60,7 @@ def readConfigFile(config_file):
         if ret:
             return newConfig
 
+# TODO: will fail if there is no git information to get
 def getGitInfo():
     import commands
     git_show = 'cd '+XTERN_ROOT+' && git show '
@@ -76,7 +77,7 @@ def getGitInfo():
     gitcommitdate = str(datetime.datetime.strptime(commit_date, date_fmt))
     logging.debug( "git 6 digits hash code: " + githash[0:6] )
     logging.debug( "git reposotory status: " + gitstatus)
-    logging.debug( "git commit date: ")
+    logging.debug( "git commit date: " + gitcommitdate)
     return [githash[0:6], gitstatus, gitcommitdate]
 
 def mkdir_p(path):
@@ -121,6 +122,19 @@ def generate_local_options(config, bench):
     with open("local.options", "w") as option_file:
         option_file.write(output)
 
+# ref: twisted-12.3.0 procutils.py
+def which(name, flags=os.X_OK):
+    result = []
+    path = os.environ.get('PATH', None)
+    if path is None:
+        return []
+    for p in os.environ.get('PATH', '').split(os.pathsep):
+        p = os.path.join(p, name)
+        if os.access(p, flags):
+            result.append(p)
+    return result
+
+
 def processBench(config, bench):
     logging.debug("processing: " + bench)
     apps_name, exec_file = extract_apps_exec(bench)
@@ -137,24 +151,55 @@ def processBench(config, bench):
     inputs = config.get(bench, 'inputs')
     repeats = config.get(bench, 'repeats')
     
+    '''
     xtern_env = os.environ.copy()
     xtern_env['LD_PRELOAD'] = "%s/dync_hook/interpose.so" % XTERN_ROOT
+    '''
+
+    # run command in shell, currently uses 'bash'
+    bash_path = which('bash')
+    if not bash_path:
+        logging.critical("cannot find shell 'bash'")
+        sys.exit(1)
+    else:
+        bash_path = bash_path[0]
+        logging.debug("find 'bash' at %s" % bash_path)
+
+    # generate command for xtern [time LD_PRELOAD=... exec args...]
+    xtern_command = ' '.join(['time', '-p', XTERN_PRELOAD, exec_file] + inputs.split())
+    logging.info("executing '%s'" % xtern_command)
+
+    repeats = 10
+    for i in range(int(repeats)):
+        sys.stderr.write("\tPROGRESS: %5d/%d\r" % (i+1, int(repeats))) # progress
+        proc = subprocess.Popen(xtern_command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True, executable=bash_path )
+        proc.wait()
+        # move log files into 'xtern' directory
+        os.renames('out', 'xtern/out.%d' % i)
+        with open('xtern/output.%d' % i, 'w') as log_file:
+            log_file.write(proc.stdout.read())
+
+    # generate command for non-det [time LD_PRELOAD=... exec args...]
+    nondet_command = ' '.join(['time', '-p', RAND_PRELOAD, exec_file] + inputs.split())
+    logging.info("executing '%s'" % nondet_command)
 
     for i in range(int(repeats)):
-        proc = subprocess.Popen(['time', '-p', exec_file] + inputs.split(), stdout=subprocess.PIPE, stderr=subprocess.STDOUT, env=xtern_env)
+        sys.stderr.write("\tPROGRESS: %5d/%d\r" % (i+1, int(repeats))) # progress
+        proc = subprocess.Popen(xtern_command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True, executable=bash_path )
         proc.wait()
-        os.system('mv out out.%d' % i)
-        with open('output.%d' % i, 'w') as log_file:
+        # move log files into 'non-det' directory
+        os.renames('out', 'non-det/out.%d' % i)
+        with open('non-det/output.%d' % i, 'w') as log_file:
             log_file.write(proc.stdout.read())
 
     # FIXME: performance issue
-    cost = []
-    for i in range(int(repeats)):
-        for line in open('output.%d' % i, 'r'):
-            if re.search('^real ', line):
-                cost += [float(line.split()[1])]
-    logging.info('Average Cost: %f' % (sum(cost)/float(repeats)))
-
+    #cost = []
+    #for i in range(int(repeats)):
+    #    for line in reversed(open('output.%d' % i, 'r').readlines()):
+    #        if re.search('^real [0-9]?\.[0-9][0-9]$', line):
+    #            cost += [float(line.split()[1])]
+    #            break
+    #logging.info('Average Cost: %f' % (sum(cost)/float(repeats)))
 
     os.chdir("..")
 
@@ -195,7 +240,7 @@ if __name__ == "__main__":
         sys.exit(1)
     APPS = os.path.abspath(XTERN_ROOT + "/apps/")
     XTERN_PRELOAD = "LD_PRELOAD=%s/dync_hook/interpose.so" % XTERN_ROOT
-    RAND_PRELOAD = "LDPRELOAD=%s/eval/rand-intercept/rand-intercept.so"
+    RAND_PRELOAD = "LD_PRELOAD=%s/eval/rand-intercept/rand-intercept.so" % XTERN_ROOT
 
     # get default xtern options
     default_options = getXternDefaultOptions()
