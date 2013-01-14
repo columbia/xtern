@@ -131,6 +131,10 @@ def checkExist(file, flags=os.X_OK):
         return False
     return True
 
+def copy_file(src, dst):
+    import shutil
+    shutil.copy(src, dst)
+
 # ref: twisted-12.3.0 procutils.py
 def which(name, flags=os.X_OK):
     result = []
@@ -162,6 +166,7 @@ def write_stats(xtern, nondet):
         stats.write('non-det:\n\tavg {0}\n\tstd {1}\n'.format(nondet_avg, nondet_std))
 
 def processBench(config, bench):
+    # for each bench, generate running directory
     logging.debug("processing: " + bench)
     apps_name, exec_file = extract_apps_exec(bench)
     logging.debug("app = %s" % apps_name)
@@ -172,7 +177,6 @@ def processBench(config, bench):
 
     segs = re.sub(r'(\")|(\.)|/|\'', '', bench).split()
     dir_name =  '_'.join(segs)
-    
     mkdir_p(dir_name)
     os.chdir(dir_name)
 
@@ -232,6 +236,9 @@ def processBench(config, bench):
                 break
 
     write_stats(xtern_cost, nondet_cost)
+
+    # copy exec file
+    copy_file(exec_file, '.')
 
     os.chdir("..")
 
