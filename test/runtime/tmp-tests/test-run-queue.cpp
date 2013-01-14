@@ -15,11 +15,11 @@ void print() {
 }
 
 int main(int argc, char *argv[]) {
-  q.createThreadElem(0);
-  q.createThreadElem(1);
-  q.createThreadElem(2);
-  q.createThreadElem(3);
-  q.createThreadElem(4);
+  q.create_thd_elem(0);
+  q.create_thd_elem(1);
+  q.create_thd_elem(2);
+  q.create_thd_elem(3);
+  q.create_thd_elem(4);
 
   q.push_back(0);
   q.push_back(1);

@@ -9,12 +9,12 @@
 #include <string.h>
 
 #define MAX_THREAD_NUM 1111
-#define DEBUG_RUN_QUEUE // "defined" means enable the debug check; "undef" means disable it (faster).
+//#define DEBUG_RUN_QUEUE // "defined" means enable the debug check; "undef" means disable it (faster).
 
 namespace tern {
 class run_queue {
 public:
-   enum THD_STATUS {
+  enum THD_STATUS {
     RUNNABLE,     /** The thread can do any regular pthreads sync operation. **/
     RUNNING,      /** The thread has got a turn and it should call RRScheduler::block() (getTurn() and then next()),
                               in order to make the turn being passed smoothly. This GOT_TURN is semantically the "token" of the run queue. **/
@@ -108,8 +108,8 @@ public:
     return elem;
   }
   
-  inline struct runq_elem *createThreadElem(int tid) {
-    //fprintf(stderr, "tid %d is called with runq::createThreadElem\n", tid);
+  inline struct runq_elem *create_thd_elem(int tid) {
+    //fprintf(stderr, "tid %d is called with runq::create_thd_elem\n", tid);
     assert(tid >= 0 && tid < MAX_THREAD_NUM);
     assert(tid_map[tid] == NULL);
     struct runq_elem *elem = new runq_elem(tid);
@@ -117,7 +117,7 @@ public:
     return elem;
   }
 
-  inline void destroyThreadElem(int tid) {
+  inline void del_thd_elem(int tid) {
     print(__FUNCTION__);
     struct runq_elem *elem = tid_map[tid];
     assert(elem);
@@ -181,7 +181,7 @@ public:
       if (tid_map[i] != NULL) {
         int tid = tid_map[i]->tid;
         tid_map[i]->prev = tid_map[i]->next = NULL;
-        destroyThreadElem(tid); // Deep clear.
+        del_thd_elem(tid); // Deep clear.
       }
     }
   }
@@ -256,7 +256,7 @@ public:
     return head->tid;
   }
 
-  inline struct runq_elem *frontElem() {
+  inline struct runq_elem *front_elem() {
     print(__FUNCTION__);
     assert(head != NULL);
     dbg_assert_elem_in(head);

@@ -551,7 +551,7 @@ RRScheduler::RRScheduler()
 
   // main thread
   assert(self() == MainThreadTid && "tid hasn't been initialized!");
-  struct run_queue::runq_elem *main_elem = runq.createThreadElem(MainThreadTid);
+  struct run_queue::runq_elem *main_elem = runq.create_thd_elem(MainThreadTid);
   runq.push_back(self());
   waits[MainThreadTid].post(); // Assign an initial turn to main thread.
   main_elem->status = run_queue::RUNNING;// Assign an initial running state (i.e., turn) to main thread.
@@ -633,9 +633,6 @@ ostream& RRScheduler::dump(ostream& o)
 }
 
 bool RRScheduler::nwkBlkStart() {
-  // TBD: can this function do per-thread logging (what is the turn count at 
-  // this moment) How did xtern do network op logging without scheduling network?
-
   bool isHead = true;
   struct run_queue::runq_elem *elem = runq.get_my_elem(self());
 
@@ -654,9 +651,6 @@ bool RRScheduler::nwkBlkStart() {
 }
 
 bool RRScheduler::nwkBlkEnd() {
-  // TBD: can this function do per-thread logging (what is the turn count at 
-  // this moment) How did xtern do network op logging without scheduling 
-  // network?
   struct run_queue::runq_elem *elem = runq.get_my_elem(self());
   pthread_spin_lock(&elem->spin_lock);
   assert(elem->status == run_queue::NWK_STOP);
@@ -687,7 +681,7 @@ int RRScheduler::nextRunnable(bool at_thread_end) {
     assert(!runq.empty());
 
     // Process one head element.
-    headElem = runq.frontElem();
+    headElem = runq.front_elem();
     pthread_spin_lock(&headElem->spin_lock);
     if (headElem->status == run_queue::NWK_STOP) {
       /** If this thread is blocking, remove it from run queue

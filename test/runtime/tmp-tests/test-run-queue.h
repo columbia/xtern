@@ -70,7 +70,7 @@ public:
       tid_map[i] = NULL;
   }
 
-  struct runq_elem *createThreadElem(int tid) {
+  struct runq_elem *create_thd_elem(int tid) {
     struct runq_elem *elem = new struct runq_elem;
     pthread_spin_init(&(elem->spin_lock), 0);
     elem->tid = tid;
@@ -81,7 +81,7 @@ public:
     return elem;
   }
 
-  void destroyThreadElem(int tid) {
+  void del_thd_elem(int tid) {
     struct runq_elem *elem = tid_map[tid];
     assert(elem);
     tid_map[tid] = NULL;

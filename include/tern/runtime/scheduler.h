@@ -233,7 +233,7 @@ struct Scheduler: public Serializer {
     assert(self() == runq.front());
     TidMap::create(new_th);
     int tid = getTid(new_th);
-    runq.createThreadElem(tid);
+    runq.create_thd_elem(tid);
     runq.push_back(tid);
   }
 
@@ -241,7 +241,7 @@ struct Scheduler: public Serializer {
     TidMap::reset(pthread_self());
     waitq.clear();
     runq.deep_clear();    
-    runq.createThreadElem(MainThreadTid);
+    runq.create_thd_elem(MainThreadTid);
     runq.push_back(MainThreadTid);
   }
 
