@@ -47,8 +47,9 @@ def getConfigFullPath(config_file):
 
 def readConfigFile(config_file):
     try:
-        newConfig = ConfigParser.ConfigParser( {"REPEATS": "100",
-                                       "INPUTS": ""} )
+        newConfig = ConfigParser.ConfigParser( {"REPEATS": "100", 
+                                                "INPUTS": "",
+                                                "REQUIRED_FILES": ""} )
         ret = newConfig.read(config_file)
     except ConfigParser.MissingSectionHeaderError as e:
         logging.error(str(e))
@@ -165,6 +166,20 @@ def write_stats(xtern, nondet):
         stats.write('xtern:\n\tavg {0}\n\tstd {1}\n'.format(xtern_avg, xtern_std))
         stats.write('non-det:\n\tavg {0}\n\tstd {1}\n'.format(nondet_avg, nondet_std))
 
+def copy_required_files(app, files):
+    for f in files.split():
+        logging.debug("copying required file : %s" % f)
+        if os.path.isabs(f):
+            src = f
+        else:
+            src = os.path.abspath('%s/apps/%s/%s' % (XTERN_ROOT, app, f))
+        try:
+            copy_file(src, '.')
+        except IOError as e:
+            logging.warning(str(e))
+            return False
+    return True
+
 def processBench(config, bench):
     # for each bench, generate running directory
     logging.debug("processing: " + bench)
@@ -184,6 +199,12 @@ def processBench(config, bench):
     generate_local_options(config, bench)
     inputs = config.get(bench, 'inputs')
     repeats = config.get(bench, 'repeats')
+
+    # copy required files
+    required_files = config.get(bench, 'required_files')
+    if not copy_required_files(apps_name, required_files):
+        logging.warning("error in config [%s], skip" % bench)
+        return
     
     # run command in shell, currently uses 'bash'
     bash_path = which('bash')
