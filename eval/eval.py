@@ -254,7 +254,7 @@ def processBench(config, bench):
     for i in range(int(repeats)):
         sys.stderr.write("\tPROGRESS: %5d/%d\r" % (i+1, int(repeats))) # progress
         with open('non-det/output.%d' % i, 'w', 102400) as log_file:
-            proc = subprocess.Popen(xtern_command, stdout=log_file, stderr=subprocess.STDOUT, shell=True, executable=bash_path, bufsize = 102400 )
+            proc = subprocess.Popen(nondet_command, stdout=log_file, stderr=subprocess.STDOUT, shell=True, executable=bash_path, bufsize = 102400 )
             proc.wait()
         # move log files into 'non-det' directory
         os.renames('out', 'non-det/out.%d' % i)
