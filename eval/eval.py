@@ -10,6 +10,7 @@ import coloroutput
 import re
 import subprocess
 import time
+import signal
 
 def getXternDefaultOptions():
     default = {}
@@ -255,22 +256,24 @@ def processBench(config, bench):
     for i in range(int(repeats)):
         sys.stderr.write("\tPROGRESS: %5d/%d\r" % (i+1, int(repeats))) # progress
         with open('xtern/output.%d' % i, 'w', 102400) as log_file:
-            proc = subprocess.Popen(xtern_command, stdout=log_file, stderr=subprocess.STDOUT,
-                                    shell=True, executable=bash_path, bufsize = 102400)
+            proc = subprocess.Popen(xtern_command, stdout=sys.stdout, stderr=sys.stdout,
+            #proc = subprocess.Popen(xtern_command, stdout=log_file, stderr=subprocess.STDOUT,
+                                    shell=True, executable=bash_path, bufsize = 102400, preexec_fn=os.setsid)
             if client_cmd:
-                time.sleep(4)
+                time.sleep(2)
                 with open('xtern/client.%d' % i, 'w', 102400) as client_log_file:
                     client_proc = subprocess.Popen(client_cmd, stdout=client_log_file, stderr=subprocess.STDOUT,
                                                    shell=True, executable=bash_path, bufsize = 102400)
                     client_proc.wait()
                 if client_terminate_server:
-                    proc.terminate()
+                    os.killpg(proc.pid, signal.SIGTERM)
                 proc.wait()
-                time.sleep(3)
+                time.sleep(2)
             else:
                 proc.wait()
         # move log files into 'xtern' directory
         os.renames('out', 'xtern/out.%d' % i)
+    
 
     # generate command for non-det [time LD_PRELOAD=... exec args...]
     nondet_command = ' '.join(['time', '-p', RAND_PRELOAD, exec_file] + inputs.split())
@@ -281,17 +284,18 @@ def processBench(config, bench):
         sys.stderr.write("\tPROGRESS: %5d/%d\r" % (i+1, int(repeats))) # progress
         with open('non-det/output.%d' % i, 'w', 102400) as log_file:
             proc = subprocess.Popen(nondet_command, stdout=log_file, stderr=subprocess.STDOUT,
-                                    shell=True, executable=bash_path, bufsize = 102400 )
+            #proc = subprocess.Popen(nondet_command, stdout=sys.stdout, stderr=sys.stdout,
+                                    shell=True, executable=bash_path, bufsize = 102400, preexec_fn=os.setsid )
             if client_cmd:
-                time.sleep(4)
+                time.sleep(2)
                 with open('non-det/client.%d' % i, 'w', 102400) as client_log_file:
                     client_proc = subprocess.Popen(client_cmd, stdout=client_log_file, stderr=subprocess.STDOUT,
                                                    shell=True, executable=bash_path, bufsize = 102400)
                     client_proc.wait()
                 if client_terminate_server:
-                    proc.terminate()
+                    os.killpg(proc.pid, signal.SIGTERM)
                 proc.wait()
-                time.sleep(3)
+                time.sleep(2)
             else:
                 proc.wait()
         # move log files into 'non-det' directory
@@ -300,14 +304,22 @@ def processBench(config, bench):
     # get stats
     xtern_cost = []
     for i in range(int(repeats)):
-        for line in reversed(open('xtern/output.%d' % i, 'r').readlines()):
+        if client_cmd and use_client_stats:
+            log_file_name = 'xtern/client.%d' % i
+        else:
+            log_file_name = 'xtern/output.%d' % i
+        for line in reversed(open(log_file_name, 'r').readlines()):
             if re.search('^real [0-9]+\.[0-9][0-9]$', line):
                 xtern_cost += [float(line.split()[1])]
                 break
 
     nondet_cost = []
     for i in range(int(repeats)):
-        for line in reversed(open('non-det/output.%d' % i, 'r').readlines()):
+        if client_cmd and use_client_stats:
+            log_file_name = 'non-det/client.%d' % i
+        else:
+            log_file_name = 'non-det/output.%d' % i
+        for line in reversed(open(log_file_name, 'r').readlines()):
             if re.search('^real [0-9]+\.[0-9][0-9]$', line):
                 nondet_cost += [float(line.split()[1])]
                 break
