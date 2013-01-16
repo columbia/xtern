@@ -33,7 +33,7 @@ diff -ruN ImageMagick-6.8.0-4/magick/magick.c ImageMagick-6.8.0-4-modified/magic
      *events,
      execution_path[MaxTextExtent],
      filename[MaxTextExtent];
-+  tern_lineup_init(0, 4, 100);
++  tern_lineup_init(0, omp_get_max_threads(), 100);
  
    /*
      Initialize the Magick environment.
