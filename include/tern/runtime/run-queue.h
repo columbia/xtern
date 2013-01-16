@@ -16,8 +16,8 @@ class run_queue {
 public:
   enum THD_STATUS {
     RUNNABLE,     /** The thread can do any regular pthreads sync operation. **/
-    RUNNING,      /** The thread has got a turn and it should call RRScheduler::block() (getTurn() and then next()),
-                              in order to make the turn being passed smoothly. This GOT_TURN is semantically the "token" of the run queue. **/
+    RUNNING_REG,     /** The thread has got a turn and it may call any sync operation (can be pthreads or network). **/
+    RUNNING_NWK,      /** The thread has got a turn and it is going to call a network operation. **/
     NWK_STOP      /** The thread is stopped (blocked) on a network operation, and no other thread can pass turn to it. **/
   };
   
@@ -126,39 +126,56 @@ public:
     delete elem;
   }
 
-  inline void dbg_assert_elem_in(struct runq_elem *elem) {
+  inline void dbg_assert_elem_in(const char *tag, struct runq_elem *elem) {
 #ifdef DEBUG_RUN_QUEUE
-      assert(elements.find((void *)elem) != elements.end());
+  if (elements.find((void *)elem) == elements.end()) {
+    fprintf(stderr, "DBG_FUNC: %s, elem tid %d, tag %s.\n", __FUNCTION__, elem?elem->tid:-1, tag);
+    int i = 0;
+    fprintf(stderr, "\n\n OP: %s: elements set size %u\n", tag, (unsigned)elements.size());
+    for (run_queue::iterator itr = begin(); itr != end(); ++itr) {
+      if (i > MAX_THREAD_NUM)
+        assert(false);
+      fprintf(stderr, "q[%d] = tid %d, status = %d\n", i, *itr, itr->status);
+      i++;
+    }
+    assert(false);
+  }
 #endif
   }
 
-  inline void dbg_assert_elem_not_in(struct runq_elem *elem) {
+  inline void dbg_assert_elem_not_in(const char *tag, struct runq_elem *elem) {
 #ifdef DEBUG_RUN_QUEUE
-      assert(elements.find((void *)elem) == elements.end());
+    if (elements.find((void *)elem) != elements.end()) {
+      fprintf(stderr, "DBG_FUNC: %s, elem tid %d, tag %s.\n", __FUNCTION__, elem?elem->tid:-1, tag);
+      assert(false);
+    }
 #endif
   }
 
-  inline void dbg_insert_elem(struct runq_elem *elem) {
+  inline void dbg_insert_elem(const char *tag, struct runq_elem *elem) {
 #ifdef DEBUG_RUN_QUEUE
-      elements.insert((void *)elem);
+    elements.insert((void *)elem);
 #endif
   }
 
-  inline void dbg_erase_elem(struct runq_elem *elem) {
+  inline void dbg_erase_elem(const char *tag, struct runq_elem *elem) {
 #ifdef DEBUG_RUN_QUEUE
-      elements.erase((void *)elem);
+    elements.erase((void *)elem);
 #endif
   }
 
   inline void dbg_clear_all_elems() {
 #ifdef DEBUG_RUN_QUEUE
-      elements.clear();
+    elements.clear();
 #endif
   }
 
-  void dbg_assert_elem_size(size_t sz) {
+  void dbg_assert_elem_size(const char *tag, size_t sz) {
 #ifdef DEBUG_RUN_QUEUE
-      assert(elements.size() == sz);
+      if (elements.size() != sz) {
+        fprintf(stderr, "elements set size %u, num_elements %u\n", (unsigned)elements.size(), (unsigned)sz);
+        assert(false);
+      }
 #endif
   }
   
@@ -170,10 +187,29 @@ public:
     return iterator();
   }
 
+  /** Check whether current element is in the queue. Only the head-of run queue should call this function,
+  because it is the only thread which could modify the linked list of run queue. **/
+  inline bool in(int tid) {
+    struct runq_elem *elem = tid_map[tid];
+    assert(elem);
+    /** If I have prev or next element, then I am still in the queue. **/
+    if (elem->prev != NULL || elem->next != NULL) {
+      dbg_assert_elem_in("run_queue.in.1", elem);
+      return true;
+    }
+    /** Else, if I am the only element in the queue, then I am still in the queue. **/
+    else if (head == elem && tail == elem) {
+      dbg_assert_elem_in("run_queue.in.2", elem);
+      return true;
+    }
+    dbg_assert_elem_not_in("run_queue.in.3", elem);
+    return false;
+  }
+
   /** This is a "deep" clear. It not only clears the list, but also the tid_map.
   This function should only be called when handling fork() and a deep clean is requried. **/
   inline void deep_clear() {
-    print(__FUNCTION__);
+    //print(__FUNCTION__);
     head = tail = NULL;
     num_elements = 0;
     dbg_clear_all_elems();
@@ -192,7 +228,8 @@ public:
   }
  
   inline size_t size() {
-    dbg_assert_elem_size(num_elements);
+    //print(__FUNCTION__);
+    dbg_assert_elem_size(__FUNCTION__, num_elements);
     return num_elements;
   }
 
@@ -204,7 +241,7 @@ public:
     } else {
       struct runq_elem *ret = position->next;
       struct runq_elem *cur = &position;
-      dbg_assert_elem_in(cur);
+      dbg_assert_elem_in(__FUNCTION__, cur);
 
       // Connect the "new" prev and next.
       if (position->prev != NULL)
@@ -221,19 +258,19 @@ public:
       // Clear the position's prev and next.
       cur->prev = cur->next = NULL;
 
-      dbg_erase_elem(cur);
+      dbg_erase_elem(__FUNCTION__, cur);
       num_elements--;
       return iterator(ret);
     }
   }
   
   inline void push_back(int tid) {
-    print(__FUNCTION__);
-    //fprintf(stderr, "push back tid %d\n", tid);
+    print("push_back_start");
+    //fprintf(stderr, "~~~~~~~~~~~~push back tid %d\n", tid);
 
     struct runq_elem *elem = tid_map[tid];
     assert(elem);
-    dbg_assert_elem_not_in(elem);
+    dbg_assert_elem_not_in(__FUNCTION__, elem);
     if (head == NULL) {
       assert(tail == NULL);
       head = tail = elem;
@@ -243,23 +280,23 @@ public:
       tail->next = elem;
       tail = elem;
     }
-    dbg_insert_elem(elem);
+    dbg_insert_elem(__FUNCTION__, elem);
     num_elements++;
-    print(__FUNCTION__);
+    print("push_back_end");
   }
 
   /* This is a thread run queue, all thread ids are fixed, reference is not allowed! */
   inline int front() {
     print(__FUNCTION__);
     assert(head != NULL);
-    dbg_assert_elem_in(head);
+    dbg_assert_elem_in(__FUNCTION__, head);
     return head->tid;
   }
 
   inline struct runq_elem *front_elem() {
     print(__FUNCTION__);
     assert(head != NULL);
-    dbg_assert_elem_in(head);
+    dbg_assert_elem_in(__FUNCTION__, head);
     return head;
   }
 
@@ -267,42 +304,43 @@ public:
     print(__FUNCTION__);
     struct runq_elem *elem = tid_map[tid];
     assert(elem);
-    dbg_assert_elem_not_in(elem);
+    dbg_assert_elem_not_in(__FUNCTION__, elem);
     if (head == NULL) {
       head = tail = elem;
     } else {
       elem->next = head;
       head = elem;
     }
-    dbg_insert_elem(elem);
+    dbg_insert_elem(__FUNCTION__, elem);
     num_elements++;
   }
 
   inline void pop_front() {
     print(__FUNCTION__);
     struct runq_elem *elem = head;
-    dbg_assert_elem_in(elem);
+    dbg_assert_elem_in(__FUNCTION__, elem);
     head = elem->next;
     elem->prev = elem->next = NULL;
     if (head == NULL) /** If head is empty, then the tail must also be empty. **/
       tail = NULL;
-    dbg_erase_elem(elem);
+    dbg_erase_elem(__FUNCTION__, elem);
     num_elements--;
   }
 
   inline void print(const char *tag) {
+    //fprintf(stderr, "\n\n OP: %s: elements set size %u\n", tag, (unsigned)elements.size());
     return;
 #ifdef DEBUG_RUN_QUEUE
-      int i = 0;
-      fprintf(stderr, "\n\n OP: %s: q size %u\n", tag, (unsigned)size());
-      for (run_queue::iterator itr = begin(); itr != end(); ++itr) {
-        if (i > MAX_THREAD_NUM)
-          assert(false);
-        fprintf(stderr, "q[%d] = %d, status = %d\n", i, *itr, itr->status);
-        i++;
-      }
-#endif
+    int i = 0;
+    fprintf(stderr, "\n\n OP: %s: elements set size %u\n", tag, (unsigned)elements.size());
+    for (run_queue::iterator itr = begin(); itr != end(); ++itr) {
+      if (i > MAX_THREAD_NUM)
+        assert(false);
+      fprintf(stderr, "q[%d] = tid %d, status = %d\n", i, *itr, itr->status);
+      i++;
     }
+#endif
+  }
 };
 }
 #endif

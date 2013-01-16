@@ -92,7 +92,7 @@ cat /dev/null > $MTREADOUT
 # Perform a basic multi-threaded search using multiple connections
 echo "======================================================"
 CONN=2
-THR=2
+THR=8
 OUTER=100
 INNER=`expr $TESTLOOPS \* 1`
 echo "Testing basic mt-hot search: $THR threads $CONN conns ($OUTER x $INNER) loops..."

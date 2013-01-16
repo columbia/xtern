@@ -51,7 +51,8 @@ static void *monitor(void *arg)
 
 extern pthread_mutex_t idle_mutex;
 extern pthread_cond_t idle_cond;
-
+extern int idle_done;
+extern ClockManager clockManager;
 pthread_mutex_t turn_mutex;
 
 void RRSchedulerCV::detect_blocking_threads(void)
@@ -265,37 +266,17 @@ int RRScheduler::fireTimeouts()
 
 void RRScheduler::check_wakeup()
 {
-  static int check_count = 0;
-  if (wakeup_flag && 
-    (options::wakeup_period <= 0 || 
-#if 1
-    (int) turnCount >= (int) options::wakeup_period * check_count
-#else
-    !(turnCount % options::wakeup_period)
-#endif
-    ))
-  {
-    check_count = turnCount / options::wakeup_period + 1;
-    pthread_mutex_lock(&wakeup_mutex);
-    dprintf("check_wakeup works at turn %d\n", turnCount);
-    dprintf("current runq = ");
-    for (run_queue::iterator it = runq.begin(); it != runq.end(); ++it)
-    {
-      dprintf("%d ", *it);
+  if (nwk_wakeup_flag) {
+    pthread_mutex_lock(&nwk_wakeup_mutex);
+    for (tid_set::iterator itr = nwk_wakeup_tids.begin(); itr != nwk_wakeup_tids.end(); ++itr) {
+      // This runq.in() call is safe, because check_wakeup() can only be called by 
+      // the thread holding the turn.
+      if (!runq.in(*itr))
+        runq.push_back(*itr);   
     }
-    dprintf("\n");
-    dprintf("wakeup queue = ");
-    for (int i = 0; i < (int) wakeup_queue.size(); ++i)
-    {
-      dprintf("%d ", wakeup_queue[i]);
-    }
-    dprintf("\n");
-    sort(wakeup_queue.begin(), wakeup_queue.end()); //  TODO
-    for (int i = 0; i < (int) wakeup_queue.size(); ++i)
-      runq.push_back(wakeup_queue[i]);
-    wakeup_queue.clear();
-    wakeup_flag = false;
-    pthread_mutex_unlock(&wakeup_mutex);
+    nwk_wakeup_tids.clear();
+    nwk_wakeup_flag = false;
+    pthread_mutex_unlock(&nwk_wakeup_mutex);
   }
 }
 
@@ -307,10 +288,14 @@ void RRScheduler::next(bool at_thread_end, bool hasPoppedFront)
   if (!hasPoppedFront) {
     // Update the status of the head element.
     struct run_queue::runq_elem *my = runq.get_my_elem(self());
-    // Current if branch can not be taken (hasPoppedFront is false) if a thread
-    // is doing network operation, so current status must be RUNNING.
-    assert(my->status == run_queue::RUNNING);
-    my->status = run_queue::RUNNABLE;
+    dprintf("RRScheduler::nextRunnable at_thread_end %d, self tid %d, head status %d\n",
+      at_thread_end, self(), my->status);
+    if (my->status == run_queue::RUNNING_REG)
+      my->status = run_queue::RUNNABLE;
+    else {
+      assert(my->status == run_queue::RUNNING_NWK);
+      my->status = run_queue::NWK_STOP;
+    }
 
     // remove self from runq
     runq.pop_front();
@@ -351,20 +336,30 @@ void RRScheduler::wakeUpIdleThread() {
     }
   }
   assert(tid == IdleThreadTid);
+  assert(!runq.empty());
   pthread_mutex_lock(&idle_mutex);
   pthread_cond_signal(&idle_cond);
   pthread_mutex_unlock(&idle_mutex);
 }
 
 void RRScheduler::idleThreadCondWait() {
-  int tid = self();
-  assert(tid == IdleThreadTid);
-  waits[tid].chan = (void *)&idle_cond;
-  waits[tid].timeout = FOREVER;
-  waitq.push_back(tid);
-  assert(tid == runq.front());
-  next();
-  pthread_cond_wait(&idle_cond, &idle_mutex);
+  /** At this moment the idle thread is still holding the turn, but the 
+  "picture" of run queue can be racy due to the fast and safe networking 
+  removal mechanism. Some threads may be runnable when the
+  idle thread looks at the runq, but after the idle thread decides to cond wait,
+  all threads in the runq can be calling blocking network operations.
+  So we need tryPutTurn(). **/
+  if (tryPutTurn()) {
+    int tid = self();
+    assert(tid == IdleThreadTid);
+    waits[tid].chan = (void *)&idle_cond;
+    waits[tid].timeout = FOREVER;
+    waitq.push_back(tid);
+    assert(tid == runq.front());
+    next();
+    pthread_cond_wait(&idle_cond, &idle_mutex);
+  } else 
+    putTurn();  // TBD: this seems not that nice, need refactored. Refer to record-runtime.
 }
 
 //@before without turn
@@ -393,42 +388,10 @@ int RRScheduler::block()
 
 void RRScheduler::wakeup()
 {
-  pthread_mutex_lock(&wakeup_mutex);
-  dprintf("thread %d wakes up at turn %d\n", self(), turnCount);
-  wakeup_queue.push_back(self());
-  wakeup_flag = true;
-  pthread_mutex_unlock(&wakeup_mutex);
-#if 0
-  int tid = -1;
-  dprintf("thread %d, wakeup start at turn %d\n", self(), getTurnCount());
-
-  while (tid < 0)
-  {
-#if 0
-  //  the first solution is to check the list front, which is not thread safe,
-  //  but is efficient.
-  if (runq.size() && !sem_trywait(&waits[runq.front()].sem))
-    tid = runq.front();
-#else
-  //  the second solution is to check all semaphore and grab the global token 
-  //  if possible.
-  int nt = nthread;
-  for (int i = 0; i < nt; ++i)
-    if (!sem_trywait(&waits[i].sem))
-    {
-      tid = i;
-      break;
-    }
-#endif
-  }
-  dprintf("thread %d, wakeup returned at turn %d\n", self(), getTurnCount());
-  
-  dprintf("RRScheduler: %d wakes up by stealing %d's turn\n", self(), tid);
-  runq.push_back(self());
-  timemark[self()] = timer;
-  runq.push_front(self());  //  hack code
-  next();
-#endif
+  pthread_mutex_lock(&nwk_wakeup_mutex);
+  nwk_wakeup_tids.insert(self());
+  nwk_wakeup_flag = true;
+  pthread_mutex_unlock(&nwk_wakeup_mutex);
 }
 
 //@before with turn
@@ -449,12 +412,10 @@ void RRScheduler::putTurn(bool at_thread_end)
   } else {
     // Check and modify "my" run queue element. No need to grab element spinlock since I am the head.
     struct run_queue::runq_elem *my = runq.get_my_elem(tid);
-    if (my->status == run_queue::RUNNING)
-      my->status = run_queue::RUNNABLE;
-    else
-      // A head thread can be calling a network operation later after it is put 
-      // ahead of the queue, so it could also be NWK_STOP.
-      assert(my->status == run_queue::NWK_STOP);
+    // Current if branch can not be taken (hasPoppedFront is false) if a thread
+    // is doing network operation, so current status must be RUNNING_REG.
+    assert (my->status == run_queue::RUNNING_REG);
+    my->status = run_queue::RUNNABLE;
 
     // Process run queue structure.
     runq.pop_front();
@@ -516,9 +477,6 @@ void RRScheduler::signal(void *chan, bool all)
   SELFCHECK;
 }
 
-extern int idle_done;
-extern ClockManager clockManager;
-
 //@before with turn
 //@after with turn
 unsigned RRScheduler::incTurnCount(void)
@@ -554,11 +512,11 @@ RRScheduler::RRScheduler()
   struct run_queue::runq_elem *main_elem = runq.create_thd_elem(MainThreadTid);
   runq.push_back(self());
   waits[MainThreadTid].post(); // Assign an initial turn to main thread.
-  main_elem->status = run_queue::RUNNING;// Assign an initial running state (i.e., turn) to main thread.
+  main_elem->status = run_queue::RUNNING_REG;// Assign an initial running state (i.e., turn) to main thread.
 
-  wakeup_queue.clear();
-  wakeup_flag = 0;
-  pthread_mutex_init(&wakeup_mutex, NULL);
+  nwk_wakeup_tids.clear();
+  nwk_wakeup_flag = 0;
+  pthread_mutex_init(&nwk_wakeup_mutex, NULL);
   pthread_mutex_init(&turn_mutex, NULL);
 
   if (options::RR_skip_zombie)
@@ -637,14 +595,13 @@ bool RRScheduler::nwkBlkStart() {
   struct run_queue::runq_elem *elem = runq.get_my_elem(self());
 
   pthread_spin_lock(&elem->spin_lock);
-  if (elem->status == run_queue::RUNNABLE)
-    isHead = false; // Set isHead to be false so that we do not need to call  ::block() in the record-runtime.
-  else
-    assert(elem->status == run_queue::RUNNING); // Leave isHead to be true so that we need to call ::block() as the next step.
-  /** The self-thread going to block does not modify the linked list of the run queue,
-  instead it only changes its own status. Only the head-thread could modify the linked list
-  of the run queue. So it is safe. **/
-  elem->status = run_queue::NWK_STOP;
+  if (elem->status == run_queue::RUNNABLE) {
+    isHead = false;
+    elem->status = run_queue::NWK_STOP;
+  } else {
+    assert(elem->status == run_queue::RUNNING_REG);
+    elem->status = run_queue::RUNNING_NWK;
+  }
   pthread_spin_unlock(&elem->spin_lock);
 
   return isHead;
@@ -675,8 +632,16 @@ int RRScheduler::nextRunnable(bool at_thread_end) {
       } else if (at_thread_end && !waitq.empty() && self() == MainThreadTid) {
         fprintf(stderr, "WARNING: main thread exits with some children threads alive (e.g., openmp).\n");
         return InvalidTid;
-      } else if (options::launch_idle_thread && self() != IdleThreadTid) // If I am not the idle thread, then wake up the idle thread.
+      } else {
+        if (!options::launch_idle_thread) {
+          fprintf(stderr, "WARN: the program may contain some blocking network \
+            operations which requires 'options::launch_idle_thread = 1', please \
+            check your local.options file and rerun.\n");
+          exit(1);
+        }
+        assert(self() != IdleThreadTid);
         wakeUpIdleThread();
+      }
     }
     assert(!runq.empty());
 
@@ -689,10 +654,13 @@ int RRScheduler::nextRunnable(bool at_thread_end) {
       that could modify the linked list of run queue, so it is safe. **/
       runq.pop_front();  
     } else {
-      //fprintf(stderr, "RRScheduler::nextRunnable at_thread_end %d, self %d, headElem tid %d, head status running %d?, self status %d\n",
-        //at_thread_end, self(), headElem->tid, headElem->status == run_queue::RUNNING, runq.get_my_elem(self())->status);
-      assert(headElem->status == run_queue::RUNNABLE);
-      headElem->status = run_queue::RUNNING;
+      dprintf("RRScheduler::nextRunnable at_thread_end %d, self %d, headElem tid %d, head status %d, self status %d\n",
+        at_thread_end, self(), headElem->tid, headElem->status, runq.get_my_elem(self())->status);
+      assert(headElem->status == run_queue::RUNNABLE ||
+        headElem->status == run_queue::RUNNING_REG || 
+        headElem->status == run_queue::RUNNING_NWK);
+      if (headElem->status == run_queue::RUNNABLE)
+        headElem->status = run_queue::RUNNING_REG;
       passed = true;
     }
     pthread_spin_unlock(&headElem->spin_lock);
@@ -704,6 +672,25 @@ int RRScheduler::nextRunnable(bool at_thread_end) {
   assert(headElem);
   return headElem->tid;
 }
+
+bool RRScheduler::tryPutTurn() {
+  assert(!runq.empty());
+  assert(self() == runq.front());
+  run_queue::iterator itr = runq.begin();
+  itr++; // Ignore myself.
+  for (; itr != runq.end(); ++itr) {
+    struct run_queue::runq_elem *cur = &itr;
+    pthread_spin_lock(&cur->spin_lock);
+    if (cur->status == run_queue::RUNNABLE) {
+      cur->status = run_queue::RUNNING_REG; // Try put turn succeeded.
+      pthread_spin_unlock(&cur->spin_lock);
+      return true;
+    }
+    pthread_spin_unlock(&cur->spin_lock);
+  }
+  return false;
+}
+
 
 void FCFSScheduler::getTurn() {  
   pthread_mutex_lock(&fcfs_lock);

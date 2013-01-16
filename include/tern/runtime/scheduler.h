@@ -241,7 +241,8 @@ struct Scheduler: public Serializer {
     TidMap::reset(pthread_self());
     waitq.clear();
     runq.deep_clear();    
-    runq.create_thd_elem(MainThreadTid);
+    struct run_queue::runq_elem *elem = runq.create_thd_elem(MainThreadTid);
+    elem->status = run_queue::RUNNING_REG; // Pass the first token to the main thread after fork.
     runq.push_back(MainThreadTid);
   }
 

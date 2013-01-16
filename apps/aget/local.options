@@ -10,7 +10,7 @@
 DMT = 1
 
 # determine network operations (including blocking functions) are hooked or not. 
-schedule_network  = 1
+schedule_network  = 0
 
 # the runtime scheduler algorithm, options are:
 # 1.  FCFS    first come first serve

@@ -20,6 +20,7 @@
 #include <iostream>
 #include <fstream>
 #include <semaphore.h>
+#include <tr1/unordered_set>
 #include "tern/runtime/scheduler.h"
 
 extern pthread_mutex_t turn_mutex;
@@ -135,6 +136,14 @@ protected:
   /// execution of the program.
   int nextRunnable(bool at_thread_end = false);
 
+  /// Called by the idle thread to decide whether the try put turn could be successful.
+  /// If so, this function will modify the first runnable thread's status from RUNNABLE to RUNNING_REG,
+  /// and the function return true. This is necessary because of the network handling mechanism,
+  /// the runq "picture" seen by an idle thread could be racy (some threads may be runnable when the
+  /// idle thread looks at the runq, but after the idle thread decides to cond wait, all threads in the runq
+  /// can be calling blocking network operations). So we need this tryPutTurn().
+  bool tryPutTurn();
+
   // MAYBE: can use a thread-local wait struct for each thread if it
   // improves performance
   wait_t waits[MAX_THREAD_NUM];
@@ -144,11 +153,14 @@ protected:
   int timer;
   int timemark[MAX_THREAD_NUM];
 
-  //  for wakeup
-  std::vector<int> wakeup_queue;
-  bool wakeup_flag;
-  pthread_mutex_t wakeup_mutex;
+  //  for network wakeup
+  typedef std::tr1::unordered_set<int> tid_set;
+  tid_set nwk_wakeup_tids;
+  bool nwk_wakeup_flag;
+  pthread_mutex_t nwk_wakeup_mutex;
   void check_wakeup();
+
+  // For idle thread.
   void wakeUpIdleThread();
   void idleThreadCondWait();
 };
