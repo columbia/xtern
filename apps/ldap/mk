@@ -26,5 +26,6 @@ cp slapd.conf.template $APP_DIR/install/etc/openldap/slapd.conf
 # Add benchmark.
 cd openldap-$VER
 patch -p1 < ../only-xtern-test-mt-hot.patch
+patch -p1 < ../only-run-bdb-tests.patch
 cd $APP_DIR
 
