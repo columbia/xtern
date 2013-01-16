@@ -47,8 +47,10 @@ def getConfigFullPath(config_file):
 
 def readConfigFile(config_file):
     try:
-        newConfig = ConfigParser.ConfigParser( {"REPEATS": "100",
-                                       "INPUTS": ""} )
+        newConfig = ConfigParser.ConfigParser( {"REPEATS": "100", 
+                                                "INPUTS": "",
+                                                "REQUIRED_FILES": "",
+                                                "DOWNLOAD_FILES": ""} )
         ret = newConfig.read(config_file)
     except ConfigParser.MissingSectionHeaderError as e:
         logging.error(str(e))
@@ -60,14 +62,17 @@ def readConfigFile(config_file):
         if ret:
             return newConfig
 
+# TODO: will fail if there is no git information to get
 def getGitInfo():
     import commands
     git_show = 'cd '+XTERN_ROOT+' && git show '
     githash = commands.getoutput(git_show+'| head -1 | sed -e "s/commit //"')
     git_diff = 'cd '+XTERN_ROOT+' && git diff --quiet'
-    gitstatus = commands.getoutput('if ! ('+
-                                   git_diff+
-                                   '); then echo "_dirty"; fi')
+    diff = commands.getoutput('cd ' +XTERN_ROOT+ ' && git diff')
+    if diff:
+        gitstatus = '_dirty'
+    else:
+        gitstatus = ''
     commit_date = commands.getoutput( git_show+
             '| head -4 | grep "Date:" | sed -e "s/Date:[ \t]*//"' )
     date_tz  = re.compile(r'^.* ([+-]\d\d\d\d)$').match(commit_date).group(1)
@@ -76,8 +81,8 @@ def getGitInfo():
     gitcommitdate = str(datetime.datetime.strptime(commit_date, date_fmt))
     logging.debug( "git 6 digits hash code: " + githash[0:6] )
     logging.debug( "git reposotory status: " + gitstatus)
-    logging.debug( "git commit date: ")
-    return [githash[0:6], gitstatus, gitcommitdate]
+    logging.debug( "git commit date: " + gitcommitdate)
+    return [githash[0:6], gitstatus, gitcommitdate, diff]
 
 def mkdir_p(path):
     try:
@@ -121,14 +126,84 @@ def generate_local_options(config, bench):
     with open("local.options", "w") as option_file:
         option_file.write(output)
 
+def checkExist(file, flags=os.X_OK):
+    if not os.path.exists(file) or not os.path.isfile(file) or not os.access(file, flags):
+        return False
+    return True
+
+def copy_file(src, dst):
+    import shutil
+    shutil.copy(src, dst)
+
+# ref: twisted-12.3.0 procutils.py
+def which(name, flags=os.X_OK):
+    result = []
+    path = os.environ.get('PATH', None)
+    if path is None:
+        return []
+    for p in os.environ.get('PATH', '').split(os.pathsep):
+        p = os.path.join(p, name)
+        if os.access(p, flags):
+            result.append(p)
+    return result
+
+def write_stats(xtern, nondet):
+    try:
+        import numpy
+    except ImportError:
+        logging.error("please install 'numpy' module")
+        sys.exit(1)
+    xtern_avg = numpy.average(xtern)
+    xtern_std = numpy.std(xtern)
+    nondet_avg = numpy.average(nondet)
+    nondet_std = numpy.std(nondet)
+    overhead_avg = (xtern_avg - nondet_avg)/nondet_avg
+    import math
+    overhead_std = overhead_avg*(math.sqrt(2*((nondet_std/nondet_avg)**2) + (xtern_std/xtern_avg)**2))
+    with open("stats.txt", "w") as stats:
+        stats.write('overhead: {2:.3f}%\n\tavg {0}\n\tstd {1}\n'.format(overhead_avg, overhead_std, overhead_avg*100))
+        stats.write('xtern:\n\tavg {0}\n\tstd {1}\n'.format(xtern_avg, xtern_std))
+        stats.write('non-det:\n\tavg {0}\n\tstd {1}\n'.format(nondet_avg, nondet_std))
+
+def copy_required_files(app, files):
+    for f in files.split():
+        logging.debug("copying required file : %s" % f)
+        if os.path.isabs(f):
+            src = f
+        else:
+            src = os.path.abspath('%s/apps/%s/%s' % (XTERN_ROOT, app, f))
+        try:
+            copy_file(src, '.')
+        except IOError as e:
+            logging.warning(str(e))
+            return False
+    return True
+
+def download_files_from_web(links):
+    #from urllib import urlretrieve
+    import urllib
+    opener = urllib.URLopener()
+    for link in links.split():
+        logging.debug("Downloading file from %s" % link)
+        try:
+            opener.retrieve(link, link.split('/')[-1])
+        except IOError as e:
+            logging.warning(str(e))
+            return False
+    return True
+
 def processBench(config, bench):
+    # for each bench, generate running directory
     logging.debug("processing: " + bench)
     apps_name, exec_file = extract_apps_exec(bench)
     logging.debug("app = %s" % apps_name)
     logging.debug("executible file = %s" % exec_file)
+    if not checkExist(exec_file, os.X_OK):
+        logging.warning('%s does not exist, skip [%s]' % (exec_file, bench))
+        return
+
     segs = re.sub(r'(\")|(\.)|/|\'', '', bench).split()
     dir_name =  '_'.join(segs)
-    
     mkdir_p(dir_name)
     os.chdir(dir_name)
 
@@ -136,25 +211,73 @@ def processBench(config, bench):
     generate_local_options(config, bench)
     inputs = config.get(bench, 'inputs')
     repeats = config.get(bench, 'repeats')
+
+    # copy required files
+    required_files = config.get(bench, 'required_files')
+    if not copy_required_files(apps_name, required_files):
+        logging.warning("error in config [%s], skip" % bench)
+        return
+
+    # download files if needed
+    download_files = config.get(bench, 'download_files')
+    if not download_files_from_web(download_files):
+        logging.warning("cannot download one of files in config [%s], skip" % bench)
+        return
     
-    xtern_env = os.environ.copy()
-    xtern_env['LD_PRELOAD'] = "%s/dync_hook/interpose.so" % XTERN_ROOT
+    # run command in shell, currently uses 'bash'
+    bash_path = which('bash')
+    if not bash_path:
+        logging.critical("cannot find shell 'bash'")
+        sys.exit(1)
+    else:
+        bash_path = bash_path[0]
+        logging.debug("find 'bash' at %s" % bash_path)
 
+    # generate command for xtern [time LD_PRELOAD=... exec args...]
+    xtern_command = ' '.join(['time', '-p', XTERN_PRELOAD, exec_file] + inputs.split())
+    logging.info("executing '%s'" % xtern_command)
+
+    mkdir_p('xtern')
     for i in range(int(repeats)):
-        proc = subprocess.Popen(['time', '-p', exec_file] + inputs.split(), stdout=subprocess.PIPE, stderr=subprocess.STDOUT, env=xtern_env)
-        proc.wait()
-        os.system('mv out out.%d' % i)
-        with open('output.%d' % i, 'w') as log_file:
-            log_file.write(proc.stdout.read())
+        sys.stderr.write("\tPROGRESS: %5d/%d\r" % (i+1, int(repeats))) # progress
+        with open('xtern/output.%d' % i, 'w', 102400) as log_file:
+            proc = subprocess.Popen(xtern_command, stdout=log_file, stderr=subprocess.STDOUT, shell=True, executable=bash_path, bufsize = 102400)
+            proc.wait()
+        # move log files into 'xtern' directory
+        os.renames('out', 'xtern/out.%d' % i)
 
-    # FIXME: performance issue
-    cost = []
+    # generate command for non-det [time LD_PRELOAD=... exec args...]
+    nondet_command = ' '.join(['time', '-p', RAND_PRELOAD, exec_file] + inputs.split())
+    logging.info("executing '%s'" % nondet_command)
+
+    mkdir_p('non-det')
     for i in range(int(repeats)):
-        for line in open('output.%d' % i, 'r'):
-            if re.search('^real ', line):
-                cost += [float(line.split()[1])]
-    logging.info('Average Cost: %f' % (sum(cost)/float(repeats)))
+        sys.stderr.write("\tPROGRESS: %5d/%d\r" % (i+1, int(repeats))) # progress
+        with open('non-det/output.%d' % i, 'w', 102400) as log_file:
+            proc = subprocess.Popen(nondet_command, stdout=log_file, stderr=subprocess.STDOUT, shell=True, executable=bash_path, bufsize = 102400 )
+            proc.wait()
+        # move log files into 'non-det' directory
+        os.renames('out', 'non-det/out.%d' % i)
 
+    # get stats
+    xtern_cost = []
+    for i in range(int(repeats)):
+        for line in reversed(open('xtern/output.%d' % i, 'r').readlines()):
+            if re.search('^real [0-9]+\.[0-9][0-9]$', line):
+                xtern_cost += [float(line.split()[1])]
+                break
+
+    nondet_cost = []
+    for i in range(int(repeats)):
+        for line in reversed(open('non-det/output.%d' % i, 'r').readlines()):
+            if re.search('^real [0-9]+\.[0-9][0-9]$', line):
+                nondet_cost += [float(line.split()[1])]
+                break
+
+    write_stats(xtern_cost, nondet_cost)
+
+    # copy exec file
+    copy_file(exec_file, '.')
 
     os.chdir("..")
 
@@ -194,8 +317,14 @@ if __name__ == "__main__":
         logging.error("Please set the environment variable " + str(e))
         sys.exit(1)
     APPS = os.path.abspath(XTERN_ROOT + "/apps/")
+    if not checkExist("%s/dync_hook/interpose.so" % XTERN_ROOT, os.R_OK):
+        logging.error('thre is no "$XTERN_ROOT/dync_hook/interpose.so"')
+        sys.exit(1)
+    if not checkExist("%s/eval/rand-intercept/rand-intercept.so" % XTERN_ROOT, os.R_OK):
+        logging.error('there is no "$XTERN_ROOT/eval/rand-intercept/rand-intercept.so"')
+        sys.exit(1)
     XTERN_PRELOAD = "LD_PRELOAD=%s/dync_hook/interpose.so" % XTERN_ROOT
-    RAND_PRELOAD = "LDPRELOAD=%s/eval/rand-intercept/rand-intercept.so"
+    RAND_PRELOAD = "LD_PRELOAD=%s/eval/rand-intercept/rand-intercept.so" % XTERN_ROOT
 
     # get default xtern options
     default_options = getXternDefaultOptions()
@@ -218,6 +347,11 @@ if __name__ == "__main__":
         if not run_dir:
             continue
         os.chdir(run_dir)
+
+        # write diff file if the repository is dirty
+        if git_info[3]:
+            with open("git_diff", "w") as diff:
+                diff.write(git_info[3])
         
         benchmarks = local_config.sections()
         for benchmark in benchmarks:

@@ -26,8 +26,8 @@ tar zxf $APPS_DIR/sys/MPlayer-$VER.tar.gz
 cd MPlayer-$VER
 patch -p1 < ../add-xtern-annot.patch
 ./configure --disable-mplayer --yasm= --extra-cflags="-g \
-  -I$XTERN_ROOT/include -L$XTERN_ROOT/dync_hook -lxtern-annot"
-make
+    -I$XTERN_ROOT/include -L$XTERN_ROOT/dync_hook  -Wl,--rpath,$XTERN_ROOT/dync_hook -lxtern-annot"
+make -j64
 mv mencoder ../
 cd ../
 

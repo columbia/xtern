@@ -32,10 +32,10 @@ diff -ruN MPlayer-1.1/Makefile MPlayer-1.1-modified/Makefile
 +++ MPlayer-1.1-modified/Makefile	2012-12-25 01:51:17.470879025 -0500
 @@ -695,7 +695,7 @@
  FFMPEGFILES = $(foreach part, $(FFMPEGPARTS), $(wildcard $(addprefix ffmpeg/$(part)/,*.[chS] /*/*.[chS] /*/*.asm)))
- 
+
  COMMON_LIBS-$(FFMPEG_A)           += $(FFMPEGLIBS)
 -COMMON_LIBS                       += $(COMMON_LIBS-yes)
-+COMMON_LIBS                       += $(COMMON_LIBS-yes) -I/home/heming/rcs/smt+mc/xtern/include -L/home/heming/rcs/smt+mc/xtern/dync_hook -lxtern-annot
++COMMON_LIBS                       += $(COMMON_LIBS-yes) -I$(XTERN_ROOT)/include -L$(XTERN_ROOT)/dync_hook -Wl,--rpath,$(XTERN_ROOT)/dync_hook -lxtern-annot
  
  OBJS_COMMON    += $(addsuffix .o, $(basename $(SRCS_COMMON)))
  OBJS_MENCODER  += $(addsuffix .o, $(basename $(SRCS_MENCODER)))

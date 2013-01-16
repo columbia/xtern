@@ -5,7 +5,7 @@ diff -ruN pbzip2-1.1.5/Makefile pbzip2-1.1.5-modified/Makefile
  # External libraries
  LDFLAGS = -lbz2
  LDFLAGS += -lpthread
-+LDFLAGS += -I$(XTERN_ROOT)/include -L$(XTERN_ROOT)/dync_hook -lxtern-annot
++LDFLAGS += -I$(XTERN_ROOT)/include -L$(XTERN_ROOT)/dync_hook -Wl,--rpath,$(XTERN_ROOT)/dync_hook -lxtern-annot
  
  # Where you want pbzip2 installed when you do 'make install'
  PREFIX = /usr
