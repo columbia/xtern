@@ -9,6 +9,7 @@ import logging
 import coloroutput
 import re
 import subprocess
+import time
 
 def getXternDefaultOptions():
     default = {}
@@ -50,7 +51,10 @@ def readConfigFile(config_file):
         newConfig = ConfigParser.ConfigParser( {"REPEATS": "100", 
                                                 "INPUTS": "",
                                                 "REQUIRED_FILES": "",
-                                                "DOWNLOAD_FILES": ""} )
+                                                "DOWNLOAD_FILES": "",
+                                                "C_CMD": "",
+                                                "C_TERMINATE_SERVER": "0",
+                                                "C_STATS": "0"} )
         ret = newConfig.read(config_file)
     except ConfigParser.MissingSectionHeaderError as e:
         logging.error(str(e))
@@ -233,6 +237,16 @@ def processBench(config, bench):
         bash_path = bash_path[0]
         logging.debug("find 'bash' at %s" % bash_path)
 
+    # check if this is a server-client app
+    client_cmd = config.get(bench, 'C_CMD')
+    client_terminate_server = bool(config.get(bench, 'C_TERMINATE_SERVER'))
+    use_client_stats = bool(config.get(bench, 'C_STATS'))
+    if use_client_stats:
+        client_cmd = 'time -p ' + client_cmd
+    logging.info("client command : %s" % client_cmd)
+    logging.debug("terminate server after client finish job : " + str(client_terminate_server))
+    logging.debug("evaluate performance by using stats of client : " + str(use_client_stats))
+
     # generate command for xtern [time LD_PRELOAD=... exec args...]
     xtern_command = ' '.join(['time', '-p', XTERN_PRELOAD, exec_file] + inputs.split())
     logging.info("executing '%s'" % xtern_command)
@@ -241,8 +255,20 @@ def processBench(config, bench):
     for i in range(int(repeats)):
         sys.stderr.write("\tPROGRESS: %5d/%d\r" % (i+1, int(repeats))) # progress
         with open('xtern/output.%d' % i, 'w', 102400) as log_file:
-            proc = subprocess.Popen(xtern_command, stdout=log_file, stderr=subprocess.STDOUT, shell=True, executable=bash_path, bufsize = 102400)
-            proc.wait()
+            proc = subprocess.Popen(xtern_command, stdout=log_file, stderr=subprocess.STDOUT,
+                                    shell=True, executable=bash_path, bufsize = 102400)
+            if client_cmd:
+                time.sleep(4)
+                with open('xtern/client.%d' % i, 'w', 102400) as client_log_file:
+                    client_proc = subprocess.Popen(client_cmd, stdout=client_log_file, stderr=subprocess.STDOUT,
+                                                   shell=True, executable=bash_path, bufsize = 102400)
+                    client_proc.wait()
+                if client_terminate_server:
+                    proc.terminate()
+                proc.wait()
+                time.sleep(3)
+            else:
+                proc.wait()
         # move log files into 'xtern' directory
         os.renames('out', 'xtern/out.%d' % i)
 
@@ -254,8 +280,20 @@ def processBench(config, bench):
     for i in range(int(repeats)):
         sys.stderr.write("\tPROGRESS: %5d/%d\r" % (i+1, int(repeats))) # progress
         with open('non-det/output.%d' % i, 'w', 102400) as log_file:
-            proc = subprocess.Popen(nondet_command, stdout=log_file, stderr=subprocess.STDOUT, shell=True, executable=bash_path, bufsize = 102400 )
-            proc.wait()
+            proc = subprocess.Popen(nondet_command, stdout=log_file, stderr=subprocess.STDOUT,
+                                    shell=True, executable=bash_path, bufsize = 102400 )
+            if client_cmd:
+                time.sleep(4)
+                with open('non-det/client.%d' % i, 'w', 102400) as client_log_file:
+                    client_proc = subprocess.Popen(client_cmd, stdout=client_log_file, stderr=subprocess.STDOUT,
+                                                   shell=True, executable=bash_path, bufsize = 102400)
+                    client_proc.wait()
+                if client_terminate_server:
+                    proc.terminate()
+                proc.wait()
+                time.sleep(3)
+            else:
+                proc.wait()
         # move log files into 'non-det' directory
         os.renames('out', 'non-det/out.%d' % i)
 
