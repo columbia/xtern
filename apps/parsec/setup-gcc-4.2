@@ -1,0 +1,40 @@
+#!/bin/bash
+
+set -e
+
+# if get an error like " cannot find crti.o ..."
+# sudo ln -s /usr/lib/x86_64-linux-gnu /usr/lib64
+
+ROOT=`pwd`
+
+if [ ! -d $XTERN_ROOT ]; then
+	echo "XTERN_ROOT is not defined"
+	exit 1
+fi
+
+PARSEC_ROOT=$XTERN_ROOT/apps/parsec
+
+SOURCE=$PARSEC_ROOT/gcc-4.2-src/
+INSTALL=$PARSEC_ROOT/gcc-4.2/
+
+rm -rf $SOURCE $INSTALL
+
+pushd $PARSEC_ROOT
+
+svn co --quiet svn://gcc.gnu.org/svn/gcc/tags/gcc_4_2_4_release $SOURCE
+
+
+pushd $SOURCE
+
+./configure --prefix=$INSTALL
+make -j64
+mkdir -p $INSTALL
+make install
+
+rm -rf $INSTALL/lib64/libstdc++.so
+rm -rf $INSTALL/lib64/libstdc++.so.6
+ln -s /usr/lib/x86_64-linux-gnu/libstdc++.so.6 $INSTALL/lib64/libstdc++.so
+ln -s /usr/lib/x86_64-linux-gnu/libstdc++.so.6 $INSTALL/lib64/libstdc++.so.6
+
+popd
+popd
