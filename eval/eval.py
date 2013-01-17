@@ -240,13 +240,14 @@ def processBench(config, bench):
 
     # check if this is a server-client app
     client_cmd = config.get(bench, 'C_CMD')
-    client_terminate_server = bool(config.get(bench, 'C_TERMINATE_SERVER'))
-    use_client_stats = bool(config.get(bench, 'C_STATS'))
-    if use_client_stats:
+    client_terminate_server = bool(int(config.get(bench, 'C_TERMINATE_SERVER')))
+    use_client_stats = bool(int(config.get(bench, 'C_STATS')))
+    if client_cmd and use_client_stats:
         client_cmd = 'time -p ' + client_cmd
-    logging.info("client command : %s" % client_cmd)
-    logging.debug("terminate server after client finish job : " + str(client_terminate_server))
-    logging.debug("evaluate performance by using stats of client : " + str(use_client_stats))
+    if client_cmd:
+        logging.info("client command : %s" % client_cmd)
+        logging.debug("terminate server after client finish job : " + str(client_terminate_server))
+        logging.debug("evaluate performance by using stats of client : " + str(use_client_stats))
 
     # generate command for xtern [time LD_PRELOAD=... exec args...]
     xtern_command = ' '.join(['time', '-p', XTERN_PRELOAD, exec_file] + inputs.split())
