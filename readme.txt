@@ -1,19 +1,41 @@
-Dynamic Hooks
-=============
+Installing xtern
+================
 
-How to build xtern (with dynamic hook module).
-0. add $XTERN_ROOT into environment variables in your ~/.bashrc. make sure LLVM is correctly setup in debug mode.
-1. create $XTERN_ROOT/obj, go to obj.
-2. do config as following. that's because xtern uses LLVM makefile.common
-> ./../configure --with-llvmsrc=$LLVM_ROOT/llvm-2.7/ --with-llvmobj=$LLVM_ROOT/llvm-obj/ --with-llvmgccdir=$LLVM_ROOT/install/bin/ --prefix=$XTERN_ROOT/install
-3. do "make ENABLE_OPTIMIZED=0/1 && make ENABLE_OPTIMIZED=0/1 install"
-4. goto $XTERN_ROOT/dync_hook and run 'make'.
+0. Add $XTERN_ROOT (the absolute path of "xtern") into environment variables
+in your ~/.bashrc. Run "echo $XTERN_ROOT" to make sure it is correct.
+
+1. Go to directory $XTERN_ROOT, and run:
+> cd $XTERN_ROOT
+> ./llvm/build-llvm.sh --optimized
+You may need to install bison and flex on your machine because llvm needs them.
+The "--optimized" flag above is optional, if you are getting performance results,
+then you need this flag; if you are developing and need debug symbols,
+then you don't need this flag. If you have specified this "--optimized" flag,
+you need to specify "ENABLE_OPTIMIZED=1" in the following steps, otherwise 
+specify "ENABLE_OPTIMIZED=0".
+
+2. Create $XTERN_ROOT/obj, go to obj.
+
+3. Do config as following. that's because xtern uses LLVM makefile.common:
+> ./../configure --with-llvmsrc=$XTERN_ROOT/llvm/llvm-2.7/ \
+  --with-llvmobj=$XTERN_ROOT/llvm/llvm-obj/ \
+  --with-llvmgccdir=$XTERN_ROOT/llvm/install/bin/ \
+  --prefix=$XTERN_ROOT/install
+
+4. Make. Every time after you 'git pull' xtern, you should go to this directory and make it.
+> cd $XTERN_ROOT/dync_hook
+> make clean
+> make ENABLE_OPTIMIZED=0/1
+
 5. Append $XTERN_ROOT/dync_hook to your LD_LIBRARY_PATH in your ~/.bashrc.
+Run "echo $LD_LIBRARY_PATH" to make sure it is correct.
 > export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$XTERN_ROOT/dync_hook
-6. goto $XTERN_ROOT/eva/rand-intercept and run 'make'.
 
-You can test the build by running 'make test_sc' in $XTERN_ROOT/dync_hook
+6. Go to $XTERN_ROOT/eva/rand-intercept and run 'make'.
 
+7. Test, if it all passes, then everything has been installed correctly.
+> cd $XTERN_ROOT/obj
+> make ENABLE_OPTIMIZED=0/1 -C test check
 
 
 

@@ -7,6 +7,8 @@ fi
 
 VER=2.4.11
 JOBS=$1
+cd $XTERN_ROOT/apps/redis/
+tar zxvf $APPS_DIR/sys/redis-$VER.tar.gz
 
 cd redis-$VER
 

@@ -20,6 +20,7 @@
 #include <iostream>
 #include <fstream>
 #include <semaphore.h>
+#include <tr1/unordered_set>
 #include "tern/runtime/scheduler.h"
 
 extern pthread_mutex_t turn_mutex;
@@ -103,6 +104,8 @@ struct RRScheduler: public Scheduler {
   virtual void signal(void *chan, bool all=false);
 
   virtual int block(); 
+  virtual bool nwkBlkStart();
+  virtual bool nwkBlkEnd();
   virtual void wakeup();
 
   unsigned incTurnCount(void);
@@ -121,28 +124,43 @@ protected:
   /// return the next timeout turn number
   unsigned nextTimeout();
   /// pop the @runq and wakes up the thread at the front of @runq
-  virtual void next(bool at_thread_end=false);
+  virtual void next(bool at_thread_end=false, bool hasPoppedFront = false);
   /// child classes can override this method to reorder threads in @runq
   virtual void reorderRunq(void) {}
 
   /// for debugging
   void selfcheck(void);
   std::ostream& dump(std::ostream& o);
+  /// An associated function to assist the fast and safe runq removal mechanism for network operation.
+  /// Return the  ext runnable thread id. If this function returns an invalid tid, it means it is already the end of 
+  /// execution of the program.
+  int nextRunnable(bool at_thread_end = false);
+
+  /// Called by the idle thread to decide whether the try put turn could be successful.
+  /// If so, this function will modify the first runnable thread's status from RUNNABLE to RUNNING_REG,
+  /// and the function return true. This is necessary because of the network handling mechanism,
+  /// the runq "picture" seen by an idle thread could be racy (some threads may be runnable when the
+  /// idle thread looks at the runq, but after the idle thread decides to cond wait, all threads in the runq
+  /// can be calling blocking network operations). So we need this tryPutTurn().
+  bool tryPutTurn();
 
   // MAYBE: can use a thread-local wait struct for each thread if it
   // improves performance
-  wait_t waits[MaxThreads];
+  wait_t waits[MAX_THREAD_NUM];
 
   //  for monitor
   pthread_t monitor_th;
   int timer;
-  int timemark[MaxThreads];
+  int timemark[MAX_THREAD_NUM];
 
-  //  for wakeup
-  std::vector<int> wakeup_queue;
-  bool wakeup_flag;
-  pthread_mutex_t wakeup_mutex;
+  //  for network wakeup
+  typedef std::tr1::unordered_set<int> tid_set;
+  tid_set nwk_wakeup_tids;
+  bool nwk_wakeup_flag;
+  pthread_mutex_t nwk_wakeup_mutex;
   void check_wakeup();
+
+  // For idle thread.
   void wakeUpIdleThread();
   void idleThreadCondWait();
 };
@@ -156,146 +174,9 @@ public:
   FCFSScheduler();
   ~FCFSScheduler();
 protected:
-  virtual void next(bool at_thread_end=false);
+  virtual void next(bool at_thread_end=false, bool hasPoppedFront = false);
   pthread_mutex_t fcfs_lock;
 };
-
-#if 0
-struct RRSchedulerCV: public Scheduler {
-  typedef Scheduler Parent;
-
-  enum {Lock=true, NoLock=false, Unlock=true, NoUnlock=false,
-        OneThread = false, AllThreads = true };
-
-  void getTurn(bool at_thread_begin)
-  { getTurnHelper(Lock, Unlock, at_thread_begin); }
-  void putTurn(bool at_thread_end)
-  { putTurnHelper(Lock, Unlock, at_thread_end); }
-
-  /// give up the turn and deterministically wait on @chan as the last
-  /// thread on @waitq
-  void wait(void *chan) { waitHelper(chan, Lock, Unlock); }
-
-  void block();
-
-  void wakeup();
-/*
-  removed in sem branch
-  /// must call with turn held
-  void threadCreate(pthread_t new_th) {
-    assert(self() == runq.front());
-    Parent::threadCreate(new_th);
-    runq.push_back(getTernTid(new_th));
-    timemark[getTernTid(new_th)] = -1;
-  }
-*/
-
-#if 0
-  void threadBegin(pthread_t self_th) {
-    pthread_mutex_lock(&lock);
-    Parent::threadBegin(self_th);
-    getTurnHelper(false, false);
-    pthread_mutex_unlock(&lock);
-  }
-
-  /// if any thread is waiting on our exit, wake it up, then give up turn
-  /// and exit (not putting self back to the tail of runq)
-  void threadEnd(pthread_t self_th);
-#endif
-
-  /// deterministically wake up the first thread waiting on @chan on the
-  /// wait queue; must call with the turn held
-  ///
-  /// pthread_mutex_lock() is necessary to avoid race with the
-  /// pthread_cond_wait() in void wait(void* chan) illustrated by the
-  /// thread interleaving below
-  ///
-  ///                    this->wait()
-  ///                      blocks within pthread_cond_wait
-  ///   this->getTurn()
-  ///     unlocks lock
-  ///   this->signal()     wakes up from pthread_cond_wait()
-  ///
-  void signal(void *chan)     { signalHelper(chan, OneThread, Lock, Unlock); }
-
-  /// deterministically wake up all threads waiting on @chan on the wait
-  /// queue; must call with the turn held.
-  ///
-  ///  need to acquire @lock for the same reason as in signal()
-  void broadcast(void *chan)  { signalHelper(chan, true, Lock, Unlock); }
-
-  /// for implementing pthread_cond_wait
-  void getTurnNU(void)        { getTurnHelper(NoLock, Unlock); }
-  void getTurnLN(void)        { getTurnHelper(Lock, NoUnlock); }
-  void putTurnNU(void)        { putTurnHelper(NoLock, Unlock); }
-  void signalNN(void *chan)   { signalHelper(chan, OneThread,
-                                             NoLock, NoUnlock); }
-  void broadcastNN(void *chan){ signalHelper(chan, AllThreads,
-                                             NoLock, NoUnlock); }
-  void waitFirstHalf(void *chan, bool doLock = Lock);
-  bool isWaiting();
-
-  unsigned incTurnCount(void)
-  {
-    unsigned ret = turnCount++;
-    pthread_cond_broadcast(&tickcv);
-    return ret;
-  }
-
-  pthread_mutex_t *getLock() {
-    return &lock;
-  }
-
-  RRSchedulerCV(pthread_t main_th);
-  ~RRSchedulerCV();
-
-  void detect_blocking_threads();
-
-protected:
-
-  /// same as getTurn but acquires or releases the scheduler lock based on
-  /// the flags @doLock and @doUnlock
-  void getTurnHelper(bool doLock, bool doUnlock, bool at_thread_begin=false);
-  /// same as putTurn but acquires or releases the scheduler lock based on
-  /// the flags @doLock and @doUnlock
-  void putTurnHelper(bool doLock, bool doUnlock, bool at_thread_end=false);
-  /// same as signal() but acquires or releases the scheduler lock based
-  /// on the flags @doLock and @doUnlock
-  void signalHelper(void *chan, bool all, bool doLock,
-                    bool doUnlock, bool wild = false);
-  /// same as wait but but acquires or releases the scheduler lock based
-  /// on the flags @doLock and @doUnlock
-  void waitHelper(void *chan, bool doLock, bool doUnlock);
-  /// common operations done by both wait() and putTurnHelper()
-  void next(void);
-
-  /// for debugging
-  void selfcheck(void);
-  std::ostream& dump(std::ostream& o);
-
-  std::list<int>  runq;
-  std::list<int>  waitq;
-  pthread_mutex_t lock;
-
-  struct net_item
-  {
-    int tid;
-    int turn;
-  };
-  std::list<net_item> net_events;
-  pthread_cond_t replaycv;
-  pthread_cond_t tickcv;
-  FILE *log;
-  pthread_t monitor_th;
-  int timemark[MaxThreads];
-  int timer;
-
-  // TODO: can potentially create a thread-local struct for each thread if
-  // it improves performance
-  pthread_cond_t  waitcv[MaxThreads];
-  void*           waitvar[MaxThreads];
-};
-#endif
 
 /// adapted from an example in POSIX.1-2001
 struct Random {
@@ -354,7 +235,7 @@ public:
   };
 
 protected:
-  sem_t waits[MaxThreads];
+  sem_t waits[MAX_THREAD_NUM];
   std::vector<record_list> logdata;
   void readrecords(FILE * fin, record_list &records);
 

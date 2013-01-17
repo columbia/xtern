@@ -8,6 +8,7 @@ tar zxvf $APPS_DIR/sys/openldap-$VER.tgz
 
 # Build.
 cd openldap-$VER
+patch -p1 < ../add-resp-to-mtread.patch
 mkdir obj
 cd obj
 CFLAGS="-g -O0" CXXFLAGS="-g -O0" ../configure --prefix=$XTERN_ROOT/apps/ldap/install
@@ -25,5 +26,6 @@ cp slapd.conf.template $APP_DIR/install/etc/openldap/slapd.conf
 # Add benchmark.
 cd openldap-$VER
 patch -p1 < ../only-xtern-test-mt-hot.patch
+patch -p1 < ../only-run-bdb-tests.patch
 cd $APP_DIR
 

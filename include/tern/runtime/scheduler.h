@@ -8,6 +8,7 @@
 #include <list>
 #include <tr1/unordered_map>
 #include <tr1/unordered_set>
+#include "run-queue.h"
 
 extern "C" {
 extern int idle_done;
@@ -21,7 +22,7 @@ namespace tern {
 /// synchronize its methods; instead, the callers of these methods must
 /// ensure that the methods are synchronized.
 struct TidMap {
-  enum {MainThreadTid = 0, InvalidTid = -1, MaxThreads = 2000};
+  enum {MainThreadTid = 0, IdleThreadTid = 1, InvalidTid = -1};
 
   typedef std::tr1::unordered_map<pthread_t, int> pthread_to_tern_map;
   typedef std::tr1::unordered_map<int, pthread_t> tern_to_pthread_map;
@@ -157,6 +158,18 @@ struct Serializer: public TidMap {
     return ret;
   }
 
+  /// start to fastly and safely do a network block operation (without getting a turn and putting it).
+  /// by default it is NOP (always return false), if any runtime scheduler needs it, just reimplement it.
+  virtual bool nwkBlkStart() {
+    return false;
+  }
+
+  /// finish doing a network block operation.
+  /// by default it is NOP (always return false), if any runtime scheduler needs it, just reimplement it.
+  virtual bool nwkBlkEnd() {
+    return false;
+  }
+
   /// inform the scheduler that a blocking thread has returned.
   virtual void wakeup() {}
 
@@ -219,17 +232,21 @@ struct Scheduler: public Serializer {
   void create(pthread_t new_th) {
     assert(self() == runq.front());
     TidMap::create(new_th);
-    runq.push_back(getTid(new_th));
+    int tid = getTid(new_th);
+    runq.create_thd_elem(tid);
+    runq.push_back(tid);
   }
 
   void childForkReturn() {
     TidMap::reset(pthread_self());
     waitq.clear();
-    runq.clear();
+    runq.deep_clear();    
+    struct run_queue::runq_elem *elem = runq.create_thd_elem(MainThreadTid);
+    elem->status = run_queue::RUNNING_REG; // Pass the first token to the main thread after fork.
     runq.push_back(MainThreadTid);
   }
 
-  std::list<int>  runq;
+  run_queue runq;
   std::list<int>  waitq;
 };
 

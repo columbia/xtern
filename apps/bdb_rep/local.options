@@ -10,7 +10,7 @@
 DMT = 1
 
 # determine network operations (including blocking functions) are hooked or not. 
-schedule_network  = 1
+schedule_network  = 0
 
 # the runtime scheduler algorithm, options are:
 # 1.  FCFS    first come first serve
@@ -103,4 +103,4 @@ log_sync = 0
 # the algorithm to enforce turn, options are:
 # 1.  semaphore      semaphore.
 # 2.  hybrid              busy wait flag + cond wait.
-enforce_turn_type = semaphore
+enforce_turn_type = hybrid

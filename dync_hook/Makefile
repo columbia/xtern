@@ -1,16 +1,9 @@
 all: xternruntime interpose.so libxtern-annot.so usermonitor
 
-BuildMode := Debug
-ENABLE_OPTIMIZED := 0
-
 INC_DIRS=-I$(TERN_ROOT)/include/ -I$(XTERN_ROOT)/include/ -I$(XTERN_ROOT)/obj/include
-#INC_DIRS=-I$(XTERN_ROOT)/include/
 STD_LIBS=-lsupc++ -lpthread -lstdc++ -lrt
 FLAG=`date +%F\#%T`
-#TERN_LIBS=-L$(XTERN_ROOT)/obj/$(BuildMode)/lib/  -lanalysis -linstr -lruntime
-TERN_LIBS=-L$(XTERN_ROOT)/obj/$(BuildMode)/lib/ -lruntime -lcommon 
-#TERN_LIBS=
-#TERN_LIBS=$(XTERN_ROOT)/install/lib/libruntime.a $(XTERN_ROOT)/install/lib/libcommon.a
+TERN_LIBS=-L$(XTERN_ROOT)/install/lib/ -lruntime -lcommon
 CFLAGS= -g $(INC_DIRS)
 CXXFLAGS= -g $(INC_DIRS)
 PREFIX=LD_PRELOAD=$(XTERN_ROOT)/dync_hook/interpose.so
@@ -19,8 +12,8 @@ PREFIX=LD_PRELOAD=$(XTERN_ROOT)/dync_hook/interpose.so
 usermonitor: usermonitor.cpp
 	g++ usermonitor.cpp -o usermonitor
 
-xternruntime: 
-	cd $(XTERN_ROOT)/obj && make ENABLE_OPTIMIZED=$(ENABLE_OPTIMIZED)
+xternruntime:
+	cd $(XTERN_ROOT)/obj && make ENABLE_OPTIMIZED=$(ENABLE_OPTIMIZED) install
 
 interpose.so: template.cpp spec_hooks.cpp hook.cpp
 	gcc -fPIC -rdynamic hook.cpp $(CFLAGS) -c -o interpose.o

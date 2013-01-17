@@ -291,7 +291,14 @@ void RecorderRT<RecordSerializer>::idle_sleep(void) {
     block_turn = _S::block(); \
     assert(block_turn >= 0); \
     sched_block_time = update_time(); \
-  } 
+  } else { \
+    if (_S::nwkBlkStart()) { \
+      _S::block(); \
+    } \
+  }
+// At this moment, since self-thread is ahead of the run queue, so this block() should be very fast.
+// TBD: do we need logging here? We can, but not sure whether we need to do this.
+
 
 #define BLOCK_TIMER_END(syncop, ...) \
   int backup_errno = errno; \
@@ -313,14 +320,20 @@ void RecorderRT<RecordSerializer>::idle_sleep(void) {
     sched_time = update_time();  \
     if (options::log_sync) \
       Logger::the->logSync(ins, (syncop), second_turn, app_time, syscall_time, sched_time, true, __VA_ARGS__); \
+  } else { \
+    if (_S::nwkBlkEnd()) { \
+      _S::wakeup(); \
+    } \
   } \
-  errno = backup_errno; 
+  errno = backup_errno;
 
 #define SCHED_TIMER_START \
   unsigned nturn; \
   timespec app_time = update_time(); \
   _S::getTurn(); \
   timespec sched_time = update_time();
+  //fprintf(stderr, "\n\nSCHED_TIMER_START tid %d, function %s\n", _S::self(), 
+  // __FUNCTION__);
 
 #define SCHED_TIMER_END_COMMON(syncop, ...) \
   int backup_errno = errno; \
@@ -333,6 +346,7 @@ void RecorderRT<RecordSerializer>::idle_sleep(void) {
   SCHED_TIMER_END_COMMON(syncop, __VA_ARGS__); \
   _S::putTurn();\
   errno = backup_errno;
+  //fprintf(stderr, "\n\nSCHED_TIMER_END tid %d, function %s\n", _S::self(), __FUNCTION__);
 
 #define SCHED_TIMER_THREAD_END(syncop, ...) \
   SCHED_TIMER_END_COMMON(syncop, __VA_ARGS__); \

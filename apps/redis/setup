@@ -1,18 +1,11 @@
 #!/bin/bash
 
-if [ "$APPS_DIR" = "" ]; then
-	echo '$APPS_DIR not defined, do `export APPS_DIR=`'
-	exit 1
-fi
-
-#if [ -z $1 ]; then
-#	# No version number
-#	echo "Usage: <version number: e.g. 2.4.11>"
-#	exit 1
-#fi
-VER=2.4.11
-
-# remove previous build
-rm -rf redis-$VER
-tar zxvf $APPS_DIR/sys/redis-$VER.tar.gz
+cd $XTERN_ROOT/apps/redis
+rm -rf out* serializer.log
+INIT_ENV_CMD=""
+APP=$XTERN_ROOT/apps/bdb_rep/redis-server
+CLIENT=$XTERN_ROOT/apps/bdb_rep/redis-benchmark
+NTHREADS=8
+INPUT="tbd..."
+echo "Running $APP $INPUT ..."
 

@@ -10,7 +10,9 @@ then
 fi
 
 APP=$XTERN_ROOT/apps/pbzip2/pbzip2
-tar cvf input.tar $LLVM_ROOT/install/bin/llc &> /dev/null
+cp $APPS_DIR/sys/db-5.3.15.tar.gz .
+gunzip -f db-5.3.15.tar.gz
+mv db-5.3.15.tar input.tar
 
 if [ $ROUTINE = "--compress" ];
 then
