@@ -256,11 +256,11 @@ def processBench(config, bench):
     for i in range(int(repeats)):
         sys.stderr.write("\tPROGRESS: %5d/%d\r" % (i+1, int(repeats))) # progress
         with open('xtern/output.%d' % i, 'w', 102400) as log_file:
-            proc = subprocess.Popen(xtern_command, stdout=sys.stdout, stderr=sys.stdout,
-            #proc = subprocess.Popen(xtern_command, stdout=log_file, stderr=subprocess.STDOUT,
+            #proc = subprocess.Popen(xtern_command, stdout=sys.stdout, stderr=sys.stdout,
+            proc = subprocess.Popen(xtern_command, stdout=log_file, stderr=subprocess.STDOUT,
                                     shell=True, executable=bash_path, bufsize = 102400, preexec_fn=os.setsid)
             if client_cmd:
-                time.sleep(2)
+                time.sleep(1)
                 with open('xtern/client.%d' % i, 'w', 102400) as client_log_file:
                     client_proc = subprocess.Popen(client_cmd, stdout=client_log_file, stderr=subprocess.STDOUT,
                                                    shell=True, executable=bash_path, bufsize = 102400)
@@ -268,7 +268,7 @@ def processBench(config, bench):
                 if client_terminate_server:
                     os.killpg(proc.pid, signal.SIGTERM)
                 proc.wait()
-                time.sleep(2)
+                time.sleep(1)
             else:
                 proc.wait()
         # move log files into 'xtern' directory
@@ -287,7 +287,7 @@ def processBench(config, bench):
             #proc = subprocess.Popen(nondet_command, stdout=sys.stdout, stderr=sys.stdout,
                                     shell=True, executable=bash_path, bufsize = 102400, preexec_fn=os.setsid )
             if client_cmd:
-                time.sleep(2)
+                time.sleep(1)
                 with open('non-det/client.%d' % i, 'w', 102400) as client_log_file:
                     client_proc = subprocess.Popen(client_cmd, stdout=client_log_file, stderr=subprocess.STDOUT,
                                                    shell=True, executable=bash_path, bufsize = 102400)
@@ -295,7 +295,7 @@ def processBench(config, bench):
                 if client_terminate_server:
                     os.killpg(proc.pid, signal.SIGTERM)
                 proc.wait()
-                time.sleep(2)
+                time.sleep(1)
             else:
                 proc.wait()
         # move log files into 'non-det' directory
