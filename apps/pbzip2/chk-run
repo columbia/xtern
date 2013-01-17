@@ -1,0 +1,35 @@
+#!/bin/bash
+
+cd $XTERN_ROOT/apps/pbzip2
+rm -rf out* serializer.log dbug-logs
+killall -9 dbug-arbiter-server ruby &> /dev/null
+
+ROUTINE="--compress"
+if [ $1"X" != "X" ];
+then
+        ROUTINE=$1
+fi
+
+APP=$XTERN_ROOT/apps/pbzip2/pbzip2
+cp $APPS_DIR/sys/sed-4.2.tar.gz .
+gunzip -f sed-4.2.tar.gz
+mv sed-4.2.tar input.tar
+
+if [ $ROUTINE = "--compress" ];
+then
+	INPUT="-p4 -rkvf input.tar"
+else
+	if [ $ROUTINE = "--decompress" ];
+	then
+		$APP -p4 -rkvf input.tar &> /dev/null
+		INPUT="-p4 -dkvf input.tar.bz2"
+	else
+		echo "Wrong routine: $ROUTINE, exiting...";
+		exit 1;
+	fi
+fi
+
+# Run dbug with pbzip2.
+echo "Running dbug tool with $APP $INPUT..."
+explorer.rb --prefix $SMT_MC_ROOT/mc-tools/dbug/install "$APP $INPUT"
+
