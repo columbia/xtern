@@ -42,7 +42,7 @@ tar xzvf llvm-$VER.tgz
 mkdir -p llvm-obj
 cd llvm-obj
 ../llvm-$VER/configure --prefix="$ROOT/install"
-make $llvm_debug
+make $llvm_debug -j64
 make $llvm_debug install
 cd ..
 
