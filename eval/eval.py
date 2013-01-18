@@ -269,7 +269,7 @@ def processBench(config, bench):
                 if client_terminate_server:
                     os.killpg(proc.pid, signal.SIGTERM)
                 proc.wait()
-                time.sleep(1)
+                time.sleep(2)
             else:
                 proc.wait()
         # move log files into 'xtern' directory
@@ -296,7 +296,7 @@ def processBench(config, bench):
                 if client_terminate_server:
                     os.killpg(proc.pid, signal.SIGTERM)
                 proc.wait()
-                time.sleep(1)
+                time.sleep(2)
             else:
                 proc.wait()
         # move log files into 'non-det' directory
