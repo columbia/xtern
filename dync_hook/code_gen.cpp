@@ -83,8 +83,15 @@ void print_func(
     replace(pattern, "ARGS_ONLY_NAME", args_only_name);
   } else
     replace(pattern, "ARGS_ONLY_NAME", args_only_name);
- 
-	replace(pattern, "LIB_PATH", lib_path);
+#if __WORDSIZE == 64
+    std::string x86_64Path ="/lib/x86_64-linux-gnu";
+    x86_64Path = x86_64Path + lib_path;
+    replace(pattern, "LIB_PATH", x86_64Path.c_str());
+#else
+    std::string i686Path ="/lib";
+    i686Path = i686Path + lib_path;
+    replace(pattern, "LIB_PATH", i686Path.c_str());
+#endif
 	fprintf(file, "%s", pattern.c_str());
 }
 
