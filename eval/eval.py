@@ -9,6 +9,8 @@ import logging
 import coloroutput
 import re
 import subprocess
+import time
+import signal
 
 def getXternDefaultOptions():
     default = {}
@@ -50,7 +52,12 @@ def readConfigFile(config_file):
         newConfig = ConfigParser.ConfigParser( {"REPEATS": "100", 
                                                 "INPUTS": "",
                                                 "REQUIRED_FILES": "",
-                                                "DOWNLOAD_FILES": ""} )
+                                                "DOWNLOAD_FILES": "",
+                                                "TARBALL": "",
+                                                "EXPORT": "",
+                                                "C_CMD": "",
+                                                "C_TERMINATE_SERVER": "0",
+                                                "C_STATS": "0"} )
         ret = newConfig.read(config_file)
     except ConfigParser.MissingSectionHeaderError as e:
         logging.error(str(e))
@@ -192,6 +199,28 @@ def download_files_from_web(links):
             return False
     return True
 
+def extract_tarball(app, files):
+    for f in files.split():
+        logging.debug("extracting file : %s" % f)
+        if os.path.isabs(f):
+            src = f
+        else:
+            src = os.path.abspath('%s/apps/%s/%s' % (XTERN_ROOT, app, f))
+        
+        import tarfile
+        try:
+            tarfile.is_tarfile(src)
+            with tarfile.open(src, 'r') as t:
+                t.extractall()
+        except IOError as e:
+            logging.warning(str(e))
+            return False
+        except tarfile.TarError as e:
+            logging.warning(str(e))
+            return False
+    return True
+
+
 def processBench(config, bench):
     # for each bench, generate running directory
     logging.debug("processing: " + bench)
@@ -223,6 +252,12 @@ def processBench(config, bench):
     if not download_files_from_web(download_files):
         logging.warning("cannot download one of files in config [%s], skip" % bench)
         return
+
+    # extract *.tar files
+    tar_balls = config.get(bench, 'tarball')
+    if not extract_tarball(apps_name, tar_balls):
+        logging.warning("cannot extract files in config [%s], skip" % bench)
+        return
     
     # run command in shell, currently uses 'bash'
     bash_path = which('bash')
@@ -233,43 +268,97 @@ def processBench(config, bench):
         bash_path = bash_path[0]
         logging.debug("find 'bash' at %s" % bash_path)
 
+    # get 'export' environment variable
+    export = config.get(bench, 'EXPORT')
+    if export:
+        logging.debug("export %s", export)
+
+    # check if this is a server-client app
+    client_cmd = config.get(bench, 'C_CMD')
+    client_terminate_server = bool(int(config.get(bench, 'C_TERMINATE_SERVER')))
+    use_client_stats = bool(int(config.get(bench, 'C_STATS')))
+    if client_cmd and use_client_stats:
+        client_cmd = 'time -p ' + client_cmd
+    if client_cmd:
+        logging.info("client command : %s" % client_cmd)
+        logging.debug("terminate server after client finish job : " + str(client_terminate_server))
+        logging.debug("evaluate performance by using stats of client : " + str(use_client_stats))
+
     # generate command for xtern [time LD_PRELOAD=... exec args...]
-    xtern_command = ' '.join(['time', '-p', XTERN_PRELOAD, exec_file] + inputs.split())
+    xtern_command = ' '.join(['time', '-p', XTERN_PRELOAD, export, exec_file] + inputs.split())
     logging.info("executing '%s'" % xtern_command)
 
     mkdir_p('xtern')
     for i in range(int(repeats)):
         sys.stderr.write("\tPROGRESS: %5d/%d\r" % (i+1, int(repeats))) # progress
         with open('xtern/output.%d' % i, 'w', 102400) as log_file:
-            proc = subprocess.Popen(xtern_command, stdout=log_file, stderr=subprocess.STDOUT, shell=True, executable=bash_path, bufsize = 102400)
-            proc.wait()
+            #proc = subprocess.Popen(xtern_command, stdout=sys.stdout, stderr=sys.stdout,
+            proc = subprocess.Popen(xtern_command, stdout=log_file, stderr=subprocess.STDOUT,
+                                    shell=True, executable=bash_path, bufsize = 102400, preexec_fn=os.setsid)
+            if client_cmd:
+                time.sleep(1)
+                with open('xtern/client.%d' % i, 'w', 102400) as client_log_file:
+                    client_proc = subprocess.Popen(client_cmd, stdout=client_log_file, stderr=subprocess.STDOUT,
+                                                   shell=True, executable=bash_path, bufsize = 102400)
+                    client_proc.wait()
+                if client_terminate_server:
+                    os.killpg(proc.pid, signal.SIGTERM)
+                proc.wait()
+                time.sleep(2)
+            else:
+                proc.wait()
         # move log files into 'xtern' directory
         os.renames('out', 'xtern/out.%d' % i)
 
     # generate command for non-det [time LD_PRELOAD=... exec args...]
-    nondet_command = ' '.join(['time', '-p', RAND_PRELOAD, exec_file] + inputs.split())
+    nondet_command = ' '.join(['time', '-p', RAND_PRELOAD, export, exec_file] + inputs.split())
     logging.info("executing '%s'" % nondet_command)
 
     mkdir_p('non-det')
     for i in range(int(repeats)):
         sys.stderr.write("\tPROGRESS: %5d/%d\r" % (i+1, int(repeats))) # progress
         with open('non-det/output.%d' % i, 'w', 102400) as log_file:
-            proc = subprocess.Popen(nondet_command, stdout=log_file, stderr=subprocess.STDOUT, shell=True, executable=bash_path, bufsize = 102400 )
-            proc.wait()
+            proc = subprocess.Popen(nondet_command, stdout=log_file, stderr=subprocess.STDOUT,
+            #proc = subprocess.Popen(nondet_command, stdout=sys.stdout, stderr=sys.stdout,
+                                    shell=True, executable=bash_path, bufsize = 102400, preexec_fn=os.setsid )
+            if client_cmd:
+                time.sleep(1)
+                with open('non-det/client.%d' % i, 'w', 102400) as client_log_file:
+                    client_proc = subprocess.Popen(client_cmd, stdout=client_log_file, stderr=subprocess.STDOUT,
+                                                   shell=True, executable=bash_path, bufsize = 102400)
+                    client_proc.wait()
+                if client_terminate_server:
+                    os.killpg(proc.pid, signal.SIGTERM)
+                proc.wait()
+                time.sleep(2)
+            else:
+                proc.wait()
         # move log files into 'non-det' directory
-        os.renames('out', 'non-det/out.%d' % i)
+        # FIXME: sometimes there is no 'run' directory
+        try:
+            os.renames('out', 'non-det/out.%d' % i)
+        except OSError:
+            pass
 
     # get stats
     xtern_cost = []
     for i in range(int(repeats)):
-        for line in reversed(open('xtern/output.%d' % i, 'r').readlines()):
+        if client_cmd and use_client_stats:
+            log_file_name = 'xtern/client.%d' % i
+        else:
+            log_file_name = 'xtern/output.%d' % i
+        for line in reversed(open(log_file_name, 'r').readlines()):
             if re.search('^real [0-9]+\.[0-9][0-9]$', line):
                 xtern_cost += [float(line.split()[1])]
                 break
 
     nondet_cost = []
     for i in range(int(repeats)):
-        for line in reversed(open('non-det/output.%d' % i, 'r').readlines()):
+        if client_cmd and use_client_stats:
+            log_file_name = 'non-det/client.%d' % i
+        else:
+            log_file_name = 'non-det/output.%d' % i
+        for line in reversed(open(log_file_name, 'r').readlines()):
             if re.search('^real [0-9]+\.[0-9][0-9]$', line):
                 nondet_cost += [float(line.split()[1])]
                 break
