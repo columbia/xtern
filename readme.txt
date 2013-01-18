@@ -1,4 +1,4 @@
-Installing xtern
+Installing xtern (currently only on Ubuntu 11.10 64bits)
 ================
 
 0. Add $XTERN_ROOT (the absolute path of "xtern") into environment variables
