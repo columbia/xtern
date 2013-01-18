@@ -25,16 +25,16 @@ then
     echo "Can't find llvm source (llvm-$VER.tgz). Please download from llvm.org."
     exit 0
 fi
-if [ ! -e llvm-gcc$GCCVER-$MACHINE-linux.tar.bz2 ]
-then
-    echo "Can't find llvm gcc binary (llvm-gcc$GCCVER-$MACHINE-linux.tar.bz2)."\
-         "Please download from llvm.org."
-    exit 0
-fi
+#if [ ! -e llvm-gcc$GCCVER-$MACHINE-linux.tar.bz2 ]
+#then
+#    echo "Can't find llvm gcc binary (llvm-gcc$GCCVER-$MACHINE-linux.tar.bz2)."\
+#         "Please download from llvm.org."
+#    exit 0
+#fi
 
 # install gcc
 mkdir -p install
-tar xjvf llvm-gcc$GCCVER-$MACHINE-linux.tar.bz2
+#tar xjvf llvm-gcc$GCCVER-$MACHINE-linux.tar.bz2
 (cd llvm-gcc$GCCVER-$MACHINE-linux; tar cf - .) |(cd install; tar xvf -)
 
 # install llvm
