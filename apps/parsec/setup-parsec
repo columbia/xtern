@@ -90,6 +90,7 @@ for i in "${workloads[@]}"
 do
     cp parsec-2.0/pkgs/apps/$i/inst/x86_64-linux.gcc/bin/$i .
 done
+cp parsec-2.0/pkgs/apps/raytrace/inst/x86_64-linux.gcc/bin/rtview .
 workloads=( canneal dedup streamcluster )
 for i in "${workloads[@]}"
 do
