@@ -70,7 +70,11 @@ extern "C" int __libc_start_main(
   void * handle;
   int ret;
 
+#if __WORDSIZE == 64
   if(!(handle=dlopen("/lib/x86_64-linux-gnu/libc.so.6", RTLD_LAZY))) {
+#else
+  if(!(handle=dlopen("/lib/libc.so.6", RTLD_LAZY))) {  
+#endif
     puts("dlopen error");
     abort();
   }
