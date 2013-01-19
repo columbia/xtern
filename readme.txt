@@ -13,7 +13,9 @@ The "--optimized" flag above is optional, if you are getting performance results
 then you need this flag; if you are developing and need debug symbols,
 then you don't need this flag. If you have specified this "--optimized" flag,
 you need to specify "ENABLE_OPTIMIZED=1" in the following steps, otherwise 
-specify "ENABLE_OPTIMIZED=0".
+specify "ENABLE_OPTIMIZED=0". This LLVM compilation is only one way work,
+later if you check out a newer version of xtern, you do not need to rerun this,
+you only need to redo the Step 4 below.
 
 2. Create $XTERN_ROOT/obj, go to obj.
 
