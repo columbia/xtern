@@ -14,5 +14,6 @@ cd pbzip2-$VER
 patch -p1 < ../for-dbug-1.patch
 patch -p1 < ../add-dbg-flag.patch
 patch -p1 < ../add-xtern-annot.patch
+patch -p1 < ../add-xtern-annot-decompress.patch
 make
 mv pbzip2 ../
