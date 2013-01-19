@@ -6,6 +6,7 @@ in your ~/.bashrc. Run "echo $XTERN_ROOT" to make sure it is correct.
 
 1. Go to directory $XTERN_ROOT, and run:
 > cd $XTERN_ROOT
+> sudo apt-get install dejagnu flex bison
 > ./llvm/build-llvm.sh --optimized
 You may need to install bison and flex on your machine because llvm needs them.
 The "--optimized" flag above is optional, if you are getting performance results,
@@ -37,8 +38,25 @@ Run "echo $LD_LIBRARY_PATH" to make sure it is correct.
 > cd $XTERN_ROOT/obj
 > make ENABLE_OPTIMIZED=0/1 -C test check
 
+8. Run an application with xtern.
+> cd $XTERN_ROOT/apps/pbzip2
+> ./mk
+> ./run
+The above "run" script will first run the pbzip2 with xtern,
+and then run it non-deterministically, and both their execution time will be shown.
+Xtern has a bunch of options at run time (with default values).
+When you run an app with xtern, by default it will first find a 
+"local.options" file and then run xtern with the options specified within
+this local file, if this file does not exist, xtern will be run with (default)
+options specified in the "$XTERN_ROOT/default.options" file.
 
-
+9. How to run the xtern evaluation framework.
+> go to each $XTERN_ROOT/apps/* directory and run "./mk", like the Step 8 above.
+> cd $XTERN_ROOT/eval/
+> ./eval.py xtern.cfg
+> find . -name stats.txt
+Then you will see a bunch of these "stats.txt" files containing overhead of
+xtern over non-det execution and maybe other stats info.
 
 
 
