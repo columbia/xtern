@@ -88,7 +88,7 @@ void print_func(
     x86_64Path = x86_64Path + lib_path;
     replace(pattern, "LIB_PATH", x86_64Path.c_str());
 #else
-    std::string i686Path ="/lib";
+    std::string i686Path ="/lib/tls/i686/cmov";
     i686Path = i686Path + lib_path;
     replace(pattern, "LIB_PATH", i686Path.c_str());
 #endif
