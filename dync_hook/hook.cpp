@@ -143,6 +143,7 @@ void *get_eip()
 #define __SPEC_HOOK_tern_lineup_init
 #define __SPEC_HOOK_tern_lineup_start
 #define __SPEC_HOOK_tern_lineup_end
+#define __SPEC_HOOK_tern_lineup
 #endif
 
 #include "spec_hooks.cpp"

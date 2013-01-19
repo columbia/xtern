@@ -30,3 +30,16 @@ extern "C" void tern_lineup_end(long opaque_type){
   // If not runnning with xtern, NOP.
 }
 #endif
+
+#ifndef __SPEC_HOOK_tern_lineup
+extern "C" void tern_lineup(long opaque_type){
+#ifdef __USE_TERN_RUNTIME
+  if (Space::isApp() && options::DMT && options::enforce_annotations) {
+    tern_lineup_start_real(opaque_type);
+    tern_lineup_end_real(opaque_type);
+  } 
+#endif
+  // If not runnning with xtern, NOP.
+}
+#endif
+
