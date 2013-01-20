@@ -6,6 +6,16 @@
 #        exit 1
 #fi
 
+VER=0.9.5
+cd $XTERN_ROOT/apps/pbzip2
+rm -rf pbzip2-$VER
+tar zxvf $APPS_DIR/sys/pbzip2-$VER.tar.gz
+cd pbzip2-$VER
+patch -p1 < ../add-xtern-annot-0.9.5-all.patch
+make
+mv pbzip2 ../pbzip2
+
+
 VER=1.1.5
 cd $XTERN_ROOT/apps/pbzip2
 rm -rf pbzip2-$VER
@@ -16,4 +26,4 @@ patch -p1 < ../add-dbg-flag.patch
 patch -p1 < ../add-xtern-annot.patch
 patch -p1 < ../add-xtern-annot-decompress.patch
 make
-mv pbzip2 ../
+mv pbzip2 ../pbzip2-v1.1.5
