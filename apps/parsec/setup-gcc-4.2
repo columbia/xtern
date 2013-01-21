@@ -12,6 +12,11 @@ if [ ! -d $XTERN_ROOT ]; then
 	exit 1
 fi
 
+if [ ! d $APPS_DIR ]; then
+    echo "APPS_DIR is not defined"
+    exit 1
+fi
+
 PARSEC_ROOT=$XTERN_ROOT/apps/parsec
 
 SOURCE=$PARSEC_ROOT/gcc-4.2-src/
@@ -21,8 +26,8 @@ rm -rf $SOURCE $INSTALL
 
 pushd $PARSEC_ROOT
 
-svn co --quiet svn://gcc.gnu.org/svn/gcc/tags/gcc_4_2_4_release $SOURCE
-
+tar zxf $APPS_DIR/sys/gcc-4.2.4.tar.gz
+mv gcc-4.2.4 $SOURCE
 
 pushd $SOURCE
 
