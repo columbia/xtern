@@ -22,6 +22,7 @@ XTERN_ANNOT_LIB="-L$XTERN_ROOT/dync_hook -Wl,--rpath,$XTERN_ROOT/dync_hook -lxte
 # compile ImageMagick
 cd ImageMagick-$VER
 patch -p1 < ../add-convert-xtern-annot.patch
+patch -p1 < ../add-resize-xtern-annot.patch
 mkdir obj
 cd obj
 
