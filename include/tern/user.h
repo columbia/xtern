@@ -21,6 +21,7 @@ extern "C" {
   /// New programming primitives to get better performance without affecting
   /// logics of applications.
   void tern_lineup_init(long opaque_type, unsigned count, unsigned timeout_turns);
+  void tern_lineup_destroy(long opaque_type);
   void tern_lineup_start(long opaque_type);
   void tern_lineup_end(long opaque_type);
   void tern_lineup(long opaque_type);

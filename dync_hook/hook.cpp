@@ -141,6 +141,7 @@ void *get_eip()
 
 #ifndef HOOK_USER_ANNOTATIONS
 #define __SPEC_HOOK_tern_lineup_init
+#define __SPEC_HOOK_tern_lineup_destroy
 #define __SPEC_HOOK_tern_lineup_start
 #define __SPEC_HOOK_tern_lineup_end
 #define __SPEC_HOOK_tern_lineup

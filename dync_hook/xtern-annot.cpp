@@ -10,6 +10,10 @@ void tern_lineup_init(long opaque_type, unsigned count, unsigned timeout_turns) 
   //fprintf(stderr, "Non-deterministic tern_lineup_init\n");
 }
 
+void tern_lineup_destroy(long opaque_type) {
+  //fprintf(stderr, "Non-deterministic tern_lineup_destroy\n");
+}
+
 void tern_lineup_start(long opaque_type) {
   //fprintf(stderr, "Non-deterministic tern_lineup_start\n");
 }

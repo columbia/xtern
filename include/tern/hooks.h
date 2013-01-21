@@ -27,6 +27,7 @@ extern "C" {
                             int nbytes, const char *name);
   void tern_task_end_real(unsigned insid);
   void tern_lineup_init_real(long opaque_type, unsigned count, unsigned timeout_turns);
+  void tern_lineup_destroy_real(long opaque_type);
   void tern_lineup_start_real(long opaque_type);
   void tern_lineup_end_real(long opaque_type);
 

@@ -294,6 +294,14 @@ void tern_lineup_init_real(long opaque_type, unsigned count, unsigned timeout_tu
   errno = error;
 }
 
+void tern_lineup_destroy_real(long opaque_type) {
+  int error = errno;
+  Space::enterSys();
+  Runtime::the->lineupDestroy(opaque_type);
+  Space::exitSys();
+  errno = error;
+}
+
 void tern_lineup_start_real(long opaque_type) {
   int error = errno;
   Space::enterSys();

@@ -79,6 +79,7 @@ struct RecorderRT: public Runtime, public _Scheduler {
 
   // new programming primitives
   void lineupInit(long opaque_type, unsigned count, unsigned timeout_turns);
+  void lineupDestroy(long opaque_type);
   void lineupStart(long opaque_type);
   void lineupEnd(long opaque_type);
 

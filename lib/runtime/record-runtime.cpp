@@ -1221,6 +1221,20 @@ void RecorderRT<_S>::lineupInit(long opaque_type, unsigned count, unsigned timeo
 }
 
 template <typename _S>
+void RecorderRT<_S>::lineupDestroy(long opaque_type) {
+  unsigned ins = opaque_type;
+  SCHED_TIMER_START;
+  //fprintf(stderr, "lineupDestroy opaque_type %p\n", (void *)opaque_type);
+  assert(refcnt_bars.find(opaque_type) != refcnt_bars.end() && "refcnt barrier is not initialized!");
+  refcnt_bars[opaque_type].count = 0;
+  refcnt_bars[opaque_type].nactive = 0;
+  refcnt_bars[opaque_type].timeout = 0;
+  refcnt_bars[opaque_type].setArriving();
+  refcnt_bars.erase(opaque_type);
+  SCHED_TIMER_END(syncfunc::tern_lineup_destroy, (uint64_t)opaque_type);
+}
+
+template <typename _S>
 void RecorderRT<_S>::lineupStart(long opaque_type) {
   unsigned ins = opaque_type;
   SCHED_TIMER_START;

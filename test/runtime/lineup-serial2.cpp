@@ -52,6 +52,7 @@ int main(int argc, char *argv[], char* env[]) {
   for (int i = 0; i < nthreads; i++)
     pthread_join(th[i], NULL);
 
+  tern_lineup_destroy(0);
   return 0;
 }
 

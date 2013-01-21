@@ -61,6 +61,7 @@ struct Runtime {
 
   // new programming primitives
   virtual void lineupInit(long opaque_type, unsigned count, unsigned timeout_turns) = 0;
+  virtual void lineupDestroy(long opaque_type) = 0;
   virtual void lineupStart(long opaque_type) = 0;
   virtual void lineupEnd(long opaque_type) = 0;
   

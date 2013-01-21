@@ -128,6 +128,7 @@ void TxtLogger::logSync(unsigned insid, unsigned short sync,
   case syncfunc::pthread_rwlock_wrlock:
   case syncfunc::tern_lineup_start:
   case syncfunc::tern_lineup_end:
+  case syncfunc::tern_lineup_destroy:
     ouf << hex << " 0x" << va_arg(args, uint64_t) << dec;
     break;
 
@@ -504,6 +505,7 @@ void TestLogger::logSync(unsigned insid, unsigned short sync,
   case syncfunc::pthread_rwlock_wrlock:
   case syncfunc::tern_lineup_start:
   case syncfunc::tern_lineup_end:
+  case syncfunc::tern_lineup_destroy:
     ouf << hex << " 0x" << va_arg(args, uint64_t) << dec;
     break;
 
