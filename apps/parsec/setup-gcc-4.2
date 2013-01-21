@@ -12,7 +12,7 @@ if [ ! -d $XTERN_ROOT ]; then
 	exit 1
 fi
 
-if [ ! d $APPS_DIR ]; then
+if [ ! -d $APPS_DIR ]; then
     echo "APPS_DIR is not defined"
     exit 1
 fi
@@ -31,15 +31,17 @@ mv gcc-4.2.4 $SOURCE
 
 pushd $SOURCE
 
-./configure --prefix=$INSTALL
+patch -p1 < ../patch/xtern_annot.patch
+XTERN_ANNOT_LIB="-I$XTERN_ROOT/include -L$XTERN_ROOT/dync_hook -Wl,--rpath,$XTERN_ROOT/dync_hook -lxtern-annot"
+CFLAGS+="$XTERN_ANNOT_LIB" ./configure --prefix=$INSTALL --disable-linux-futex --enable-languages=c,c++ --disable-multilib
 make -j64
 mkdir -p $INSTALL
-make install
+make -j64 install
 
-rm -rf $INSTALL/lib64/libstdc++.so
-rm -rf $INSTALL/lib64/libstdc++.so.6
-ln -s /usr/lib/x86_64-linux-gnu/libstdc++.so.6 $INSTALL/lib64/libstdc++.so
-ln -s /usr/lib/x86_64-linux-gnu/libstdc++.so.6 $INSTALL/lib64/libstdc++.so.6
+#rm -rf $INSTALL/lib64/libstdc++.so
+#rm -rf $INSTALL/lib64/libstdc++.so.6
+#ln -s /usr/lib/x86_64-linux-gnu/libstdc++.so.6 $INSTALL/lib64/libstdc++.so
+#ln -s /usr/lib/x86_64-linux-gnu/libstdc++.so.6 $INSTALL/lib64/libstdc++.so.6
 
 popd
 popd
