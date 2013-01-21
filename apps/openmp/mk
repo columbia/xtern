@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -e
+
 if [ "$APPS_DIR" = "" ]; then
 	echo '$APPS_DIR not defined, do `export APPS_DIR=`'
 	exit 1
@@ -7,7 +9,7 @@ fi
 
 XTERN_ANNOT_LIB="-I$XTERN_ROOT/include -L$XTERN_ROOT/dync_hook -Wl,--rpath,$XTERN_ROOT/dync_hook -lxtern-annot"
 VER=4.5.4
-echo "\nWe are compiling gcc-$VER by ourselves. We hope you have installed the same version of gcc on your machine, because we are going to use some libraries of it.\n";
+echo -e "\nWe are compiling gcc-$VER by ourselves. We hope you have installed the same version of gcc on your machine, because we are going to use some libraries of it.\n";
 cd $XTERN_ROOT/apps/openmp
 rm -rf gcc-$VER install *.a ex//*.a
 tar zxf $APPS_DIR/sys/gcc-$VER.tar.gz

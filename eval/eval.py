@@ -166,7 +166,7 @@ def write_stats(xtern, nondet):
     nondet_std = numpy.std(nondet)
     overhead_avg = (xtern_avg - nondet_avg)/nondet_avg
     import math
-    overhead_std = overhead_avg*(math.sqrt(2*((nondet_std/nondet_avg)**2) + (xtern_std/xtern_avg)**2))
+    overhead_std = math.fabs(overhead_avg)*(math.sqrt(2*((nondet_std/nondet_avg)**2) + (xtern_std/xtern_avg)**2))
     with open("stats.txt", "w") as stats:
         stats.write('overhead: {2:.3f}%\n\tavg {0}\n\tstd {1}\n'.format(overhead_avg, overhead_std, overhead_avg*100))
         stats.write('xtern:\n\tavg {0}\n\tstd {1}\n'.format(xtern_avg, xtern_std))
