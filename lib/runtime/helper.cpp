@@ -131,7 +131,6 @@ void __tern_prog_end (void) {
          "or __tern_prog_end() already called!");
 
   prog_began = false;
-  //fprintf(stderr, "%08d calls __tern_prog_end\n", (int) pthread_self());
   assert(Space::isApp() && "__tern_prog_end must start in app space");
 
   // terminate the idle thread because it references the runtime which we
@@ -153,14 +152,15 @@ void __tern_prog_end (void) {
     assert(pthread_self() != idle_th && "idle_th should never reach __tern_prog_end");
     tern_pthread_join(0xdeadffff, idle_th, NULL);
   }
-
   tern_thread_end(-1); // main thread ends
 
   assert(Space::isSys());
   tern_prog_end();
-  
-  delete tern::Runtime::the;
-  tern::Runtime::the = NULL;
+
+  // Mut not delete the runtime, because at this moment there could be still child 
+  // threads running yet, e.g., OpenMP. If delete this, will have seg fault sometimes.
+  //delete tern::Runtime::the;
+  //tern::Runtime::the = NULL;
   assert(Space::isSys() && "__tern_prog_end must end in system space");
 }
 

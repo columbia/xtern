@@ -32,7 +32,7 @@ make -j64 install
 cd $XTERN_ROOT/apps/openmp
 ln -s $XTERN_ROOT/apps/openmp/install/lib64/libgomp.a
 ln -s $XTERN_ROOT/apps/openmp/install/lib64/libstdc++.a
-g++ -g  rand-shuf.cpp -o rand-serial
+#g++ -g  rand-shuf.cpp -o rand-serial
 
 # Heming: we must add "-lgomp" in order to make the compilation pass.
 g++ -g -static-libgcc -static-libstdc++ -D_GLIBCXX_PARALLEL -L. -fopenmp rand-shuf.cpp -o rand-para -lgomp $XTERN_ANNOT_LIB
