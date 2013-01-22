@@ -1,8 +1,8 @@
 #include <stdio.h>
 
 int main(int argc, char *argv[]) {
-  const long N = 1e8;
-  const long innerLoop = 50;
+  const long N = 1e6;
+  const long innerLoop = 2e3;
   long long i, a[N];
   long long sum = 0;
  

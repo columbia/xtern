@@ -33,7 +33,8 @@ pushd $SOURCE
 
 patch -p1 < ../patch/xtern_annot.patch
 XTERN_ANNOT_LIB="-I$XTERN_ROOT/include -L$XTERN_ROOT/dync_hook -Wl,--rpath,$XTERN_ROOT/dync_hook -lxtern-annot"
-CFLAGS+="$XTERN_ANNOT_LIB" ./configure --prefix=$INSTALL --disable-linux-futex --enable-languages=c,c++ --disable-multilib
+#CFLAGS+="$XTERN_ANNOT_LIB" ./configure --prefix=$INSTALL --disable-linux-futex --enable-languages=c,c++ --disable-multilib
+CFLAGS+="$XTERN_ANNOT_LIB" ./configure --prefix=$INSTALL --disable-multilib
 make -j64
 mkdir -p $INSTALL
 make -j64 install

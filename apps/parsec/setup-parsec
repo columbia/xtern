@@ -10,7 +10,8 @@ if [ ! -d $XTERN_ROOT ]; then
 fi
 
 echo "Checking required packages..."
-package=( axel libxi-dev libxmu-dev freeglut3-dev gettext libjasper-runtime libjasper-dev libjpeg62-dev )
+#package=( axel libxi-dev libxmu-dev freeglut3-dev gettext libjasper-runtime libjasper-dev libjpeg62-dev )
+package=( axel libxi-dev libxmu-dev freeglut3-dev gettext libjasper-runtime libjasper-dev )
 for i in "${package[@]}"
 do
     check=$(dpkg-query -W -f='${Status} ${Version}\n' $i 2>&1)
@@ -79,18 +80,20 @@ sed -i "215 s/\"time\"/\"time -p\"/g" $XTERN_ROOT/apps/parsec/parsec-2.0/bin/par
 echo "Build Parsec"
 sed -i '42 s|'/usr/local/gcc-4.2.1'|'$XTERN_ROOT/apps/parsec/gcc-4.2'|' parsec-2.0/config/gcc.bldconf
 sed -i '44 s|'/usr/local'|'/usr'|' parsec-2.0/config/gcc.bldconf
+sed -i '74 s|\"$| -L${XTERN_ROOT}/dync_hook -Wl,--rpath,${XTERN_ROOT}/dync_hook -lxtern-annot\"''|' parsec-2.0/config/gcc.bldconf
 cd parsec-2.0/bin
-./parsecmgmt -a build
+./parsecmgmt -a build -p blackscholes bodytrack facesim swaptions fluidanimate vips x264 canneal dedup streamcluster 
+# ferret freqmine raytrace
 
 ./parsecmgmt -a status
 
 cd $XTERN_ROOT/apps/parsec
-workloads=( blackscholes bodytrack facesim ferret fluidanimate freqmine swaptions vips x264 ) #raytrace
+workloads=( blackscholes bodytrack facesim fluidanimate swaptions vips x264 ) #ferret freqmine
 for i in "${workloads[@]}"
 do
     cp parsec-2.0/pkgs/apps/$i/inst/x86_64-linux.gcc/bin/$i .
 done
-cp parsec-2.0/pkgs/apps/raytrace/inst/x86_64-linux.gcc/bin/rtview .
+#cp parsec-2.0/pkgs/apps/raytrace/inst/x86_64-linux.gcc/bin/rtview .
 workloads=( canneal dedup streamcluster )
 for i in "${workloads[@]}"
 do
