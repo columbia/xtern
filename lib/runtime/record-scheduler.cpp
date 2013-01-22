@@ -321,6 +321,11 @@ void RRScheduler::next(bool at_thread_end, bool hasPoppedFront)
 
 void RRScheduler::wakeUpIdleThread() {
   int tid = -1;
+  if (idle_done) {
+    fprintf(stderr, "WARN: idle thread is done, but tid %d is still running (for example, in OpenMP). Exit too.\n", self());
+    fflush(stderr);
+    pthread_exit(0);
+  }
   list<int>::iterator prv, cur;
   // use delete-safe way of iterating the list
   for(cur=waitq.begin(); cur!=waitq.end();) {
