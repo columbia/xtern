@@ -21,7 +21,7 @@ patch -p1 < ../add-xtern-annot.patch
 mkdir obj
 cd obj
 CFLAGS+="$XTERN_ANNOT_LIB" ../configure \
---prefix=$XTERN_ROOT/apps/openmp/install --disable-linux-futex --enable-languages=c,c++ --disable-multilib
+--prefix=$XTERN_ROOT/apps/openmp/install --disable-linux-futex --enable-languages=c,c++,fortran --disable-multilib
 # If there is any problem with building 'crti.o', try to create a symbolic link as following
 # ln -s /usr/lib/x86_64-linux-gnu /usr/lib64
 make -j64
