@@ -433,6 +433,11 @@ if __name__ == "__main__":
 
         # generate running directory
         run_dir = genRunDir(full_path, git_info)
+        try:
+            os.unlink('current')
+        except OSError:
+            pass
+        os.symlink(run_dir, 'current')
         if not run_dir:
             continue
         os.chdir(run_dir)
