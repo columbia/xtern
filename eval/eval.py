@@ -180,7 +180,7 @@ def copy_required_files(app, files):
         else:
             src = os.path.abspath('%s/apps/%s/%s' % (XTERN_ROOT, app, f))
         try:
-            copy_file(src, '.')
+            copy_file(os.path.realpath(src), '.')
         except IOError as e:
             logging.warning(str(e))
             return False
@@ -366,7 +366,7 @@ def processBench(config, bench):
     write_stats(xtern_cost, nondet_cost)
 
     # copy exec file
-    copy_file(exec_file, '.')
+    copy_file(os.path.realpath(exec_file), '.')
 
     os.chdir("..")
 

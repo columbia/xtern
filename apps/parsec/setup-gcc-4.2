@@ -33,16 +33,17 @@ pushd $SOURCE
 
 patch -p1 < ../patch/xtern_annot.patch
 XTERN_ANNOT_LIB="-I$XTERN_ROOT/include -L$XTERN_ROOT/dync_hook -Wl,--rpath,$XTERN_ROOT/dync_hook -lxtern-annot"
-#CFLAGS+="$XTERN_ANNOT_LIB" ./configure --prefix=$INSTALL --disable-linux-futex --enable-languages=c,c++ --disable-multilib
-CFLAGS+="$XTERN_ANNOT_LIB" ./configure --prefix=$INSTALL --disable-multilib
+CFLAGS+="$XTERN_ANNOT_LIB" ./configure --prefix=$INSTALL --disable-linux-futex --enable-languages=c,c++ --disable-multilib
 make -j64
 mkdir -p $INSTALL
 make -j64 install
 
-#rm -rf $INSTALL/lib64/libstdc++.so
-#rm -rf $INSTALL/lib64/libstdc++.so.6
-#ln -s /usr/lib/x86_64-linux-gnu/libstdc++.so.6 $INSTALL/lib64/libstdc++.so
-#ln -s /usr/lib/x86_64-linux-gnu/libstdc++.so.6 $INSTALL/lib64/libstdc++.so.6
+ln -s $INSTALL/lib64/libgomp.spec $INSTALL/lib/gcc/x86_64-unknown-linux-gnu/4.2.4/
+
+mv $INSTALL/lib64/libstdc++.so $INSTALL/lib64/libstdc++.so.bak
+mv $INSTALL/lib64/libstdc++.so.6 $INSTALL/lib64/libstdc++.so.bak
+ln -s $XTERN_ROOT/apps/openmp/install/lib64/libstdc++.so $INSTALL/lib64/libstdc++.so
+ln -s $XTERN_ROOT/apps/openmp/install/lib64/libstdc++.so.6 $INSTALL/lib64/libstdc++.so.6
 
 popd
 popd
