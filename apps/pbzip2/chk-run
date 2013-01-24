@@ -31,5 +31,5 @@ fi
 
 # Run dbug with pbzip2.
 echo "Running dbug tool with $APP $INPUT..."
-explorer.rb --prefix $SMT_MC_ROOT/mc-tools/dbug/install "$APP $INPUT"
+$SMT_MC_ROOT/mc-tools/dbug/install/bin/explorer.rb --prefix $SMT_MC_ROOT/mc-tools/dbug/install "$APP $INPUT"
 
