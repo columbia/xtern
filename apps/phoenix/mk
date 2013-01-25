@@ -1,0 +1,42 @@
+#!/bin/bash
+
+set -e
+
+ROOT=`pwd`
+
+if [ ! -d $XTERN_ROOT ]; then
+	echo "XTERN_ROOT is not defined"
+	exit 1
+fi
+
+if [ ! -d $APPS_DIR ]; then
+    echo "APPS_DIR is not defiend"
+    exit 1
+fi
+
+if [ ! -f $APPS_DIR/sys/phoenix-2.0.0.tar.gz ]; then
+    echo "please update \$APPS_DIR"
+    exit 1
+fi
+
+pushd $XTERN_ROOT/apps/phoenix/
+
+# clean up
+rm -rf phoenix-2.0.0
+tar zxf $APPS_DIR/sys/phoenix-2.0.0.tar.gz
+
+# patch && make
+pushd phoenix-2.0.0
+patch -p1 < ../fix.patch
+make
+popd
+
+#rm -rf ft mg sp lu bt is ep cg ua dc
+#bench=( ft mg sp lu bt is ep cg ua dc )
+#for i in "${bench[@]}"
+#do
+#    ln -s NPB3.3.1/NPB3.3-OMP/bin/$i.?.x $i
+#done
+
+popd
+echo "DONE!"
