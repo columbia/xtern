@@ -54,6 +54,7 @@ def readConfigFile(config_file):
                                                 "REQUIRED_FILES": "",
                                                 "DOWNLOAD_FILES": "",
                                                 "TARBALL": "",
+                                                "GZIP": "",
                                                 "EXPORT": "",
                                                 "C_CMD": "",
                                                 "C_TERMINATE_SERVER": "0",
@@ -220,6 +221,26 @@ def extract_tarball(app, files):
             return False
     return True
 
+def extract_gzip(app, files):
+    for f in files.split():
+        logging.debug("extracting gzip file : %s" % f)
+        if os.path.isabs(f):
+            src = f
+        else:
+            src = os.path.abspath('%s/apps/%s/%s' % (XTERN_ROOT, app, f))
+        
+        import tarfile
+        try:
+            tarfile.is_tarfile(src)
+            with tarfile.open(src, 'r:gz') as t:
+                t.extractall()
+        except IOError as e:
+            logging.warning(str(e))
+            return False
+        except tarfile.TarError as e:
+            logging.warning(str(e))
+            return False
+    return True
 
 def processBench(config, bench):
     # for each bench, generate running directory
@@ -256,6 +277,11 @@ def processBench(config, bench):
     # extract *.tar files
     tar_balls = config.get(bench, 'tarball')
     if not extract_tarball(apps_name, tar_balls):
+        logging.warning("cannot extract files in config [%s], skip" % bench)
+        return
+
+    gzips = config.get(bench, 'gzip')
+    if not extract_gzip(apps_name, gzips):
         logging.warning("cannot extract files in config [%s], skip" % bench)
         return
     

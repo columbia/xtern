@@ -21,6 +21,26 @@ fi
 
 pushd $XTERN_ROOT/apps/phoenix/
 
+# download required files
+check=$(dpkg-query -W -f='${Status} ${Version}\n' axel 2>&1)
+if [[ "$check" != "install ok"* ]]; then
+    echo "please install 'axel'"
+    exit 1
+fi
+AXEL=$(which axel)
+files=( histogram linear_regression string_match reverse_index word_count  )
+for i in "${files[@]}"
+do
+    if [ ! -f $i.tar.gz ]; then
+        $AXEL http://mapreduce.stanford.edu/datafiles/$i.tar.gz
+    fi
+done
+md5sum -c md5check.txt
+#for i in "${files[@]}"
+#do
+#    tar zxf $i.tar.gz
+#done
+
 # clean up
 rm -rf phoenix-2.0.0
 tar zxf $APPS_DIR/sys/phoenix-2.0.0.tar.gz
@@ -31,12 +51,13 @@ patch -p1 < ../fix.patch
 make
 popd
 
-#rm -rf ft mg sp lu bt is ep cg ua dc
-#bench=( ft mg sp lu bt is ep cg ua dc )
-#for i in "${bench[@]}"
-#do
-#    ln -s NPB3.3.1/NPB3.3-OMP/bin/$i.?.x $i
-#done
+find . -maxdepth 1 -type l -exec rm -rf {} \;
+bench=( histogram linear_regression matrix_multiply string_match kmeans pca word_count )
+for i in "${bench[@]}"
+do
+    ln -s phoenix-2.0.0/tests/$i/$i
+    ln -s phoenix-2.0.0/tests/$i/$i-pthread
+done
 
 popd
 echo "DONE!"
