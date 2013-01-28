@@ -11,13 +11,13 @@ fi
 
 echo "Checking required packages..."
 #package=( axel libxi-dev libxmu-dev freeglut3-dev gettext libjasper-runtime libjasper-dev libjpeg62-dev )
-set +e
 package=( axel libxi-dev libxmu-dev freeglut3-dev gettext libjasper-runtime libjasper-dev )
+set +e
 for i in "${package[@]}"
 do
     check=$(dpkg-query -W -f='${Status} ${Version}\n' $i 2>&1)
     if [[ "$check" != "install ok"* ]]; then
-        echo "please run 'sudo apt-get install ${package[*]}'"
+	echo "please run 'sudo apt-get install ${package[*]}'"
         exit 1
     fi
 done
@@ -35,13 +35,13 @@ if [ ! -f parsec-2.0/pkgs/apps/blackscholes/parsec/simdev.runconf ]; then
     tar zxvf parsec-2.0-sim.tar.gz
 fi
 
-#echo "Checking parsec native file..."
-#if [ ! -f parsec-2.0-native.tar.gz ]; then
-#    $AXEL http://coblitz.codeen.org/parsec.cs.princeton.edu/download/2.0/parsec-2.0-native.tar.gz
-#fi
-#if [ ! -f parsec-2.0/pkgs/apps/x264/parsec/native.runconf ]; then
-#    tar zxvf parsec-2.0-native.tar.gz
-#fi
+echo "Checking parsec native file..."
+if [ ! -f parsec-2.0-native.tar.gz ]; then
+    $AXEL http://coblitz.codeen.org/parsec.cs.princeton.edu/download/2.0/parsec-2.0-native.tar.gz
+fi
+if [ ! -f parsec-2.0/pkgs/apps/x264/parsec/native.runconf ]; then
+    tar zxvf parsec-2.0-native.tar.gz
+fi
 
 echo "Checking parsec core file..."
 if [ ! -f parsec-2.0-core.tar.gz ]; then
@@ -78,37 +78,34 @@ sed -i 's/${LDFLAGS} ${LIBS}/${LDFLAGS} -lz ${LIBS}/g' $XTERN_ROOT/apps/parsec/p
 sed -i "51 s/%F_%T\"/%F_%T_%N\"/" $XTERN_ROOT/apps/parsec/parsec-2.0/config/linux.sysconf
 # posix time format
 sed -i "215 s/\"time\"/\"time -p\"/g" $XTERN_ROOT/apps/parsec/parsec-2.0/bin/parsecmgmt
+# use system zlib
+cp $XTERN_ROOT/apps/parsec/patch/dedup-gcc-pthreads-32.bldconf $XTERN_ROOT/apps/parsec/parsec-2.0/pkgs/kernels/dedup/parsec/gcc-pthreads.bldconf
 
 echo "Build Parsec"
 sed -i '42 s|'/usr/local/gcc-4.2.1'|'$XTERN_ROOT/apps/parsec/gcc-4.2'|' parsec-2.0/config/gcc.bldconf
 sed -i '44 s|'/usr/local'|'/usr'|' parsec-2.0/config/gcc.bldconf
-sed -i '74 s|\"$| -Wl,--rpath,${CC_HOME}/lib64 -Wl,--rpath,${CC_HOME}/lib -L${XTERN_ROOT}/dync_hook -Wl,--rpath,${XTERN_ROOT}/dync_hook\"''|' parsec-2.0/config/gcc.bldconf
+sed -i '74 s|\"$| -Wl,--rpath,${CC_HOME}/lib -L${XTERN_ROOT}/dync_hook -Wl,--rpath,${XTERN_ROOT}/dync_hook\"''|' parsec-2.0/config/gcc.bldconf
 sed -i '75 s|\"$|-lxtern-annot\"''|' parsec-2.0/config/gcc.bldconf
 cd parsec-2.0/bin
-./parsecmgmt -a build -p blackscholes bodytrack facesim swaptions fluidanimate vips x264 canneal dedup streamcluster raytrace ferret
-./parsecmgmt -a build -c gcc-openmp -p blackscholes freqmine bodytrack
+#./parsecmgmt -a build -p blackscholes bodytrack facesim swaptions fluidanimate vips x264 canneal dedup streamcluster raytrace ferret
+./parsecmgmt -a build -p blackscholes swaptions canneal dedup streamcluster ferret
+#./parsecmgmt -a build -c gcc-openmp -p blackscholes freqmine bodytrack
 
 ./parsecmgmt -a status
 
 # copy files
 cd $XTERN_ROOT/apps/parsec
-rm -rf blackscholes bodytrack facesim fluidanimate swaptions vips x264 ferret freqmine rtview canneal dedup streamcluster
-rm -rf freqmine-openmp blackscholes-openmp bodytrack-openmp
-workloads=( blackscholes bodytrack facesim fluidanimate swaptions vips x264 ferret )
+find . -maxdepth 1 -type l -exec rm -rf {} \;
+workloads=( blackscholes swaptions ferret )
 for i in "${workloads[@]}"
 do
-    ln -s parsec-2.0/pkgs/apps/$i/inst/x86_64-linux.gcc/bin/$i
+    ln -s parsec-2.0/pkgs/apps/$i/inst/i686-linux.gcc/bin/$i
 done
-workloads=( freqmine blackscholes bodytrack )
-for i in "${workloads[@]}"
-do
-    ln -s parsec-2.0/pkgs/apps/$i/inst/x86_64-linux.gcc-openmp/bin/$i $i-openmp
-done
-ln -s parsec-2.0/pkgs/apps/raytrace/inst/x86_64-linux.gcc/bin/rtview
+#ln -s parsec-2.0/pkgs/apps/raytrace/inst/x86_64-linux.gcc/bin/rtview
 workloads=( canneal dedup streamcluster )
 for i in "${workloads[@]}"
 do
-    ln -s parsec-2.0/pkgs/kernels/$i/inst/x86_64-linux.gcc/bin/$i
+    ln -s parsec-2.0/pkgs/kernels/$i/inst/i686-linux.gcc/bin/$i
 done
 
 popd

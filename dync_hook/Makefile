@@ -116,3 +116,4 @@ eval:
 clean: 
 	rm -rf *.o
 	rm -rf *.so
+	rm -rf code_gen template.cpp

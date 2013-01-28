@@ -56,6 +56,7 @@ def readConfigFile(config_file):
                                                 "TARBALL": "",
                                                 "GZIP": "",
                                                 "EXPORT": "",
+                                                "DTHREADS": "",
                                                 "C_CMD": "",
                                                 "C_TERMINATE_SERVER": "0",
                                                 "C_STATS": "0"} )
@@ -176,12 +177,13 @@ def write_stats(xtern, nondet):
 def copy_required_files(app, files):
     for f in files.split():
         logging.debug("copying required file : %s" % f)
+        dst = os.path.basename(f)
         if os.path.isabs(f):
             src = f
         else:
             src = os.path.abspath('%s/apps/%s/%s' % (XTERN_ROOT, app, f))
         try:
-            copy_file(os.path.realpath(src), '.')
+            copy_file(os.path.realpath(src), dst)
         except IOError as e:
             logging.warning(str(e))
             return False
@@ -242,26 +244,7 @@ def extract_gzip(app, files):
             return False
     return True
 
-def processBench(config, bench):
-    # for each bench, generate running directory
-    logging.debug("processing: " + bench)
-    apps_name, exec_file = extract_apps_exec(bench)
-    logging.debug("app = %s" % apps_name)
-    logging.debug("executible file = %s" % exec_file)
-    if not checkExist(exec_file, os.X_OK):
-        logging.warning('%s does not exist, skip [%s]' % (exec_file, bench))
-        return
-
-    segs = re.sub(r'(\")|(\.)|/|\'', '', bench).split()
-    dir_name =  '_'.join(segs)
-    mkdir_p(dir_name)
-    os.chdir(dir_name)
-
-    # generate local options
-    generate_local_options(config, bench)
-    inputs = config.get(bench, 'inputs')
-    repeats = config.get(bench, 'repeats')
-
+def preSetting(config, bench, apps_name):
     # copy required files
     required_files = config.get(bench, 'required_files')
     if not copy_required_files(apps_name, required_files):
@@ -285,14 +268,55 @@ def processBench(config, bench):
         logging.warning("cannot extract files in config [%s], skip" % bench)
         return
     
-    # run command in shell, currently uses 'bash'
-    bash_path = which('bash')
-    if not bash_path:
-        logging.critical("cannot find shell 'bash'")
-        sys.exit(1)
-    else:
-        bash_path = bash_path[0]
-        logging.debug("find 'bash' at %s" % bash_path)
+ 
+def execBench(cmd, repeats, out_dir, client_cmd="", client_terminate_server=False):
+    mkdir_p(out_dir)
+    for i in range(int(repeats)):
+        sys.stderr.write("\tPROGRESS: %5d/%d\r" % (i+1, int(repeats))) # progress
+        with open('%s/output.%d' % (out_dir, i), 'w', 102400) as log_file:
+            #proc = subprocess.Popen(xtern_command, stdout=sys.stdout, stderr=sys.stdout,
+            proc = subprocess.Popen(cmd, stdout=log_file, stderr=subprocess.STDOUT,
+                                    shell=True, executable=bash_path, bufsize = 102400, preexec_fn=os.setsid)
+            if client_cmd:
+                time.sleep(1)
+                with open('%s/client.%d' % (out_dir, i), 'w', 102400) as client_log_file:
+                    client_proc = subprocess.Popen(client_cmd, stdout=client_log_file, stderr=subprocess.STDOUT,
+                                                   shell=True, executable=bash_path, bufsize = 102400)
+                    client_proc.wait()
+                if client_terminate_server:
+                    os.killpg(proc.pid, signal.SIGTERM)
+                proc.wait()
+                time.sleep(2)
+            else:
+                proc.wait()
+        # move log files into 'xtern' directory
+        try:
+            os.renames('out', '%s/out.%d' % (out_dir, i))
+        except OSError:
+            pass
+
+def processBench(config, bench):
+    # for each bench, generate running directory
+    logging.debug("processing: " + bench)
+    apps_name, exec_file = extract_apps_exec(bench)
+    logging.debug("app = %s" % apps_name)
+    logging.debug("executible file = %s" % exec_file)
+    if not checkExist(exec_file, os.X_OK):
+        logging.warning('%s does not exist, skip [%s]' % (exec_file, bench))
+        return
+
+    segs = re.sub(r'(\")|(\.)|/|\'', '', bench).split()
+    dir_name =  '_'.join(segs)
+    mkdir_p(dir_name)
+    os.chdir(dir_name)
+
+    # generate local options
+    generate_local_options(config, bench)
+    inputs = config.get(bench, 'inputs')
+    repeats = config.get(bench, 'repeats')
+
+    # get required files
+    preSetting(config, bench, apps_name)
 
     # get 'export' environment variable
     export = config.get(bench, 'EXPORT')
@@ -313,58 +337,20 @@ def processBench(config, bench):
     # generate command for xtern [time LD_PRELOAD=... exec args...]
     xtern_command = ' '.join(['time', '-p', XTERN_PRELOAD, export, exec_file] + inputs.split())
     logging.info("executing '%s'" % xtern_command)
-
-    mkdir_p('xtern')
-    for i in range(int(repeats)):
-        sys.stderr.write("\tPROGRESS: %5d/%d\r" % (i+1, int(repeats))) # progress
-        with open('xtern/output.%d' % i, 'w', 102400) as log_file:
-            #proc = subprocess.Popen(xtern_command, stdout=sys.stdout, stderr=sys.stdout,
-            proc = subprocess.Popen(xtern_command, stdout=log_file, stderr=subprocess.STDOUT,
-                                    shell=True, executable=bash_path, bufsize = 102400, preexec_fn=os.setsid)
-            if client_cmd:
-                time.sleep(1)
-                with open('xtern/client.%d' % i, 'w', 102400) as client_log_file:
-                    client_proc = subprocess.Popen(client_cmd, stdout=client_log_file, stderr=subprocess.STDOUT,
-                                                   shell=True, executable=bash_path, bufsize = 102400)
-                    client_proc.wait()
-                if client_terminate_server:
-                    os.killpg(proc.pid, signal.SIGTERM)
-                proc.wait()
-                time.sleep(2)
-            else:
-                proc.wait()
-        # move log files into 'xtern' directory
-        os.renames('out', 'xtern/out.%d' % i)
+    #execBench(xtern_command, repeats, 'xtern', client_cmd, client_terminate_server)
 
     # generate command for non-det [time LD_PRELOAD=... exec args...]
     nondet_command = ' '.join(['time', '-p', RAND_PRELOAD, export, exec_file] + inputs.split())
     logging.info("executing '%s'" % nondet_command)
+    #execBench(nondet_command, repeats, 'non-det', client_cmd, client_terminate_server)
 
-    mkdir_p('non-det')
-    for i in range(int(repeats)):
-        sys.stderr.write("\tPROGRESS: %5d/%d\r" % (i+1, int(repeats))) # progress
-        with open('non-det/output.%d' % i, 'w', 102400) as log_file:
-            proc = subprocess.Popen(nondet_command, stdout=log_file, stderr=subprocess.STDOUT,
-            #proc = subprocess.Popen(nondet_command, stdout=sys.stdout, stderr=sys.stdout,
-                                    shell=True, executable=bash_path, bufsize = 102400, preexec_fn=os.setsid )
-            if client_cmd:
-                time.sleep(1)
-                with open('non-det/client.%d' % i, 'w', 102400) as client_log_file:
-                    client_proc = subprocess.Popen(client_cmd, stdout=client_log_file, stderr=subprocess.STDOUT,
-                                                   shell=True, executable=bash_path, bufsize = 102400)
-                    client_proc.wait()
-                if client_terminate_server:
-                    os.killpg(proc.pid, signal.SIGTERM)
-                proc.wait()
-                time.sleep(2)
-            else:
-                proc.wait()
-        # move log files into 'non-det' directory
-        # FIXME: sometimes there is no 'run' directory
-        try:
-            os.renames('out', 'non-det/out.%d' % i)
-        except OSError:
-            pass
+    # run additional benchmark for dthreads
+    dthread = config.get(bench, 'DTHREADS')
+    if dthread:
+        dthread_exec_file = os.path.abspath('%s/%s/%s' % (APPS, apps_name, dthread))
+        dthread_command = ' '.join(['time', '-p', export, dthread_exec_file] + inputs.split())
+        logging.info("executing '%s'" % dthread_command)
+        execBench(dthread_command, repeats, 'dthreads')
 
     # get stats
     xtern_cost = []
@@ -392,7 +378,7 @@ def processBench(config, bench):
     write_stats(xtern_cost, nondet_cost)
 
     # copy exec file
-    copy_file(os.path.realpath(exec_file), '.')
+    copy_file(os.path.realpath(exec_file), os.path.basename(exec_file))
 
     os.chdir("..")
 
@@ -412,7 +398,8 @@ if __name__ == "__main__":
         description="Evaluate the perforamnce of xtern")
     parser.add_argument('filename', nargs='*',
         type=str,
-        default = ["xtern.cfg"],
+        #default = ["xtern.cfg"],
+        default = ["parsec32.cfg"],
         help = "list of configuration files (default: xtern.cfg)")
     args = parser.parse_args()
 
@@ -440,6 +427,16 @@ if __name__ == "__main__":
         sys.exit(1)
     XTERN_PRELOAD = "LD_PRELOAD=%s/dync_hook/interpose.so" % XTERN_ROOT
     RAND_PRELOAD = "LD_PRELOAD=%s/eval/rand-intercept/rand-intercept.so" % XTERN_ROOT
+
+    # run command in shell, currently uses 'bash'
+    bash_path = which('bash')
+    if not bash_path:
+        logging.critical("cannot find shell 'bash'")
+        sys.exit(1)
+    else:
+        bash_path = bash_path[0]
+        logging.debug("find 'bash' at %s" % bash_path)
+
 
     # get default xtern options
     default_options = getXternDefaultOptions()
