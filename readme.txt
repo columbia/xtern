@@ -44,6 +44,7 @@ Run "echo $LD_LIBRARY_PATH" to make sure it is correct.
 6. Go to $XTERN_ROOT/eva/rand-intercept and run 'make'.
 
 7. Test, if it all passes, then everything has been installed correctly.
+This step may take a few minutes, depending on hardware speed.
 > cd $XTERN_ROOT/obj
 > make ENABLE_OPTIMIZED=0/1 -C test check
 
