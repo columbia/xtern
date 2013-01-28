@@ -174,6 +174,24 @@ def write_stats(xtern, nondet):
         stats.write('xtern:\n\tavg {0}\n\tstd {1}\n'.format(xtern_avg, xtern_std))
         stats.write('non-det:\n\tavg {0}\n\tstd {1}\n'.format(nondet_avg, nondet_std))
 
+def write_stats_dthread(dthread, nondet):
+    try:
+        import numpy
+    except ImportError:
+        logging.error("please install 'numpy' module")
+        sys.exit(1)
+    dthread_avg = numpy.average(dthread)
+    dthread_std = numpy.std(dthread)
+    nondet_avg = numpy.average(nondet)
+    nondet_std = numpy.std(nondet)
+    overhead_avg = dthread_avg/nondet_avg - 1.0
+    import math
+    overhead_std = math.fabs(overhead_avg)*(math.sqrt(((nondet_std/nondet_avg)**2) + (dthread_std/dthread_avg)**2))
+    with open("stats.txt", "a") as stats:
+        stats.write('dthread-overhead: {2:.3f}%\n\tavg {0}\n\tstd {1}\n'.format(overhead_avg, overhead_std, overhead_avg*100))
+        stats.write('dthread:\n\tavg {0}\n\tstd {1}\n'.format(dthread_avg, dthread_std))
+
+
 def copy_required_files(app, files):
     for f in files.split():
         logging.debug("copying required file : %s" % f)
@@ -337,12 +355,12 @@ def processBench(config, bench):
     # generate command for xtern [time LD_PRELOAD=... exec args...]
     xtern_command = ' '.join(['time', '-p', XTERN_PRELOAD, export, exec_file] + inputs.split())
     logging.info("executing '%s'" % xtern_command)
-    #execBench(xtern_command, repeats, 'xtern', client_cmd, client_terminate_server)
+    execBench(xtern_command, repeats, 'xtern', client_cmd, client_terminate_server)
 
     # generate command for non-det [time LD_PRELOAD=... exec args...]
     nondet_command = ' '.join(['time', '-p', RAND_PRELOAD, export, exec_file] + inputs.split())
     logging.info("executing '%s'" % nondet_command)
-    #execBench(nondet_command, repeats, 'non-det', client_cmd, client_terminate_server)
+    execBench(nondet_command, repeats, 'non-det', client_cmd, client_terminate_server)
 
     # run additional benchmark for dthreads
     dthread = config.get(bench, 'DTHREADS')
@@ -375,7 +393,21 @@ def processBench(config, bench):
                 nondet_cost += [float(line.split()[1])]
                 break
 
+    dthread_cost = []
+    if dthread:
+        for i in range(int(repeats)):
+            if client_cmd and use_client_stats:
+                log_file_name = 'dthreads/client.%d' % i
+            else:
+                log_file_name = 'dthreads/output.%d' % i
+            for line in reversed(open(log_file_name, 'r').readlines()):
+                if re.search('^real [0-9]+\.[0-9][0-9]$', line):
+                    dthread_cost += [float(line.split()[1])]
+                    break
+
     write_stats(xtern_cost, nondet_cost)
+    if dthread:
+        write_stats_dthread(dthread_cost, nondet_cost)
 
     # copy exec file
     copy_file(os.path.realpath(exec_file), os.path.basename(exec_file))
