@@ -5,12 +5,10 @@ And link your gcc-4.5 and g++-4.5 to be gcc and g++.
 
 1. Link directory or file.
 On 64 bits machine:
-$ ln -s /usr/lib/x86_64-linux-gnu /usr/lib64
+Nothing needs to be done.
 
 On 32 bits machine:
 $ sudo ln -s /usr/include/i386-linux-gnu/gnu/stubs-32.h /usr/include/gnu/stubs-32.h
-$ sudo ln -s /usr/lib/i386-linux-gnu/crti.o /usr/lib/
-$ sudo ln -s /usr/lib/i386-linux-gnu/crtn.o /usr/lib/
 
 2. Build.
 $ cd $XTERN_ROOT/apps/openmp/
