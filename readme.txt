@@ -2,7 +2,7 @@ Typical (and recommended) systems configuration for xtern
 ================
 Hardware: we have tried both 4-core and 24-core machines with 64 bits.
 OS: Ubuntu 11.10.
-Gcc: 4.5.4 (you may avoid a lot potential compilation troubles if you choose this version).
+Gcc: 4.5.4 (you may avoid lots of potential compilation troubles if you choose this version).
 
 
 Installing xtern
