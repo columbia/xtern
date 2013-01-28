@@ -20,5 +20,7 @@ ex-for
 rand-para
 
 3. Run with xtern.
-LD_PRELOAD=$XTERN_ROOT/dync_hook/interpose.so ./ex-for
+$ LD_PRELOAD=$XTERN_ROOT/dync_hook/interpose.so ./ex-for
 
+4. Run with dbug.
+$ $SMT_MC_ROOT/mc-tools/dbug/install/bin/explorer.rb --prefix $SMT_MC_ROOT/mc-tools/dbug/install ./ex-for
