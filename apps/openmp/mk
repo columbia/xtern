@@ -7,6 +7,7 @@ if [ "$APPS_DIR" = "" ]; then
 	exit 1
 fi
 
+ARCH=`uname -m`
 XTERN_ANNOT_LIB="-I$XTERN_ROOT/include -L$XTERN_ROOT/dync_hook -Wl,--rpath,$XTERN_ROOT/dync_hook -lxtern-annot"
 VER=4.5.4
 echo -e "\nWe are compiling gcc-$VER by ourselves. We hope you have installed the same version of gcc on your machine, because we are going to use some libraries of it.\n";
@@ -21,17 +22,24 @@ patch -p1 < ../add-xtern-annot.patch
 mkdir obj
 cd obj
 CFLAGS+="$XTERN_ANNOT_LIB" ../configure \
---prefix=$XTERN_ROOT/apps/openmp/install --disable-linux-futex --enable-languages=c,c++ --disable-multilib
-# If there is any problem with building 'crti.o', try to create a symbolic link as following
-# ln -s /usr/lib/x86_64-linux-gnu /usr/lib64
-make -j64
+--prefix=$XTERN_ROOT/apps/openmp/install --disable-linux-futex --enable-languages=c,c++,fortran --disable-multilib
+if [ "$ARCH" == "x86_64" ]; then
+  LIBRARY_PATH=/usr/lib/x86_64-linux-gnu make -j64
+else
+  LIBRARY_PATH=/usr/lib/i386-linux-gnu make -j64
+fi
 make -j64 install
 
 
 # Build the random shuffle benchmark.
 cd $XTERN_ROOT/apps/openmp
-ln -s $XTERN_ROOT/apps/openmp/install/lib64/libgomp.a
-ln -s $XTERN_ROOT/apps/openmp/install/lib64/libstdc++.a
+if [ "$ARCH" == "x86_64" ]; then
+  ln -s $XTERN_ROOT/apps/openmp/install/lib64/libgomp.a
+  ln -s $XTERN_ROOT/apps/openmp/install/lib64/libstdc++.a
+else
+  ln -s $XTERN_ROOT/apps/openmp/install/lib/libgomp.a
+  ln -s $XTERN_ROOT/apps/openmp/install/lib/libstdc++.a
+fi
 #g++ -g  rand-shuf.cpp -o rand-serial
 
 # Heming: we must add "-lgomp" in order to make the compilation pass.
@@ -42,8 +50,13 @@ g++ -g -static-libgcc -static-libstdc++ -D_GLIBCXX_PARALLEL -L. -fopenmp example
 
 # Build some other examples.
 cd ex
-ln -s $XTERN_ROOT/apps/openmp/install/lib64/libgomp.a
-ln -s $XTERN_ROOT/apps/openmp/install/lib64/libstdc++.a
+if [ "$ARCH" == "x86_64" ]; then
+  ln -s $XTERN_ROOT/apps/openmp/install/lib64/libgomp.a
+  ln -s $XTERN_ROOT/apps/openmp/install/lib64/libstdc++.a
+else
+  ln -s $XTERN_ROOT/apps/openmp/install/lib/libgomp.a
+  ln -s $XTERN_ROOT/apps/openmp/install/lib/libstdc++.a
+fi
 make
 cd ..
 

@@ -100,7 +100,11 @@ int Runtime::__socket(unsigned ins, int &error, int domain, int type, int protoc
 int Runtime::__listen(unsigned ins, int &error, int sockfd, int backlog)
 {
   errno = error;
+#ifdef XTERN_PLUS_DBUG
+
+#else
   int ret = listen(sockfd, backlog);
+#endif
   error = errno;
   return ret;
 }
@@ -118,9 +122,13 @@ static bool sock_nonblock (int fd)
 int Runtime::__accept(unsigned ins, int &error, int sockfd, struct sockaddr *cliaddr, socklen_t *addrlen)
 {
   errno = error;
+#ifdef XTERN_PLUS_DBUG
+
+#else
   int ret = accept(sockfd, cliaddr, addrlen);
   if (options::non_block_recv)
     assert(sock_nonblock(sockfd));
+#endif
   error = errno;
   return ret;
 }
@@ -128,7 +136,11 @@ int Runtime::__accept(unsigned ins, int &error, int sockfd, struct sockaddr *cli
 int Runtime::__accept4(unsigned ins, int &error, int sockfd, struct sockaddr *cliaddr, socklen_t *addrlen, int flags)
 {
   errno = error;
+#ifdef XTERN_PLUS_DBUG
+
+#else
   int ret = accept4(sockfd, cliaddr, addrlen, flags);
+#endif
   error = errno;
   return ret;
 }
@@ -136,9 +148,13 @@ int Runtime::__accept4(unsigned ins, int &error, int sockfd, struct sockaddr *cl
 int Runtime::__connect(unsigned ins, int &error, int sockfd, const struct sockaddr *serv_addr, socklen_t addrlen)
 {
   errno = error;
+#ifdef XTERN_PLUS_DBUG
+
+#else
   int ret = connect(sockfd, serv_addr, addrlen);
   if (options::non_block_recv)
     assert(sock_nonblock(sockfd));
+#endif
   error = errno;
   return ret;
 }
@@ -164,7 +180,11 @@ struct hostent *Runtime::__gethostbyaddr(unsigned ins, int &error, const void *a
 ssize_t Runtime::__send(unsigned ins, int &error, int sockfd, const void *buf, size_t len, int flags)
 {
   errno = error;
+#ifdef XTERN_PLUS_DBUG
+
+#else
   ssize_t ret = send(sockfd, buf, len, flags);
+#endif
   error = errno;
   return ret;
 }
@@ -172,7 +192,11 @@ ssize_t Runtime::__send(unsigned ins, int &error, int sockfd, const void *buf, s
 ssize_t Runtime::__sendto(unsigned ins, int &error, int sockfd, const void *buf, size_t len, int flags, const struct sockaddr *dest_addr, socklen_t addrlen)
 {
   errno = error;
+#ifdef XTERN_PLUS_DBUG
+
+#else
   ssize_t ret = sendto(sockfd, buf, len, flags, dest_addr, addrlen);
+#endif
   error = errno;
   return ret;
 }
@@ -180,7 +204,11 @@ ssize_t Runtime::__sendto(unsigned ins, int &error, int sockfd, const void *buf,
 ssize_t Runtime::__sendmsg(unsigned ins, int &error, int sockfd, const struct msghdr *msg, int flags)
 {
   errno = error;
+#ifdef XTERN_PLUS_DBUG
+
+#else
   ssize_t ret = sendmsg(sockfd, msg, flags);
+#endif
   error = errno;
   return ret;
 }
@@ -188,6 +216,9 @@ ssize_t Runtime::__sendmsg(unsigned ins, int &error, int sockfd, const struct ms
 ssize_t Runtime::__recv(unsigned ins, int &error, int sockfd, void *buf, size_t len, int flags)
 {
   errno = error;
+#ifdef XTERN_PLUS_DBUG
+
+#else
   ssize_t ret = 0;
   int try_count = 0;
   timespec ts;
@@ -212,6 +243,7 @@ ssize_t Runtime::__recv(unsigned ins, int &error, int sockfd, void *buf, size_t 
       ++try_count;
     }
   }
+#endif
   error = errno;
   return ret;
 }
@@ -219,7 +251,11 @@ ssize_t Runtime::__recv(unsigned ins, int &error, int sockfd, void *buf, size_t 
 ssize_t Runtime::__recvfrom(unsigned ins, int &error, int sockfd, void *buf, size_t len, int flags, struct sockaddr *src_addr, socklen_t *addrlen)
 {
   errno = error;
+#ifdef XTERN_PLUS_DBUG
+
+#else
   ssize_t ret = recvfrom(sockfd, buf, len, flags, src_addr, addrlen);
+#endif
   error = errno;
   return ret;
 }
@@ -227,7 +263,11 @@ ssize_t Runtime::__recvfrom(unsigned ins, int &error, int sockfd, void *buf, siz
 ssize_t Runtime::__recvmsg(unsigned ins, int &error, int sockfd, struct msghdr *msg, int flags)
 {
   errno = error;
+#ifdef XTERN_PLUS_DBUG
+
+#else
   ssize_t ret = recvmsg(sockfd, msg, flags);
+#endif
   error = errno;
   return ret;
 }
@@ -235,7 +275,11 @@ ssize_t Runtime::__recvmsg(unsigned ins, int &error, int sockfd, struct msghdr *
 int Runtime::__shutdown(unsigned ins, int &error, int sockfd, int how)
 {
   errno = error;
+#ifdef XTERN_PLUS_DBUG
+
+#else
   int ret = shutdown(sockfd, how);
+#endif
   error = errno;
   return ret;
 }
@@ -243,7 +287,11 @@ int Runtime::__shutdown(unsigned ins, int &error, int sockfd, int how)
 int Runtime::__getpeername(unsigned ins, int &error, int sockfd, struct sockaddr *addr, socklen_t *addrlen)
 {
   errno = error;
+#ifdef XTERN_PLUS_DBUG
+
+#else
   int ret = getpeername(sockfd, addr, addrlen);
+#endif
   error = errno;
   return ret;
 }
@@ -251,7 +299,11 @@ int Runtime::__getpeername(unsigned ins, int &error, int sockfd, struct sockaddr
 int Runtime::__getsockopt(unsigned ins, int &error, int sockfd, int level, int optname, void *optval, socklen_t *optlen)
 {
   errno = error;
+#ifdef XTERN_PLUS_DBUG
+
+#else
   int ret = getsockopt(sockfd, level, optname, optval, optlen);
+#endif
   error = errno;
   return ret;
 }
@@ -259,7 +311,11 @@ int Runtime::__getsockopt(unsigned ins, int &error, int sockfd, int level, int o
 int Runtime::__setsockopt(unsigned ins, int &error, int sockfd, int level, int optname, const void *optval, socklen_t optlen)
 {
   errno = error;
+#ifdef XTERN_PLUS_DBUG
+
+#else
   int ret = setsockopt(sockfd, level, optname, optval, optlen);
+#endif
   error = errno;
   return ret;
 }
@@ -267,7 +323,11 @@ int Runtime::__setsockopt(unsigned ins, int &error, int sockfd, int level, int o
 int Runtime::__close(unsigned ins, int &error, int fd)
 {
   errno = error;
+#ifdef XTERN_PLUS_DBUG
+
+#else
   int ret = close(fd);
+#endif
   error = errno;
   return ret;
 }
@@ -275,7 +335,11 @@ int Runtime::__close(unsigned ins, int &error, int fd)
 ssize_t Runtime::__read(unsigned ins, int &error, int fd, void *buf, size_t count)
 {
   errno = error;
+#ifdef XTERN_PLUS_DBUG
+  // TBD: HOW DID XTERN HANDLE THIS?
+#else
   ssize_t ret = read(fd, buf, count);
+#endif
   error = errno;
   return ret;
 }
@@ -283,7 +347,11 @@ ssize_t Runtime::__read(unsigned ins, int &error, int fd, void *buf, size_t coun
 ssize_t Runtime::__write(unsigned ins, int &error, int fd, const void *buf, size_t count)
 {
   errno = error;
+#ifdef XTERN_PLUS_DBUG
+
+#else
   ssize_t ret = write(fd, buf, count);
+#endif
   error = errno;
   return ret;
 }
@@ -291,7 +359,11 @@ ssize_t Runtime::__write(unsigned ins, int &error, int fd, const void *buf, size
 int Runtime::__select(unsigned ins, int &error, int nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds, struct timeval *timeout)
 {
   errno = error;
+#ifdef XTERN_PLUS_DBUG
+
+#else
   int ret = select(nfds, readfds, writefds, exceptfds, timeout);
+#endif
   error = errno;
   return ret;
 }
@@ -299,7 +371,11 @@ int Runtime::__select(unsigned ins, int &error, int nfds, fd_set *readfds, fd_se
 int Runtime::__sigwait(unsigned ins, int &error, const sigset_t *set, int *sig)
 {
   errno = error;
+#ifdef XTERN_PLUS_DBUG
+
+#else
   int ret = sigwait(set, sig);
+#endif
   error = errno;
   return ret;
 }
@@ -307,7 +383,11 @@ int Runtime::__sigwait(unsigned ins, int &error, const sigset_t *set, int *sig)
 int Runtime::__epoll_wait(unsigned ins, int &error, int epfd, struct epoll_event *events, int maxevents, int timeout)
 {
   errno = error;
+#ifdef XTERN_PLUS_DBUG
+
+#else
   int ret = epoll_wait(epfd, events, maxevents, timeout);
+#endif
   error = errno;
   return ret;
 }
