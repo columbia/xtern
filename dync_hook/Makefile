@@ -13,7 +13,9 @@ usermonitor: usermonitor.cpp
 	g++ usermonitor.cpp -o usermonitor
 
 xternruntime:
-	cd $(XTERN_ROOT)/obj && make ENABLE_OPTIMIZED=$(ENABLE_OPTIMIZED) install
+	cd $(XTERN_ROOT)/obj && \
+	make ENABLE_OPTIMIZED=$(ENABLE_OPTIMIZED) XTERN_PLUS_DBUG=$(XTERN_PLUS_DBUG) && \
+	make ENABLE_OPTIMIZED=$(ENABLE_OPTIMIZED) XTERN_PLUS_DBUG=$(XTERN_PLUS_DBUG) install
 
 interpose.so: template.cpp spec_hooks.cpp hook.cpp
 	gcc -fPIC -rdynamic hook.cpp $(CFLAGS) -c -o interpose.o
@@ -27,7 +29,7 @@ libxtern-annot.so: xtern-annot.cpp
 	$(CXX) $(INCLUDES) $(CXXFLAGS) -c $
 
 code_gen: code_gen.cpp
-	g++ $^ $(CXXFLAGS) -o code_gen
+	g++ $^ $(CXXFLAGS) -o code_gen -ldl
 
 template.cpp: code_gen func_template.cpp void_func_template.cpp hook_func.def
 	./code_gen < hook_func.def
@@ -116,3 +118,4 @@ eval:
 clean: 
 	rm -rf *.o
 	rm -rf *.so
+	- rm code_gen

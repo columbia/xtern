@@ -11,3 +11,7 @@ BUILD_ARCHIVE := 1
 # MODULE_NAME := $(LIBRARYNAME)
 
 include $(LEVEL)/Makefile.common
+
+ifeq ($(XTERN_PLUS_DBUG),1)
+  CXXFLAGS += -I$(SMT_MC_ROOT)/mc-tools/dbug/include/ -DXTERN_PLUS_DBUG  
+endif

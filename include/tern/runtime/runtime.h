@@ -64,7 +64,10 @@ struct Runtime {
   virtual void lineupDestroy(long opaque_type) = 0;
   virtual void lineupStart(long opaque_type) = 0;
   virtual void lineupEnd(long opaque_type) = 0;
-  
+
+#ifdef XTERN_PLUS_DBUG
+  void *resolveDbugFunc(const char *func_name);
+#endif
 /*
   virtual int __pthread_create(unsigned insid, int &error, pthread_t *th, const pthread_attr_t *a, void *(*func)(void*), void *arg)
   	{ return pthreadCreate(insid, th, const_cast<pthread_attr_t *>(a), func, arg); }

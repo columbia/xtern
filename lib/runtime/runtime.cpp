@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <iostream>
 #include <fcntl.h>
+#include <string>
 
 #include "tern/config.h"
 #include "tern/hooks.h"
@@ -18,11 +19,42 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 
+#ifdef XTERN_PLUS_DBUG
+#include "dbug/interposition/interpose.h"
+//xxxxxx
+#endif
+
 using namespace tern;
 
 Runtime *Runtime::the = NULL;
 
 int __thread TidMap::self_tid  = -1;
+
+#ifdef XTERN_PLUS_DBUG
+#include <dlfcn.h>
+using namespace std;
+void *Runtime::resolveDbugFunc(const char *func_name) {
+  void * handle;
+  void * ret;
+
+  std::string libDbugPath = getenv("SMT_MC_ROOT");
+  libDbugPath += "/mc-tools/dbug/install/lib/libdbug.so";
+  if(!(handle=dlopen(libDbugPath.c_str(), RTLD_LAZY))) {
+    perror("resolveDbugFunc dlopen");
+    abort();
+  }
+
+  ret = dlsym(handle, func_name);
+
+  if(dlerror()) {
+    perror("resolveDbugFunc dlsym");
+    abort();
+  }
+
+  dlclose(handle);
+  return ret;
+}
+#endif
 
 int Runtime::pthreadCancel(unsigned insid, int &error, pthread_t thread)
 {
@@ -51,7 +83,16 @@ int Runtime::pthreadMutexDestroy(unsigned insid, int &error, pthread_mutex_t *mu
 int Runtime::__socket(unsigned ins, int &error, int domain, int type, int protocol)
 {
   errno = error;
-  int ret = socket(domain, type, protocol);
+  int ret;
+#ifdef XTERN_PLUS_DBUG
+  typedef int (*orig_func_type)(int, int, int);
+  static orig_func_type orig_func;
+  if (!orig_func)
+    orig_func = (orig_func_type)resolveDbugFunc("socket");
+  ret = orig_func(domain, type, protocol);
+#else
+  ret = socket(domain, type, protocol);
+#endif
   error = errno;
   return ret;
 }
