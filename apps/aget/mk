@@ -11,6 +11,7 @@ cd $XTERN_ROOT/apps/aget
 rm -rf aget-$VER 
 tar zxvf $APPS_DIR/sys/aget-$VER.tar.gz
 cd aget-$VER
-patch -p1 < ../for-dbug-1.patch
+#patch -p1 < ../for-dbug-1.patch
+patch -p1 < ../fix-off-by-one.patch
 make CFLAGS='-D_GNU_SOURCE -g -w'
 mv aget ../
