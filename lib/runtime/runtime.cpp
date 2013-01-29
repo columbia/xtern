@@ -36,7 +36,7 @@ using namespace std;
 void *Runtime::resolveDbugFunc(const char *func_name) {
   void * handle;
   void * ret;
-
+  //fprintf(stderr, "resolveDbugFunc %s\n", func_name);
   std::string libDbugPath = getenv("SMT_MC_ROOT");
   libDbugPath += "/mc-tools/dbug/install/lib/libdbug.so";
   if(!(handle=dlopen(libDbugPath.c_str(), RTLD_LAZY))) {
