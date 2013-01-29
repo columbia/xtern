@@ -104,8 +104,8 @@ struct RRScheduler: public Scheduler {
   virtual void signal(void *chan, bool all=false);
 
   virtual int block(); 
-  virtual bool nwkBlkStart();
-  virtual bool nwkBlkEnd();
+  virtual bool interProStart();
+  virtual bool interProEnd();
   virtual void wakeup();
 
   unsigned incTurnCount(void);
@@ -153,11 +153,11 @@ protected:
   int timer;
   int timemark[MAX_THREAD_NUM];
 
-  //  for network wakeup
+  //  for inter-process operation wakeup
   typedef std::tr1::unordered_set<int> tid_set;
-  tid_set nwk_wakeup_tids;
-  bool nwk_wakeup_flag;
-  pthread_mutex_t nwk_wakeup_mutex;
+  tid_set inter_pro_wakeup_tids;
+  bool inter_pro_wakeup_flag;
+  pthread_mutex_t inter_pro_wakeup_mutex;
   void check_wakeup();
 
   // For idle thread.

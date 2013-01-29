@@ -292,7 +292,7 @@ void RecorderRT<RecordSerializer>::idle_sleep(void) {
     assert(block_turn >= 0); \
     sched_block_time = update_time(); \
   } else { \
-    if (_S::nwkBlkStart()) { \
+    if (_S::interProStart()) { \
       _S::block(); \
     } \
   }
@@ -321,7 +321,7 @@ void RecorderRT<RecordSerializer>::idle_sleep(void) {
     if (options::log_sync) \
       Logger::the->logSync(ins, (syncop), second_turn, app_time, syscall_time, sched_time, true, __VA_ARGS__); \
   } else { \
-    if (_S::nwkBlkEnd()) { \
+    if (_S::interProEnd()) { \
       _S::wakeup(); \
     } \
   } \

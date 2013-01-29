@@ -266,17 +266,17 @@ int RRScheduler::fireTimeouts()
 
 void RRScheduler::check_wakeup()
 {
-  if (nwk_wakeup_flag) {
-    pthread_mutex_lock(&nwk_wakeup_mutex);
-    for (tid_set::iterator itr = nwk_wakeup_tids.begin(); itr != nwk_wakeup_tids.end(); ++itr) {
+  if (inter_pro_wakeup_flag) {
+    pthread_mutex_lock(&inter_pro_wakeup_mutex);
+    for (tid_set::iterator itr = inter_pro_wakeup_tids.begin(); itr != inter_pro_wakeup_tids.end(); ++itr) {
       // This runq.in() call is safe, because check_wakeup() can only be called by 
       // the thread holding the turn.
       if (!runq.in(*itr))
         runq.push_back(*itr);   
     }
-    nwk_wakeup_tids.clear();
-    nwk_wakeup_flag = false;
-    pthread_mutex_unlock(&nwk_wakeup_mutex);
+    inter_pro_wakeup_tids.clear();
+    inter_pro_wakeup_flag = false;
+    pthread_mutex_unlock(&inter_pro_wakeup_mutex);
   }
 }
 
@@ -293,8 +293,8 @@ void RRScheduler::next(bool at_thread_end, bool hasPoppedFront)
     if (my->status == run_queue::RUNNING_REG)
       my->status = run_queue::RUNNABLE;
     else {
-      assert(my->status == run_queue::RUNNING_NWK);
-      my->status = run_queue::NWK_STOP;
+      assert(my->status == run_queue::RUNNING_INTER_PRO);
+      my->status = run_queue::INTER_PRO_STOP;
     }
 
     // remove self from runq
@@ -393,10 +393,10 @@ int RRScheduler::block()
 
 void RRScheduler::wakeup()
 {
-  pthread_mutex_lock(&nwk_wakeup_mutex);
-  nwk_wakeup_tids.insert(self());
-  nwk_wakeup_flag = true;
-  pthread_mutex_unlock(&nwk_wakeup_mutex);
+  pthread_mutex_lock(&inter_pro_wakeup_mutex);
+  inter_pro_wakeup_tids.insert(self());
+  inter_pro_wakeup_flag = true;
+  pthread_mutex_unlock(&inter_pro_wakeup_mutex);
 }
 
 //@before with turn
@@ -519,9 +519,9 @@ RRScheduler::RRScheduler()
   waits[MainThreadTid].post(); // Assign an initial turn to main thread.
   main_elem->status = run_queue::RUNNING_REG;// Assign an initial running state (i.e., turn) to main thread.
 
-  nwk_wakeup_tids.clear();
-  nwk_wakeup_flag = 0;
-  pthread_mutex_init(&nwk_wakeup_mutex, NULL);
+  inter_pro_wakeup_tids.clear();
+  inter_pro_wakeup_flag = 0;
+  pthread_mutex_init(&inter_pro_wakeup_mutex, NULL);
   pthread_mutex_init(&turn_mutex, NULL);
 
   if (options::RR_skip_zombie)
@@ -595,27 +595,27 @@ ostream& RRScheduler::dump(ostream& o)
   return o;
 }
 
-bool RRScheduler::nwkBlkStart() {
+bool RRScheduler::interProStart() {
   bool isHead = true;
   struct run_queue::runq_elem *elem = runq.get_my_elem(self());
 
   pthread_spin_lock(&elem->spin_lock);
   if (elem->status == run_queue::RUNNABLE) {
     isHead = false;
-    elem->status = run_queue::NWK_STOP;
+    elem->status = run_queue::INTER_PRO_STOP;
   } else {
     assert(elem->status == run_queue::RUNNING_REG);
-    elem->status = run_queue::RUNNING_NWK;
+    elem->status = run_queue::RUNNING_INTER_PRO;
   }
   pthread_spin_unlock(&elem->spin_lock);
 
   return isHead;
 }
 
-bool RRScheduler::nwkBlkEnd() {
+bool RRScheduler::interProEnd() {
   struct run_queue::runq_elem *elem = runq.get_my_elem(self());
   pthread_spin_lock(&elem->spin_lock);
-  assert(elem->status == run_queue::NWK_STOP);
+  assert(elem->status == run_queue::INTER_PRO_STOP);
   elem->status = run_queue::RUNNABLE;
   pthread_spin_unlock(&elem->spin_lock);
   return true;
@@ -653,7 +653,7 @@ int RRScheduler::nextRunnable(bool at_thread_end) {
     // Process one head element.
     headElem = runq.front_elem();
     pthread_spin_lock(&headElem->spin_lock);
-    if (headElem->status == run_queue::NWK_STOP) {
+    if (headElem->status == run_queue::INTER_PRO_STOP) {
       /** If this thread is blocking, remove it from run queue
       and find the next one. The head thread is the only thread
       that could modify the linked list of run queue, so it is safe. **/
@@ -663,7 +663,7 @@ int RRScheduler::nextRunnable(bool at_thread_end) {
         at_thread_end, self(), headElem->tid, headElem->status, runq.get_my_elem(self())->status);
       assert(headElem->status == run_queue::RUNNABLE ||
         headElem->status == run_queue::RUNNING_REG || 
-        headElem->status == run_queue::RUNNING_NWK);
+        headElem->status == run_queue::RUNNING_INTER_PRO);
       if (headElem->status == run_queue::RUNNABLE)
         headElem->status = run_queue::RUNNING_REG;
       passed = true;
