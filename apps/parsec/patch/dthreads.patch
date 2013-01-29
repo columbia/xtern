@@ -190,7 +190,7 @@ diff -Naur parsec-2.0_bak/pkgs/kernels/dedup/parsec/gcc-dthreads.bldconf parsec-
 +build_deps="ssl"
 +
 +# Environment to use for configure script and Makefile
-+build_env="version=dthreads CFLAGS=\"-I${PARSECDIR}/pkgs/libs/ssl/inst/${PARSECPLAT}/include ${CFLAGS}\" LDFLAGS=\"-L${PARSECDIR}/pkgs/libs/ssl/inst/${PARSECPLAT}/lib ${LDFLAGS}\""
++build_env="version=dthreads CFLAGS=\"-I${PARSECDIR}/pkgs/libs/ssl/inst/${PARSECPLAT}/include -I${DMTTOOL_ROOT}/dthreads/src2/eval/tests/dedup/include/ ${CFLAGS}\" LDFLAGS=\"-L${PARSECDIR}/pkgs/libs/ssl/inst/${PARSECPLAT}/lib -L${DMTTOOL_ROOT}/dthreads/src2/eval/tests/dedup/lib ${LDFLAGS}\""
 +
 +# Whether the build system supports only in-place compilation.
 +# If TRUE, then all sources will be copied to the build directory before we

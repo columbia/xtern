@@ -79,13 +79,15 @@ sed -i "51 s/%F_%T\"/%F_%T_%N\"/" $XTERN_ROOT/apps/parsec/parsec-2.0/config/linu
 # posix time format
 sed -i "215 s/\"time\"/\"time -p\"/g" $XTERN_ROOT/apps/parsec/parsec-2.0/bin/parsecmgmt
 # use system zlib
-cp $XTERN_ROOT/apps/parsec/patch/dedup-gcc-pthreads-32.bldconf $XTERN_ROOT/apps/parsec/parsec-2.0/pkgs/kernels/dedup/parsec/gcc-pthreads.bldconf
+#cp $XTERN_ROOT/apps/parsec/patch/dedup-gcc-pthreads-32.bldconf $XTERN_ROOT/apps/parsec/parsec-2.0/pkgs/kernels/dedup/parsec/gcc-pthreads.bldconf
 
 echo "Build Parsec"
 sed -i '42 s|'/usr/local/gcc-4.2.1'|'$XTERN_ROOT/apps/parsec/gcc-4.2'|' parsec-2.0/config/gcc.bldconf
 sed -i '44 s|'/usr/local'|'/usr'|' parsec-2.0/config/gcc.bldconf
 sed -i '74 s|\"$| -Wl,--rpath,${CC_HOME}/lib -L${XTERN_ROOT}/dync_hook -Wl,--rpath,${XTERN_ROOT}/dync_hook\"''|' parsec-2.0/config/gcc.bldconf
 sed -i '75 s|\"$|-lxtern-annot\"''|' parsec-2.0/config/gcc.bldconf
+sed -i '70 s/\"$/ -march=native\"/g' parsec-2.0/config/gcc.bldconf
+sed -i '71 s/\"$/ -march=native\"/g' parsec-2.0/config/gcc.bldconf
 cd parsec-2.0/bin
 #./parsecmgmt -a build -p blackscholes bodytrack facesim swaptions fluidanimate vips x264 canneal dedup streamcluster raytrace ferret
 ./parsecmgmt -a build -p blackscholes swaptions canneal dedup streamcluster ferret

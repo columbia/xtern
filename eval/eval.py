@@ -430,8 +430,8 @@ if __name__ == "__main__":
         description="Evaluate the perforamnce of xtern")
     parser.add_argument('filename', nargs='*',
         type=str,
-        #default = ["xtern.cfg"],
-        default = ["parsec32.cfg"],
+        default = ["xtern.cfg"],
+        #default = ["parsec32.cfg"],
         help = "list of configuration files (default: xtern.cfg)")
     args = parser.parse_args()
 
