@@ -19,8 +19,16 @@ libstdc++.a
 ex-for
 rand-para
 
-3. Run with xtern.
+3. Build two simple programs with openmp (the "ex-for" and "rand-para" executables are alreaady built, I 
+am just telling you how they were built).
+$ cd $XTERN_ROOT/apps/openmp/
+$ export XTERN_ANNOT_LIB="-I$XTERN_ROOT/include -L$XTERN_ROOT/dync_hook -Wl,--rpath,$XTERN_ROOT/dync_hook -lxtern-annot"
+$ g++ -g -static-libgcc -static-libstdc++ -D_GLIBCXX_PARALLEL -L. -fopenmp rand-shuf.cpp -o rand-para -lgomp $XTERN_ANNOT_LIB
+$ g++ -g -static-libgcc -static-libstdc++ -D_GLIBCXX_PARALLEL -L. -fopenmp examples/ex-for.cpp -o ex-for -lgomp $XTERN_ANNOT_LIB
+
+4. Run with xtern.
 $ LD_PRELOAD=$XTERN_ROOT/dync_hook/interpose.so ./ex-for
 
-4. Run with dbug.
+5. Run with dbug.
 $ $SMT_MC_ROOT/mc-tools/dbug/install/bin/explorer.rb --prefix $SMT_MC_ROOT/mc-tools/dbug/install ./ex-for
+
