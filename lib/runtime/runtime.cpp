@@ -171,7 +171,7 @@ int Runtime::__connect(unsigned ins, int &error, int sockfd, const struct sockad
     orig_func = (orig_func_type)resolveDbugFunc("connect");
   ret = orig_func(sockfd, serv_addr, addrlen);
 #else
-  int ret = connect(sockfd, serv_addr, addrlen);
+  ret = connect(sockfd, serv_addr, addrlen);
   if (options::non_block_recv)
     assert(sock_nonblock(sockfd));
 #endif
