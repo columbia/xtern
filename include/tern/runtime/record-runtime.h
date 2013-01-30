@@ -113,6 +113,7 @@ struct RecorderRT: public Runtime, public _Scheduler {
   char *__fgets(unsigned insid, int &error, char *s, int size, FILE *stream);
   pid_t __fork(unsigned insid, int &error);
   pid_t __wait(unsigned insid, int &error, int *status);
+  pid_t __waitpid(unsigned insid, int &error, pid_t pid, int *status, int options);
   time_t __time(unsigned ins, int &error, time_t *t);
   int __clock_getres(unsigned ins, int &error, clockid_t clk_id, struct timespec *res);
   int __clock_gettime(unsigned ins, int &error, clockid_t clk_id, struct timespec *tp);

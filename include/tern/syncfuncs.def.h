@@ -78,6 +78,7 @@ DEF(select, BlockingSyscall, int, int nfds, fd_set *readfds, fd_set *writefds, f
 //DEF(poll, Synchronization, int, struct pollfd *fds, nfds_t nfds, int timeout)
 DEF(fork, Synchronization, pid_t)
 DEF(wait, Synchronization, pid_t, int *status)
+DEF(waitpid, Synchronization, pid_t, pid_t pid, int *status, int options)
 
 //  real time functions
 DEF(time, Synchronization, time_t, time_t *t)

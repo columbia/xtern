@@ -1850,7 +1850,16 @@ pid_t RecorderRT<_S>::__wait(unsigned ins, int &error, int *status)
 {
   BLOCK_TIMER_START;
   pid_t ret = Runtime::__wait(ins, error, status);
-  BLOCK_TIMER_END(syncfunc::wait, (uint64_t) ret);
+  BLOCK_TIMER_END(syncfunc::wait, (uint64_t)*status, (uint64_t)ret);
+  return ret;
+}
+
+template <typename _S>
+pid_t RecorderRT<_S>::__waitpid(unsigned ins, int &error, pid_t pid, int *status, int options)
+{
+  BLOCK_TIMER_START;
+  pid_t ret = Runtime::__waitpid(ins, error, pid, status, options);
+  BLOCK_TIMER_END(syncfunc::waitpid, (uint64_t)pid, (uint64_t)*status, (uint64_t)options, (uint64_t)ret);
   return ret;
 }
 

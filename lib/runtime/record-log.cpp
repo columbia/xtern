@@ -107,6 +107,7 @@ void TxtLogger::logSync(unsigned insid, unsigned short sync,
   case syncfunc::fgets:
   case syncfunc::fork:
   case syncfunc::wait:
+  case syncfunc::waitpid:
   case syncfunc::tern_idle:
     break;
     // log one sync var (common case)
@@ -484,6 +485,7 @@ void TestLogger::logSync(unsigned insid, unsigned short sync,
   case syncfunc::fgets:
   case syncfunc::fork:
   case syncfunc::wait:
+  case syncfunc::waitpid:
   case syncfunc::tern_idle:
     break;
     // log one sync var (common case)

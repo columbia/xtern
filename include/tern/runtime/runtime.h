@@ -155,6 +155,7 @@ struct Runtime {
   virtual char *__fgets(unsigned ins, int &error, char *s, int size, FILE *stream);
   virtual pid_t __fork(unsigned ins, int &error);
   virtual pid_t __wait(unsigned ins, int &error, int *status);
+  virtual pid_t __waitpid(unsigned ins, int &error, pid_t pid, int *status, int options);
   virtual time_t __time(unsigned ins, int &error, time_t *t);
   virtual int __clock_getres(unsigned ins, int &error, clockid_t clk_id, struct timespec *res);
   virtual int __clock_gettime(unsigned ins, int &error, clockid_t clk_id, struct timespec *tp);

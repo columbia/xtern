@@ -541,6 +541,23 @@ pid_t Runtime::__wait(unsigned ins, int &error, int *status)
   return ret;
 }
 
+pid_t Runtime::__waitpid(unsigned ins, int &error, pid_t pid, int *status, int options)
+{
+  errno = error;
+  pid_t ret;
+#ifdef XTERN_PLUS_DBUG
+  typedef pid_t (*orig_func_type)(pid_t, int *, int);
+  static orig_func_type orig_func;
+  if (!orig_func)
+    orig_func = (orig_func_type)resolveDbugFunc("waitpid");
+  ret = orig_func(pid, status, options);
+#else
+  ret = waitpid(pid, status, options);
+#endif
+  error = errno;
+  return ret;
+}
+
 int Runtime::nanosleep(unsigned ins, int &error, const struct timespec *req, struct timespec *rem)
 {
   errno = error;

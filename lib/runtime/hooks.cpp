@@ -697,6 +697,17 @@ pid_t tern_wait(unsigned ins, int *status)
   return ret;
 }
 
+pid_t tern_waitpid(unsigned ins, pid_t pid, int *status, int options)
+{
+  int error = errno;
+  pid_t ret;
+  Space::enterSys();
+  ret = Runtime::the->__waitpid(ins, error, pid, status, options);
+  Space::exitSys();
+  errno = error;
+  return ret;
+}
+
 time_t tern_time(unsigned ins, time_t *t)
 {
   int error = errno;

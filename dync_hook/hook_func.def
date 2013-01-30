@@ -431,6 +431,13 @@ END_SHORT_DEFINE
 
 START_SHORT_DEFINE
 /libc.so.6
+pid_t
+waitpid
+(pid_t pid, int *status, int options)
+END_SHORT_DEFINE
+
+START_SHORT_DEFINE
+/libc.so.6
 time_t
 time
 (time_t *t)
