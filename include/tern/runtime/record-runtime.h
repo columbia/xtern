@@ -86,6 +86,7 @@ struct RecorderRT: public Runtime, public _Scheduler {
   void symbolic(unsigned insid, int &error, void *addr, int nbytes, const char *name);
 
   // socket & file
+  bool regularFile(int fd);
   int __socket(unsigned insid, int &error, int domain, int type, int protocol);
   int __listen(unsigned insid, int &error, int sockfd, int backlog);
   int __accept(unsigned insid, int &error, int sockfd, struct sockaddr *cliaddr, socklen_t *addrlen);

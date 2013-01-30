@@ -68,10 +68,17 @@ static void print_stack()
 
 void *get_eip()
 {
-  void *tracePtrs[20];
+  // Change this "idx" to be 2 when pthread_*() functions are called by 
+  // application code directly; and change it to be 3 when pthread_*()
+  // functions are called by the app's wrapper functions.
+  const int idx = 3;
+  const int len = 5;
+  void *tracePtrs[len];
   int i;
   uint64_t ret = 0; 
-  int count = backtrace(tracePtrs, 20);
+  /* Fixme: sometimes after fork(), the child process may hang (100% cpu) here, weird.
+  Saw this case when running the simple-fork-test.c testcase. */
+  int count = backtrace(tracePtrs, len);
 
   if (options::whole_stack_eip_signature)
   {
@@ -84,7 +91,7 @@ void *get_eip()
     //printf( "%s\n", funcNames[2] );
     //printf(stderr, "reteip: %p\n", tracePtrs[1]);
   } else
-    return tracePtrs[3];  //  this is ret_eip of my caller
+    return tracePtrs[idx];  //  this is ret_eip of my caller
 }
 
 #define HOOK_MUTEX_COND

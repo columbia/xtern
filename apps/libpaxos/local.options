@@ -54,9 +54,6 @@ set_mutex_errorcheck = 0
 # and xtern. I ran both the libpaxos proposer and a self-written toy code looping usleep.
 nanosec_per_turn = 800
 
-# whether we schedule on output operations like write, send and so. 
-schedule_write = 0
-
 # whether we ignore read/write to regular files
 RR_ignore_rw_regular_file = 1
 

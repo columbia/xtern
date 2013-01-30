@@ -492,12 +492,19 @@ char *Runtime::__fgets(unsigned ins, int &error, char *s, int size, FILE *stream
   return ret;
 }
 
-/* Do not need to involve dbug tool here, since fork/execv
-  is handled in a "within process" way by xtern. */
 pid_t Runtime::__fork(unsigned ins, int &error)
 {
   errno = error;
-  pid_t ret = fork();
+  pid_t ret;
+#ifdef XTERN_PLUS_DBUG
+  typedef pid_t (*orig_func_type)();
+  static orig_func_type orig_func;
+  if (!orig_func)
+    orig_func = (orig_func_type)resolveDbugFunc("fork");
+  ret = orig_func();
+#else
+  ret = fork();
+#endif
   error = errno;
   return ret;
 }

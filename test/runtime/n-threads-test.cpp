@@ -21,7 +21,7 @@ void* thread_func(void *arg) {
   //sprintf(buf, "%03d RUNS\n", tid);
   sprintf(buf, "RUNS\n");
   pthread_mutex_lock(&m);
-  write(1, buf, strlen(buf));
+  printf("%s", buf);
   pthread_mutex_unlock(&m);
 }
 
