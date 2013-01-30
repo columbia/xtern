@@ -1653,14 +1653,11 @@ ssize_t RecorderRT<_S>::__read(unsigned ins, int &error, int fd, void *buf, size
   {
     struct stat st;
     fstat(fd, &st);
-//    printf("st.st_mode = %x\n", (unsigned) st.st_mode);
-//    printf("st.st_mode & S_IFMT = %x\n", (unsigned) (st.st_mode & S_IFMT));
-//    printf("S_IFSOCK = %x\n", (unsigned) S_IFSOCK);
     if (S_IFREG == (st.st_mode & S_IFMT))
       ignore = true;
   }
   if (ignore)
-    return Runtime::__read(ins, error, fd, buf, count);
+    return read(fd, buf, count);  // Directly call the libc read() for regular IO.
 
   BLOCK_TIMER_START;
   ssize_t ret = Runtime::__read(ins, error, fd, buf, count);
@@ -1680,9 +1677,8 @@ ssize_t RecorderRT<_S>::__write(unsigned ins, int &error, int fd, const void *bu
     if (S_IFREG == (st.st_mode & S_IFMT))
       ignore = true;
   }
-
   if (ignore)
-    return Runtime::__write(ins, error, fd, buf, count);
+    return write(fd, buf, count);  // Directly call the libc write() for regular IO.
 
   if (options::schedule_write)
   {
@@ -1813,7 +1809,7 @@ char *RecorderRT<_S>::__fgets(unsigned ins, int &error, char *s, int size, FILE 
       ignore = true;
   }
   if (ignore)
-     return Runtime::__fgets(ins, error, s, size, stream);
+    return fgets(s, size, stream);  // Directly call the libc fgets() for regular IO.
 
   BLOCK_TIMER_START;
   char * ret = Runtime::__fgets(ins, error, s, size, stream);
