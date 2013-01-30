@@ -29,9 +29,9 @@ def getXternDefaultOptions():
     except IOError as e:
         logging.error("There is no 'default.options' file")
         sys.exit(1)
-    logging.debug("default.options : ")
-    for key in default:
-        logging.debug("\t{0} = '{1}'".format(key,default[key]))
+    #logging.debug("default.options : ")
+    #for key in default:
+    #    logging.debug("\t{0} = '{1}'".format(key,default[key]))
     return default
     
 def getConfigFullPath(config_file):
@@ -54,7 +54,9 @@ def readConfigFile(config_file):
                                                 "REQUIRED_FILES": "",
                                                 "DOWNLOAD_FILES": "",
                                                 "TARBALL": "",
+                                                "GZIP": "",
                                                 "EXPORT": "",
+                                                "DTHREADS": "",
                                                 "C_CMD": "",
                                                 "C_TERMINATE_SERVER": "0",
                                                 "C_STATS": "0"} )
@@ -154,7 +156,7 @@ def which(name, flags=os.X_OK):
             result.append(p)
     return result
 
-def write_stats(xtern, nondet):
+def write_stats(xtern, nondet, repeats):
     try:
         import numpy
     except ImportError:
@@ -166,21 +168,40 @@ def write_stats(xtern, nondet):
     nondet_std = numpy.std(nondet)
     overhead_avg = xtern_avg/nondet_avg - 1.0
     import math
-    overhead_std = math.fabs(overhead_avg)*(math.sqrt(((nondet_std/nondet_avg)**2) + (xtern_std/xtern_avg)**2))
+    #overhead_std = math.fabs(overhead_avg)*(math.sqrt(((nondet_std/nondet_avg)**2) + (xtern_std/xtern_avg)**2))
     with open("stats.txt", "w") as stats:
-        stats.write('overhead: {2:.3f}%\n\tavg {0}\n\tstd {1}\n'.format(overhead_avg, overhead_std, overhead_avg*100))
-        stats.write('xtern:\n\tavg {0}\n\tstd {1}\n'.format(xtern_avg, xtern_std))
-        stats.write('non-det:\n\tavg {0}\n\tstd {1}\n'.format(nondet_avg, nondet_std))
+        stats.write('overhead: {1:.3f}%\n\tavg {0}\n'.format(overhead_avg, overhead_avg*100))
+        stats.write('xtern:\n\tavg {0}\n\tsem {1}\n'.format(xtern_avg, xtern_std/math.sqrt(repeats)))
+        stats.write('non-det:\n\tavg {0}\n\tsem {1}\n'.format(nondet_avg, nondet_std/math.sqrt(repeats)))
+
+def write_stats_dthread(dthread, nondet, repeats):
+    try:
+        import numpy
+    except ImportError:
+        logging.error("please install 'numpy' module")
+        sys.exit(1)
+    dthread_avg = numpy.average(dthread)
+    dthread_std = numpy.std(dthread)
+    nondet_avg = numpy.average(nondet)
+    nondet_std = numpy.std(nondet)
+    overhead_avg = dthread_avg/nondet_avg - 1.0
+    import math
+    #overhead_std = math.fabs(overhead_avg)*(math.sqrt(((nondet_std/nondet_avg)**2) + (dthread_std/dthread_avg)**2))
+    with open("stats.txt", "a") as stats:
+        stats.write('dthread-overhead: {1:.3f}%\n\tavg {0}\n'.format(overhead_avg, overhead_avg*100))
+        stats.write('dthread:\n\tavg {0}\n\tsem {1}\n'.format(dthread_avg, dthread_std/math.sqrt(repeats)))
+
 
 def copy_required_files(app, files):
     for f in files.split():
         logging.debug("copying required file : %s" % f)
+        dst = os.path.basename(f)
         if os.path.isabs(f):
             src = f
         else:
             src = os.path.abspath('%s/apps/%s/%s' % (XTERN_ROOT, app, f))
         try:
-            copy_file(src, '.')
+            copy_file(os.path.realpath(src), dst)
         except IOError as e:
             logging.warning(str(e))
             return False
@@ -220,6 +241,77 @@ def extract_tarball(app, files):
             return False
     return True
 
+def extract_gzip(app, files):
+    for f in files.split():
+        logging.debug("extracting gzip file : %s" % f)
+        if os.path.isabs(f):
+            src = f
+        else:
+            src = os.path.abspath('%s/apps/%s/%s' % (XTERN_ROOT, app, f))
+        
+        import tarfile
+        try:
+            tarfile.is_tarfile(src)
+            with tarfile.open(src, 'r:gz') as t:
+                t.extractall()
+        except IOError as e:
+            logging.warning(str(e))
+            return False
+        except tarfile.TarError as e:
+            logging.warning(str(e))
+            return False
+    return True
+
+def preSetting(config, bench, apps_name):
+    # copy required files
+    required_files = config.get(bench, 'required_files')
+    if not copy_required_files(apps_name, required_files):
+        logging.warning("error in config [%s], skip" % bench)
+        return
+
+    # download files if needed
+    download_files = config.get(bench, 'download_files')
+    if not download_files_from_web(download_files):
+        logging.warning("cannot download one of files in config [%s], skip" % bench)
+        return
+
+    # extract *.tar files
+    tar_balls = config.get(bench, 'tarball')
+    if not extract_tarball(apps_name, tar_balls):
+        logging.warning("cannot extract files in config [%s], skip" % bench)
+        return
+
+    gzips = config.get(bench, 'gzip')
+    if not extract_gzip(apps_name, gzips):
+        logging.warning("cannot extract files in config [%s], skip" % bench)
+        return
+    
+ 
+def execBench(cmd, repeats, out_dir, client_cmd="", client_terminate_server=False):
+    mkdir_p(out_dir)
+    for i in range(int(repeats)):
+        sys.stderr.write("\tPROGRESS: %5d/%d\r" % (i+1, int(repeats))) # progress
+        with open('%s/output.%d' % (out_dir, i), 'w', 102400) as log_file:
+            #proc = subprocess.Popen(xtern_command, stdout=sys.stdout, stderr=sys.stdout,
+            proc = subprocess.Popen(cmd, stdout=log_file, stderr=subprocess.STDOUT,
+                                    shell=True, executable=bash_path, bufsize = 102400, preexec_fn=os.setsid)
+            if client_cmd:
+                time.sleep(1)
+                with open('%s/client.%d' % (out_dir, i), 'w', 102400) as client_log_file:
+                    client_proc = subprocess.Popen(client_cmd, stdout=client_log_file, stderr=subprocess.STDOUT,
+                                                   shell=True, executable=bash_path, bufsize = 102400)
+                    client_proc.wait()
+                if client_terminate_server:
+                    os.killpg(proc.pid, signal.SIGTERM)
+                proc.wait()
+                time.sleep(2)
+            else:
+                proc.wait()
+        # move log files into 'xtern' directory
+        try:
+            os.renames('out', '%s/out.%d' % (out_dir, i))
+        except OSError:
+            pass
 
 def processBench(config, bench):
     # for each bench, generate running directory
@@ -241,32 +333,8 @@ def processBench(config, bench):
     inputs = config.get(bench, 'inputs')
     repeats = config.get(bench, 'repeats')
 
-    # copy required files
-    required_files = config.get(bench, 'required_files')
-    if not copy_required_files(apps_name, required_files):
-        logging.warning("error in config [%s], skip" % bench)
-        return
-
-    # download files if needed
-    download_files = config.get(bench, 'download_files')
-    if not download_files_from_web(download_files):
-        logging.warning("cannot download one of files in config [%s], skip" % bench)
-        return
-
-    # extract *.tar files
-    tar_balls = config.get(bench, 'tarball')
-    if not extract_tarball(apps_name, tar_balls):
-        logging.warning("cannot extract files in config [%s], skip" % bench)
-        return
-    
-    # run command in shell, currently uses 'bash'
-    bash_path = which('bash')
-    if not bash_path:
-        logging.critical("cannot find shell 'bash'")
-        sys.exit(1)
-    else:
-        bash_path = bash_path[0]
-        logging.debug("find 'bash' at %s" % bash_path)
+    # get required files
+    preSetting(config, bench, apps_name)
 
     # get 'export' environment variable
     export = config.get(bench, 'EXPORT')
@@ -284,61 +352,24 @@ def processBench(config, bench):
         logging.debug("terminate server after client finish job : " + str(client_terminate_server))
         logging.debug("evaluate performance by using stats of client : " + str(use_client_stats))
 
+    TIMEFORMAT="TIMEFORMAT=$'\nreal %E\nuser %U\nsys %S';"
     # generate command for xtern [time LD_PRELOAD=... exec args...]
-    xtern_command = ' '.join(['time', '-p', XTERN_PRELOAD, export, exec_file] + inputs.split())
+    xtern_command = ' '.join(['time', XTERN_PRELOAD, export, exec_file] + inputs.split())
     logging.info("executing '%s'" % xtern_command)
-
-    mkdir_p('xtern')
-    for i in range(int(repeats)):
-        sys.stderr.write("\tPROGRESS: %5d/%d\r" % (i+1, int(repeats))) # progress
-        with open('xtern/output.%d' % i, 'w', 102400) as log_file:
-            #proc = subprocess.Popen(xtern_command, stdout=sys.stdout, stderr=sys.stdout,
-            proc = subprocess.Popen(xtern_command, stdout=log_file, stderr=subprocess.STDOUT,
-                                    shell=True, executable=bash_path, bufsize = 102400, preexec_fn=os.setsid)
-            if client_cmd:
-                time.sleep(1)
-                with open('xtern/client.%d' % i, 'w', 102400) as client_log_file:
-                    client_proc = subprocess.Popen(client_cmd, stdout=client_log_file, stderr=subprocess.STDOUT,
-                                                   shell=True, executable=bash_path, bufsize = 102400)
-                    client_proc.wait()
-                if client_terminate_server:
-                    os.killpg(proc.pid, signal.SIGTERM)
-                proc.wait()
-                time.sleep(2)
-            else:
-                proc.wait()
-        # move log files into 'xtern' directory
-        os.renames('out', 'xtern/out.%d' % i)
+    execBench(xtern_command, repeats, 'xtern', client_cmd, client_terminate_server)
 
     # generate command for non-det [time LD_PRELOAD=... exec args...]
-    nondet_command = ' '.join(['time', '-p', RAND_PRELOAD, export, exec_file] + inputs.split())
+    nondet_command = ' '.join(['time', RAND_PRELOAD, export, exec_file] + inputs.split())
     logging.info("executing '%s'" % nondet_command)
+    execBench(nondet_command, repeats, 'non-det', client_cmd, client_terminate_server)
 
-    mkdir_p('non-det')
-    for i in range(int(repeats)):
-        sys.stderr.write("\tPROGRESS: %5d/%d\r" % (i+1, int(repeats))) # progress
-        with open('non-det/output.%d' % i, 'w', 102400) as log_file:
-            proc = subprocess.Popen(nondet_command, stdout=log_file, stderr=subprocess.STDOUT,
-            #proc = subprocess.Popen(nondet_command, stdout=sys.stdout, stderr=sys.stdout,
-                                    shell=True, executable=bash_path, bufsize = 102400, preexec_fn=os.setsid )
-            if client_cmd:
-                time.sleep(1)
-                with open('non-det/client.%d' % i, 'w', 102400) as client_log_file:
-                    client_proc = subprocess.Popen(client_cmd, stdout=client_log_file, stderr=subprocess.STDOUT,
-                                                   shell=True, executable=bash_path, bufsize = 102400)
-                    client_proc.wait()
-                if client_terminate_server:
-                    os.killpg(proc.pid, signal.SIGTERM)
-                proc.wait()
-                time.sleep(2)
-            else:
-                proc.wait()
-        # move log files into 'non-det' directory
-        # FIXME: sometimes there is no 'run' directory
-        try:
-            os.renames('out', 'non-det/out.%d' % i)
-        except OSError:
-            pass
+    # run additional benchmark for dthreads
+    dthread = config.get(bench, 'DTHREADS')
+    if dthread:
+        dthread_exec_file = os.path.abspath('%s/%s/%s' % (APPS, apps_name, dthread))
+        dthread_command = ' '.join(['time', export, dthread_exec_file] + inputs.split())
+        logging.info("executing '%s'" % dthread_command)
+        execBench(dthread_command, repeats, 'dthreads')
 
     # get stats
     xtern_cost = []
@@ -348,7 +379,7 @@ def processBench(config, bench):
         else:
             log_file_name = 'xtern/output.%d' % i
         for line in reversed(open(log_file_name, 'r').readlines()):
-            if re.search('^real [0-9]+\.[0-9][0-9]$', line):
+            if re.search('^real [0-9]+\.[0-9][0-9][0-9]$', line):
                 xtern_cost += [float(line.split()[1])]
                 break
 
@@ -359,14 +390,28 @@ def processBench(config, bench):
         else:
             log_file_name = 'non-det/output.%d' % i
         for line in reversed(open(log_file_name, 'r').readlines()):
-            if re.search('^real [0-9]+\.[0-9][0-9]$', line):
+            if re.search('^real [0-9]+\.[0-9][0-9][0-9]$', line):
                 nondet_cost += [float(line.split()[1])]
                 break
 
-    write_stats(xtern_cost, nondet_cost)
+    dthread_cost = []
+    if dthread:
+        for i in range(int(repeats)):
+            if client_cmd and use_client_stats:
+                log_file_name = 'dthreads/client.%d' % i
+            else:
+                log_file_name = 'dthreads/output.%d' % i
+            for line in reversed(open(log_file_name, 'r').readlines()):
+                if re.search('^real [0-9]+\.[0-9][0-9]$', line):
+                    dthread_cost += [float(line.split()[1])]
+                    break
+
+    write_stats(xtern_cost, nondet_cost, int(repeats))
+    if dthread:
+        write_stats_dthread(dthread_cost, nondet_cost, int(repeats))
 
     # copy exec file
-    copy_file(exec_file, '.')
+    copy_file(os.path.realpath(exec_file), os.path.basename(exec_file))
 
     os.chdir("..")
 
@@ -414,6 +459,19 @@ if __name__ == "__main__":
         sys.exit(1)
     XTERN_PRELOAD = "LD_PRELOAD=%s/dync_hook/interpose.so" % XTERN_ROOT
     RAND_PRELOAD = "LD_PRELOAD=%s/eval/rand-intercept/rand-intercept.so" % XTERN_ROOT
+    # set environment variable
+    logging.debug("set timeformat to '\\nreal %E\\nuser %U\\nsys %S'")
+    os.environ['TIMEFORMAT'] = "\nreal %E\nuser %U\nsys %S"
+
+    # run command in shell, currently uses 'bash'
+    bash_path = which('bash')
+    if not bash_path:
+        logging.critical("cannot find shell 'bash'")
+        sys.exit(1)
+    else:
+        bash_path = bash_path[0]
+        logging.debug("find 'bash' at %s" % bash_path)
+
 
     # get default xtern options
     default_options = getXternDefaultOptions()
@@ -433,6 +491,11 @@ if __name__ == "__main__":
 
         # generate running directory
         run_dir = genRunDir(full_path, git_info)
+        try:
+            os.unlink('current')
+        except OSError:
+            pass
+        os.symlink(run_dir, 'current')
         if not run_dir:
             continue
         os.chdir(run_dir)

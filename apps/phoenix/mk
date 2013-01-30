@@ -1,0 +1,63 @@
+#!/bin/bash
+
+set -e
+
+ROOT=`pwd`
+
+if [ ! -d $XTERN_ROOT ]; then
+	echo "XTERN_ROOT is not defined"
+	exit 1
+fi
+
+if [ ! -d $APPS_DIR ]; then
+    echo "APPS_DIR is not defiend"
+    exit 1
+fi
+
+if [ ! -f $APPS_DIR/sys/phoenix-2.0.0.tar.gz ]; then
+    echo "please update \$APPS_DIR"
+    exit 1
+fi
+
+pushd $XTERN_ROOT/apps/phoenix/
+
+# download required files
+check=$(dpkg-query -W -f='${Status} ${Version}\n' axel 2>&1)
+if [[ "$check" != "install ok"* ]]; then
+    echo "please install 'axel'"
+    exit 1
+fi
+AXEL=$(which axel)
+files=( histogram linear_regression string_match reverse_index word_count  )
+for i in "${files[@]}"
+do
+    if [ ! -f $i.tar.gz ]; then
+        $AXEL http://mapreduce.stanford.edu/datafiles/$i.tar.gz
+    fi
+done
+md5sum -c md5check.txt
+#for i in "${files[@]}"
+#do
+#    tar zxf $i.tar.gz
+#done
+
+# clean up
+rm -rf phoenix-2.0.0
+tar zxf $APPS_DIR/sys/phoenix-2.0.0.tar.gz
+
+# patch && make
+pushd phoenix-2.0.0
+patch -p1 < ../fix.patch
+make
+popd
+
+find . -maxdepth 1 -type l -exec rm -rf {} \;
+bench=( histogram linear_regression matrix_multiply string_match kmeans pca word_count )
+for i in "${bench[@]}"
+do
+    ln -s phoenix-2.0.0/tests/$i/$i
+    ln -s phoenix-2.0.0/tests/$i/$i-pthread
+done
+
+popd
+echo "DONE!"

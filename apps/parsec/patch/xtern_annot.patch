@@ -1,6 +1,6 @@
-diff -Naur gcc-4.2-src/libgomp/config/posix/bar.c gcc-4.2-src_modified/libgomp/config/posix/bar.c
---- gcc-4.2-src/libgomp/config/posix/bar.c	2013-01-17 17:45:24.804248297 -0500
-+++ gcc-4.2-src_modified/libgomp/config/posix/bar.c	2013-01-21 10:50:01.856359610 -0500
+diff -Naur gcc-4.2-src-orig/libgomp/config/posix/bar.c gcc-4.2-src-modified/libgomp/config/posix/bar.c
+--- gcc-4.2-src-orig/libgomp/config/posix/bar.c	2013-01-17 17:45:24.804248297 -0500
++++ gcc-4.2-src-modified/libgomp/config/posix/bar.c	2013-01-22 15:08:29.720831157 -0500
 @@ -31,6 +31,7 @@
     POSIX pthread_barrier_t won't work.  */
  
@@ -17,7 +17,15 @@ diff -Naur gcc-4.2-src/libgomp/config/posix/bar.c gcc-4.2-src_modified/libgomp/c
  }
  
  void
-@@ -108,4 +110,6 @@
+@@ -59,6 +61,7 @@
+ #endif
+   gomp_sem_destroy (&bar->sem1);
+   gomp_sem_destroy (&bar->sem2);
++  tern_lineup_destroy((long)bar);
+ }
+ 
+ void
+@@ -108,4 +111,6 @@
  gomp_barrier_wait (gomp_barrier_t *barrier)
  {
    gomp_barrier_wait_end (barrier, gomp_barrier_wait_start (barrier));
