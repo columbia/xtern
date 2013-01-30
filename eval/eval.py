@@ -29,9 +29,9 @@ def getXternDefaultOptions():
     except IOError as e:
         logging.error("There is no 'default.options' file")
         sys.exit(1)
-    logging.debug("default.options : ")
-    for key in default:
-        logging.debug("\t{0} = '{1}'".format(key,default[key]))
+    #logging.debug("default.options : ")
+    #for key in default:
+    #    logging.debug("\t{0} = '{1}'".format(key,default[key]))
     return default
     
 def getConfigFullPath(config_file):
@@ -156,7 +156,7 @@ def which(name, flags=os.X_OK):
             result.append(p)
     return result
 
-def write_stats(xtern, nondet):
+def write_stats(xtern, nondet, repeats):
     try:
         import numpy
     except ImportError:
@@ -168,13 +168,13 @@ def write_stats(xtern, nondet):
     nondet_std = numpy.std(nondet)
     overhead_avg = xtern_avg/nondet_avg - 1.0
     import math
-    overhead_std = math.fabs(overhead_avg)*(math.sqrt(((nondet_std/nondet_avg)**2) + (xtern_std/xtern_avg)**2))
+    #overhead_std = math.fabs(overhead_avg)*(math.sqrt(((nondet_std/nondet_avg)**2) + (xtern_std/xtern_avg)**2))
     with open("stats.txt", "w") as stats:
-        stats.write('overhead: {2:.3f}%\n\tavg {0}\n\tstd {1}\n'.format(overhead_avg, overhead_std, overhead_avg*100))
-        stats.write('xtern:\n\tavg {0}\n\tstd {1}\n'.format(xtern_avg, xtern_std))
-        stats.write('non-det:\n\tavg {0}\n\tstd {1}\n'.format(nondet_avg, nondet_std))
+        stats.write('overhead: {1:.3f}%\n\tavg {0}\n'.format(overhead_avg, overhead_avg*100))
+        stats.write('xtern:\n\tavg {0}\n\tsem {1}\n'.format(xtern_avg, xtern_std/math.sqrt(repeats)))
+        stats.write('non-det:\n\tavg {0}\n\tsem {1}\n'.format(nondet_avg, nondet_std/math.sqrt(repeats)))
 
-def write_stats_dthread(dthread, nondet):
+def write_stats_dthread(dthread, nondet, repeats):
     try:
         import numpy
     except ImportError:
@@ -186,10 +186,10 @@ def write_stats_dthread(dthread, nondet):
     nondet_std = numpy.std(nondet)
     overhead_avg = dthread_avg/nondet_avg - 1.0
     import math
-    overhead_std = math.fabs(overhead_avg)*(math.sqrt(((nondet_std/nondet_avg)**2) + (dthread_std/dthread_avg)**2))
+    #overhead_std = math.fabs(overhead_avg)*(math.sqrt(((nondet_std/nondet_avg)**2) + (dthread_std/dthread_avg)**2))
     with open("stats.txt", "a") as stats:
-        stats.write('dthread-overhead: {2:.3f}%\n\tavg {0}\n\tstd {1}\n'.format(overhead_avg, overhead_std, overhead_avg*100))
-        stats.write('dthread:\n\tavg {0}\n\tstd {1}\n'.format(dthread_avg, dthread_std))
+        stats.write('dthread-overhead: {1:.3f}%\n\tavg {0}\n'.format(overhead_avg, overhead_avg*100))
+        stats.write('dthread:\n\tavg {0}\n\tsem {1}\n'.format(dthread_avg, dthread_std/math.sqrt(repeats)))
 
 
 def copy_required_files(app, files):
@@ -352,13 +352,14 @@ def processBench(config, bench):
         logging.debug("terminate server after client finish job : " + str(client_terminate_server))
         logging.debug("evaluate performance by using stats of client : " + str(use_client_stats))
 
+    TIMEFORMAT="TIMEFORMAT=$'\nreal %E\nuser %U\nsys %S';"
     # generate command for xtern [time LD_PRELOAD=... exec args...]
-    xtern_command = ' '.join(['time', '-p', XTERN_PRELOAD, export, exec_file] + inputs.split())
+    xtern_command = ' '.join(['time', XTERN_PRELOAD, export, exec_file] + inputs.split())
     logging.info("executing '%s'" % xtern_command)
     execBench(xtern_command, repeats, 'xtern', client_cmd, client_terminate_server)
 
     # generate command for non-det [time LD_PRELOAD=... exec args...]
-    nondet_command = ' '.join(['time', '-p', RAND_PRELOAD, export, exec_file] + inputs.split())
+    nondet_command = ' '.join(['time', RAND_PRELOAD, export, exec_file] + inputs.split())
     logging.info("executing '%s'" % nondet_command)
     execBench(nondet_command, repeats, 'non-det', client_cmd, client_terminate_server)
 
@@ -366,7 +367,7 @@ def processBench(config, bench):
     dthread = config.get(bench, 'DTHREADS')
     if dthread:
         dthread_exec_file = os.path.abspath('%s/%s/%s' % (APPS, apps_name, dthread))
-        dthread_command = ' '.join(['time', '-p', export, dthread_exec_file] + inputs.split())
+        dthread_command = ' '.join(['time', export, dthread_exec_file] + inputs.split())
         logging.info("executing '%s'" % dthread_command)
         execBench(dthread_command, repeats, 'dthreads')
 
@@ -378,7 +379,7 @@ def processBench(config, bench):
         else:
             log_file_name = 'xtern/output.%d' % i
         for line in reversed(open(log_file_name, 'r').readlines()):
-            if re.search('^real [0-9]+\.[0-9][0-9]$', line):
+            if re.search('^real [0-9]+\.[0-9][0-9][0-9]$', line):
                 xtern_cost += [float(line.split()[1])]
                 break
 
@@ -389,7 +390,7 @@ def processBench(config, bench):
         else:
             log_file_name = 'non-det/output.%d' % i
         for line in reversed(open(log_file_name, 'r').readlines()):
-            if re.search('^real [0-9]+\.[0-9][0-9]$', line):
+            if re.search('^real [0-9]+\.[0-9][0-9][0-9]$', line):
                 nondet_cost += [float(line.split()[1])]
                 break
 
@@ -405,9 +406,9 @@ def processBench(config, bench):
                     dthread_cost += [float(line.split()[1])]
                     break
 
-    write_stats(xtern_cost, nondet_cost)
+    write_stats(xtern_cost, nondet_cost, int(repeats))
     if dthread:
-        write_stats_dthread(dthread_cost, nondet_cost)
+        write_stats_dthread(dthread_cost, nondet_cost, int(repeats))
 
     # copy exec file
     copy_file(os.path.realpath(exec_file), os.path.basename(exec_file))
@@ -431,7 +432,6 @@ if __name__ == "__main__":
     parser.add_argument('filename', nargs='*',
         type=str,
         default = ["xtern.cfg"],
-        #default = ["parsec32.cfg"],
         help = "list of configuration files (default: xtern.cfg)")
     args = parser.parse_args()
 
@@ -459,6 +459,9 @@ if __name__ == "__main__":
         sys.exit(1)
     XTERN_PRELOAD = "LD_PRELOAD=%s/dync_hook/interpose.so" % XTERN_ROOT
     RAND_PRELOAD = "LD_PRELOAD=%s/eval/rand-intercept/rand-intercept.so" % XTERN_ROOT
+    # set environment variable
+    logging.debug("set timeformat to '\\nreal %E\\nuser %U\\nsys %S'")
+    os.environ['TIMEFORMAT'] = "\nreal %E\nuser %U\nsys %S"
 
     # run command in shell, currently uses 'bash'
     bash_path = which('bash')

@@ -44,3 +44,11 @@ CC="$CC_HOME/bin/gcc" \
 make V=1 -j64
 make install
 
+# create link
+cd ../..
+find . -maxdepth 1 -type l -exec rm -rf {} \;
+bench=( animate composite convert identify mogrify stream compare conjure display import montage )
+for i in "${bench[@]}"
+do
+    ln -s install/bin/$i
+done

@@ -35,7 +35,9 @@ mkdir -p $TESTDIR $DBDIR1
 #
 
 echo "Running slapadd to build slapd database..."
+echo "$CONFFILTER $BACKEND $MONITORDB < $MCONF > $ADDCONF"
 . $CONFFILTER $BACKEND $MONITORDB < $MCONF > $ADDCONF
+echo $SLAPADD -f $ADDCONF -l $LDIFORDERED
 time -p $SLAPADD -f $ADDCONF -l $LDIFORDERED
 RC=$?
 if test $RC != 0 ; then
