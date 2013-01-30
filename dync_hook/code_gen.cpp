@@ -3,12 +3,15 @@
 #include <cstring>
 #include <string>
 #include <set>
+#include <dlfcn.h>
+#include <execinfo.h>
 
 using namespace std;
 
 string func_pattern; 
 string void_func_pattern;
 set<string> filter;
+string libPathPrefix;
 
 void init_filter()
 {
@@ -83,17 +86,9 @@ void print_func(
     replace(pattern, "ARGS_ONLY_NAME", args_only_name);
   } else
     replace(pattern, "ARGS_ONLY_NAME", args_only_name);
-#if __WORDSIZE == 64
-    std::string x86_64Path ="/lib/x86_64-linux-gnu";
-    x86_64Path = x86_64Path + lib_path;
-    replace(pattern, "LIB_PATH", x86_64Path.c_str());
-#else
-    std::string i686Path ="/lib/i386-linux-gnu";
-    //std::string i686Path ="/lib/tls/i686/cmov";
-    i686Path = i686Path + lib_path;
-    replace(pattern, "LIB_PATH", i686Path.c_str());
-#endif
-	fprintf(file, "%s", pattern.c_str());
+    std::string path =libPathPrefix + lib_path;
+    replace(pattern, "LIB_PATH", path.c_str());
+    fprintf(file, "%s", pattern.c_str());
 }
 
 char buffer[1024];
@@ -225,9 +220,19 @@ string read_file(const char *name)
 
 int main()
 {
+  // Get the libPathPrefix.
+  Dl_info dli;
+  void* tracePtrs[5];
+  backtrace(tracePtrs, 5);
+  dladdr((void *)tracePtrs[1], &dli);
+  libPathPrefix = dli.dli_fname;
+  size_t lastSlash = libPathPrefix.find_last_of("/");
+  libPathPrefix = libPathPrefix.substr(0, lastSlash);
+
+  // Generate code.
   init_filter();
-	func_pattern = read_file("func_template.cpp");
-	void_func_pattern = read_file("void_func_template.cpp");
-	convert(stdin);
-	return 0;
+  func_pattern = read_file("func_template.cpp");
+  void_func_pattern = read_file("void_func_template.cpp");
+  convert(stdin);
+  return 0;
 }

@@ -1,3 +1,10 @@
+Typical (and recommended) systems configuration for xtern
+================
+Hardware: we have tried both 4-core and 24-core machines with 64 bits.
+OS: Ubuntu 11.10.
+Gcc: 4.5.4 (you may avoid lots of potential compilation troubles if you choose this version).
+
+
 Installing xtern
 ================
 
@@ -37,10 +44,14 @@ Run "echo $LD_LIBRARY_PATH" to make sure it is correct.
 6. Go to $XTERN_ROOT/eva/rand-intercept and run 'make'.
 
 7. Test, if it all passes, then everything has been installed correctly.
+This step may take a few minutes, depending on hardware speed.
 > cd $XTERN_ROOT/obj
 > make ENABLE_OPTIMIZED=0/1 -C test check
 
 8. Run an application with xtern.
+Normally each app directory should contain a "mk" (build the x86 of the app),
+a "run" (run the app with both xtern and original non-deterministic execution),
+and a "chk-run" (run the app with the dbug tool only).
 > cd $XTERN_ROOT/apps/pbzip2
 > ./mk
 > ./run
@@ -52,7 +63,8 @@ When you run an app with xtern, by default it will first find a
 this local file, if this file does not exist, xtern will be run with (default)
 options specified in the "$XTERN_ROOT/default.options" file.
 
-9. How to run the xtern evaluation framework.
+9. How to run the xtern evaluation framework. You can skip this step unless you 
+want to get a comprehensive performance overhead of xtern over all its benchmarks.
 > go to each $XTERN_ROOT/apps/* directory and run "./mk", like the Step 8 above.
 > cd $XTERN_ROOT/eval/
 > ./eval.py xtern.cfg

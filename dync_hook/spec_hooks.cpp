@@ -70,12 +70,16 @@ extern "C" int __libc_start_main(
   void * handle;
   int ret;
 
-#if __WORDSIZE == 64
-  if(!(handle=dlopen("/lib/x86_64-linux-gnu/libc.so.6", RTLD_LAZY))) {
-#else
-  //if(!(handle=dlopen("/lib/tls/i686/cmov/libc.so.6", RTLD_LAZY))) {  
-  if(!(handle=dlopen("/lib/i386-linux-gnu/libc.so.6", RTLD_LAZY))) {  
-#endif
+  // Get lib path.
+  Dl_info dli;
+  dladdr((void *)dlsym, &dli);
+  std::string libPath = dli.dli_fname;
+  libPath = dli.dli_fname;
+  size_t lastSlash = libPath.find_last_of("/");
+  libPath = libPath.substr(0, lastSlash);
+  libPath += "/libc.so.6";
+
+  if(!(handle=dlopen(libPath.c_str(), RTLD_LAZY))) {
     puts("dlopen error");
     abort();
   }

@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <iostream>
 #include <fcntl.h>
+#include <string>
 
 #include "tern/config.h"
 #include "tern/hooks.h"
@@ -18,11 +19,42 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 
+#ifdef XTERN_PLUS_DBUG
+#include "dbug/interposition/interpose.h"
+//xxxxxx
+#endif
+
 using namespace tern;
 
 Runtime *Runtime::the = NULL;
 
 int __thread TidMap::self_tid  = -1;
+
+#ifdef XTERN_PLUS_DBUG
+#include <dlfcn.h>
+using namespace std;
+void *Runtime::resolveDbugFunc(const char *func_name) {
+  void * handle;
+  void * ret;
+  //fprintf(stderr, "resolveDbugFunc %s\n", func_name);
+  std::string libDbugPath = getenv("SMT_MC_ROOT");
+  libDbugPath += "/mc-tools/dbug/install/lib/libdbug.so";
+  if(!(handle=dlopen(libDbugPath.c_str(), RTLD_LAZY))) {
+    perror("resolveDbugFunc dlopen");
+    abort();
+  }
+
+  ret = dlsym(handle, func_name);
+
+  if(dlerror()) {
+    perror("resolveDbugFunc dlsym");
+    abort();
+  }
+
+  dlclose(handle);
+  return ret;
+}
+#endif
 
 int Runtime::pthreadCancel(unsigned insid, int &error, pthread_t thread)
 {
@@ -51,7 +83,16 @@ int Runtime::pthreadMutexDestroy(unsigned insid, int &error, pthread_mutex_t *mu
 int Runtime::__socket(unsigned ins, int &error, int domain, int type, int protocol)
 {
   errno = error;
-  int ret = socket(domain, type, protocol);
+  int ret;
+#ifdef XTERN_PLUS_DBUG
+  typedef int (*orig_func_type)(int, int, int);
+  static orig_func_type orig_func;
+  if (!orig_func)
+    orig_func = (orig_func_type)resolveDbugFunc("socket");
+  ret = orig_func(domain, type, protocol);
+#else
+  ret = socket(domain, type, protocol);
+#endif
   error = errno;
   return ret;
 }
@@ -59,7 +100,16 @@ int Runtime::__socket(unsigned ins, int &error, int domain, int type, int protoc
 int Runtime::__listen(unsigned ins, int &error, int sockfd, int backlog)
 {
   errno = error;
-  int ret = listen(sockfd, backlog);
+  int ret;
+#ifdef XTERN_PLUS_DBUG
+  typedef int (*orig_func_type)(int, int);
+  static orig_func_type orig_func;
+  if (!orig_func)
+    orig_func = (orig_func_type)resolveDbugFunc("listen");
+  ret = orig_func(sockfd, backlog);
+#else
+  ret = listen(sockfd, backlog);
+#endif
   error = errno;
   return ret;
 }
@@ -77,9 +127,18 @@ static bool sock_nonblock (int fd)
 int Runtime::__accept(unsigned ins, int &error, int sockfd, struct sockaddr *cliaddr, socklen_t *addrlen)
 {
   errno = error;
-  int ret = accept(sockfd, cliaddr, addrlen);
+  int ret;
+#ifdef XTERN_PLUS_DBUG
+  typedef int (*orig_func_type)(int , struct sockaddr *, socklen_t *);
+  static orig_func_type orig_func;
+  if (!orig_func)
+    orig_func = (orig_func_type)resolveDbugFunc("accept");
+  ret = orig_func(sockfd, cliaddr, addrlen);
+#else
+  ret = accept(sockfd, cliaddr, addrlen);
   if (options::non_block_recv)
     assert(sock_nonblock(sockfd));
+#endif
   error = errno;
   return ret;
 }
@@ -87,7 +146,16 @@ int Runtime::__accept(unsigned ins, int &error, int sockfd, struct sockaddr *cli
 int Runtime::__accept4(unsigned ins, int &error, int sockfd, struct sockaddr *cliaddr, socklen_t *addrlen, int flags)
 {
   errno = error;
-  int ret = accept4(sockfd, cliaddr, addrlen, flags);
+  int ret;
+#ifdef XTERN_PLUS_DBUG
+  typedef int (*orig_func_type)(int , struct sockaddr *, socklen_t *, int);
+  static orig_func_type orig_func;
+  if (!orig_func)
+    orig_func = (orig_func_type)resolveDbugFunc("accept4");
+  ret = orig_func(sockfd, cliaddr, addrlen, flags);
+#else
+  ret = accept4(sockfd, cliaddr, addrlen, flags);
+#endif
   error = errno;
   return ret;
 }
@@ -95,9 +163,18 @@ int Runtime::__accept4(unsigned ins, int &error, int sockfd, struct sockaddr *cl
 int Runtime::__connect(unsigned ins, int &error, int sockfd, const struct sockaddr *serv_addr, socklen_t addrlen)
 {
   errno = error;
-  int ret = connect(sockfd, serv_addr, addrlen);
+  int ret;
+#ifdef XTERN_PLUS_DBUG
+  typedef int (*orig_func_type)(int , const struct sockaddr *, socklen_t);
+  static orig_func_type orig_func;
+  if (!orig_func)
+    orig_func = (orig_func_type)resolveDbugFunc("connect");
+  ret = orig_func(sockfd, serv_addr, addrlen);
+#else
+  ret = connect(sockfd, serv_addr, addrlen);
   if (options::non_block_recv)
     assert(sock_nonblock(sockfd));
+#endif
   error = errno;
   return ret;
 }
@@ -123,7 +200,16 @@ struct hostent *Runtime::__gethostbyaddr(unsigned ins, int &error, const void *a
 ssize_t Runtime::__send(unsigned ins, int &error, int sockfd, const void *buf, size_t len, int flags)
 {
   errno = error;
-  ssize_t ret = send(sockfd, buf, len, flags);
+  ssize_t ret;
+#ifdef XTERN_PLUS_DBUG
+  typedef ssize_t (*orig_func_type)(int, const void*, size_t, int);
+  static orig_func_type orig_func;
+  if (!orig_func)
+    orig_func = (orig_func_type)resolveDbugFunc("send");
+  ret = orig_func(sockfd, buf, len, flags);
+#else
+  ret = send(sockfd, buf, len, flags);
+#endif
   error = errno;
   return ret;
 }
@@ -131,7 +217,16 @@ ssize_t Runtime::__send(unsigned ins, int &error, int sockfd, const void *buf, s
 ssize_t Runtime::__sendto(unsigned ins, int &error, int sockfd, const void *buf, size_t len, int flags, const struct sockaddr *dest_addr, socklen_t addrlen)
 {
   errno = error;
-  ssize_t ret = sendto(sockfd, buf, len, flags, dest_addr, addrlen);
+  ssize_t ret;
+#ifdef XTERN_PLUS_DBUG
+  typedef ssize_t (*orig_func_type)(int , const void *, size_t , int , const struct sockaddr *, socklen_t );
+  static orig_func_type orig_func;
+  if (!orig_func)
+    orig_func = (orig_func_type)resolveDbugFunc("sendto");
+  ret = orig_func(sockfd,buf,len,flags,dest_addr,addrlen);
+#else
+  ret = sendto(sockfd,buf,len,flags,dest_addr,addrlen);
+#endif
   error = errno;
   return ret;
 }
@@ -139,7 +234,16 @@ ssize_t Runtime::__sendto(unsigned ins, int &error, int sockfd, const void *buf,
 ssize_t Runtime::__sendmsg(unsigned ins, int &error, int sockfd, const struct msghdr *msg, int flags)
 {
   errno = error;
-  ssize_t ret = sendmsg(sockfd, msg, flags);
+  ssize_t ret;
+#ifdef XTERN_PLUS_DBUG
+  typedef ssize_t (*orig_func_type)(int , const struct msghdr *, int );
+  static orig_func_type orig_func;
+  if (!orig_func)
+    orig_func = (orig_func_type)resolveDbugFunc("sendmsg");
+  ret = orig_func(sockfd,msg,flags);
+#else
+  ret = sendmsg(sockfd,msg,flags);
+#endif
   error = errno;
   return ret;
 }
@@ -147,7 +251,15 @@ ssize_t Runtime::__sendmsg(unsigned ins, int &error, int sockfd, const struct ms
 ssize_t Runtime::__recv(unsigned ins, int &error, int sockfd, void *buf, size_t len, int flags)
 {
   errno = error;
-  ssize_t ret = 0;
+  ssize_t ret;
+#ifdef XTERN_PLUS_DBUG
+  typedef ssize_t (*orig_func_type)(int, void*, size_t, int);
+  static orig_func_type orig_func;
+  if (!orig_func)
+    orig_func = (orig_func_type)resolveDbugFunc("recv");
+  ret = orig_func(sockfd, buf, len, flags);
+#else
+  ret = 0;
   int try_count = 0;
   timespec ts;
   ts.tv_sec = 0;
@@ -171,6 +283,7 @@ ssize_t Runtime::__recv(unsigned ins, int &error, int sockfd, void *buf, size_t 
       ++try_count;
     }
   }
+#endif
   error = errno;
   return ret;
 }
@@ -178,7 +291,17 @@ ssize_t Runtime::__recv(unsigned ins, int &error, int sockfd, void *buf, size_t 
 ssize_t Runtime::__recvfrom(unsigned ins, int &error, int sockfd, void *buf, size_t len, int flags, struct sockaddr *src_addr, socklen_t *addrlen)
 {
   errno = error;
-  ssize_t ret = recvfrom(sockfd, buf, len, flags, src_addr, addrlen);
+  ssize_t ret;
+#ifdef XTERN_PLUS_DBUG
+  typedef ssize_t (*orig_func_type)(int , void *, size_t , int , struct 
+sockaddr *, socklen_t *);
+  static orig_func_type orig_func;
+  if (!orig_func)
+    orig_func = (orig_func_type)resolveDbugFunc("recvfrom");
+  ret = orig_func(sockfd,buf,len,flags,src_addr,addrlen);
+#else
+  ret = recvfrom(sockfd,buf,len,flags,src_addr,addrlen);
+#endif
   error = errno;
   return ret;
 }
@@ -186,7 +309,16 @@ ssize_t Runtime::__recvfrom(unsigned ins, int &error, int sockfd, void *buf, siz
 ssize_t Runtime::__recvmsg(unsigned ins, int &error, int sockfd, struct msghdr *msg, int flags)
 {
   errno = error;
-  ssize_t ret = recvmsg(sockfd, msg, flags);
+  ssize_t ret;
+#ifdef XTERN_PLUS_DBUG
+  typedef ssize_t (*orig_func_type)(int , struct msghdr *, int );
+  static orig_func_type orig_func;
+  if (!orig_func)
+    orig_func = (orig_func_type)resolveDbugFunc("recvmsg");
+  ret = orig_func(sockfd,msg,flags);
+#else
+  ret = recvmsg(sockfd,msg,flags);
+#endif
   error = errno;
   return ret;
 }
@@ -194,7 +326,7 @@ ssize_t Runtime::__recvmsg(unsigned ins, int &error, int sockfd, struct msghdr *
 int Runtime::__shutdown(unsigned ins, int &error, int sockfd, int how)
 {
   errno = error;
-  int ret = shutdown(sockfd, how);
+  int ret = shutdown(sockfd,how);
   error = errno;
   return ret;
 }
@@ -226,7 +358,16 @@ int Runtime::__setsockopt(unsigned ins, int &error, int sockfd, int level, int o
 int Runtime::__close(unsigned ins, int &error, int fd)
 {
   errno = error;
-  int ret = close(fd);
+  int ret;
+#ifdef XTERN_PLUS_DBUG
+  typedef int (*orig_func_type)(int );
+  static orig_func_type orig_func;
+  if (!orig_func)
+    orig_func = (orig_func_type)resolveDbugFunc("close");
+  ret = orig_func(fd);
+#else
+  ret = close(fd);
+#endif
   error = errno;
   return ret;
 }
@@ -234,7 +375,17 @@ int Runtime::__close(unsigned ins, int &error, int fd)
 ssize_t Runtime::__read(unsigned ins, int &error, int fd, void *buf, size_t count)
 {
   errno = error;
-  ssize_t ret = read(fd, buf, count);
+  ssize_t ret;
+#ifdef XTERN_PLUS_DBUG
+  // TBD: HOW DID XTERN HANDLE THIS?
+  typedef ssize_t (*orig_func_type)(int, void*, size_t);
+  static orig_func_type orig_func;
+  if (!orig_func)
+    orig_func = (orig_func_type)resolveDbugFunc("read");
+  ret = orig_func(fd, buf, count);
+#else
+  ret = read(fd, buf, count);
+#endif
   error = errno;
   return ret;
 }
@@ -242,7 +393,16 @@ ssize_t Runtime::__read(unsigned ins, int &error, int fd, void *buf, size_t coun
 ssize_t Runtime::__write(unsigned ins, int &error, int fd, const void *buf, size_t count)
 {
   errno = error;
-  ssize_t ret = write(fd, buf, count);
+  ssize_t ret;
+#ifdef XTERN_PLUS_DBUG
+  typedef ssize_t (*orig_func_type)(int, const void*, size_t);
+  static orig_func_type orig_func;
+  if (!orig_func)
+    orig_func = (orig_func_type)resolveDbugFunc("write");
+  ret = orig_func(fd, buf, count);
+#else
+  ret = write(fd, buf, count);
+#endif
   error = errno;
   return ret;
 }
@@ -250,7 +410,17 @@ ssize_t Runtime::__write(unsigned ins, int &error, int fd, const void *buf, size
 int Runtime::__select(unsigned ins, int &error, int nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds, struct timeval *timeout)
 {
   errno = error;
-  int ret = select(nfds, readfds, writefds, exceptfds, timeout);
+  int ret;
+#ifdef XTERN_PLUS_DBUG
+  typedef int (*orig_func_type)(int, fd_set*, fd_set *, fd_set*, struct 
+timeval*);
+  static orig_func_type orig_func;
+  if (!orig_func)
+    orig_func = (orig_func_type)resolveDbugFunc("select");
+  ret = orig_func(nfds, readfds, writefds, exceptfds, timeout);
+#else
+  ret = select(nfds, readfds, writefds, exceptfds, timeout);
+#endif
   error = errno;
   return ret;
 }
@@ -258,7 +428,16 @@ int Runtime::__select(unsigned ins, int &error, int nfds, fd_set *readfds, fd_se
 int Runtime::__sigwait(unsigned ins, int &error, const sigset_t *set, int *sig)
 {
   errno = error;
-  int ret = sigwait(set, sig);
+  int ret;
+#ifdef XTERN_PLUS_DBUG
+  typedef int (*orig_func_type)(const sigset_t *, int*);
+  static orig_func_type orig_func;
+  if (!orig_func)
+    orig_func = (orig_func_type)resolveDbugFunc("sigwait");
+  ret = orig_func(set, sig);
+#else
+  ret = sigwait(set, sig);
+#endif
   error = errno;
   return ret;
 }
@@ -266,7 +445,16 @@ int Runtime::__sigwait(unsigned ins, int &error, const sigset_t *set, int *sig)
 int Runtime::__epoll_wait(unsigned ins, int &error, int epfd, struct epoll_event *events, int maxevents, int timeout)
 {
   errno = error;
-  int ret = epoll_wait(epfd, events, maxevents, timeout);
+  int ret;
+#ifdef XTERN_PLUS_DBUG
+  typedef int (*orig_func_type)(int , struct epoll_event *, int , int );
+  static orig_func_type orig_func;
+  if (!orig_func)
+    orig_func = (orig_func_type)resolveDbugFunc("epoll_wait");
+  ret = orig_func(epfd,events,maxevents,timeout);
+#else
+  ret = epoll_wait(epfd,events,maxevents,timeout);
+#endif
   error = errno;
   return ret;
 }
@@ -290,11 +478,22 @@ int Runtime::usleep(unsigned ins, int &error, useconds_t usec)
 char *Runtime::__fgets(unsigned ins, int &error, char *s, int size, FILE *stream)
 {
   errno = error;
-  char *ret = fgets(s, size, stream);
+  char* ret;
+#ifdef XTERN_PLUS_DBUG
+  typedef char* (*orig_func_type)(char *,int ,FILE*);
+  static orig_func_type orig_func;
+  if (!orig_func)
+    orig_func = (orig_func_type)resolveDbugFunc("fgets");
+  ret = orig_func(s, size, stream);
+#else
+  ret = fgets(s, size, stream);
+#endif
   error = errno;
   return ret;
 }
 
+/* Do not need to involve dbug tool here, since fork/execv
+  is handled in a "within process" way by xtern. */
 pid_t Runtime::__fork(unsigned ins, int &error)
 {
   errno = error;
@@ -306,7 +505,16 @@ pid_t Runtime::__fork(unsigned ins, int &error)
 pid_t Runtime::__wait(unsigned ins, int &error, int *status)
 {
   errno = error;
-  pid_t ret = wait(status);
+  pid_t ret;
+#ifdef XTERN_PLUS_DBUG
+  typedef pid_t (*orig_func_type)(int *);
+  static orig_func_type orig_func;
+  if (!orig_func)
+    orig_func = (orig_func_type)resolveDbugFunc("wait");
+  ret = orig_func(status);
+#else
+  ret = wait(status);
+#endif
   error = errno;
   return ret;
 }
