@@ -54,7 +54,22 @@ void *Runtime::resolveDbugFunc(const char *func_name) {
   dlclose(handle);
   return ret;
 }
+
+void Runtime::initDbug() {
+  // Just resolve a function with the dbug library, a simple method 
+  // to init dbug (code involved in dbug's interpose-impl.cc). No matter
+  // whether we will involve any inter-process operation at runtime,
+  // this init work is a "must".
+  resolveDbugFunc("write");
+}
 #endif
+
+Runtime::Runtime() {
+#ifdef XTERN_PLUS_DBUG
+  initDbug();
+#endif
+}
+
 
 int Runtime::pthreadCancel(unsigned insid, int &error, pthread_t thread)
 {

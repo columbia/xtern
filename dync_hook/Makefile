@@ -14,6 +14,7 @@ usermonitor: usermonitor.cpp
 
 xternruntime:
 	cd $(XTERN_ROOT)/obj && \
+	make ENABLE_OPTIMIZED=$(ENABLE_OPTIMIZED) clean && \
 	make ENABLE_OPTIMIZED=$(ENABLE_OPTIMIZED) XTERN_PLUS_DBUG=$(XTERN_PLUS_DBUG) && \
 	make ENABLE_OPTIMIZED=$(ENABLE_OPTIMIZED) XTERN_PLUS_DBUG=$(XTERN_PLUS_DBUG) install
 

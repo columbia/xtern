@@ -10,6 +10,7 @@
 namespace tern {
 
 struct Runtime {
+  Runtime();
   virtual void progBegin() {}
   virtual void progEnd() {}
   virtual void symbolic(unsigned insid, int &error, void *addr,
@@ -67,6 +68,7 @@ struct Runtime {
 
 #ifdef XTERN_PLUS_DBUG
   void *resolveDbugFunc(const char *func_name);
+  void initDbug();
 #endif
 /*
   virtual int __pthread_create(unsigned insid, int &error, pthread_t *th, const pthread_attr_t *a, void *(*func)(void*), void *arg)
