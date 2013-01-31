@@ -1855,6 +1855,7 @@ extern "C" pthread_cond_t idle_cond;
 template <typename _S>
 pid_t RecorderRT<_S>::__fork(unsigned ins, int &error)
 {
+  dprintf("pid %d enters fork\n", getpid());
   pid_t ret;
 
   Logger::the->flush(); // so child process won't write it again
@@ -1890,6 +1891,7 @@ pid_t RecorderRT<_S>::__fork(unsigned ins, int &error)
     Space::enterSys();
   }
 
+  dprintf("pid %d leaves fork\n", getpid());
   return ret;
 }
 
