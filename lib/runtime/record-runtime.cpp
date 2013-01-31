@@ -1681,6 +1681,36 @@ ssize_t RecorderRT<_S>::__write(unsigned ins, int &error, int fd, const void *bu
 }
 
 template <typename _S>
+ssize_t RecorderRT<_S>::__pread(unsigned ins, int &error, int fd, void *buf, size_t count, off_t offset)
+{
+  // First, handle regular IO.
+  if (options::RR_ignore_rw_regular_file && regularFile(fd))
+    return pread(fd, buf, count, offset);  // Directly call the libc pread() for regular IO.
+
+  // Second, handle inter-process IO.
+  BLOCK_TIMER_START;
+  ssize_t ret = Runtime::__pread(ins, error, fd, buf, count, offset);
+  uint64_t sig = hash((char*)buf, count); 
+  BLOCK_TIMER_END(syncfunc::pread, (uint64_t) sig, (uint64_t) fd, (uint64_t) ret);
+  return ret;
+}
+
+template <typename _S>
+ssize_t RecorderRT<_S>::__pwrite(unsigned ins, int &error, int fd, const void *buf, size_t count, off_t offset)
+{
+  // First, handle regular IO.
+  if (options::RR_ignore_rw_regular_file && regularFile(fd))
+    return pwrite(fd, buf, count, offset);  // Directly call the libc pwrite() for regular IO.
+
+  // Second, handle inter-process IO.
+  BLOCK_TIMER_START;
+  ssize_t ret = Runtime::__pwrite(ins, error, fd, buf, count, offset);
+  uint64_t sig = hash((char*)buf, count); 
+  BLOCK_TIMER_END(syncfunc::pwrite, (uint64_t) sig, (uint64_t) fd, (uint64_t) ret);
+  return ret;
+}
+
+template <typename _S>
 int RecorderRT<_S>::__select(unsigned ins, int &error, int nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds, struct timeval *timeout)
 {
   int wt = 0;

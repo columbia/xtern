@@ -146,6 +146,8 @@ struct Runtime {
   virtual int __close(unsigned insid, int &error, int fd);
   virtual ssize_t __read(unsigned insid, int &error, int fd, void *buf, size_t count);
   virtual ssize_t __write(unsigned insid, int &error, int fd, const void *buf, size_t count);
+  virtual ssize_t __pread(unsigned insid, int &error, int fd, void *buf, size_t count, off_t offset);
+  virtual ssize_t __pwrite(unsigned insid, int &error, int fd, const void *buf, size_t count, off_t offset);
   virtual int __select(unsigned insid, int &error, int nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds, struct timeval *timeout);  
   virtual int __poll(unsigned ins, int &error, struct pollfd *fds, nfds_t nfds, int timeout);
   virtual int __bind(unsigned ins, int &error, int socket, const struct sockaddr *address, socklen_t address_len);

@@ -596,6 +596,28 @@ ssize_t tern_write(unsigned ins, int fd, const void *buf, size_t count)
   return ret;
 }
 
+ssize_t tern_pread(unsigned ins, int fd, void *buf, size_t count, off_t offset)
+{
+  int error = errno;
+  int ret;
+  Space::enterSys();
+  ret = Runtime::the->__pread(ins, error, fd, buf, count, offset);
+  Space::exitSys();
+  errno = error;
+  return ret;
+}
+
+ssize_t tern_pwrite(unsigned ins, int fd, const void *buf, size_t count, off_t offset)
+{
+  int error = errno;
+  int ret;
+  Space::enterSys();
+  ret = Runtime::the->__pwrite(ins, error, fd, buf, count, offset);
+  Space::exitSys();
+  errno = error;
+  return ret;
+}
+
 int tern_epoll_wait(unsigned ins, int epfd, struct epoll_event *events, int maxevents, int timeout)
 {
   int error = errno;

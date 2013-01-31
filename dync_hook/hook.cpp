@@ -101,9 +101,9 @@ void *get_eip()
 #define HOOK_BLOCKING_FUNCS
 #define HOOK_USER_ANNOTATIONS
 
-//  notice we have not implemented tern_fork yet. so the
-//  hooking code is disabled. 
-//#define __SPEC_HOOK_fork
+#define __SPEC_HOOK_fork
+#define __SPEC_HOOK_wait
+#define __SPEC_HOOK_waitpid
 
 #ifndef HOOK_MUTEX_COND
 #define __SPEC_HOOK_pthread_mutex_init
@@ -131,14 +131,21 @@ void *get_eip()
 #endif
 
 #ifndef HOOK_BLOCKING_FUNCS
+#define __SPEC_HOOK_send
+#define __SPEC_HOOK_sendmsg
+#define __SPEC_HOOK_sendto
 #define __SPEC_HOOK_recv
 #define __SPEC_HOOK_connect
 #define __SPEC_HOOK_accept
 #define __SPEC_HOOK_accept4
 #define __SPEC_HOOK_read
 #define __SPEC_HOOK_write
+#define __SPEC_HOOK_pread
+#define __SPEC_HOOK_pwrite
 #define __SPEC_HOOK_sigwait
 #define __SPEC_HOOK_select
+#define __SPEC_HOOK_poll
+#define __SPEC_HOOK_bind
 #define __SPEC_HOOK_recvfrom
 #define __SPEC_HOOK_recvmsg
 #define __SPEC_HOOK_sleep

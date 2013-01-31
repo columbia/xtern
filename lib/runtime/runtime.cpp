@@ -393,7 +393,6 @@ ssize_t Runtime::__read(unsigned ins, int &error, int fd, void *buf, size_t coun
   errno = error;
   ssize_t ret;
 #ifdef XTERN_PLUS_DBUG
-  // TBD: HOW DID XTERN HANDLE THIS?
   typedef ssize_t (*orig_func_type)(int, void*, size_t);
   static orig_func_type orig_func;
   if (!orig_func)
@@ -418,6 +417,40 @@ ssize_t Runtime::__write(unsigned ins, int &error, int fd, const void *buf, size
   ret = orig_func(fd, buf, count);
 #else
   ret = write(fd, buf, count);
+#endif
+  error = errno;
+  return ret;
+}
+
+ssize_t Runtime::__pread(unsigned ins, int &error, int fd, void *buf, size_t count, off_t offset)
+{
+  errno = error;
+  ssize_t ret;
+#ifdef XTERN_PLUS_DBUG
+  typedef ssize_t (*orig_func_type)(int, void*, size_t, off_t);
+  static orig_func_type orig_func;
+  if (!orig_func)
+    orig_func = (orig_func_type)resolveDbugFunc("pread");
+  ret = orig_func(fd, buf, count, offset);
+#else
+  ret = pread(fd, buf, count, offset);
+#endif
+  error = errno;
+  return ret;
+}
+
+ssize_t Runtime::__pwrite(unsigned ins, int &error, int fd, const void *buf, size_t count, off_t offset)
+{
+  errno = error;
+  ssize_t ret;
+#ifdef XTERN_PLUS_DBUG
+  typedef ssize_t (*orig_func_type)(int, const void*, size_t, off_t);
+  static orig_func_type orig_func;
+  if (!orig_func)
+    orig_func = (orig_func_type)resolveDbugFunc("pwrite");
+  ret = orig_func(fd, buf, count, offset);
+#else
+  ret = pwrite(fd, buf, count, offset);
 #endif
   error = errno;
   return ret;
