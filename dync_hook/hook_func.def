@@ -235,6 +235,30 @@ ENDDEF
 
 STARTDEF
 int
+poll
+/libc.so.6
+struct pollfd *, nfds_t, int
+SECTION
+struct pollfd *fds, nfds_t nfds, int timeout
+SECTION
+fds, nfds, timeout
+SECTION
+ENDDEF
+
+STARTDEF
+int
+bind
+/libc.so.6
+int, const struct sockaddr *, socklen_t
+SECTION
+int socket, const struct sockaddr *address, socklen_t address_len
+SECTION
+socket, address, address_len
+SECTION
+ENDDEF
+
+STARTDEF
+int
 __libc_start_main
 /libc.so.6
 void *, int, char *[], void*, void*, void*

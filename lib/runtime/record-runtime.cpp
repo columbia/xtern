@@ -37,6 +37,7 @@
 #include <time.h>
 #include <string.h>
 #include <errno.h>
+#include <poll.h>
 #include "tern/runtime/clockmanager.h"
 #include "tern/runtime/record-log.h"
 #include "tern/runtime/record-runtime.h"
@@ -52,7 +53,6 @@
 #include <map>
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <sys/socket.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 
@@ -1777,6 +1777,24 @@ int RecorderRT<_S>::__epoll_wait(unsigned ins, int &error, int epfd, struct epol
 }
 
 template <typename _S>
+int RecorderRT<_S>::__poll(unsigned ins, int &error, struct pollfd *fds, nfds_t nfds, int timeout)
+{
+  BLOCK_TIMER_START;
+  int ret = Runtime::__poll(ins, error, fds, nfds, timeout);
+  BLOCK_TIMER_END(syncfunc::poll, (uint64_t)fds, (uint64_t)nfds, (uint64_t)timeout, (uint64_t)ret);
+  return ret;
+}
+
+template <typename _S>
+int RecorderRT<_S>::__bind(unsigned ins, int &error, int socket, const struct sockaddr *address, socklen_t address_len)
+{
+  BLOCK_TIMER_START;
+  int ret = Runtime::__bind(ins, error, socket, address, address_len);
+  BLOCK_TIMER_END(syncfunc::bind, (uint64_t)socket, (uint64_t)address, (uint64_t)address_len, (uint64_t)ret);
+  return ret;
+}
+
+template <typename _S>
 int RecorderRT<_S>::__sigwait(unsigned ins, int &error, const sigset_t *set, int *sig)
 {
   BLOCK_TIMER_START;
@@ -1913,13 +1931,19 @@ int RecorderRT<_S>::nanosleep(unsigned ins, int &error,
 template <typename _S>
 int RecorderRT<_S>::__socket(unsigned ins, int &error, int domain, int type, int protocol)
 {
-  return Runtime::__socket(ins, error, domain, type, protocol);
+  BLOCK_TIMER_START;
+  int ret = Runtime::__socket(ins, error, domain, type, protocol);
+  BLOCK_TIMER_END(syncfunc::socket, (uint64_t)domain, (uint64_t)type, (uint64_t)protocol, (uint64_t)ret);
+  return ret;
 }
 
 template <typename _S>
 int RecorderRT<_S>::__listen(unsigned ins, int &error, int sockfd, int backlog)
 {
-  return Runtime::__listen(ins, error, sockfd, backlog);
+  BLOCK_TIMER_START;
+  int ret = Runtime::__listen(ins, error, sockfd, backlog);
+  BLOCK_TIMER_END(syncfunc::listen, (uint64_t)sockfd, (uint64_t)backlog, (uint64_t)ret);
+  return ret;
 }
 
 template <typename _S>
@@ -1949,7 +1973,15 @@ int RecorderRT<_S>::__setsockopt(unsigned ins, int &error, int sockfd, int level
 template <typename _S>
 int RecorderRT<_S>::__close(unsigned ins, int &error, int fd)
 {
-  return Runtime::__close(ins, error, fd);
+  // First, handle regular IO.
+  if (options::RR_ignore_rw_regular_file && regularFile(fd))
+    return close(fd);  // Directly call the libc close() for regular IO.
+
+  // Second, handle inter-process IO.
+  BLOCK_TIMER_START;
+  int ret = Runtime::__close(ins, error, fd);
+  BLOCK_TIMER_END(syncfunc::close, (uint64_t)fd, (uint64_t)ret);
+  return ret;
 }
 
 template <>

@@ -5,6 +5,7 @@
 #include <iostream>
 #include <fcntl.h>
 #include <string>
+#include <poll.h>
 
 #include "tern/config.h"
 #include "tern/hooks.h"
@@ -427,14 +428,47 @@ int Runtime::__select(unsigned ins, int &error, int nfds, fd_set *readfds, fd_se
   errno = error;
   int ret;
 #ifdef XTERN_PLUS_DBUG
-  typedef int (*orig_func_type)(int, fd_set*, fd_set *, fd_set*, struct 
-timeval*);
+  typedef int (*orig_func_type)(int, fd_set*, fd_set *, fd_set*, struct timeval*);
   static orig_func_type orig_func;
   if (!orig_func)
     orig_func = (orig_func_type)resolveDbugFunc("select");
   ret = orig_func(nfds, readfds, writefds, exceptfds, timeout);
 #else
   ret = select(nfds, readfds, writefds, exceptfds, timeout);
+#endif
+  error = errno;
+  return ret;
+}
+
+int Runtime::__poll(unsigned ins, int &error, struct pollfd *fds, nfds_t nfds, int timeout)
+{
+  errno = error;
+  int ret;
+#ifdef XTERN_PLUS_DBUG
+  typedef int (*orig_func_type)(struct pollfd *, nfds_t, int);
+  static orig_func_type orig_func;
+  if (!orig_func)
+    orig_func = (orig_func_type)resolveDbugFunc("poll");
+  ret = orig_func(fds, nfds, timeout);
+#else
+  ret = poll(fds, nfds, timeout);
+#endif
+  error = errno;
+  return ret;
+}
+
+int Runtime::__bind(unsigned ins, int &error, int socket, const struct sockaddr *address, socklen_t address_len)
+{
+  errno = error;
+  int ret;
+#ifdef XTERN_PLUS_DBUG
+  typedef int (*orig_func_type)(int, const struct sockaddr *, socklen_t);
+  static orig_func_type orig_func;
+  if (!orig_func)
+    orig_func = (orig_func_type)resolveDbugFunc("bind");
+  ret = orig_func(socket, address, address_len);
+#else
+  ret = bind(socket, address, address_len);
 #endif
   error = errno;
   return ret;

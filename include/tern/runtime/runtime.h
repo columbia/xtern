@@ -147,11 +147,10 @@ struct Runtime {
   virtual ssize_t __read(unsigned insid, int &error, int fd, void *buf, size_t count);
   virtual ssize_t __write(unsigned insid, int &error, int fd, const void *buf, size_t count);
   virtual int __select(unsigned insid, int &error, int nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds, struct timeval *timeout);  
-    
+  virtual int __poll(unsigned ins, int &error, struct pollfd *fds, nfds_t nfds, int timeout);
+  virtual int __bind(unsigned ins, int &error, int socket, const struct sockaddr *address, socklen_t address_len);
   virtual int __epoll_wait(unsigned insid, int &error, int epfd, struct epoll_event *events, int maxevents, int timeout);
-
-  virtual int __sigwait(unsigned insid, int &error, const sigset_t *set, int *sig); 
-
+  virtual int __sigwait(unsigned insid, int &error, const sigset_t *set, int *sig);
   virtual char *__fgets(unsigned ins, int &error, char *s, int size, FILE *stream);
   virtual pid_t __fork(unsigned ins, int &error);
   virtual pid_t __wait(unsigned ins, int &error, int *status);

@@ -3,6 +3,7 @@
 #include <assert.h>
 #include <stdlib.h>
 #include <iostream>
+#include <poll.h>
 
 #include "tern/config.h"
 #include "tern/hooks.h"
@@ -612,6 +613,28 @@ int tern_select(unsigned ins, int nfds, fd_set *readfds, fd_set *writefds, fd_se
   int ret;
   Space::enterSys();
   ret = Runtime::the->__select(ins, error, nfds, readfds, writefds, exceptfds, timeout);
+  Space::exitSys();
+  errno = error;
+  return ret;
+}
+
+int tern_poll(unsigned ins, struct pollfd *fds, nfds_t nfds, int timeout)
+{
+  int error = errno;
+  int ret;
+  Space::enterSys();
+  ret = Runtime::the->__poll(ins, error, fds, nfds, timeout);
+  Space::exitSys();
+  errno = error;
+  return ret;
+}
+
+int tern_bind(unsigned ins, int sockfd, const struct sockaddr *addr, socklen_t addrlen)
+{
+  int error = errno;
+  int ret;
+  Space::enterSys();
+  ret = Runtime::the->__bind(ins, error, sockfd, addr, addrlen);
   Space::exitSys();
   errno = error;
   return ret;
