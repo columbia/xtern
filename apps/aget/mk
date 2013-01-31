@@ -13,5 +13,10 @@ tar zxvf $APPS_DIR/sys/aget-$VER.tar.gz
 cd aget-$VER
 #patch -p1 < ../for-dbug-1.patch
 patch -p1 < ../fix-off-by-one.patch
+
+# This is a patch in order to make aget work with the mongoose web server. Provided by Jiri.
+# I did some sample run, and the performance of downloading from clic server is roughly the same.
+patch -p1 < ../for-mongoose.patch
+
 make CFLAGS='-D_GNU_SOURCE -g -w'
 mv aget ../
