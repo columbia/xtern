@@ -11,7 +11,7 @@ tar zxvf $APPS_DIR/sys/db-$VER.tar.gz
 cd db-$VER/build_unix
 # The "--with-mutex=POSIX/pthreads" is a must, otherwise the __db_pthread_mutex_lock() will not be compiled into the library and few mutexes will be invoked.
 ../dist/configure CFLAGS="-O3 -g" CXXFLAGS="-O3 -g" --enable-posixmutexes --with-mutex=POSIX/pthreads --prefix=$APP_DIR/install
-make && make install
+make -j64 && make install
 
 # Build bdb rep.
 cp -r $DB_SRC_DIR/src/dbinc/ $APP_DIR/install/include/
