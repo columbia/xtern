@@ -106,10 +106,13 @@ timespec time_diff(const timespec &start, const timespec &end)
 timespec update_time()
 {
   timespec start_time;
-  clock_gettime(CLOCK_REALTIME , &start_time);
-  timespec ret = time_diff(my_time, start_time);
-  my_time = start_time; 
-  return ret;
+  if (options::log_sync) {
+    clock_gettime(CLOCK_REALTIME , &start_time);
+    timespec ret = time_diff(my_time, start_time);
+    my_time = start_time; 
+    return ret;
+  } else
+    return start_time;
 }
 
 void check_options()

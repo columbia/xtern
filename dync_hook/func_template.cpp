@@ -35,9 +35,12 @@ extern "C" FUNC_RET_TYPE FUNC_NAME(ARGS_WITH_NAME){
 #endif
 
 #ifdef __NEED_INPUT_INSID
-    Space::enterSys();
-    void *eip = options::dync_geteip ? get_eip() : 0;
-    Space::exitSys();
+    void *eip = 0;
+    if (options::dync_geteip) {
+      Space::enterSys();
+      eip = get_eip();
+      Space::exitSys();
+    }
     ret = tern_FUNC_NAME((unsigned)(uint64_t) eip, ARGS_ONLY_NAME);
 #else
     ret = tern_FUNC_NAME(ARGS_ONLY_NAME);
