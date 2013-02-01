@@ -16,9 +16,9 @@ class run_queue {
 public:
   enum THD_STATUS {
     RUNNABLE,     /** The thread can do any regular pthreads sync operation. **/
-    RUNNING_REG,     /** The thread has got a turn and it may call any sync operation (can be pthreads or network). **/
-    RUNNING_NWK,      /** The thread has got a turn and it is going to call a network operation. **/
-    NWK_STOP      /** The thread is stopped (blocked) on a network operation, and no other thread can pass turn to it. **/
+    RUNNING_REG,     /** The thread has got a turn and it may call any sync operation (can be pthreads or inter-process operation). **/
+    RUNNING_INTER_PRO,      /** The thread has got a turn and it is going to call a inter-process operation. **/
+    INTER_PRO_STOP      /** The thread is stopped (or blocked) on a inter-process operation, and no other thread can pass turn to it. **/
   };
   
   struct runq_elem {

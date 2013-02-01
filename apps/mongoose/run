@@ -1,0 +1,21 @@
+#!/bin/bash
+
+cd $XTERN_ROOT/apps/mongoose
+rm -rf out* serializer.log
+killall -9 mg-server &> /dev/null
+
+FILE="llvm-gcc-4.2-2.7.source.tgz"
+APP=$XTERN_ROOT/apps/mongoose/mg-server
+INPUT="-t 2"
+
+# Start the server.
+LD_PRELOAD=$XTERN_ROOT/dync_hook/interpose.so $APP $INPUT &
+sleep 2
+
+# Run the aget client.
+cd $XTERN_ROOT/apps/aget
+# The 8080 is the listening port of mongoose server.
+time -p $XTERN_ROOT/apps/aget/aget -f -n2 -p 8080 http://localhost/llvm-gcc-4.2-2.7.source.tgz
+killall -9 mg-server &> /dev/null
+cd $XTERN_ROOT/apps/mongoose
+

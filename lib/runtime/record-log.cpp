@@ -102,11 +102,14 @@ void TxtLogger::logSync(unsigned insid, unsigned short sync,
   case syncfunc::recvfrom:
   case syncfunc::recvmsg:
   case syncfunc::select:
+  case syncfunc::poll:
+  case syncfunc::bind:
   case syncfunc::epoll_wait:
   case syncfunc::sigwait:
   case syncfunc::fgets:
   case syncfunc::fork:
   case syncfunc::wait:
+  case syncfunc::waitpid:
   case syncfunc::tern_idle:
     break;
     // log one sync var (common case)
@@ -157,8 +160,10 @@ void TxtLogger::logSync(unsigned insid, unsigned short sync,
     // log three sync vars
   case syncfunc::pthread_cond_timedwait:  //  cv, mu, ret
   case syncfunc::read:  //  sig, fd, ret
+  case syncfunc::pread:  //  sig, fd, ret
   case syncfunc::accept:  //  sock(ret), from_port, to_port
   case syncfunc::write: //  sig, fd, ret
+  case syncfunc::pwrite: //  sig, fd, ret
   case syncfunc::tern_lineup_init:
     {
       //  notice "<<" operator is explained from right to left.
@@ -479,11 +484,14 @@ void TestLogger::logSync(unsigned insid, unsigned short sync,
   case syncfunc::recvfrom:
   case syncfunc::recvmsg:
   case syncfunc::select:
+  case syncfunc::poll:
+  case syncfunc::bind:
   case syncfunc::epoll_wait:
   case syncfunc::sigwait:
   case syncfunc::fgets:
   case syncfunc::fork:
   case syncfunc::wait:
+  case syncfunc::waitpid:
   case syncfunc::tern_idle:
     break;
     // log one sync var (common case)
@@ -534,8 +542,10 @@ void TestLogger::logSync(unsigned insid, unsigned short sync,
     // log three sync vars
   case syncfunc::pthread_cond_timedwait:  //  cv, mu, ret
   case syncfunc::read:  //  sig, fd, ret
+  case syncfunc::pread:  //  sig, fd, ret
   case syncfunc::accept:  //  sock(ret), from_port, to_port
   case syncfunc::write: //  sig, fd, ret
+  case syncfunc::pwrite: //  sig, fd, ret
   case syncfunc::tern_lineup_init:
     {
       //  notice "<<" operator is explained from right to left.

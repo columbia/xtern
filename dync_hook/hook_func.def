@@ -210,6 +210,30 @@ SECTION
 ENDDEF
 
 STARTDEF
+ssize_t
+pread
+/libc.so.6
+int, void *, size_t, off_t
+SECTION
+int fd, void *buf, size_t count, off_t offset
+SECTION
+fd, buf, count, offset
+SECTION
+ENDDEF
+
+STARTDEF
+ssize_t
+pwrite
+/libc.so.6
+int, const void *, size_t, off_t
+SECTION
+int fd, const void *buf, size_t count, off_t offset
+SECTION
+fd, buf, count, offset
+SECTION
+ENDDEF
+
+STARTDEF
 int
 sigwait
 /libc.so.6
@@ -230,6 +254,30 @@ SECTION
 int nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds, struct timeval *timeout
 SECTION
 nfds, readfds, writefds, exceptfds, timeout
+SECTION
+ENDDEF
+
+STARTDEF
+int
+poll
+/libc.so.6
+struct pollfd *, nfds_t, int
+SECTION
+struct pollfd *fds, nfds_t nfds, int timeout
+SECTION
+fds, nfds, timeout
+SECTION
+ENDDEF
+
+STARTDEF
+int
+bind
+/libc.so.6
+int, const struct sockaddr *, socklen_t
+SECTION
+int socket, const struct sockaddr *address, socklen_t address_len
+SECTION
+socket, address, address_len
 SECTION
 ENDDEF
 
@@ -427,6 +475,13 @@ START_SHORT_DEFINE
 pid_t
 wait
 (int *status)
+END_SHORT_DEFINE
+
+START_SHORT_DEFINE
+/libc.so.6
+pid_t
+waitpid
+(pid_t pid, int *status, int options)
 END_SHORT_DEFINE
 
 START_SHORT_DEFINE

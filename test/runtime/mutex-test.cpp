@@ -48,7 +48,7 @@ void* thread_func(void *arg) {
     break;
   }
 
-  write(1, buf, strlen(buf));
+  printf("%s", buf);
   pthread_mutex_unlock(&m);
 }
 

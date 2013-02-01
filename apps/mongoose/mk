@@ -1,0 +1,11 @@
+#!/bin/bash
+
+VER=3.6
+cd $XTERN_ROOT/apps/mongoose
+rm -rf mongoose out
+tar zxvf $APPS_DIR/sys/mongoose-$VER.tgz
+cd mongoose
+make linux
+mv mongoose ../mg-server
+cd $XTERN_ROOT/apps/mongoose
+

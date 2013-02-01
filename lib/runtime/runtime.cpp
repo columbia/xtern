@@ -5,6 +5,7 @@
 #include <iostream>
 #include <fcntl.h>
 #include <string>
+#include <poll.h>
 
 #include "tern/config.h"
 #include "tern/hooks.h"
@@ -54,7 +55,22 @@ void *Runtime::resolveDbugFunc(const char *func_name) {
   dlclose(handle);
   return ret;
 }
+
+void Runtime::initDbug() {
+  // Just resolve a function with the dbug library, a simple method 
+  // to init dbug (code involved in dbug's interpose-impl.cc). No matter
+  // whether we will involve any inter-process operation at runtime,
+  // this init work is a "must".
+  resolveDbugFunc("write");
+}
 #endif
+
+Runtime::Runtime() {
+#ifdef XTERN_PLUS_DBUG
+  initDbug();
+#endif
+}
+
 
 int Runtime::pthreadCancel(unsigned insid, int &error, pthread_t thread)
 {
@@ -377,7 +393,6 @@ ssize_t Runtime::__read(unsigned ins, int &error, int fd, void *buf, size_t coun
   errno = error;
   ssize_t ret;
 #ifdef XTERN_PLUS_DBUG
-  // TBD: HOW DID XTERN HANDLE THIS?
   typedef ssize_t (*orig_func_type)(int, void*, size_t);
   static orig_func_type orig_func;
   if (!orig_func)
@@ -407,19 +422,86 @@ ssize_t Runtime::__write(unsigned ins, int &error, int fd, const void *buf, size
   return ret;
 }
 
+ssize_t Runtime::__pread(unsigned ins, int &error, int fd, void *buf, size_t count, off_t offset)
+{
+  errno = error;
+  ssize_t ret;
+#ifdef XTERN_PLUS_DBUG
+  typedef ssize_t (*orig_func_type)(int, void*, size_t, off_t);
+  static orig_func_type orig_func;
+  if (!orig_func)
+    orig_func = (orig_func_type)resolveDbugFunc("pread");
+  ret = orig_func(fd, buf, count, offset);
+#else
+  ret = pread(fd, buf, count, offset);
+#endif
+  error = errno;
+  return ret;
+}
+
+ssize_t Runtime::__pwrite(unsigned ins, int &error, int fd, const void *buf, size_t count, off_t offset)
+{
+  errno = error;
+  ssize_t ret;
+#ifdef XTERN_PLUS_DBUG
+  typedef ssize_t (*orig_func_type)(int, const void*, size_t, off_t);
+  static orig_func_type orig_func;
+  if (!orig_func)
+    orig_func = (orig_func_type)resolveDbugFunc("pwrite");
+  ret = orig_func(fd, buf, count, offset);
+#else
+  ret = pwrite(fd, buf, count, offset);
+#endif
+  error = errno;
+  return ret;
+}
+
 int Runtime::__select(unsigned ins, int &error, int nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds, struct timeval *timeout)
 {
   errno = error;
   int ret;
 #ifdef XTERN_PLUS_DBUG
-  typedef int (*orig_func_type)(int, fd_set*, fd_set *, fd_set*, struct 
-timeval*);
+  typedef int (*orig_func_type)(int, fd_set*, fd_set *, fd_set*, struct timeval*);
   static orig_func_type orig_func;
   if (!orig_func)
     orig_func = (orig_func_type)resolveDbugFunc("select");
   ret = orig_func(nfds, readfds, writefds, exceptfds, timeout);
 #else
   ret = select(nfds, readfds, writefds, exceptfds, timeout);
+#endif
+  error = errno;
+  return ret;
+}
+
+int Runtime::__poll(unsigned ins, int &error, struct pollfd *fds, nfds_t nfds, int timeout)
+{
+  errno = error;
+  int ret;
+#ifdef XTERN_PLUS_DBUG
+  typedef int (*orig_func_type)(struct pollfd *, nfds_t, int);
+  static orig_func_type orig_func;
+  if (!orig_func)
+    orig_func = (orig_func_type)resolveDbugFunc("poll");
+  ret = orig_func(fds, nfds, timeout);
+#else
+  ret = poll(fds, nfds, timeout);
+#endif
+  error = errno;
+  return ret;
+}
+
+int Runtime::__bind(unsigned ins, int &error, int socket, const struct sockaddr *address, socklen_t address_len)
+{
+  errno = error;
+  int ret;
+#ifdef XTERN_PLUS_DBUG
+  typedef int (*orig_func_type)(int, const struct sockaddr *, socklen_t);
+  static orig_func_type orig_func;
+  if (!orig_func)
+    orig_func = (orig_func_type)resolveDbugFunc("bind");
+  ret = orig_func(socket, address, address_len);
+#else
+  ret = bind(socket, address, address_len);
 #endif
   error = errno;
   return ret;
@@ -492,12 +574,19 @@ char *Runtime::__fgets(unsigned ins, int &error, char *s, int size, FILE *stream
   return ret;
 }
 
-/* Do not need to involve dbug tool here, since fork/execv
-  is handled in a "within process" way by xtern. */
 pid_t Runtime::__fork(unsigned ins, int &error)
 {
   errno = error;
-  pid_t ret = fork();
+  pid_t ret;
+#ifdef XTERN_PLUS_DBUG
+  typedef pid_t (*orig_func_type)();
+  static orig_func_type orig_func;
+  if (!orig_func)
+    orig_func = (orig_func_type)resolveDbugFunc("fork");
+  ret = orig_func();
+#else
+  ret = fork();
+#endif
   error = errno;
   return ret;
 }
@@ -514,6 +603,23 @@ pid_t Runtime::__wait(unsigned ins, int &error, int *status)
   ret = orig_func(status);
 #else
   ret = wait(status);
+#endif
+  error = errno;
+  return ret;
+}
+
+pid_t Runtime::__waitpid(unsigned ins, int &error, pid_t pid, int *status, int options)
+{
+  errno = error;
+  pid_t ret;
+#ifdef XTERN_PLUS_DBUG
+  typedef pid_t (*orig_func_type)(pid_t, int *, int);
+  static orig_func_type orig_func;
+  if (!orig_func)
+    orig_func = (orig_func_type)resolveDbugFunc("waitpid");
+  ret = orig_func(pid, status, options);
+#else
+  ret = waitpid(pid, status, options);
 #endif
   error = errno;
   return ret;

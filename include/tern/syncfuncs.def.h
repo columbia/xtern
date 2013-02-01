@@ -74,10 +74,14 @@ DEF(setsockopt, Synchronization, int, int sockfd, int level, int optname, const 
 DEF(close, Synchronization, int, int fd)
 DEF(read, BlockingSyscall, ssize_t, int fd, void *buf, size_t count)
 DEF(write, Synchronization, ssize_t, int fd, const void *buf, size_t count)
+DEF(pread, BlockingSyscall, ssize_t, int fd, void *buf, size_t count, off_t offset)
+DEF(pwrite, Synchronization, ssize_t, int fd, const void *buf, size_t count, off_t offset)
 DEF(select, BlockingSyscall, int, int nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds, struct timeval *timeout)
-//DEF(poll, Synchronization, int, struct pollfd *fds, nfds_t nfds, int timeout)
+DEF(poll, Synchronization, int, struct pollfd *fds, nfds_t nfds, int timeout)
+DEF(bind, Synchronization, int, int socket, const struct sockaddr *address, socklen_t address_len)
 DEF(fork, Synchronization, pid_t)
 DEF(wait, Synchronization, pid_t, int *status)
+DEF(waitpid, Synchronization, pid_t, pid_t pid, int *status, int options)
 
 //  real time functions
 DEF(time, Synchronization, time_t, time_t *t)

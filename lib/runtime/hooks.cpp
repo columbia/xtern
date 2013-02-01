@@ -3,6 +3,7 @@
 #include <assert.h>
 #include <stdlib.h>
 #include <iostream>
+#include <poll.h>
 
 #include "tern/config.h"
 #include "tern/hooks.h"
@@ -595,6 +596,28 @@ ssize_t tern_write(unsigned ins, int fd, const void *buf, size_t count)
   return ret;
 }
 
+ssize_t tern_pread(unsigned ins, int fd, void *buf, size_t count, off_t offset)
+{
+  int error = errno;
+  int ret;
+  Space::enterSys();
+  ret = Runtime::the->__pread(ins, error, fd, buf, count, offset);
+  Space::exitSys();
+  errno = error;
+  return ret;
+}
+
+ssize_t tern_pwrite(unsigned ins, int fd, const void *buf, size_t count, off_t offset)
+{
+  int error = errno;
+  int ret;
+  Space::enterSys();
+  ret = Runtime::the->__pwrite(ins, error, fd, buf, count, offset);
+  Space::exitSys();
+  errno = error;
+  return ret;
+}
+
 int tern_epoll_wait(unsigned ins, int epfd, struct epoll_event *events, int maxevents, int timeout)
 {
   int error = errno;
@@ -612,6 +635,28 @@ int tern_select(unsigned ins, int nfds, fd_set *readfds, fd_set *writefds, fd_se
   int ret;
   Space::enterSys();
   ret = Runtime::the->__select(ins, error, nfds, readfds, writefds, exceptfds, timeout);
+  Space::exitSys();
+  errno = error;
+  return ret;
+}
+
+int tern_poll(unsigned ins, struct pollfd *fds, nfds_t nfds, int timeout)
+{
+  int error = errno;
+  int ret;
+  Space::enterSys();
+  ret = Runtime::the->__poll(ins, error, fds, nfds, timeout);
+  Space::exitSys();
+  errno = error;
+  return ret;
+}
+
+int tern_bind(unsigned ins, int sockfd, const struct sockaddr *addr, socklen_t addrlen)
+{
+  int error = errno;
+  int ret;
+  Space::enterSys();
+  ret = Runtime::the->__bind(ins, error, sockfd, addr, addrlen);
   Space::exitSys();
   errno = error;
   return ret;
@@ -692,6 +737,17 @@ pid_t tern_wait(unsigned ins, int *status)
   pid_t ret;
   Space::enterSys();
   ret = Runtime::the->__wait(ins, error, status);
+  Space::exitSys();
+  errno = error;
+  return ret;
+}
+
+pid_t tern_waitpid(unsigned ins, pid_t pid, int *status, int options)
+{
+  int error = errno;
+  pid_t ret;
+  Space::enterSys();
+  ret = Runtime::the->__waitpid(ins, error, pid, status, options);
   Space::exitSys();
   errno = error;
   return ret;

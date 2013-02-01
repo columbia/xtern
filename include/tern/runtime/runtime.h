@@ -10,6 +10,7 @@
 namespace tern {
 
 struct Runtime {
+  Runtime();
   virtual void progBegin() {}
   virtual void progEnd() {}
   virtual void symbolic(unsigned insid, int &error, void *addr,
@@ -67,6 +68,7 @@ struct Runtime {
 
 #ifdef XTERN_PLUS_DBUG
   void *resolveDbugFunc(const char *func_name);
+  void initDbug();
 #endif
 /*
   virtual int __pthread_create(unsigned insid, int &error, pthread_t *th, const pthread_attr_t *a, void *(*func)(void*), void *arg)
@@ -144,15 +146,17 @@ struct Runtime {
   virtual int __close(unsigned insid, int &error, int fd);
   virtual ssize_t __read(unsigned insid, int &error, int fd, void *buf, size_t count);
   virtual ssize_t __write(unsigned insid, int &error, int fd, const void *buf, size_t count);
+  virtual ssize_t __pread(unsigned insid, int &error, int fd, void *buf, size_t count, off_t offset);
+  virtual ssize_t __pwrite(unsigned insid, int &error, int fd, const void *buf, size_t count, off_t offset);
   virtual int __select(unsigned insid, int &error, int nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds, struct timeval *timeout);  
-    
+  virtual int __poll(unsigned ins, int &error, struct pollfd *fds, nfds_t nfds, int timeout);
+  virtual int __bind(unsigned ins, int &error, int socket, const struct sockaddr *address, socklen_t address_len);
   virtual int __epoll_wait(unsigned insid, int &error, int epfd, struct epoll_event *events, int maxevents, int timeout);
-
-  virtual int __sigwait(unsigned insid, int &error, const sigset_t *set, int *sig); 
-
+  virtual int __sigwait(unsigned insid, int &error, const sigset_t *set, int *sig);
   virtual char *__fgets(unsigned ins, int &error, char *s, int size, FILE *stream);
   virtual pid_t __fork(unsigned ins, int &error);
   virtual pid_t __wait(unsigned ins, int &error, int *status);
+  virtual pid_t __waitpid(unsigned ins, int &error, pid_t pid, int *status, int options);
   virtual time_t __time(unsigned ins, int &error, time_t *t);
   virtual int __clock_getres(unsigned ins, int &error, clockid_t clk_id, struct timespec *res);
   virtual int __clock_gettime(unsigned ins, int &error, clockid_t clk_id, struct timespec *tp);

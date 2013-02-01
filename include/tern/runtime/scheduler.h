@@ -158,15 +158,15 @@ struct Serializer: public TidMap {
     return ret;
   }
 
-  /// start to fastly and safely do a network block operation (without getting a turn and putting it).
+  /// start to fastly and safely do a inter-process operation (without getting a turn and putting it).
   /// by default it is NOP (always return false), if any runtime scheduler needs it, just reimplement it.
-  virtual bool nwkBlkStart() {
+  virtual bool interProStart() {
     return false;
   }
 
-  /// finish doing a network block operation.
+  /// finish doing a inter-process operation.
   /// by default it is NOP (always return false), if any runtime scheduler needs it, just reimplement it.
-  virtual bool nwkBlkEnd() {
+  virtual bool interProEnd() {
     return false;
   }
 

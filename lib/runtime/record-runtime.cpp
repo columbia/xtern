@@ -37,6 +37,7 @@
 #include <time.h>
 #include <string.h>
 #include <errno.h>
+#include <poll.h>
 #include "tern/runtime/clockmanager.h"
 #include "tern/runtime/record-log.h"
 #include "tern/runtime/record-runtime.h"
@@ -52,7 +53,6 @@
 #include <map>
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <sys/socket.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 
@@ -292,7 +292,7 @@ void RecorderRT<RecordSerializer>::idle_sleep(void) {
     assert(block_turn >= 0); \
     sched_block_time = update_time(); \
   } else { \
-    if (_S::nwkBlkStart()) { \
+    if (_S::interProStart()) { \
       _S::block(); \
     } \
   }
@@ -321,7 +321,7 @@ void RecorderRT<RecordSerializer>::idle_sleep(void) {
     if (options::log_sync) \
       Logger::the->logSync(ins, (syncop), second_turn, app_time, syscall_time, sched_time, true, __VA_ARGS__); \
   } else { \
-    if (_S::nwkBlkEnd()) { \
+    if (_S::interProEnd()) { \
       _S::wakeup(); \
     } \
   } \
@@ -332,7 +332,7 @@ void RecorderRT<RecordSerializer>::idle_sleep(void) {
   timespec app_time = update_time(); \
   _S::getTurn(); \
   timespec sched_time = update_time();
-  //fprintf(stderr, "\n\nSCHED_TIMER_START tid %d, function %s\n", _S::self(), __FUNCTION__);
+  //fprintf(stderr, "\n\nSCHED_TIMER_START pid %d, tid %d, function %s\n", getpid(), _S::self(), __FUNCTION__);
 
 #define SCHED_TIMER_END_COMMON(syncop, ...) \
   int backup_errno = errno; \
@@ -345,7 +345,7 @@ void RecorderRT<RecordSerializer>::idle_sleep(void) {
   SCHED_TIMER_END_COMMON(syncop, __VA_ARGS__); \
   _S::putTurn();\
   errno = backup_errno;
-  //fprintf(stderr, "\n\nSCHED_TIMER_END tid %d, function %s\n", _S::self(), __FUNCTION__);
+  //fprintf(stderr, "\n\nSCHED_TIMER_END pid %d, tid %d, function %s\n", getpid(), _S::self(), __FUNCTION__);
 
 #define SCHED_TIMER_THREAD_END(syncop, ...) \
   SCHED_TIMER_END_COMMON(syncop, __VA_ARGS__); \
@@ -1517,6 +1517,14 @@ int RecorderRT<RecordSerializer>::pthreadCondBroadcast(unsigned ins, int &error,
 }
 
 template <typename _S>
+bool RecorderRT<_S>::regularFile(int fd) {
+  struct stat st;
+  fstat(fd, &st);
+  // If it is neither a socket, nor a fifo, then it is regular file (not a inter-process communication media).
+  return ((S_IFSOCK != (st.st_mode & S_IFMT)) && (S_IFIFO != (st.st_mode & S_IFMT)));
+}
+
+template <typename _S>
 int RecorderRT<_S>::__accept(unsigned ins, int &error, int sockfd, struct sockaddr *cliaddr, socklen_t *addrlen)
 {
   BLOCK_TIMER_START;
@@ -1576,43 +1584,34 @@ static uint64_t hash(const char *buffer, int len)
 template <typename _S>
 ssize_t RecorderRT<_S>::__send(unsigned ins, int &error, int sockfd, const void *buf, size_t len, int flags)
 {
-  if (options::schedule_write)
-  {
-    SCHED_TIMER_START;
-    int ret = Runtime::__send(ins, error, sockfd, buf, len, flags);
-    uint64_t sig = hash((char*)buf, len); 
-    SCHED_TIMER_END(syncfunc::send, (uint64_t) sig, (uint64_t) ret);
-    return ret;
-  } else
-    return Runtime::__send(ins, error, sockfd, buf, len, flags);
+  /* Even it is non-blocking operation, we use BLOCK_* instead of SCHED_*, 
+    because this operation can be involved by other systematic testing tools to 
+    explore non-deterministic order. */
+  BLOCK_TIMER_START;
+  int ret = Runtime::__send(ins, error, sockfd, buf, len, flags);
+  uint64_t sig = hash((char*)buf, len); 
+  BLOCK_TIMER_END(syncfunc::send, (uint64_t) sig, (uint64_t) ret);
+  return ret;
 }
 
 template <typename _S>
 ssize_t RecorderRT<_S>::__sendto(unsigned ins, int &error, int sockfd, const void *buf, size_t len, int flags, const struct sockaddr *dest_addr, socklen_t addrlen)
 {
-  if (options::schedule_write)
-  {
-    SCHED_TIMER_START;
-    int ret = Runtime::__sendto(ins, error, sockfd, buf, len, flags, dest_addr, addrlen);
-    uint64_t sig = hash((char*)buf, len); 
-    SCHED_TIMER_END(syncfunc::sendto, (uint64_t) sig, (uint64_t) ret);
-    return ret;
-  } else
-    return Runtime::__sendto(ins, error, sockfd, buf, len, flags, dest_addr, addrlen);
+  BLOCK_TIMER_START;
+  int ret = Runtime::__sendto(ins, error, sockfd, buf, len, flags, dest_addr, addrlen);
+  uint64_t sig = hash((char*)buf, len); 
+  BLOCK_TIMER_END(syncfunc::sendto, (uint64_t) sig, (uint64_t) ret);
+  return ret;
 }
 
 template <typename _S>
 ssize_t RecorderRT<_S>::__sendmsg(unsigned ins, int &error, int sockfd, const struct msghdr *msg, int flags)
 {
-  if (options::schedule_write)
-  {
-    SCHED_TIMER_START;
-    int ret = Runtime::__sendmsg(ins, error, sockfd, msg, flags);
-    uint64_t sig = hash((char*)msg, sizeof(struct msghdr)); 
-    SCHED_TIMER_END(syncfunc::sendmsg, (uint64_t) sig, (uint64_t) ret);
-    return ret;
-  } else
-    return Runtime::__sendmsg(ins, error, sockfd, msg, flags);
+  BLOCK_TIMER_START;
+  int ret = Runtime::__sendmsg(ins, error, sockfd, msg, flags);
+  uint64_t sig = hash((char*)msg, sizeof(struct msghdr)); 
+  BLOCK_TIMER_END(syncfunc::sendmsg, (uint64_t) sig, (uint64_t) ret);
+  return ret;
 }
 
 template <typename _S>
@@ -1648,20 +1647,11 @@ ssize_t RecorderRT<_S>::__recvmsg(unsigned ins, int &error, int sockfd, struct m
 template <typename _S>
 ssize_t RecorderRT<_S>::__read(unsigned ins, int &error, int fd, void *buf, size_t count)
 {
-  bool ignore = false;
-  if (options::RR_ignore_rw_regular_file)
-  {
-    struct stat st;
-    fstat(fd, &st);
-//    printf("st.st_mode = %x\n", (unsigned) st.st_mode);
-//    printf("st.st_mode & S_IFMT = %x\n", (unsigned) (st.st_mode & S_IFMT));
-//    printf("S_IFSOCK = %x\n", (unsigned) S_IFSOCK);
-    if (S_IFREG == (st.st_mode & S_IFMT))
-      ignore = true;
-  }
-  if (ignore)
-    return Runtime::__read(ins, error, fd, buf, count);
+  // First, handle regular IO.
+  if (options::RR_ignore_rw_regular_file && regularFile(fd))
+    return read(fd, buf, count);  // Directly call the libc read() for regular IO.
 
+  // Second, handle inter-process IO.
   BLOCK_TIMER_START;
   ssize_t ret = Runtime::__read(ins, error, fd, buf, count);
   uint64_t sig = hash((char*)buf, count); 
@@ -1672,27 +1662,52 @@ ssize_t RecorderRT<_S>::__read(unsigned ins, int &error, int fd, void *buf, size
 template <typename _S>
 ssize_t RecorderRT<_S>::__write(unsigned ins, int &error, int fd, const void *buf, size_t count)
 {
-  bool ignore = false;
-  if (options::RR_ignore_rw_regular_file)
-  {
-    struct stat st;
-    fstat(fd, &st);
-    if (S_IFREG == (st.st_mode & S_IFMT))
-      ignore = true;
+  // First, handle regular IO.
+  if (options::RR_ignore_rw_regular_file && regularFile(fd)) {
+    dprintf("RecorderRT<_S>::__write ignores regular file %d\n", fd);
+    return write(fd, buf, count);  // Directly call the libc write() for regular IO.
   }
 
-  if (ignore)
-    return Runtime::__write(ins, error, fd, buf, count);
+  // Second, handle inter-process IO.
+  /* Even it is non-blocking operation, we use BLOCK_* instead of SCHED_*, 
+    because this operation can be involved by other systematic testing tools to 
+    explore non-deterministic order. */
+  BLOCK_TIMER_START;
+  dprintf("RecorderRT<_S>::__write handles inter-process file %d\n", fd);
+  ssize_t ret = Runtime::__write(ins, error, fd, buf, count);
+  uint64_t sig = hash((char*)buf, count); 
+  BLOCK_TIMER_END(syncfunc::write, (uint64_t) sig, (uint64_t) fd, (uint64_t) ret);
+  return ret;
+}
 
-  if (options::schedule_write)
-  {
-    SCHED_TIMER_START;
-    ssize_t ret = Runtime::__write(ins, error, fd, buf, count);
-    uint64_t sig = hash((char*)buf, count); 
-    SCHED_TIMER_END(syncfunc::write, (uint64_t) sig, (uint64_t) fd, (uint64_t) ret);
-    return ret;
-  } else
-    return Runtime::__write(ins, error, fd, buf, count);
+template <typename _S>
+ssize_t RecorderRT<_S>::__pread(unsigned ins, int &error, int fd, void *buf, size_t count, off_t offset)
+{
+  // First, handle regular IO.
+  if (options::RR_ignore_rw_regular_file && regularFile(fd))
+    return pread(fd, buf, count, offset);  // Directly call the libc pread() for regular IO.
+
+  // Second, handle inter-process IO.
+  BLOCK_TIMER_START;
+  ssize_t ret = Runtime::__pread(ins, error, fd, buf, count, offset);
+  uint64_t sig = hash((char*)buf, count); 
+  BLOCK_TIMER_END(syncfunc::pread, (uint64_t) sig, (uint64_t) fd, (uint64_t) ret);
+  return ret;
+}
+
+template <typename _S>
+ssize_t RecorderRT<_S>::__pwrite(unsigned ins, int &error, int fd, const void *buf, size_t count, off_t offset)
+{
+  // First, handle regular IO.
+  if (options::RR_ignore_rw_regular_file && regularFile(fd))
+    return pwrite(fd, buf, count, offset);  // Directly call the libc pwrite() for regular IO.
+
+  // Second, handle inter-process IO.
+  BLOCK_TIMER_START;
+  ssize_t ret = Runtime::__pwrite(ins, error, fd, buf, count, offset);
+  uint64_t sig = hash((char*)buf, count); 
+  BLOCK_TIMER_END(syncfunc::pwrite, (uint64_t) sig, (uint64_t) fd, (uint64_t) ret);
+  return ret;
 }
 
 template <typename _S>
@@ -1792,6 +1807,24 @@ int RecorderRT<_S>::__epoll_wait(unsigned ins, int &error, int epfd, struct epol
 }
 
 template <typename _S>
+int RecorderRT<_S>::__poll(unsigned ins, int &error, struct pollfd *fds, nfds_t nfds, int timeout)
+{
+  BLOCK_TIMER_START;
+  int ret = Runtime::__poll(ins, error, fds, nfds, timeout);
+  BLOCK_TIMER_END(syncfunc::poll, (uint64_t)fds, (uint64_t)nfds, (uint64_t)timeout, (uint64_t)ret);
+  return ret;
+}
+
+template <typename _S>
+int RecorderRT<_S>::__bind(unsigned ins, int &error, int socket, const struct sockaddr *address, socklen_t address_len)
+{
+  BLOCK_TIMER_START;
+  int ret = Runtime::__bind(ins, error, socket, address, address_len);
+  BLOCK_TIMER_END(syncfunc::bind, (uint64_t)socket, (uint64_t)address, (uint64_t)address_len, (uint64_t)ret);
+  return ret;
+}
+
+template <typename _S>
 int RecorderRT<_S>::__sigwait(unsigned ins, int &error, const sigset_t *set, int *sig)
 {
   BLOCK_TIMER_START;
@@ -1803,18 +1836,11 @@ int RecorderRT<_S>::__sigwait(unsigned ins, int &error, const sigset_t *set, int
 template <typename _S>
 char *RecorderRT<_S>::__fgets(unsigned ins, int &error, char *s, int size, FILE *stream)
 {
-  // Heming: follow a similar way as in __read() of ignoring scheduling fgets for regular files.
-  bool ignore = false;
-  if (options::RR_ignore_rw_regular_file) {
-    int fd = fileno(stream);
-    struct stat st;
-    fstat(fd, &st);
-    if (S_IFREG == (st.st_mode & S_IFMT))
-      ignore = true;
-  }
-  if (ignore)
-     return Runtime::__fgets(ins, error, s, size, stream);
+  // First, handle regular IO.
+  if (options::RR_ignore_rw_regular_file && regularFile(fileno(stream)))
+    return fgets(s, size, stream);  // Directly call the libc fgets() for regular IO.
 
+  // Second, handle inter-process IO.
   BLOCK_TIMER_START;
   char * ret = Runtime::__fgets(ins, error, s, size, stream);
   BLOCK_TIMER_END(syncfunc::fgets, (uint64_t) ret);
@@ -1823,41 +1849,49 @@ char *RecorderRT<_S>::__fgets(unsigned ins, int &error, char *s, int size, FILE 
 
 extern "C" void *idle_thread(void*);
 extern "C" pthread_t idle_th;
+extern "C" pthread_mutex_t idle_mutex;
+extern "C" pthread_cond_t idle_cond;
 
 template <typename _S>
 pid_t RecorderRT<_S>::__fork(unsigned ins, int &error)
 {
+  dprintf("pid %d enters fork\n", getpid());
   pid_t ret;
 
   Logger::the->flush(); // so child process won't write it again
 
+  /* Although this is inter-process operation, and we need to involve dbug
+    tool (debug needs to register/unregister threads based on fork()), we do
+    not need to switch from SCHED_TIMER_START to BLOCK_TIMER_START, 
+    because at this moment the child thread is not alive yet, so dbug could not 
+    enforce any order between child and parent processes. And, we need this
+    sched_* scheduling way to update the runq and waitq of parent
+    and child processes safely. */
   SCHED_TIMER_START;
-  errno = error;
-  ret = fork();
-  error = errno;
-
+  ret = Runtime::__fork(ins, error);
   if(ret == 0) {
-    // child process returns from fork; re-initializes scheduler and
-    // logger state
+    // child process returns from fork; re-initializes scheduler and logger state
     dprintf("fork return in child %d\n", (int)getpid());
     Logger::threadEnd(); // close log
     Logger::threadBegin(_S::self()); // re-open log
+    assert(!sem_init(&thread_begin_sem, 0, 0));
+    assert(!sem_init(&thread_begin_done_sem, 0, 0));
     _S::childForkReturn();
-  }
-
+  } else
+    assert(ret > 0);
   SCHED_TIMER_END(syncfunc::fork, (uint64_t) ret);
 
-  if(ret == 0) { // spawn idle thread for child process
-    // FIXME: this is gross.  idle thread should be part of RecorderRT
-    if (options::launch_idle_thread) {
-      Space::exitSys();
-      int ret = tern_pthread_create(0xdead0000, &idle_th,
-                                    NULL, idle_thread, NULL);
-      assert(ret == 0 && "tern_pthread_create failed!");
-      Space::enterSys();
-    }
+  // FIXME: this is gross.  idle thread should be part of RecorderRT
+  if (ret == 0 && options::launch_idle_thread) {
+    Space::exitSys();
+    pthread_cond_init(&idle_cond, NULL);
+    tern_pthread_mutex_init(0xdead0000, &idle_mutex, NULL);
+    int res = tern_pthread_create(0xdead0000, &idle_th, NULL, idle_thread, NULL);
+    assert(res == 0 && "tern_pthread_create failed!");
+    Space::enterSys();
   }
 
+  dprintf("pid %d leaves fork\n", getpid());
   return ret;
 }
 
@@ -1866,7 +1900,16 @@ pid_t RecorderRT<_S>::__wait(unsigned ins, int &error, int *status)
 {
   BLOCK_TIMER_START;
   pid_t ret = Runtime::__wait(ins, error, status);
-  BLOCK_TIMER_END(syncfunc::wait, (uint64_t) ret);
+  BLOCK_TIMER_END(syncfunc::wait, (uint64_t)*status, (uint64_t)ret);
+  return ret;
+}
+
+template <typename _S>
+pid_t RecorderRT<_S>::__waitpid(unsigned ins, int &error, pid_t pid, int *status, int options)
+{
+  BLOCK_TIMER_START;
+  pid_t ret = Runtime::__waitpid(ins, error, pid, status, options);
+  BLOCK_TIMER_END(syncfunc::waitpid, (uint64_t)pid, (uint64_t)*status, (uint64_t)options, (uint64_t)ret);
   return ret;
 }
 
@@ -1920,13 +1963,19 @@ int RecorderRT<_S>::nanosleep(unsigned ins, int &error,
 template <typename _S>
 int RecorderRT<_S>::__socket(unsigned ins, int &error, int domain, int type, int protocol)
 {
-  return Runtime::__socket(ins, error, domain, type, protocol);
+  BLOCK_TIMER_START;
+  int ret = Runtime::__socket(ins, error, domain, type, protocol);
+  BLOCK_TIMER_END(syncfunc::socket, (uint64_t)domain, (uint64_t)type, (uint64_t)protocol, (uint64_t)ret);
+  return ret;
 }
 
 template <typename _S>
 int RecorderRT<_S>::__listen(unsigned ins, int &error, int sockfd, int backlog)
 {
-  return Runtime::__listen(ins, error, sockfd, backlog);
+  BLOCK_TIMER_START;
+  int ret = Runtime::__listen(ins, error, sockfd, backlog);
+  BLOCK_TIMER_END(syncfunc::listen, (uint64_t)sockfd, (uint64_t)backlog, (uint64_t)ret);
+  return ret;
 }
 
 template <typename _S>
@@ -1956,7 +2005,15 @@ int RecorderRT<_S>::__setsockopt(unsigned ins, int &error, int sockfd, int level
 template <typename _S>
 int RecorderRT<_S>::__close(unsigned ins, int &error, int fd)
 {
-  return Runtime::__close(ins, error, fd);
+  // First, handle regular IO.
+  if (options::RR_ignore_rw_regular_file && regularFile(fd))
+    return close(fd);  // Directly call the libc close() for regular IO.
+
+  // Second, handle inter-process IO.
+  BLOCK_TIMER_START;
+  int ret = Runtime::__close(ins, error, fd);
+  BLOCK_TIMER_END(syncfunc::close, (uint64_t)fd, (uint64_t)ret);
+  return ret;
 }
 
 template <>

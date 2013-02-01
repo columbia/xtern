@@ -22,7 +22,6 @@ replay_log_dir = replay
 replay_log_type = serializer
 runtime_type = RR
 schedule_network = 1
-schedule_write = 0
 scheduler_seed = 74565
 set_mutex_errorcheck = 0
 sync_global_clock = 1
