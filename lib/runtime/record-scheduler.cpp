@@ -53,7 +53,6 @@ extern pthread_mutex_t idle_mutex;
 extern pthread_cond_t idle_cond;
 extern int idle_done;
 extern ClockManager clockManager;
-pthread_mutex_t turn_mutex;
 
 void RRSchedulerCV::detect_blocking_threads(void)
 {
@@ -200,14 +199,14 @@ void RRScheduler::wait_t::wait() {
       i++;
     }
     if (!wakenUp) {
-      pthread_mutex_lock(&turn_mutex);
+      pthread_mutex_lock(&mutex);
       while (!wakenUp) {/** This can save the context switch overhead. **/
         dprintf("RRScheduler::wait_t::wait before cond wait, tid %d\n", self());
-        pthread_cond_wait(&cond, &turn_mutex);
+        pthread_cond_wait(&cond, &mutex);
         dprintf("RRScheduler::wait_t::wait after cond wait, tid %d\n", self());
       }
       wakenUp = false;
-      pthread_mutex_unlock(&turn_mutex);
+      pthread_mutex_unlock(&mutex);
     } else {
       wakenUp = false;
     }
@@ -218,10 +217,10 @@ void RRScheduler::wait_t::post() {
   if (options::enforce_turn_type == 1) { // Semaphore relay.
     sem_post(&sem);
   } else {   // Hybrid relay.
-    pthread_mutex_lock(&turn_mutex);
+    pthread_mutex_lock(&mutex);
     wakenUp = true;
     pthread_cond_signal(&cond);
-    pthread_mutex_unlock(&turn_mutex);
+    pthread_mutex_unlock(&mutex);
   }
 }
 
@@ -284,12 +283,13 @@ void RRScheduler::check_wakeup()
 //@after with turn
 void RRScheduler::next(bool at_thread_end, bool hasPoppedFront)
 {
+  int tid = self();
   int next_tid;
   if (!hasPoppedFront) {
     // Update the status of the head element.
-    struct run_queue::runq_elem *my = runq.get_my_elem(self());
+    struct run_queue::runq_elem *my = runq.get_my_elem(tid);
     dprintf("RRScheduler::nextRunnable at_thread_end %d, self tid %d, head status %d\n",
-      at_thread_end, self(), my->status);
+      at_thread_end, tid, my->status);
     if (my->status == run_queue::RUNNING_REG)
       my->status = run_queue::RUNNABLE;
     else {
@@ -509,9 +509,6 @@ RRScheduler::~RRScheduler() {}
 
 RRScheduler::RRScheduler()
 {
-  for(unsigned i=0; i<MAX_THREAD_NUM; ++i)
-    sem_init(&waits[i].sem, 0, 0);
-
   // main thread
   assert(self() == MainThreadTid && "tid hasn't been initialized!");
   struct run_queue::runq_elem *main_elem = runq.create_thd_elem(MainThreadTid);
@@ -522,7 +519,6 @@ RRScheduler::RRScheduler()
   inter_pro_wakeup_tids.clear();
   inter_pro_wakeup_flag = 0;
   pthread_mutex_init(&inter_pro_wakeup_mutex, NULL);
-  pthread_mutex_init(&turn_mutex, NULL);
 
   if (options::RR_skip_zombie)
   {

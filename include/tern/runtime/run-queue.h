@@ -53,6 +53,12 @@
 #define PRINT(...)
 #endif
 
+#ifdef DEBUG_RUN_QUEUE
+#define ASSERT(...) assert(__VA_ARGS__)
+#else
+#define ASSERT(...)
+#endif
+
 
 namespace tern {
 class run_queue {
@@ -146,15 +152,19 @@ public:
 
   /** Each thread get its own thread element. This is a per-thread array so it is thread-safe. **/
   inline struct runq_elem *get_my_elem(int my_tid) {
+#ifdef DEBUG_RUN_QUEUE
     struct runq_elem *elem = tid_map[my_tid];
-    assert(elem && my_tid == elem->tid); /** Make sure each thread can only get its own element. **/
+    ASSERT(elem && my_tid == elem->tid); /** Make sure each thread can only get its own element. **/
     return elem;
+#else
+    return tid_map[my_tid];
+#endif
   }
   
   inline struct runq_elem *create_thd_elem(int tid) {
     //fprintf(stderr, "tid %d is called with runq::create_thd_elem\n", tid);
-    assert(tid >= 0 && tid < MAX_THREAD_NUM);
-    assert(tid_map[tid] == NULL);
+    ASSERT(tid >= 0 && tid < MAX_THREAD_NUM);
+    ASSERT(tid_map[tid] == NULL);
     struct runq_elem *elem = new runq_elem(tid);
     tid_map[tid] = elem;
     return elem;
@@ -163,7 +173,7 @@ public:
   inline void del_thd_elem(int tid) {
     PRINT(__FUNCTION__);
     struct runq_elem *elem = tid_map[tid];
-    assert(elem);
+    ASSERT(elem);
     tid_map[tid] = NULL;
     pthread_spin_destroy(&(elem->spin_lock));
     delete elem;
@@ -234,7 +244,7 @@ public:
   because it is the only thread which could modify the linked list of run queue. **/
   inline bool in(int tid) {
     struct runq_elem *elem = tid_map[tid];
-    assert(elem);
+    ASSERT(elem);
     /** If I have prev or next element, then I am still in the queue. **/
     if (elem->prev != NULL || elem->next != NULL) {
       DBG_ASSERT_ELEM_IN("run_queue.in.1", elem);
@@ -312,13 +322,13 @@ public:
     //fprintf(stderr, "~~~~~~~~~~~~push back tid %d\n", tid);
 
     struct runq_elem *elem = tid_map[tid];
-    assert(elem);
+    ASSERT(elem);
     DBG_ASSERT_ELEM_NOT_IN(__FUNCTION__, elem);
     if (head == NULL) {
-      assert(tail == NULL);
+      ASSERT(tail == NULL);
       head = tail = elem;
     } else {
-      assert (tail != NULL);
+      ASSERT(tail != NULL);
       elem->prev = tail;
       tail->next = elem;
       tail = elem;
@@ -331,14 +341,14 @@ public:
   /* This is a thread run queue, all thread ids are fixed, reference is not allowed! */
   inline int front() {
     PRINT(__FUNCTION__);
-    assert(head != NULL);
+    ASSERT(head != NULL);
     DBG_ASSERT_ELEM_IN(__FUNCTION__, head);
     return head->tid;
   }
 
   inline struct runq_elem *front_elem() {
     PRINT(__FUNCTION__);
-    assert(head != NULL);
+    ASSERT(head != NULL);
     DBG_ASSERT_ELEM_IN(__FUNCTION__, head);
     return head;
   }
@@ -346,7 +356,7 @@ public:
   inline void push_front(int tid) {
     PRINT(__FUNCTION__);
     struct runq_elem *elem = tid_map[tid];
-    assert(elem);
+    ASSERT(elem);
     DBG_ASSERT_ELEM_NOT_IN(__FUNCTION__, elem);
     if (head == NULL) {
       head = tail = elem;

@@ -23,7 +23,6 @@
 #include <tr1/unordered_set>
 #include "tern/runtime/scheduler.h"
 
-extern pthread_mutex_t turn_mutex;
 
 namespace tern {
 
@@ -75,6 +74,7 @@ struct RRScheduler: public Scheduler {
   typedef Scheduler Parent;
   
   struct wait_t {
+    pthread_mutex_t mutex;
     pthread_cond_t cond;
     sem_t    sem;
     void*    chan;
@@ -90,6 +90,7 @@ struct RRScheduler: public Scheduler {
     }
 
     wait_t() {
+      pthread_mutex_init(&mutex, NULL);
       pthread_cond_init(&cond, NULL);
       sem_init(&sem, 0, 0);
       reset(0);
