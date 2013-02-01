@@ -183,7 +183,7 @@ void SeededRRScheduler::reorderRunq(void)
 void RRScheduler::wait_t::wait() {
   if (options::enforce_turn_type == 1) {  // Semaphore relay.
     sem_wait(&sem);
-  } else {  // Hybrid relay.
+  } else if (options::enforce_turn_type == 2) {  // Hybrid relay.
     /** by default, 3e4. This would cause the busy loop to loop for around 10 ms 
     on my machine, or 14 ms on bug00. This is one order of magnitude bigger
     than context switch time (1ms). **/
@@ -210,17 +210,24 @@ void RRScheduler::wait_t::wait() {
     } else {
       wakenUp = false;
     }
+  } else {  // Busy relay.
+    while (!wakenUp) {
+      sched_yield();
+    }
+    wakenUp = false;
   }
 }
 
 void RRScheduler::wait_t::post() {
   if (options::enforce_turn_type == 1) { // Semaphore relay.
     sem_post(&sem);
-  } else {   // Hybrid relay.
+  } else if (options::enforce_turn_type == 2) {   // Hybrid relay.
     pthread_mutex_lock(&mutex);
     wakenUp = true;
     pthread_cond_signal(&cond);
     pthread_mutex_unlock(&mutex);
+  } else {  // Busy relay.
+    wakenUp = true;
   }
 }
 

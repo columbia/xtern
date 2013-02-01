@@ -100,6 +100,7 @@ log_sync = 1
 # the algorithm to enforce turn, options are:
 # 1.  Value: 1      	semaphore (default).
 # 2.  Value: 2              busy wait flag + cond wait.
+# 3.  Value: 3              busy wait only.
 enforce_turn_type = 1
 
 # if turned on, enforce xtern annotations such as lineup, workload and non_det.
