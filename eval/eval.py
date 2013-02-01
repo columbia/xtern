@@ -57,6 +57,8 @@ def readConfigFile(config_file):
                                                 "GZIP": "",
                                                 "EXPORT": "",
                                                 "DTHREADS": "",
+                                                "INIT_ENV_CMD": "",
+                                                "C_WITH_XTERN": "0",
                                                 "C_CMD": "",
                                                 "C_TERMINATE_SERVER": "0",
                                                 "C_STATS": "0"} )
@@ -287,11 +289,15 @@ def preSetting(config, bench, apps_name):
         return
     
  
-def execBench(cmd, repeats, out_dir, client_cmd="", client_terminate_server=False):
+def execBench(cmd, repeats, out_dir,
+              client_cmd="", client_terminate_server=False,
+              init_env_cmd=""):
     mkdir_p(out_dir)
     for i in range(int(repeats)):
         sys.stderr.write("\tPROGRESS: %5d/%d\r" % (i+1, int(repeats))) # progress
         with open('%s/output.%d' % (out_dir, i), 'w', 102400) as log_file:
+            if init_env_cmd:
+                os.system(init_env_cmd)
             #proc = subprocess.Popen(xtern_command, stdout=sys.stdout, stderr=sys.stdout,
             proc = subprocess.Popen(cmd, stdout=log_file, stderr=subprocess.STDOUT,
                                     shell=True, executable=bash_path, bufsize = 102400, preexec_fn=os.setsid)
@@ -341,31 +347,51 @@ def processBench(config, bench):
     if export:
         logging.debug("export %s", export)
 
+    # git environment presetting command
+    init_env_cmd = config.get(bench, 'INIT_ENV_CMD')
+    if init_env_cmd:
+        logging.info("presetting cmd in each round %s" % init_env_cmd)
+
     # check if this is a server-client app
     client_cmd = config.get(bench, 'C_CMD')
     client_terminate_server = bool(int(config.get(bench, 'C_TERMINATE_SERVER')))
+    client_with_xtern = bool(int(config.get(bench, 'C_WITH_XTERN')))
     use_client_stats = bool(int(config.get(bench, 'C_STATS')))
-    if client_cmd and use_client_stats:
-        client_cmd = 'time -p ' + client_cmd
     if client_cmd:
+        if client_with_xtern:
+            client_cmd = XTERN_PRELOAD + ' ' + client_cmd
+        client_cmd = 'time ' + client_cmd
         logging.info("client command : %s" % client_cmd)
         logging.debug("terminate server after client finish job : " + str(client_terminate_server))
         logging.debug("evaluate performance by using stats of client : " + str(use_client_stats))
 
-    TIMEFORMAT="TIMEFORMAT=$'\nreal %E\nuser %U\nsys %S';"
     # generate command for xtern [time LD_PRELOAD=... exec args...]
-    xtern_command = ' '.join(['time', XTERN_PRELOAD, export, exec_file] + inputs.split())
+    if client_cmd and client_with_xtern:
+        xtern_command = ' '.join(['time', export, exec_file] + inputs.split())
+    else:
+        xtern_command = ' '.join(['time', XTERN_PRELOAD, export, exec_file] + inputs.split())
     logging.info("executing '%s'" % xtern_command)
-    execBench(xtern_command, repeats, 'xtern', client_cmd, client_terminate_server)
+    execBench(xtern_command, repeats, 'xtern', client_cmd, client_terminate_server, init_env_cmd)
 
+    client_cmd = config.get(bench, 'C_CMD')
+    if client_cmd:
+        if client_with_xtern:
+            client_cmd = RAND_PRELOAD + ' ' + client_cmd
+        client_cmd = 'time ' + client_cmd
     # generate command for non-det [time LD_PRELOAD=... exec args...]
-    nondet_command = ' '.join(['time', RAND_PRELOAD, export, exec_file] + inputs.split())
+    if client_cmd and client_with_xtern:
+        nondet_command = ' '.join(['time', export, exec_file] + inputs.split())
+    else:
+        nondet_command = ' '.join(['time', RAND_PRELOAD, export, exec_file] + inputs.split())
     logging.info("executing '%s'" % nondet_command)
-    execBench(nondet_command, repeats, 'non-det', client_cmd, client_terminate_server)
+    execBench(nondet_command, repeats, 'non-det', client_cmd, client_terminate_server, init_env_cmd)
 
     # run additional benchmark for dthreads
     dthread = config.get(bench, 'DTHREADS')
     if dthread:
+        if client_cmd:
+            logging.error("client-server with dthreads has not yet tested...")
+            sys.exit(1)
         dthread_exec_file = os.path.abspath('%s/%s/%s' % (APPS, apps_name, dthread))
         dthread_command = ' '.join(['time', export, dthread_exec_file] + inputs.split())
         logging.info("executing '%s'" % dthread_command)
