@@ -7,12 +7,12 @@
 # wget http://llvm.org/releases/2.7/$SOURCE
 
 # Create mongoose binary
-cd $XTERN_ROOT/apps/mongoose
-./mk
+#cd $XTERN_ROOT/apps/mongoose
+#./mk
 
 # Create aget binary
-cd $XTERN_ROOT/apps/aget
-./mk
+#cd $XTERN_ROOT/apps/aget
+#./mk
 
 # Create strategy file for the dBug test that guarantees that the server is actually listening for connections
 cd /tmp
@@ -30,3 +30,4 @@ $SMT_MC_ROOT/mc-tools/dbug/install/bin/dbug-arbiter-server -s strategy -b 3 -l /
 sleep 1
 LD_PRELOAD=$SMT_MC_ROOT/mc-tools/dbug/install/lib/libdbug.so $XTERN_ROOT/apps/mongoose/mg-server -t 2 -r $XTERN_ROOT/apps/mongoose &
 LD_PRELOAD=$SMT_MC_ROOT/mc-tools/dbug/install/lib/libdbug.so $XTERN_ROOT/apps/aget/aget -f -n2 -p 8080 http://127.0.0.1/llvm-gcc-4.2-2.7.source.tgz
+#LD_PRELOAD=$SMT_MC_ROOT/mc-tools/dbug/install/lib/libdbug.so $XTERN_ROOT/apps/aget/aget -f -n2 -p 8080 http://127.0.0.1/test.txt
