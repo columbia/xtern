@@ -61,7 +61,8 @@ def readConfigFile(config_file):
                                                 "C_WITH_XTERN": "0",
                                                 "C_CMD": "",
                                                 "C_TERMINATE_SERVER": "0",
-                                                "C_STATS": "0"} )
+                                                "C_STATS": "0",
+                                                "EVALUATION": ""} )
         ret = newConfig.read(config_file)
     except ConfigParser.MissingSectionHeaderError as e:
         logging.error(str(e))
@@ -322,10 +323,11 @@ def execBench(cmd, repeats, out_dir,
 def processBench(config, bench):
     # for each bench, generate running directory
     logging.debug("processing: " + bench)
+    specified_evaluation = config.get(bench, 'EVALUATION')
     apps_name, exec_file = extract_apps_exec(bench)
     logging.debug("app = %s" % apps_name)
     logging.debug("executible file = %s" % exec_file)
-    if not checkExist(exec_file, os.X_OK):
+    if not specified_evaluation and not checkExist(exec_file, os.X_OK):
         logging.warning('%s does not exist, skip [%s]' % (exec_file, bench))
         return
 
@@ -338,6 +340,12 @@ def processBench(config, bench):
     generate_local_options(config, bench)
     inputs = config.get(bench, 'inputs')
     repeats = config.get(bench, 'repeats')
+
+    # if specified evaluation script; use it
+    if specified_evaluation:
+        specified = __import__(specified_evaluation, globals(), locals(), [], -1)
+        specified.evaluation(int(repeats))
+        return
 
     # get required files
     preSetting(config, bench, apps_name)
