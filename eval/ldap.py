@@ -78,6 +78,4 @@ def evaluation(repeats = 100):
                 nondet_cost += [float(line.split()[1])]
                 break
 
-    print xtern_cost
-    print nondet_cost
     eval.write_stats(xtern_cost, nondet_cost, int(repeats))
