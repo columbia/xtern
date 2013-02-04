@@ -2,12 +2,8 @@
 
 VER=2.4.33
 APP_DIR=$XTERN_ROOT/apps/ldap/
-cd $APP_DIR
-rm -rf out* *.log rr-* random-*
 killall -9 slapd &> /dev/null
-SCHED="RR"
 
 cd $APP_DIR/openldap-$VER/obj
 PRELOAD_LIB="$XTERN_ROOT/dync_hook/interpose.so" make test
-cd $APP_DIR
 
