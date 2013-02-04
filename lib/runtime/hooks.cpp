@@ -74,6 +74,13 @@ void tern_thread_end(unsigned ins) {
 }
 
 int tern_pthread_cancel(unsigned ins, pthread_t thread) {
+  /* Fixme: a correct way of handling pthread_cancel() is: at the starting 
+  point of each child thread, the child thread register a cleanup routine using 
+  pthread_cleanup_push(), and then in this routine the thread removes itself 
+  from runq. Currently the pthread_cancel mechaism in xtern ignores this, which 
+  may cause a problem that a child thread is canceled and exits, but its thread 
+  id is still in the runq.
+  */
   int error = errno;
   int ret;
   Space::enterSys();
