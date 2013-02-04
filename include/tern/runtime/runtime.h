@@ -67,8 +67,8 @@ struct Runtime {
   virtual void lineupEnd(long opaque_type) = 0;
 
 #ifdef XTERN_PLUS_DBUG
-  void *resolveDbugFunc(const char *func_name);
-  void initDbug();
+  static void *resolveDbugFunc(const char *func_name);
+  static void initDbug();
 #endif
 /*
   virtual int __pthread_create(unsigned insid, int &error, pthread_t *th, const pthread_attr_t *a, void *(*func)(void*), void *arg)
@@ -124,6 +124,10 @@ struct Runtime {
   virtual int __sem_post(unsigned insid, int &error, sem_t *sem)
   	{ return semPost(insid, sem); }
 */
+
+  // thread management
+  static int __pthread_create(pthread_t *th, const pthread_attr_t *a, void *(*func)(void*), void *arg);
+  static void __pthread_exit(void *value_ptr);
 
   // socket and files
   virtual int __socket(unsigned insid, int &error, int domain, int type, int protocol);

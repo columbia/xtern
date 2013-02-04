@@ -96,6 +96,34 @@ int Runtime::pthreadMutexDestroy(unsigned insid, int &error, pthread_mutex_t *mu
   return ret;
 }
 
+int Runtime::__pthread_create(pthread_t *th, const pthread_attr_t *a, void *(*func)(void*), void *arg) {
+  //errno = error;
+  int ret;
+#ifdef XTERN_PLUS_DBUG
+  typedef int (*orig_func_type)(pthread_t *,const pthread_attr_t *,void *(*)(void*),void *);
+  static orig_func_type orig_func;
+  if (!orig_func)
+    orig_func = (orig_func_type)resolveDbugFunc("pthread_create");
+  ret = orig_func(th, a, func, arg);
+#else
+  ret = pthread_create(th, a, func, arg);
+#endif
+  //error = errno;
+  return ret;
+}
+
+void Runtime::__pthread_exit(void *value_ptr) {
+#ifdef XTERN_PLUS_DBUG
+  typedef int (*orig_func_type)(void *);
+  static orig_func_type orig_func;
+  if (!orig_func)
+    orig_func = (orig_func_type)resolveDbugFunc("pthread_exit");
+  orig_func(value_ptr);
+#else
+  pthread_exit(value_ptr);
+#endif
+}
+
 int Runtime::__socket(unsigned ins, int &error, int domain, int type, int protocol)
 {
   errno = error;

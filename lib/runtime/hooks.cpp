@@ -28,7 +28,6 @@ extern "C" {
 #endif
 
 extern void *idle_thread(void*);
-static int main_thread_alive = 0;
 
 void tern_prog_begin() {
   assert(Space::isSys() && "tern_prog_begin must start in sys space");
@@ -358,17 +357,14 @@ void tern_pthread_exit(unsigned ins, void *retval) {
   if(Scheduler::self() != Scheduler::MainThreadTid)
   {
     tern_thread_end(ins);
-  } else
-  {
-    main_thread_alive = false;
-
+  } else {
     // FIXME: Need to call exit() to stop the idle thread here because
     // when the main thread calls pthread_exit(), it may wait for all
     // current threads to finish, before calling __tern_prog_end().
     exit(0);
   }
   assert(Space::isSys());
-  pthread_exit(retval);
+  Runtime::__pthread_exit(retval);
 }
 
 int tern_sigwait(unsigned ins, const sigset_t *set, int *sig)

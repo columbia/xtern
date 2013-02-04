@@ -53,7 +53,7 @@ int __tern_pthread_create(pthread_t *thread,  const pthread_attr_t *attr,
   args[1] = user_thread_arg;
 
   int ret;
-  ret = pthread_create(thread, const_cast<pthread_attr_t*>(attr), __tern_thread_func, (void*)args);
+  ret = Runtime::__pthread_create(thread, const_cast<pthread_attr_t*>(attr), __tern_thread_func, (void*)args);
   if(ret < 0)
     delete[] (void**)args; // clean up memory for @args
   return ret;
