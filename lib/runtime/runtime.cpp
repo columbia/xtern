@@ -61,6 +61,7 @@ void Runtime::initDbug() {
   // to init dbug (code involved in dbug's interpose-impl.cc). No matter
   // whether we will involve any inter-process operation at runtime,
   // this init work is a "must".
+  resolveDbugFunc("pthread_create");
   resolveDbugFunc("write");
 }
 #endif
