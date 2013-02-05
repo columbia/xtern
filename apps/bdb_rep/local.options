@@ -101,4 +101,4 @@ log_sync = 0
 # 1.  Value: 1      	semaphore (default).
 # 2.  Value: 2              busy wait flag + cond wait.
 # 3.  Value: 3              busy wait only.
-enforce_turn_type = 3
+enforce_turn_type = 2

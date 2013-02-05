@@ -53,7 +53,7 @@ void *Runtime::resolveDbugFunc(const char *func_name) {
   fprintf(stderr, "Pid %d: self %u: resolveDbugFunc %s start\n", getpid(), (unsigned)pthread_self(), func_name);
   if (!handle) {
     std::string libDbugPath = getenv("SMT_MC_ROOT");
-    libDbugPath += "/mc-tools/dbug/install/lib/libdbug.so";
+    libDbugPath += "/mc-tools/dbug/install-xtern+dbug/lib/libdbug.so";
     if(!(handle=dlopen(libDbugPath.c_str(), RTLD_LAZY))) {
       perror("resolveDbugFunc dlopen");
       abort();

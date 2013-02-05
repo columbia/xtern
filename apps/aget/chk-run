@@ -31,7 +31,7 @@ echo 1 2 >> strategy
 
 # Run the dBug test
 killall -9 aget mg-server dbug-arbiter-server
-$SMT_MC_ROOT/mc-tools/dbug/install/bin/dbug-arbiter-server -s strategy -b 3 -l /tmp/dbug/dbug-server &
+$SMT_MC_ROOT/mc-tools/dbug/install-xtern+dbug/bin/dbug-arbiter-server -s strategy -b 3 -l /tmp/dbug/dbug-server &
 sleep 3
 
 #PRELOAD_LIB="$SMT_MC_ROOT/mc-tools/dbug/install/lib/libdbug.so"

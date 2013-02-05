@@ -201,9 +201,9 @@ void RRScheduler::wait_t::wait() {
     if (!wakenUp) {
       pthread_mutex_lock(&mutex);
       while (!wakenUp) {/** This can save the context switch overhead. **/
-        dprintf("RRScheduler::wait_t::wait before cond wait, tid %d\n", self());
+        fprintf(stderr, "RRScheduler::wait_t::wait before cond wait, tid %d\n", self());
         pthread_cond_wait(&cond, &mutex);
-        dprintf("RRScheduler::wait_t::wait after cond wait, tid %d\n", self());
+        fprintf(stderr, "RRScheduler::wait_t::wait after cond wait, tid %d\n", self());
       }
       wakenUp = false;
       pthread_mutex_unlock(&mutex);
@@ -227,7 +227,9 @@ void RRScheduler::wait_t::post() {
     pthread_cond_signal(&cond);
     pthread_mutex_unlock(&mutex);
   } else {  // Busy relay.
+    //pthread_mutex_lock(&mutex);
     wakenUp = true;
+    //pthread_mutex_unlock(&mutex);
   }
 }
 
