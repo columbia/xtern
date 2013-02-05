@@ -26,6 +26,7 @@ extern "C" FUNC_RET_TYPE FUNC_NAME(ARGS_WITH_NAME){
   }
 
 #ifdef __USE_TERN_RUNTIME
+  //fprintf(stdout, "FUNC_NAME is hooked, %d %d.\n", Space::isApp(), options::DMT);
   if (Space::isApp() && options::DMT) {
 
 #ifdef PRINT_DEBUG

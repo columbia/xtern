@@ -35,24 +35,26 @@ int __thread TidMap::self_tid  = -1;
 #include <dlfcn.h>
 using namespace std;
 void *Runtime::resolveDbugFunc(const char *func_name) {
-  void * handle;
+  static void * handle;
   void * ret;
-  //fprintf(stderr, "resolveDbugFunc %s\n", func_name);
-  std::string libDbugPath = getenv("SMT_MC_ROOT");
-  libDbugPath += "/mc-tools/dbug/install/lib/libdbug.so";
-  if(!(handle=dlopen(libDbugPath.c_str(), RTLD_LAZY))) {
-    perror("resolveDbugFunc dlopen");
-    abort();
+  //fprintf(stderr, "resolveDbugFunc %s start\n", func_name);
+  if (!handle) {
+    std::string libDbugPath = getenv("SMT_MC_ROOT");
+    libDbugPath += "/mc-tools/dbug/install/lib/libdbug.so";
+    if(!(handle=dlopen(libDbugPath.c_str(), RTLD_LAZY))) {
+      perror("resolveDbugFunc dlopen");
+      abort();
+    }
   }
-
+  //fprintf(stderr, "resolveDbugFunc %s dlsym\n", func_name);
   ret = dlsym(handle, func_name);
 
   if(dlerror()) {
     perror("resolveDbugFunc dlsym");
     abort();
   }
-
-  dlclose(handle);
+  //fprintf(stderr, "resolveDbugFunc %s end\n", func_name);
+  //dlclose(handle);
   return ret;
 }
 
@@ -61,8 +63,8 @@ void Runtime::initDbug() {
   // to init dbug (code involved in dbug's interpose-impl.cc). No matter
   // whether we will involve any inter-process operation at runtime,
   // this init work is a "must".
+  //resolveDbugFunc("write");
   resolveDbugFunc("pthread_create");
-  resolveDbugFunc("write");
 }
 #endif
 
@@ -100,6 +102,7 @@ int Runtime::pthreadMutexDestroy(unsigned insid, int &error, pthread_mutex_t *mu
 int Runtime::__pthread_create(pthread_t *th, const pthread_attr_t *a, void *(*func)(void*), void *arg) {
   //errno = error;
   int ret;
+//#if 0
 #ifdef XTERN_PLUS_DBUG
   typedef int (*orig_func_type)(pthread_t *,const pthread_attr_t *,void *(*)(void*),void *);
   static orig_func_type orig_func;
@@ -114,6 +117,7 @@ int Runtime::__pthread_create(pthread_t *th, const pthread_attr_t *a, void *(*fu
 }
 
 void Runtime::__pthread_exit(void *value_ptr) {
+//#if 0
 #ifdef XTERN_PLUS_DBUG
   typedef int (*orig_func_type)(void *);
   static orig_func_type orig_func;
