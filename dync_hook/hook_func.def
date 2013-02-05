@@ -150,6 +150,54 @@ SECTION
 ENDDEF
 
 STARTDEF
+struct hostent *
+gethostbyname
+/libc.so.6
+const char *
+SECTION
+const char *name
+SECTION
+name
+SECTION
+ENDDEF
+
+STARTDEF
+struct hostent *
+gethostbyaddr
+/libc.so.6
+const void *, socklen_t, int
+SECTION
+const void *addr, socklen_t len, int type
+SECTION
+addr, len, type
+SECTION
+ENDDEF
+
+STARTDEF
+char *
+inet_ntoa
+/libc.so.6
+struct in_addr
+SECTION
+struct in_addr in
+SECTION
+in
+SECTION
+ENDDEF
+
+STARTDEF
+char *
+strtok
+/libc.so.6
+char *, const char *
+SECTION
+char * str, const char * delimiters
+SECTION
+str, delimiters
+SECTION
+ENDDEF
+
+STARTDEF
 int
 accept
 /libc.so.6

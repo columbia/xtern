@@ -2134,19 +2134,39 @@ int RecorderRT<_S>::__settimeofday(unsigned ins, int &error, const struct timeva
   return ret;
 }
 
-/*
 template <typename _S>
 struct hostent *RecorderRT<_S>::__gethostbyname(unsigned ins, int &error, const char *name)
 {
-  return Runtime::__gethostbyname(ins, error, name);
+  BLOCK_TIMER_START;
+  struct hostent *ret = Runtime::__gethostbyname(ins, error, name);
+  BLOCK_TIMER_END(syncfunc::gethostbyname, (uint64_t)ret);
+  return ret;
 }
 
 template <typename _S>
 struct hostent *RecorderRT<_S>::__gethostbyaddr(unsigned ins, int &error, const void *addr, int len, int type)
 {
-  return Runtime::__gethostbyaddr(ins, error, addr, len, type);
+  BLOCK_TIMER_START;
+  struct hostent *ret = Runtime::__gethostbyaddr(ins, error, addr, len, type);
+  BLOCK_TIMER_END(syncfunc::gethostbyaddr, (uint64_t)ret);
+  return ret;
 }
-*/
+
+template <typename _S>
+char *RecorderRT<_S>::__inet_ntoa(unsigned ins, int &error, struct in_addr in) {
+  BLOCK_TIMER_START;
+  char * ret = Runtime::__inet_ntoa(ins, error, in);
+  BLOCK_TIMER_END(syncfunc::inet_ntoa, (uint64_t)ret);
+  return ret;
+}
+
+template <typename _S>
+char *RecorderRT<_S>::__strtok(unsigned ins, int &error, char * str, const char * delimiters) {
+  BLOCK_TIMER_START;
+  char * ret = Runtime::__strtok(ins, error, str, delimiters);
+  BLOCK_TIMER_END(syncfunc::strtok, (uint64_t)ret);
+  return ret;
+}
 
 //////////////////////////////////////////////////////////////////////////
 // Replay Runtime

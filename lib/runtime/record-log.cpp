@@ -104,6 +104,11 @@ void TxtLogger::logSync(unsigned insid, unsigned short sync,
   case syncfunc::select:
   case syncfunc::poll:
   case syncfunc::bind:
+  case syncfunc::listen:
+  case syncfunc::gethostbyname:
+  case syncfunc::gethostbyaddr:
+  case syncfunc::inet_ntoa:
+  case syncfunc::strtok:
   case syncfunc::epoll_wait:
   case syncfunc::sigwait:
   case syncfunc::fgets:
@@ -486,6 +491,11 @@ void TestLogger::logSync(unsigned insid, unsigned short sync,
   case syncfunc::select:
   case syncfunc::poll:
   case syncfunc::bind:
+  case syncfunc::listen:
+  case syncfunc::gethostbyname:
+  case syncfunc::gethostbyaddr:
+  case syncfunc::inet_ntoa:
+  case syncfunc::strtok:
   case syncfunc::epoll_wait:
   case syncfunc::sigwait:
   case syncfunc::fgets:

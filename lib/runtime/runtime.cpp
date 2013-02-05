@@ -31,13 +31,26 @@ Runtime *Runtime::the = NULL;
 
 int __thread TidMap::self_tid  = -1;
 
+extern pthread_t idle_th;
+
+
+static bool sock_nonblock (int fd)
+{
+#ifndef __WIN32__
+  return fcntl (fd, F_SETFL, O_NONBLOCK) >= 0;
+#else
+  u_long a = 1;
+  return ioctlsocket (fd, FIONBIO, &a) >= 0;
+#endif
+}
+
 #ifdef XTERN_PLUS_DBUG
 #include <dlfcn.h>
 using namespace std;
 void *Runtime::resolveDbugFunc(const char *func_name) {
   static void * handle;
   void * ret;
-  //fprintf(stderr, "resolveDbugFunc %s start\n", func_name);
+  fprintf(stderr, "Pid %d: self %u: resolveDbugFunc %s start\n", getpid(), (unsigned)pthread_self(), func_name);
   if (!handle) {
     std::string libDbugPath = getenv("SMT_MC_ROOT");
     libDbugPath += "/mc-tools/dbug/install/lib/libdbug.so";
@@ -53,7 +66,7 @@ void *Runtime::resolveDbugFunc(const char *func_name) {
     perror("resolveDbugFunc dlsym");
     abort();
   }
-  //fprintf(stderr, "resolveDbugFunc %s end\n", func_name);
+  fprintf(stderr, "Pid %d: self %u: resolveDbugFunc %s end\n", getpid(), (unsigned)pthread_self(), func_name);
   //dlclose(handle);
   return ret;
 }
@@ -104,11 +117,16 @@ int Runtime::__pthread_create(pthread_t *th, const pthread_attr_t *a, void *(*fu
   int ret;
 //#if 0
 #ifdef XTERN_PLUS_DBUG
-  typedef int (*orig_func_type)(pthread_t *,const pthread_attr_t *,void *(*)(void*),void *);
-  static orig_func_type orig_func;
-  if (!orig_func)
-    orig_func = (orig_func_type)resolveDbugFunc("pthread_create");
-  ret = orig_func(th, a, func, arg);
+  if (th != &idle_th) { // Idle thread is xtern an internal thread, we must not register it in dbug.
+    typedef int (*orig_func_type)(pthread_t *,const pthread_attr_t *,void *(*)(void*),void *);
+    static orig_func_type orig_func;
+    if (!orig_func)
+      orig_func = (orig_func_type)resolveDbugFunc("pthread_create");
+    ret = orig_func(th, a, func, arg);
+  } else {
+    fprintf(stderr, "Created idle thread in Runtime.\n");
+    ret = pthread_create(th, a, func, arg);
+  }
 #else
   ret = pthread_create(th, a, func, arg);
 #endif
@@ -163,16 +181,6 @@ int Runtime::__listen(unsigned ins, int &error, int sockfd, int backlog)
   return ret;
 }
 
-static bool sock_nonblock (int fd)
-{
-#ifndef __WIN32__
-  return fcntl (fd, F_SETFL, O_NONBLOCK) >= 0;
-#else
-  u_long a = 1;
-  return ioctlsocket (fd, FIONBIO, &a) >= 0;
-#endif
-}
-
 int Runtime::__accept(unsigned ins, int &error, int sockfd, struct sockaddr *cliaddr, socklen_t *addrlen)
 {
   errno = error;
@@ -218,7 +226,9 @@ int Runtime::__connect(unsigned ins, int &error, int sockfd, const struct sockad
   static orig_func_type orig_func;
   if (!orig_func)
     orig_func = (orig_func_type)resolveDbugFunc("connect");
+  fprintf(stderr, "Self %u: Runtime::__connect before\n", (unsigned)pthread_self());
   ret = orig_func(sockfd, serv_addr, addrlen);
+  fprintf(stderr, "Self %u: Runtime::__connect returns %d\n", (unsigned)pthread_self(), ret);
 #else
   ret = connect(sockfd, serv_addr, addrlen);
   if (options::non_block_recv)
@@ -228,11 +238,19 @@ int Runtime::__connect(unsigned ins, int &error, int sockfd, const struct sockad
   return ret;
 }
 
-/*
 struct hostent *Runtime::__gethostbyname(unsigned ins, int &error, const char *name)
 {
   errno = error;
-  int ret = gethostbyname(name);
+  struct hostent *ret;
+#ifdef XTERN_PLUS_DBUG
+  typedef struct hostent * (*orig_func_type)(const char *);
+  static orig_func_type orig_func;
+  if (!orig_func)
+    orig_func = (orig_func_type)resolveDbugFunc("gethostbyname");
+  ret = orig_func(name);
+#else
+  ret = gethostbyname(name);
+#endif
   error = errno;
   return ret;
 }
@@ -240,11 +258,53 @@ struct hostent *Runtime::__gethostbyname(unsigned ins, int &error, const char *n
 struct hostent *Runtime::__gethostbyaddr(unsigned ins, int &error, const void *addr, int len, int type)
 {
   errno = error;
-  int ret = gethostbyaddr(addr, len, type);
+  struct hostent *ret;
+#ifdef XTERN_PLUS_DBUG
+  typedef struct hostent * (*orig_func_type)(const void *, int, int);
+  static orig_func_type orig_func;
+  if (!orig_func)
+    orig_func = (orig_func_type)resolveDbugFunc("gethostbyaddr");
+  ret = orig_func(addr, len, type);
+#else
+  ret = gethostbyaddr(addr, len, type);
+#endif
   error = errno;
   return ret;
 }
-*/
+
+char *Runtime::__inet_ntoa(unsigned ins, int &error, struct in_addr in)
+{
+  errno = error;
+  char *ret;
+#ifdef XTERN_PLUS_DBUG
+  typedef  char * (*orig_func_type)(struct in_addr);
+  static orig_func_type orig_func;
+  if (!orig_func)
+    orig_func = (orig_func_type)resolveDbugFunc("inet_ntoa");
+  ret = orig_func(in);
+#else
+  ret = inet_ntoa(in);
+#endif
+  error = errno;
+  return ret;
+}
+
+char *Runtime::__strtok(unsigned ins, int &error, char * str, const char * delimiters)
+{
+  errno = error;
+  char *ret;
+#ifdef XTERN_PLUS_DBUG
+  typedef  char * (*orig_func_type)(char *, const char *);
+  static orig_func_type orig_func;
+  if (!orig_func)
+    orig_func = (orig_func_type)resolveDbugFunc("strtok");
+  ret = orig_func(str, delimiters);
+#else
+  ret = strtok(str, delimiters);
+#endif
+  error = errno;
+  return ret;
+}
 
 ssize_t Runtime::__send(unsigned ins, int &error, int sockfd, const void *buf, size_t len, int flags)
 {
@@ -255,7 +315,9 @@ ssize_t Runtime::__send(unsigned ins, int &error, int sockfd, const void *buf, s
   static orig_func_type orig_func;
   if (!orig_func)
     orig_func = (orig_func_type)resolveDbugFunc("send");
+  fprintf(stderr, "Runtime::__send begin\n");
   ret = orig_func(sockfd, buf, len, flags);
+  fprintf(stderr, "Runtime::__send end\n");
 #else
   ret = send(sockfd, buf, len, flags);
 #endif

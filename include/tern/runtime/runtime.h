@@ -6,6 +6,8 @@
 #include <semaphore.h>
 #include <sys/socket.h>
 #include <sys/epoll.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
 
 namespace tern {
 
@@ -135,8 +137,10 @@ struct Runtime {
   virtual int __accept(unsigned insid, int &error, int sockfd, struct sockaddr *cliaddr, socklen_t *addrlen);
   virtual int __accept4(unsigned insid, int &error, int sockfd, struct sockaddr *cliaddr, socklen_t *addrlen, int flags);
   virtual int __connect(unsigned insid, int &error, int sockfd, const struct sockaddr *serv_addr, socklen_t addrlen);
-  //virtual struct hostent *__gethostbyname(unsigned insid, int &error, const char *name);
-  //virtual struct hostent *__gethostbyaddr(unsigned insid, int &error, const void *addr, int len, int type);
+  virtual struct hostent *__gethostbyname(unsigned insid, int &error, const char *name);
+  virtual struct hostent *__gethostbyaddr(unsigned insid, int &error, const void *addr, int len, int type);
+  virtual char *__inet_ntoa(unsigned ins, int &error, struct in_addr in);
+  virtual char *__strtok(unsigned ins, int &error, char * str, const char * delimiters);
   virtual ssize_t __send(unsigned insid, int &error, int sockfd, const void *buf, size_t len, int flags);
   virtual ssize_t __sendto(unsigned insid, int &error, int sockfd, const void *buf, size_t len, int flags, const struct sockaddr *dest_addr, socklen_t addrlen);
   virtual ssize_t __sendmsg(unsigned insid, int &error, int sockfd, const struct msghdr *msg, int flags);

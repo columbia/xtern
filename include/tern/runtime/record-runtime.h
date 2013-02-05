@@ -92,8 +92,10 @@ struct RecorderRT: public Runtime, public _Scheduler {
   int __accept(unsigned insid, int &error, int sockfd, struct sockaddr *cliaddr, socklen_t *addrlen);
   int __accept4(unsigned insid, int &error, int sockfd, struct sockaddr *cliaddr, socklen_t *addrlen, int flags);
   int __connect(unsigned insid, int &error, int sockfd, const struct sockaddr *serv_addr, socklen_t addrlen);
-  //struct hostent *__gethostbyname(unsigned insid, int &error, const char *name);
-  //struct hostent *__gethostbyaddr(unsigned insid, int &error, const void *addr, int len, int type);
+  struct hostent *__gethostbyname(unsigned insid, int &error, const char *name);
+  struct hostent *__gethostbyaddr(unsigned insid, int &error, const void *addr, int len, int type);
+  char *__inet_ntoa(unsigned ins, int &error, struct in_addr in);
+  char *__strtok(unsigned ins, int &error, char * str, const char * delimiters);
   ssize_t __send(unsigned insid, int &error, int sockfd, const void *buf, size_t len, int flags);
   ssize_t __sendto(unsigned insid, int &error, int sockfd, const void *buf, size_t len, int flags, const struct sockaddr *dest_addr, socklen_t addrlen);
   ssize_t __sendmsg(unsigned insid, int &error, int sockfd, const struct msghdr *msg, int flags);

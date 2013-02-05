@@ -433,11 +433,10 @@ int tern_connect(unsigned ins, int sockfd, const struct sockaddr *serv_addr, soc
   return ret;
 }
 
-/*
 struct hostent *tern_gethostbyname(unsigned ins, const char *name)
 {
   int error = errno;
-  int ret;
+  struct hostent *ret;
   Space::enterSys();
   ret = Runtime::the->__gethostbyname(ins, error, name);
   Space::exitSys();
@@ -448,14 +447,34 @@ struct hostent *tern_gethostbyname(unsigned ins, const char *name)
 struct hostent *tern_gethostbyaddr(unsigned ins, const void *addr, int len, int type)
 {
   int error = errno;
-  int ret;
+  struct hostent *ret;
   Space::enterSys();
   ret = Runtime::the->__gethostbyaddr(ins, error, addr, len, type);
   Space::exitSys();
   errno = error;
   return ret;
 }
-*/
+
+char *tern_inet_ntoa(unsigned ins, struct in_addr in) {
+  int error = errno;
+  char *ret;
+  Space::enterSys();
+  ret = Runtime::the->__inet_ntoa(ins, error, in);
+  Space::exitSys();
+  errno = error;
+  return ret;
+}
+
+char *tern_strtok(unsigned ins, char * str, const char * delimiters) {
+  int error = errno;
+  char *ret;
+  Space::enterSys();
+  ret = Runtime::the->__strtok(ins, error, str, delimiters);
+  Space::exitSys();
+  errno = error;
+  return ret;
+}
+
 ssize_t tern_send(unsigned ins, int sockfd, const void *buf, size_t len, int flags)
 {
   int error = errno;
