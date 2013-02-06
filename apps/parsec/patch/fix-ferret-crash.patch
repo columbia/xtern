@@ -1,0 +1,11 @@
+--- parsec-2.0-built/pkgs/apps/ferret/src/benchmark/ferret-parallel.c	2013-02-05 21:48:55.134117084 -0500
++++ parsec-2.0/pkgs/apps/ferret/src/benchmark/ferret-parallel.c	2013-02-06 16:15:56.355740509 -0500
+@@ -578,7 +578,7 @@
+ 	free(t_out_desc);
+ 
+ 	stimer_tuck(&tmr, "QUERY TIME");
+-
++    exit(0); // Add this to fix a ferret crash (seg fault) at the end of execution.
+ 	ret = cass_env_close(env, 0);
+ 	if (ret != 0) { printf("ERROR: %s\n", cass_strerror(ret)); return 0; }
+ 
