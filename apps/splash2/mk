@@ -54,7 +54,7 @@ sed -i "268 s/\"time\"/\"time -p\"/g" $XTERN_ROOT/apps/splash2/parsec-3.0/bin/pa
 
 echo "Build Parsec"
 # patch building configs
-sed -i  's/${PORTABILITY_FLAGS}/ ${PORTABILITY_FLAGS} -I${XTERN_ROOT}\/include -L${XTERN_ROOT}\/dync_hook -Wl,--rpath,${XTERN_ROOT}\/dync_hook -lxtern-annot/g' parsec-3.0/config/gcc.bldconf
+sed -i  's/${PORTABILITY_FLAGS}/ ${PORTABILITY_FLAGS} -I${XTERN_ROOT}\/include /g' parsec-3.0/config/gcc.bldconf
 sed -i '78 s|\"$| -L${XTERN_ROOT}/dync_hook -Wl,--rpath,${XTERN_ROOT}/dync_hook\"''|' parsec-3.0/config/gcc.bldconf
 sed -i '79 s|\"$|-lxtern-annot\"''|' parsec-3.0/config/gcc.bldconf
 sed -i '74 s/\"$/ -march=native\"/g' parsec-3.0/config/gcc.bldconf
