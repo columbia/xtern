@@ -1,0 +1,81 @@
+#!/bin/bash
+
+set -e
+
+ROOT=`pwd`
+
+if [ ! -d $XTERN_ROOT ]; then
+	echo "XTERN_ROOT is not defined"
+	exit 1
+fi
+
+set +e
+package=( axel libtiff4-dev )
+for i in "${package[@]}"
+do
+    check=$(dpkg-query -W -f='${Status} ${Version}\n' $i 2>&1)
+    if [[ "$check" != "install ok"* ]]; then
+        echo "please run 'sudo apt-get install ${package[*]}'"
+        exit 1
+    fi
+done
+set -e
+
+AXEL=$(which axel)
+
+pushd $XTERN_ROOT/apps/splash2
+
+echo "Checking splash2 sim file..."
+if [ ! -f parsec-3.0-input-sim.tar.gz ]; then
+    $AXEL http://parsec.cs.princeton.edu/download/3.0/parsec-3.0-input-sim.tar.gz
+fi
+if [ ! -f parsec-3.0/config/simdev.runconf ]; then
+    tar zxvf parsec-3.0-input-sim.tar.gz
+fi
+
+#echo "Checking parsec native file..."
+#if [ ! -f parsec-3.0-input-sim.tar.gz ]; then
+#    $AXEL http://parsec.cs.princeton.edu/download/3.0/parsec-3.0-input-sim.tar.gz
+#fi
+#if [ ! -f parsec-3.0/config/native.runconf ]; then
+#    tar zxvf parsec-3.0-native.tar.gz
+#fi
+
+echo "Checking splash2 core file..."
+if [ ! -f parsec-3.0-core.tar.gz ]; then
+    $AXEL http://parsec.cs.princeton.edu/download/3.0/parsec-3.0-core.tar.gz
+fi
+tar zxf parsec-3.0-core.tar.gz > /dev/null 2>&1
+
+# log file might miss if the execution time is less than 1 second
+sed -i "51 s/%F_%T\"/%F_%T_%N\"/" $XTERN_ROOT/apps/splash2/parsec-3.0/config/linux.sysconf
+# posix time format
+sed -i "268 s/\"time\"/\"time -p\"/g" $XTERN_ROOT/apps/splash2/parsec-3.0/bin/parsecmgmt
+
+echo "Build Parsec"
+# patch building configs
+sed -i  's/${PORTABILITY_FLAGS}/ ${PORTABILITY_FLAGS} -I${XTERN_ROOT}\/include -L${XTERN_ROOT}\/dync_hook -Wl,--rpath,${XTERN_ROOT}\/dync_hook -lxtern-annot/g' parsec-3.0/config/gcc.bldconf
+sed -i '78 s|\"$| -L${XTERN_ROOT}/dync_hook -Wl,--rpath,${XTERN_ROOT}/dync_hook\"''|' parsec-3.0/config/gcc.bldconf
+sed -i '79 s|\"$|-lxtern-annot\"''|' parsec-3.0/config/gcc.bldconf
+sed -i '74 s/\"$/ -march=native\"/g' parsec-3.0/config/gcc.bldconf
+sed -i '75 s/\"$/ -march=native\"/g' parsec-3.0/config/gcc.bldconf
+
+./parsec-3.0/bin/parsecmgmt -a build -p splash2x
+./parsec-3.0/bin/parsecmgmt -a status -p splash2x
+
+# copy files
+find . -maxdepth 1 -type l -exec rm -rf {} \;
+workloads=( barnes fmm ocean_cp ocean_ncp radiosity raytrace volrend water_nsquared water_spatial )
+for i in "${workloads[@]}"
+do
+    ln -s parsec-3.0/ext/splash2x/apps/$i/inst/amd64-linux.gcc/bin/$i
+done
+workloads=( cholesky fft lu_cb lu_ncb radix )
+for i in "${workloads[@]}"
+do
+    ln -s parsec-3.0/ext/splash2x/kernels/$i/inst/amd64-linux.gcc/bin/$i
+done
+
+popd
+
+echo "DONE!"
