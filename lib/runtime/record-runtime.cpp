@@ -335,7 +335,7 @@ void RecorderRT<RecordSerializer>::idle_sleep(void) {
   timespec app_time = update_time(); \
   _S::getTurn(); \
   timespec sched_time = update_time();
-  //fprintf(stderr, "\n\nSCHED_TIMER_START pid %d, tid %d, function %s\n", getpid(), _S::self(), __FUNCTION__);
+  //fprintf(stderr, "\n\nSCHED_TIMER_START pid %d, self %u, tid %d, function %s\n", getpid(), (unsigned)pthread_self(), _S::self(), __FUNCTION__);
 
 #define SCHED_TIMER_END_COMMON(syncop, ...) \
   int backup_errno = errno; \
@@ -1250,6 +1250,10 @@ void RecorderRT<_S>::lineupStart(long opaque_type) {
   if (b.nactive == b.count) {
     if (b.isArriving()) {
       // full, do not reset "nactive", since we are ref-counting barrier..
+      b.nSuccess++;
+      /*if (b.nSuccess%1000 == 0)
+        fprintf(stderr, "lineupStart opaque_type %p, tid %d, full and success (%ld:%ld)!\n",
+          (void *)opaque_type, _S::self(), b.nSuccess, b.nTimeout);*/
       b.setLeaving();
       _S::signal(&b, true); // Signal all threads blocking on this barrier.
     } else {
@@ -1262,7 +1266,9 @@ void RecorderRT<_S>::lineupStart(long opaque_type) {
      
       // Handle timeout here, since the wait() would call getTurn and still grab the turn.
       if (b.nactive < b.count && b.isArriving()) {
-        //fprintf(stderr, "lineupStart opaque_type %p, tid %d, timeout!\n", (void *)opaque_type, _S::self());
+        b.nTimeout++;
+        /*fprintf(stderr, "lineupStart opaque_type %p, tid %d, timeout  (%ld:%ld)!\n",
+          (void *)opaque_type, _S::self(), b.nSuccess, b.nTimeout);*/
         b.setLeaving();
         _S::signal(&b, true); // Signal all threads blocking on this barrier.
       }

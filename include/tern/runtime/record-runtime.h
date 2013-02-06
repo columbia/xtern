@@ -23,6 +23,11 @@ struct ref_cnt_barrier_t {
   enum PHASE {ARRIVING, LEAVING}; // ARRIVING: we have to wait up to "count" threads arrive or timeout.
                               // LEAVING: timeout has happened or all threads have arrived.
   PHASE phase;
+  long nSuccess;
+  long nTimeout;
+  ref_cnt_barrier_t() {
+    nSuccess = nTimeout = 0;
+  }
   void setArriving() {phase = ARRIVING;}
   void setLeaving() {phase = LEAVING;}
   bool isArriving() {return phase == ARRIVING;}
