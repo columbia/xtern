@@ -30,6 +30,8 @@ patch -p1 < ../add-compare-xtern-annot.patch
 patch -p1 < ../add-draw-xtern-annot.patch
 patch -p1 < ../add-colorspace-xtern-annot-patch
 patch -p1 < ../add-fx-xtern-annot.patch
+patch -p1 < ../add-morph-xtern-annot.patch
+patch -p1 < ../add-shear-xtern-annot.patch
 
 # compile ImageMagick
 mkdir obj
