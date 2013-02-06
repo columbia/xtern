@@ -97,7 +97,7 @@ struct RRScheduler: public Scheduler {
     }    
     void wait();
     void post();
-  };
+  }__attribute__((aligned(64)));  // Typical cache alignment.
 
   virtual void getTurn();
   virtual void putTurn(bool at_thread_end = false);
