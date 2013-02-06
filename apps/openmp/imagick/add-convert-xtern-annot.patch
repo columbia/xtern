@@ -37,3 +37,22 @@ diff -ruN ImageMagick-6.8.0-4/magick/magick.c ImageMagick-6.8.0-4-modified/magic
  
    /*
      Initialize the Magick environment.
+diff -Naur ImageMagick-6.8.0-4/magick/effect.c ImageMagick-6.8.0-4_modified/magick/effect.c
+--- ImageMagick-6.8.0-4/magick/effect.c	2013-02-05 11:20:23.669579349 -0500
++++ ImageMagick-6.8.0-4_modified/magick/effect.c	2013-02-05 13:18:29.417334014 -0500
+@@ -946,6 +946,7 @@
+       }
+     indexes=GetCacheViewVirtualIndexQueue(image_view);
+     blur_indexes=GetCacheViewAuthenticIndexQueue(blur_view);
++    tern_lineup(0);
+     for (x=0; x < (ssize_t) blur_image->columns; x++)
+     {
+       MagickPixelPacket
+@@ -1125,6 +1126,7 @@
+       }
+     indexes=GetCacheViewVirtualIndexQueue(image_view);
+     blur_indexes=GetCacheViewAuthenticIndexQueue(blur_view);
++    tern_lineup(0);
+     for (y=0; y < (ssize_t) blur_image->rows; y++)
+     {
+       MagickPixelPacket
