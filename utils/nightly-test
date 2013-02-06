@@ -70,12 +70,13 @@ git clone $xtern_git
 cd $XTERN_ROOT
 mkdir obj
 cd obj
-../configure >> $log
+../configure --prefix=$XTERN_ROOT/install >> $log
 make $llvm_debug  >> $log
 make -C $XTERN_ROOT/dync_hook $llvm_debug BuildMode=$build_mode >> $log
 
 # run tests
 cd $XTERN_ROOT/obj
+export LD_LIBRARY_PATH="$XTERN_ROOT/dync_hook" # for testing annotations
 timeout $timeout make $llvm_debug check >> $log 2>&1
 status=$?
 if test $status != 0 ; then
