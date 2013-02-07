@@ -79,3 +79,4 @@ def evaluation(repeats = 100):
                 break
 
     eval.write_stats(xtern_cost, nondet_cost, int(repeats))
+    killall('slapd')
