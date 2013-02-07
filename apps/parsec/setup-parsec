@@ -82,7 +82,7 @@ sed -i "51 s/%F_%T\"/%F_%T_%N\"/" $XTERN_ROOT/apps/parsec/parsec-2.0/config/linu
 sed -i "215 s/\"time\"/\"time -p\"/g" $XTERN_ROOT/apps/parsec/parsec-2.0/bin/parsecmgmt
 
 echo "Build Parsec"
-sed -i  's/-O3 -funroll-loops/-O3 -g -funroll-loops -I${XTERN_ROOT}\/include -L${XTERN_ROOT}\/dync_hook -Wl,--rpath,${XTERN_ROOT}\/dync_hook -lxtern-annot/g' parsec-2.0/config/gcc.bldconf
+sed -i  's/-O3 -funroll-loops/-O3 -g -funroll-loops -static-libgcc -D_GLIBCXX_PARALLEL -L$XTERN_ROOT\/apps\/openmp\/ -fopenmp -lgomp -I${XTERN_ROOT}\/include -L${XTERN_ROOT}\/dync_hook -Wl,--rpath,${XTERN_ROOT}\/dync_hook -lxtern-annot/g' parsec-2.0/config/gcc.bldconf
 sed -i '42 s|'/usr/local/gcc-4.2.1'|'$XTERN_ROOT/apps/parsec/gcc-4.2'|' parsec-2.0/config/gcc.bldconf
 sed -i '44 s|'/usr/local'|'/usr'|' parsec-2.0/config/gcc.bldconf
 sed -i '74 s|\"$| -Wl,--rpath,${CC_HOME}/lib64 -Wl,--rpath,${CC_HOME}/lib -L${XTERN_ROOT}/dync_hook -Wl,--rpath,${XTERN_ROOT}/dync_hook\"''|' parsec-2.0/config/gcc.bldconf

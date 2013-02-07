@@ -1,4 +1,4 @@
-1. sudo apt-get install libmp3lame-dev
+1. sudo apt-get install libmp3lame-dev libx264-dev
 
 2. Input:
 Download an mp4 (from this link: https://www.usenix.org/conference/osdi12/keynote-address):
