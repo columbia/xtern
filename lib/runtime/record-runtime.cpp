@@ -335,7 +335,7 @@ void RecorderRT<RecordSerializer>::idle_sleep(void) {
   timespec app_time = update_time(); \
   _S::getTurn(); \
   timespec sched_time = update_time();
-  //fprintf(stderr, "\n\nSCHED_TIMER_START pid %d, self %u, tid %d, function %s\n", getpid(), (unsigned)pthread_self(), _S::self(), __FUNCTION__);
+  //fprintf(stderr, "\n\nSCHED_TIMER_START ins %p, pid %d, self %u, tid %d, function %s\n", (void *)ins, getpid(), (unsigned)pthread_self(), _S::self(), __FUNCTION__);
 
 #define SCHED_TIMER_END_COMMON(syncop, ...) \
   int backup_errno = errno; \
