@@ -1234,7 +1234,9 @@ void RecorderRT<_S>::lineupDestroy(long opaque_type) {
   refcnt_bars[opaque_type].count = 0;
   refcnt_bars[opaque_type].nactive = 0;
   refcnt_bars[opaque_type].timeout = 0;
-  refcnt_bars[opaque_type].setArriving();
+  refcnt_bars[opaque_type].nSuccess = 0;
+  refcnt_bars[opaque_type].nTimeout = 0;
+  refcnt_bars[opaque_type].setArriving();  
   refcnt_bars.erase(opaque_type);
   SCHED_TIMER_END(syncfunc::tern_lineup_destroy, (uint64_t)opaque_type);
 }
