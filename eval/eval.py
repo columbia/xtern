@@ -295,7 +295,7 @@ def execBench(cmd, repeats, out_dir,
               init_env_cmd=""):
     mkdir_p(out_dir)
     for i in range(int(repeats)):
-        sys.stderr.write("\tPROGRESS: %5d/%d\r" % (i+1, int(repeats))) # progress
+        sys.stderr.write("        PROGRESS: %5d/%d\r" % (i+1, int(repeats))) # progress
         with open('%s/output.%d' % (out_dir, i), 'w', 102400) as log_file:
             if init_env_cmd:
                 os.system(init_env_cmd)

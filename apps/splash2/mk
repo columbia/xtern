@@ -52,19 +52,26 @@ sed -i "51 s/%F_%T\"/%F_%T_%N\"/" $XTERN_ROOT/apps/splash2/parsec-3.0/config/lin
 # posix time format
 sed -i "268 s/\"time\"/\"time -p\"/g" $XTERN_ROOT/apps/splash2/parsec-3.0/bin/parsecmgmt
 
-echo "Build Parsec"
+echo "Build splash2x"
 # patch building configs
 sed -i  's/${PORTABILITY_FLAGS}/ ${PORTABILITY_FLAGS} -I${XTERN_ROOT}\/include /g' parsec-3.0/config/gcc.bldconf
 sed -i '78 s|\"$| -L${XTERN_ROOT}/dync_hook -Wl,--rpath,${XTERN_ROOT}/dync_hook\"''|' parsec-3.0/config/gcc.bldconf
 sed -i '79 s|\"$|-lxtern-annot\"''|' parsec-3.0/config/gcc.bldconf
 sed -i '74 s/\"$/ -march=native\"/g' parsec-3.0/config/gcc.bldconf
 sed -i '75 s/\"$/ -march=native\"/g' parsec-3.0/config/gcc.bldconf
+
 # use 'c.m4.null.POSIX_BARRIER' instead of 'parmacs.pthreads.c.m4'
 rm -rf $XTERN_ROOT/apps/splash2/parsec-3.0/pkgs/libs/parmacs/src/m4/parmacs.POSIX_BARRIER.c.m4
 ln -s c.m4.null.POSIX_BARRIER \
     $XTERN_ROOT/apps/splash2/parsec-3.0/pkgs/libs/parmacs/src/m4/parmacs.POSIX_BARRIER.c.m4
 sed -i '81 s/pthreads/POSIX_BARRIER/g' parsec-3.0/config/gcc.bldconf
 sed -i '367 s/)/, gm->nprocs)/g' parsec-3.0/ext/splash2x/apps/raytrace/src/main.C #patch raytrace
+
+# patch ad hoc sync
+patch -p0 < patch/cholesky.patch
+patch -p0 < patch/fmm.patch
+patch -p0 < patch/radiosity.patch
+patch -p0 < patch/volrend.patch
 
 ./parsec-3.0/bin/parsecmgmt -a build -p splash2x
 ./parsec-3.0/bin/parsecmgmt -a status -p splash2x

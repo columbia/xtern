@@ -1,0 +1,127 @@
+diff -Naur src_orig/box.C src/box.C
+--- parsec-3.0/ext/splash2x/apps/fmm/src_orig/box.C	2013-02-11 12:15:18.725148982 -0500
++++ parsec-3.0/ext/splash2x/apps/fmm/src/box.C	2013-02-11 14:38:37.764851145 -0500
+@@ -102,6 +102,7 @@
+    b->subtree_cost = 0;
+    b->next = NULL;
+    b->prev = NULL;
++   PAUSEINIT(b->pause)
+ }
+ 
+ 
+diff -Naur src_orig/box.H src/box.H
+--- parsec-3.0/ext/splash2x/apps/fmm/src_orig/box.H	2013-02-11 12:15:18.725148982 -0500
++++ parsec-3.0/ext/splash2x/apps/fmm/src/box.H	2013-02-11 14:25:09.408879136 -0500
+@@ -108,6 +108,7 @@
+   box *prev;
+   box *link1;
+   box *link2;
++  PAUSEDEC(pause)
+ };
+ 
+ 
+diff -Naur src_orig/cost_zones.C src/cost_zones.C
+--- parsec-3.0/ext/splash2x/apps/fmm/src_orig/cost_zones.C	2013-02-11 12:15:18.725148982 -0500
++++ parsec-3.0/ext/splash2x/apps/fmm/src/cost_zones.C	2013-02-11 14:27:42.104873847 -0500
+@@ -70,9 +70,12 @@
+ 
+    if (b->type == PARENT) {
+       while (b->interaction_synch != b->num_children) {
++         WAITPAUSE(b->pause)
++         CLEARPAUSE(b->pause) 
+       }
+    }
+    b->interaction_synch = 0;
++   SETPAUSE(b->pause)
+    ComputeCostOfBox(b);
+    b->subtree_cost += b->cost;
+    pb = b->parent;
+@@ -80,6 +83,7 @@
+       ALOCK(G_Memory->lock_array, pb->exp_lock_index);
+       pb->subtree_cost += b->subtree_cost;
+       pb->interaction_synch += 1;
++      SETPAUSE(pb->pause)
+       AULOCK(G_Memory->lock_array, pb->exp_lock_index);
+    }
+ }
+diff -Naur src_orig/interactions.C src/interactions.C
+--- parsec-3.0/ext/splash2x/apps/fmm/src_orig/interactions.C	2013-02-11 12:15:18.725148982 -0500
++++ parsec-3.0/ext/splash2x/apps/fmm/src/interactions.C	2013-02-11 14:33:52.284861028 -0500
+@@ -96,17 +96,20 @@
+       ComputeMPExp(b);
+       ALOCK(G_Memory->lock_array, b->exp_lock_index);
+       b->interaction_synch = 1;
++      SETPAUSE(b->pause)
+       AULOCK(G_Memory->lock_array, b->exp_lock_index);
+    }
+    else {
+       while (b->interaction_synch != b->num_children) {
+-	 /* wait */;
++	     WAITPAUSE(b->pause)
++         CLEARPAUSE(b->pause)
+       }
+    }
+    if (b->parent != NULL) {
+       ShiftMPExp(b, b->parent);
+       ALOCK(G_Memory->lock_array, b->parent->exp_lock_index);
+       b->parent->interaction_synch += 1;
++      SETPAUSE(b->parent->pause)
+       AULOCK(G_Memory->lock_array, b->parent->exp_lock_index);
+    }
+ }
+@@ -130,17 +133,20 @@
+ {
+    if (b->parent != NULL) {
+       while (b->parent->interaction_synch != 0) {
+-	 /* wait */;
++	     WAITPAUSE(b->parent->pause)
++         CLEARPAUSE(b->parent->pause)
+       }
+       ShiftLocalExp(b->parent, b);
+    }
+    if (b->type == CHILDLESS) {
+       EvaluateLocalExp(b);
+       b->interaction_synch = 0;
++      SETPAUSE(b->pause)
+    }
+    else {
+       ALOCK(G_Memory->lock_array, b->exp_lock_index);
+       b->interaction_synch = 0;
++      SETPAUSE(b->pause)
+       AULOCK(G_Memory->lock_array, b->exp_lock_index);
+    }
+ }
+@@ -365,12 +371,14 @@
+ 
+    if (source_box->type == CHILDLESS) {
+       while (source_box->interaction_synch != 1) {
+-	 /* wait */;
++	     WAITPAUSE(source_box->pause)
++         CLEARPAUSE(source_box->pause)
+       }
+    }
+    else {
+       while (source_box->interaction_synch != source_box->num_children) {
+-	 /* wait */;
++	     WAITPAUSE(source_box->pause)
++         CLEARPAUSE(source_box->pause)
+       }
+    }
+ 
+@@ -444,12 +452,14 @@
+ 
+    if (source_box->type == CHILDLESS) {
+       while (source_box->interaction_synch != 1) {
+-	 /* wait */;
++	     WAITPAUSE(source_box->pause)
++         CLEARPAUSE(source_box->pause)
+       }
+    }
+    else {
+       while (source_box->interaction_synch != source_box->num_children) {
+-	 /* wait */;
++         WAITPAUSE(source_box->pause)
++         CLEARPAUSE(source_box->pause)
+       }
+    }
+ 

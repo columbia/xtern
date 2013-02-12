@@ -24,6 +24,7 @@ done
 set -e
 
 AXEL=$(which axel)
+INST_SET=`uname -m`
 
 pushd $XTERN_ROOT/apps/parsec
 
@@ -104,18 +105,18 @@ rm -rf freqmine-openmp blackscholes-openmp bodytrack-openmp
 workloads=( blackscholes bodytrack facesim fluidanimate swaptions vips x264 ferret )
 for i in "${workloads[@]}"
 do
-    ln -s parsec-2.0/pkgs/apps/$i/inst/x86_64-linux.gcc/bin/$i
+    ln -s parsec-2.0/pkgs/apps/$i/inst/$INST_SET-linux.gcc/bin/$i
 done
 workloads=( freqmine blackscholes bodytrack )
 for i in "${workloads[@]}"
 do
-    ln -s parsec-2.0/pkgs/apps/$i/inst/x86_64-linux.gcc-openmp/bin/$i $i-openmp
+    ln -s parsec-2.0/pkgs/apps/$i/inst/$INST_SET-linux.gcc-openmp/bin/$i $i-openmp
 done
-ln -s parsec-2.0/pkgs/apps/raytrace/inst/x86_64-linux.gcc/bin/rtview
+ln -s parsec-2.0/pkgs/apps/raytrace/inst/$INST_SET-linux.gcc/bin/rtview
 workloads=( canneal dedup streamcluster )
 for i in "${workloads[@]}"
 do
-    ln -s parsec-2.0/pkgs/kernels/$i/inst/x86_64-linux.gcc/bin/$i
+    ln -s parsec-2.0/pkgs/kernels/$i/inst/$INST_SET-linux.gcc/bin/$i
 done
 
 popd
