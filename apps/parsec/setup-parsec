@@ -65,6 +65,7 @@ patch -p1 < $XTERN_ROOT/apps/parsec/patch/simd-gcc.patch
 patch -p1 < $XTERN_ROOT/apps/parsec/patch/bodytrack.diff
 patch -p1 < $XTERN_ROOT/apps/parsec/patch/vips.diff
 patch -p1 < $XTERN_ROOT/apps/parsec/patch/fluidanimate-serial.patch
+patch -p1 < $XTERN_ROOT/apps/parsec/patch/bodytrack_avoid_deadlock.patch # to avoid a bud in 'tern_pthread_cancel'
 popd
 # openssl compiling error
 if [ ! -f openssl-0.9.8x.tar.gz ]; then
@@ -85,6 +86,7 @@ sed -i "51 s/%F_%T\"/%F_%T_%N\"/" $XTERN_ROOT/apps/parsec/parsec-2.0/config/linu
 sed -i "215 s/\"time\"/\"time -p\"/g" $XTERN_ROOT/apps/parsec/parsec-2.0/bin/parsecmgmt
 
 echo "Build Parsec"
+# patch building configs
 sed -i  's/-O3 -funroll-loops/-O3 -g -funroll-loops -I${XTERN_ROOT}\/include /g' parsec-2.0/config/gcc.bldconf
 sed -i '42 s|'/usr/local/gcc-4.2.1'|'$XTERN_ROOT/apps/parsec/gcc-4.2'|' parsec-2.0/config/gcc.bldconf
 sed -i '44 s|'/usr/local'|'/usr'|' parsec-2.0/config/gcc.bldconf

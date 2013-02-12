@@ -54,7 +54,8 @@ elif [[ "$inst_set" == 'i686' ]]; then
     ln -s $XTERN_ROOT/apps/openmp/install/lib/libstdc++.so $INSTALL/lib/libstdc++.so
     ln -s $XTERN_ROOT/apps/openmp/install/lib/libstdc++.so.6 $INSTALL/lib/libstdc++.so.6
 else
-    echo "This machine has instruction set '$inst_set'... never tested.."
+    echo "This machine has instruction set '$inst_set'... which is never tested.."
+    exit 1
 fi
 
 popd
