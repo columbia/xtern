@@ -80,6 +80,29 @@
 
 using namespace std;
 
+/// Variables for the non-det prfimitive.
+__thread bool inNonDet; /** Per-thread variable to denote whether current thread is within a non_det region. **/
+tr1::unordered_set<void *> nonDetSyncs; /** Global set to store the sync vars that have ever been accessed within non_det regions of all threads. **/
+pthread_spinlock_t nonDetLock; /** a spinlock to protect the acccess to the global set "nonDetSyncs". **/
+
+/** An internal function to record a set of sync vars accessed in non-det regions. **/
+void add_non_det_var(void *var) {
+  /*pthread_spin_lock(&nonDetLock);
+  nonDetSyncs.insert(var);
+  pthread_spin_unlock(&nonDetLock);*/
+}
+ 
+/** An internal function to check a sync var has not been accessed in non-det regions. **/
+bool is_non_det_var(void *var) {
+  return false;
+  /*pthread_spin_lock(&nonDetLock);
+  bool ret = (nonDetSyncs.find(var) != nonDetSyncs.end());
+  pthread_spin_unlock(&nonDetLock);
+  if (ret)
+    fprintf(stderr, "WARN: NON-DET SYNC VAR IS ACCESSED IN DETERMINISTIC REGION.\n");  
+  return ret;*/
+}
+
 /// clockmanager
 tern::ClockManager clockManager(time(NULL) * (uint64_t)1000000000);
 
@@ -286,9 +309,12 @@ void RecorderRT<RecordSerializer>::idle_sleep(void) {
 }
 */
 
-#define BLOCK_TIMER_START \
+#define BLOCK_TIMER_START(sync_op, ...) \
   timespec app_time, sched_block_time, syscall_time; \
   int block_turn; \
+  if (options::enforce_non_det_annotations && inNonDet) { \
+    return Runtime::__##sync_op(__VA_ARGS__); \
+  } \
   if (options::schedule_network) { \
     app_time = update_time(); \
     block_turn = _S::block(); \
@@ -332,6 +358,8 @@ void RecorderRT<RecordSerializer>::idle_sleep(void) {
 
 #define SCHED_TIMER_START \
   unsigned nturn; \
+  if (options::enforce_non_det_annotations) \
+     assert(!inNonDet); \
   timespec app_time = update_time(); \
   _S::getTurn(); \
   timespec sched_time = update_time();
@@ -515,6 +543,10 @@ template <typename _S>
 int RecorderRT<_S>::pthreadMutexInit(unsigned ins, int &error, pthread_mutex_t *mutex, const  pthread_mutexattr_t *mutexattr)
 {
   int ret;
+  if (options::enforce_non_det_annotations && inNonDet) {
+    add_non_det_var((void *)mutex);
+    return pthread_mutex_init(mutex, mutexattr);
+  }
   SCHED_TIMER_START;
   errno = error;
   ret = pthread_mutex_init(mutex, mutexattr);
@@ -527,6 +559,10 @@ template <typename _S>
 int RecorderRT<_S>::pthreadMutexDestroy(unsigned ins, int &error, pthread_mutex_t *mutex)
 {
   int ret;
+  if (options::enforce_non_det_annotations && inNonDet) {
+    add_non_det_var((void *)mutex);
+    return pthread_mutex_destroy(mutex);
+  }
   SCHED_TIMER_START;
   errno = error;
   ret = pthread_mutex_destroy(mutex);
@@ -573,6 +609,11 @@ int RecorderRT<_S>::pthreadRWLockRdLockHelper(pthread_rwlock_t *rwlock, unsigned
 
 template <typename _S>
 int RecorderRT<_S>::pthreadMutexLock(unsigned ins, int &error, pthread_mutex_t *mu) {
+  if (options::enforce_non_det_annotations && inNonDet) {
+    add_non_det_var((void *)mu);
+    //fprintf(stderr, "Thread tid %d, self %u is calling non-det pthread_mutex_lock.\n", _S::self(), (unsigned)pthread_self());
+    return pthread_mutex_lock(mu);
+  }
   SCHED_TIMER_START;
   errno = error;
   pthreadMutexLockHelper(mu);
@@ -584,6 +625,10 @@ int RecorderRT<_S>::pthreadMutexLock(unsigned ins, int &error, pthread_mutex_t *
 template <typename _S>
 int RecorderRT<_S>::__pthread_rwlock_rdlock(unsigned ins, int &error, pthread_rwlock_t *rwlock)
 {
+  if (options::enforce_non_det_annotations && inNonDet) {
+    add_non_det_var((void *)rwlock);
+    return pthread_rwlock_rdlock(rwlock);
+  }
   SCHED_TIMER_START;
   errno = error;
   pthreadRWLockRdLockHelper(rwlock);
@@ -595,6 +640,10 @@ int RecorderRT<_S>::__pthread_rwlock_rdlock(unsigned ins, int &error, pthread_rw
 template <typename _S>
 int RecorderRT<_S>::__pthread_rwlock_wrlock(unsigned ins, int &error, pthread_rwlock_t *rwlock)
 {
+  if (options::enforce_non_det_annotations && inNonDet) {
+    add_non_det_var((void *)rwlock);
+    return pthread_rwlock_wrlock(rwlock);
+  }
   SCHED_TIMER_START;
   errno = error;
   pthreadRWLockWrLockHelper(rwlock);
@@ -606,6 +655,10 @@ int RecorderRT<_S>::__pthread_rwlock_wrlock(unsigned ins, int &error, pthread_rw
 template <typename _S>
 int RecorderRT<_S>::__pthread_rwlock_tryrdlock(unsigned ins, int &error, pthread_rwlock_t *rwlock)
 {
+  if (options::enforce_non_det_annotations && inNonDet) {
+    add_non_det_var((void *)rwlock);
+    return pthread_rwlock_tryrdlock(rwlock);
+  }
   SCHED_TIMER_START;
   errno = error;
   int ret = pthread_rwlock_trywrlock(rwlock); //  FIXME now using wrlock for all rdlock
@@ -617,6 +670,10 @@ int RecorderRT<_S>::__pthread_rwlock_tryrdlock(unsigned ins, int &error, pthread
 template <typename _S>
 int RecorderRT<_S>::__pthread_rwlock_trywrlock(unsigned ins, int &error, pthread_rwlock_t *rwlock)
 {
+  if (options::enforce_non_det_annotations && inNonDet) {
+    add_non_det_var((void *)rwlock);
+    return pthread_rwlock_trywrlock(rwlock);
+  }
   SCHED_TIMER_START;
   errno = error;
   int ret = pthread_rwlock_trywrlock(rwlock); 
@@ -629,6 +686,10 @@ template <typename _S>
 int RecorderRT<_S>::__pthread_rwlock_unlock(unsigned ins, int &error, pthread_rwlock_t *rwlock)
 {
   int ret;
+  if (options::enforce_non_det_annotations && inNonDet) {
+    add_non_det_var((void *)rwlock);
+    return pthread_rwlock_unlock(rwlock);
+  }
   SCHED_TIMER_START;
 
   errno = error;
@@ -643,6 +704,10 @@ int RecorderRT<_S>::__pthread_rwlock_unlock(unsigned ins, int &error, pthread_rw
 
 template <typename _S>
 int RecorderRT<_S>::__pthread_rwlock_destroy(unsigned ins, int &error, pthread_rwlock_t *rwlock) {
+  if (options::enforce_non_det_annotations && inNonDet) {
+    add_non_det_var((void *)rwlock);
+    return pthread_rwlock_destroy(rwlock);
+  }
   SCHED_TIMER_START;
   errno = error;
   int ret = pthread_rwlock_destroy(rwlock); 
@@ -653,6 +718,10 @@ int RecorderRT<_S>::__pthread_rwlock_destroy(unsigned ins, int &error, pthread_r
 
 template <typename _S>
 int RecorderRT<_S>::__pthread_rwlock_init(unsigned ins, int &error, pthread_rwlock_t *rwlock, const pthread_rwlockattr_t *attr) {
+  if (options::enforce_non_det_annotations && inNonDet) {
+    add_non_det_var((void *)rwlock);
+    return pthread_rwlock_init(rwlock, attr);
+  }
   SCHED_TIMER_START;
   errno = error;
   int ret = pthread_rwlock_init(rwlock, attr); 
@@ -667,6 +736,10 @@ int RecorderRT<_S>::__pthread_rwlock_init(unsigned ins, int &error, pthread_rwlo
 template <typename _S>
 int RecorderRT<_S>::pthreadMutexTryLock(unsigned ins, int &error, pthread_mutex_t *mu) {
   int ret;
+  if (options::enforce_non_det_annotations && inNonDet) {
+    add_non_det_var((void *)mu);
+    return pthread_mutex_trylock(mu);
+  }
   SCHED_TIMER_START;
   errno = error;
   ret = pthread_mutex_trylock(mu);
@@ -680,6 +753,10 @@ int RecorderRT<_S>::pthreadMutexTryLock(unsigned ins, int &error, pthread_mutex_
 template <typename _S>
 int RecorderRT<_S>::pthreadMutexTimedLock(unsigned ins, int &error, pthread_mutex_t *mu,
                                                 const struct timespec *abstime) {
+  if (options::enforce_non_det_annotations && inNonDet) {
+    add_non_det_var((void *)mu);
+    return pthread_mutex_timedlock(mu, abstime);
+  }
   if(abstime == NULL)
     return pthreadMutexLock(ins, error, mu);
 
@@ -703,6 +780,11 @@ int RecorderRT<_S>::pthreadMutexTimedLock(unsigned ins, int &error, pthread_mute
 template <typename _S>
 int RecorderRT<_S>::pthreadMutexUnlock(unsigned ins, int &error, pthread_mutex_t *mu){
   int ret;
+  if (options::enforce_non_det_annotations && inNonDet) {
+    add_non_det_var((void *)mu);
+    //fprintf(stderr, "Thread tid %d, self %u is calling non-det pthread_mutex_unlock.\n", _S::self(), (unsigned)pthread_self());
+    return pthread_mutex_unlock(mu);
+  }
   SCHED_TIMER_START;
 
   errno = error;
@@ -720,6 +802,10 @@ template <typename _S>
 int RecorderRT<_S>::pthreadBarrierInit(unsigned ins, int &error, pthread_barrier_t *barrier,
                                        unsigned count) {
   int ret;
+  if (options::enforce_non_det_annotations && inNonDet) {
+    add_non_det_var((void *)barrier);
+    return pthread_barrier_init(barrier, NULL, count);
+  }
   SCHED_TIMER_START;
   errno = error;
   ret = pthread_barrier_init(barrier, NULL, count);
@@ -769,6 +855,10 @@ int RecorderRT<_S>::pthreadBarrierWait(unsigned ins, int &error,
     
   
   int ret;
+  if (options::enforce_non_det_annotations && inNonDet) {
+    add_non_det_var((void *)barrier);
+    return pthread_barrier_wait(barrier);
+  }
   SCHED_TIMER_START;
   SCHED_TIMER_FAKE_END(syncfunc::pthread_barrier_wait, (uint64_t)barrier);
   
@@ -821,6 +911,10 @@ template <typename _S>
 int RecorderRT<_S>::pthreadBarrierDestroy(unsigned ins, int &error, 
                                           pthread_barrier_t *barrier) {
   int ret;
+  if (options::enforce_non_det_annotations && inNonDet) {
+    add_non_det_var((void *)barrier);
+    return pthread_barrier_destroy(barrier);
+  }
   SCHED_TIMER_START;
   errno = error;
   ret = pthread_barrier_destroy(barrier);
@@ -1064,6 +1158,11 @@ int RecorderRT<_S>::pthreadBarrierDestroy(unsigned ins, int &error,
 template <typename _S>
 int RecorderRT<_S>::pthreadCondWait(unsigned ins, int &error, 
                                     pthread_cond_t *cv, pthread_mutex_t *mu){
+  if (options::enforce_non_det_annotations && inNonDet) {
+    add_non_det_var((void *)cv);
+    add_non_det_var((void *)mu);
+    return pthread_cond_wait(cv, mu);
+  }
   SCHED_TIMER_START;
   pthread_mutex_unlock(mu);
   _S::signal(mu);
@@ -1096,6 +1195,11 @@ int RecorderRT<_S>::pthreadCondTimedWait(unsigned ins, int &error,
   rel_time = time_diff(cur_time, *abstime);
 
   int ret;
+  if (options::enforce_non_det_annotations && inNonDet) {
+    add_non_det_var((void *)cv);
+    add_non_det_var((void *)mu);
+    return pthread_cond_timedwait(cv, mu, abstime);
+  }
   SCHED_TIMER_START;
   pthread_mutex_unlock(mu);
 
@@ -1117,7 +1221,10 @@ int RecorderRT<_S>::pthreadCondTimedWait(unsigned ins, int &error,
 
 template <typename _S>
 int RecorderRT<_S>::pthreadCondSignal(unsigned ins, int &error, pthread_cond_t *cv){
-
+  if (options::enforce_non_det_annotations && inNonDet) {
+    add_non_det_var((void *)cv);
+    return pthread_cond_signal(cv);
+  }
   SCHED_TIMER_START;
   _S::signal(cv);
   SCHED_TIMER_END(syncfunc::pthread_cond_signal, (uint64_t)cv);
@@ -1127,6 +1234,10 @@ int RecorderRT<_S>::pthreadCondSignal(unsigned ins, int &error, pthread_cond_t *
 
 template <typename _S>
 int RecorderRT<_S>::pthreadCondBroadcast(unsigned ins, int &error, pthread_cond_t*cv){
+  if (options::enforce_non_det_annotations && inNonDet) {
+    add_non_det_var((void *)cv);
+    return pthread_cond_broadcast(cv);
+  }
   SCHED_TIMER_START;
   _S::signal(cv, /*all=*/true);
   SCHED_TIMER_END(syncfunc::pthread_cond_broadcast, (uint64_t)cv);
@@ -1136,6 +1247,10 @@ int RecorderRT<_S>::pthreadCondBroadcast(unsigned ins, int &error, pthread_cond_
 template <typename _S>
 int RecorderRT<_S>::semWait(unsigned ins, int &error, sem_t *sem) {
   int ret;
+  if (options::enforce_non_det_annotations && inNonDet) {
+    add_non_det_var((void *)sem);
+    return sem_wait(sem);
+  }
   SCHED_TIMER_START;
   while((ret=sem_trywait(sem)) != 0) {
     // WTH? pthread_mutex_trylock returns EBUSY if lock is held, yet
@@ -1152,6 +1267,10 @@ int RecorderRT<_S>::semWait(unsigned ins, int &error, sem_t *sem) {
 template <typename _S>
 int RecorderRT<_S>::semTryWait(unsigned ins, int &error, sem_t *sem) {
   int ret;
+  if (options::enforce_non_det_annotations && inNonDet) {
+    add_non_det_var((void *)sem);
+    return sem_trywait(sem);
+  }
   SCHED_TIMER_START;
   errno = error;
   ret = sem_trywait(sem);
@@ -1178,6 +1297,10 @@ int RecorderRT<_S>::semTimedWait(unsigned ins, int &error, sem_t *sem,
   rel_time = time_diff(cur_time, *abstime);
   
   int ret;
+  if (options::enforce_non_det_annotations && inNonDet) {
+    add_non_det_var((void *)sem);
+    return sem_timedwait(sem, abstime);
+  }
   SCHED_TIMER_START;
   
   unsigned timeout = _S::getTurnCount() + relTimeToTurn(&rel_time);
@@ -1200,6 +1323,10 @@ int RecorderRT<_S>::semTimedWait(unsigned ins, int &error, sem_t *sem,
 template <typename _S>
 int RecorderRT<_S>::semPost(unsigned ins, int &error, sem_t *sem){
   int ret;
+  if (options::enforce_non_det_annotations && inNonDet) {
+    add_non_det_var((void *)sem);
+    return sem_post(sem);
+  }
   SCHED_TIMER_START;
   ret = sem_post(sem);
   assert(!ret && "failed sync calls are not yet supported!");
@@ -1298,6 +1425,27 @@ void RecorderRT<_S>::lineupEnd(long opaque_type) {
     b.setArriving();
   }
   SCHED_TIMER_END(syncfunc::tern_lineup_end, (uint64_t)opaque_type);
+}
+
+template <typename _S>
+void RecorderRT<_S>::nonDetStart() {
+  fprintf(stderr, "nonDetStart, tid %d\n", _S::self());
+  assert(options::enforce_non_det_annotations == 1);
+  _S::block();    /** Reuse existing xtern API. Get turn, remove myself from runq, and then pass turn.
+                        This operation is determinisitc since we get turn. **/
+  inNonDet = true;
+}
+
+template <typename _S>
+void RecorderRT<_S>::nonDetEnd() {
+  fprintf(stderr, "nonDetEnd, tid %d\n", _S::self());
+  assert(options::enforce_non_det_annotations == 1);
+  inNonDet = false;
+  _S::wakeup(); /** Reuse existing xtern API. Put myself to wake-up queue, 
+                            other threads grabbing the turn will put myself back to runq. This operation is non-
+                            determinisit since we do not get turn, but it is fine, because there is already 
+                            some non-det sync ops within the region already. Note that after this point, the 
+                            status of the thread is still runnable. **/
 }
 
 template <typename _S>
@@ -1542,7 +1690,7 @@ bool RecorderRT<_S>::regularFile(int fd) {
 template <typename _S>
 int RecorderRT<_S>::__accept(unsigned ins, int &error, int sockfd, struct sockaddr *cliaddr, socklen_t *addrlen)
 {
-  BLOCK_TIMER_START;
+  BLOCK_TIMER_START(accept, ins, error, sockfd, cliaddr, addrlen);
   int ret = Runtime::__accept(ins, error, sockfd, cliaddr, addrlen);
   int from_port = 0;
   int to_port = 0;
@@ -1561,7 +1709,7 @@ int RecorderRT<_S>::__accept(unsigned ins, int &error, int sockfd, struct sockad
 template <typename _S>
 int RecorderRT<_S>::__accept4(unsigned ins, int &error, int sockfd, struct sockaddr *cliaddr, socklen_t *addrlen, int flags)
 {
-  BLOCK_TIMER_START;
+  BLOCK_TIMER_START(accept4, ins, error, sockfd, cliaddr, addrlen, flags);
   int ret = Runtime::__accept4(ins, error, sockfd, cliaddr, addrlen, flags);
   BLOCK_TIMER_END(syncfunc::accept4, (uint64_t) ret);
   return ret;
@@ -1570,7 +1718,7 @@ int RecorderRT<_S>::__accept4(unsigned ins, int &error, int sockfd, struct socka
 template <typename _S>
 int RecorderRT<_S>::__connect(unsigned ins, int &error, int sockfd, const struct sockaddr *serv_addr, socklen_t addrlen)
 {
-  BLOCK_TIMER_START;
+  BLOCK_TIMER_START(connect, ins, error, sockfd, serv_addr, addrlen);
   int ret = Runtime::__connect(ins, error, sockfd, serv_addr, addrlen);
   int from_port = 0;
   int to_port = 0;
@@ -1602,7 +1750,7 @@ ssize_t RecorderRT<_S>::__send(unsigned ins, int &error, int sockfd, const void 
   /* Even it is non-blocking operation, we use BLOCK_* instead of SCHED_*, 
     because this operation can be involved by other systematic testing tools to 
     explore non-deterministic order. */
-  BLOCK_TIMER_START;
+  BLOCK_TIMER_START(send, ins, error, sockfd, buf, len, flags);
   int ret = Runtime::__send(ins, error, sockfd, buf, len, flags);
   uint64_t sig = hash((char*)buf, len); 
   BLOCK_TIMER_END(syncfunc::send, (uint64_t) sig, (uint64_t) ret);
@@ -1612,7 +1760,7 @@ ssize_t RecorderRT<_S>::__send(unsigned ins, int &error, int sockfd, const void 
 template <typename _S>
 ssize_t RecorderRT<_S>::__sendto(unsigned ins, int &error, int sockfd, const void *buf, size_t len, int flags, const struct sockaddr *dest_addr, socklen_t addrlen)
 {
-  BLOCK_TIMER_START;
+  BLOCK_TIMER_START(sendto, ins, error, sockfd, buf, len, flags, dest_addr, addrlen);
   int ret = Runtime::__sendto(ins, error, sockfd, buf, len, flags, dest_addr, addrlen);
   uint64_t sig = hash((char*)buf, len); 
   BLOCK_TIMER_END(syncfunc::sendto, (uint64_t) sig, (uint64_t) ret);
@@ -1622,7 +1770,7 @@ ssize_t RecorderRT<_S>::__sendto(unsigned ins, int &error, int sockfd, const voi
 template <typename _S>
 ssize_t RecorderRT<_S>::__sendmsg(unsigned ins, int &error, int sockfd, const struct msghdr *msg, int flags)
 {
-  BLOCK_TIMER_START;
+  BLOCK_TIMER_START(sendmsg, ins, error, sockfd, msg, flags);
   int ret = Runtime::__sendmsg(ins, error, sockfd, msg, flags);
   uint64_t sig = hash((char*)msg, sizeof(struct msghdr)); 
   BLOCK_TIMER_END(syncfunc::sendmsg, (uint64_t) sig, (uint64_t) ret);
@@ -1632,7 +1780,7 @@ ssize_t RecorderRT<_S>::__sendmsg(unsigned ins, int &error, int sockfd, const st
 template <typename _S>
 ssize_t RecorderRT<_S>::__recv(unsigned ins, int &error, int sockfd, void *buf, size_t len, int flags)
 {
-  BLOCK_TIMER_START;
+  BLOCK_TIMER_START(recv, ins, error, sockfd, buf, len, flags);
   ssize_t ret = Runtime::__recv(ins, error, sockfd, buf, len, flags);
   uint64_t sig = hash((char*)buf, len); 
   BLOCK_TIMER_END(syncfunc::recv, (uint64_t) sig, (uint64_t) ret);
@@ -1642,7 +1790,7 @@ ssize_t RecorderRT<_S>::__recv(unsigned ins, int &error, int sockfd, void *buf, 
 template <typename _S>
 ssize_t RecorderRT<_S>::__recvfrom(unsigned ins, int &error, int sockfd, void *buf, size_t len, int flags, struct sockaddr *src_addr, socklen_t *addrlen)
 {
-  BLOCK_TIMER_START;
+  BLOCK_TIMER_START(recvfrom, ins, error, sockfd, buf, len, flags, src_addr, addrlen);
   ssize_t ret = Runtime::__recvfrom(ins, error, sockfd, buf, len, flags, src_addr, addrlen);
   uint64_t sig = hash((char*)buf, len); 
   BLOCK_TIMER_END(syncfunc::recvfrom, (uint64_t) sig, (uint64_t) ret);
@@ -1652,7 +1800,7 @@ ssize_t RecorderRT<_S>::__recvfrom(unsigned ins, int &error, int sockfd, void *b
 template <typename _S>
 ssize_t RecorderRT<_S>::__recvmsg(unsigned ins, int &error, int sockfd, struct msghdr *msg, int flags)
 {
-  BLOCK_TIMER_START;
+  BLOCK_TIMER_START(recvmsg, ins, error, sockfd, msg, flags);
   ssize_t ret = Runtime::__recvmsg(ins, error, sockfd, msg, flags);
   uint64_t sig = hash((char*)msg, sizeof(struct msghdr)); 
   BLOCK_TIMER_END(syncfunc::recvmsg, (uint64_t) sig, (uint64_t) ret);
@@ -1667,7 +1815,7 @@ ssize_t RecorderRT<_S>::__read(unsigned ins, int &error, int fd, void *buf, size
     return read(fd, buf, count);  // Directly call the libc read() for regular IO.
 
   // Second, handle inter-process IO.
-  BLOCK_TIMER_START;
+  BLOCK_TIMER_START(read, ins, error, fd, buf, count);
   ssize_t ret = Runtime::__read(ins, error, fd, buf, count);
   uint64_t sig = hash((char*)buf, count); 
   BLOCK_TIMER_END(syncfunc::read, (uint64_t) sig, (uint64_t) fd, (uint64_t) ret);
@@ -1687,7 +1835,7 @@ ssize_t RecorderRT<_S>::__write(unsigned ins, int &error, int fd, const void *bu
   /* Even it is non-blocking operation, we use BLOCK_* instead of SCHED_*, 
     because this operation can be involved by other systematic testing tools to 
     explore non-deterministic order. */
-  BLOCK_TIMER_START;
+  BLOCK_TIMER_START(write, ins, error, fd, buf, count);
   dprintf("RecorderRT<_S>::__write handles inter-process file %d\n", fd);
   ssize_t ret = Runtime::__write(ins, error, fd, buf, count);
   uint64_t sig = hash((char*)buf, count); 
@@ -1703,7 +1851,7 @@ ssize_t RecorderRT<_S>::__pread(unsigned ins, int &error, int fd, void *buf, siz
     return pread(fd, buf, count, offset);  // Directly call the libc pread() for regular IO.
 
   // Second, handle inter-process IO.
-  BLOCK_TIMER_START;
+  BLOCK_TIMER_START(pread, ins, error, fd, buf, count, offset);
   ssize_t ret = Runtime::__pread(ins, error, fd, buf, count, offset);
   uint64_t sig = hash((char*)buf, count); 
   BLOCK_TIMER_END(syncfunc::pread, (uint64_t) sig, (uint64_t) fd, (uint64_t) ret);
@@ -1718,7 +1866,7 @@ ssize_t RecorderRT<_S>::__pwrite(unsigned ins, int &error, int fd, const void *b
     return pwrite(fd, buf, count, offset);  // Directly call the libc pwrite() for regular IO.
 
   // Second, handle inter-process IO.
-  BLOCK_TIMER_START;
+  BLOCK_TIMER_START(pwrite, ins, error, fd, buf, count, offset);
   ssize_t ret = Runtime::__pwrite(ins, error, fd, buf, count, offset);
   uint64_t sig = hash((char*)buf, count); 
   BLOCK_TIMER_END(syncfunc::pwrite, (uint64_t) sig, (uint64_t) fd, (uint64_t) ret);
@@ -1736,7 +1884,7 @@ int RecorderRT<_S>::__select(unsigned ins, int &error, int nfds, fd_set *readfds
     wt = time2turn(next);
   }
 
-  BLOCK_TIMER_START;
+  BLOCK_TIMER_START(select, ins, error, nfds, readfds, writefds, exceptfds, timeout);
 
   if (timeout && options::schedule_network && options::runtime_type == "RR" && options::adjust_timeout_for_vc)
   {
@@ -1794,7 +1942,7 @@ int RecorderRT<_S>::__epoll_wait(unsigned ins, int &error, int epfd, struct epol
     wt = time2turn(next);
   }
 
-  BLOCK_TIMER_START;
+  BLOCK_TIMER_START(epoll_wait, ins, error, epfd, events, maxevents, timeout);
   if (timeout && options::schedule_network && options::runtime_type == "RR" && options::adjust_timeout_for_vc)
   {
     uint64_t tick = (uint64_t) timeout * 1000000;
@@ -1824,7 +1972,7 @@ int RecorderRT<_S>::__epoll_wait(unsigned ins, int &error, int epfd, struct epol
 template <typename _S>
 int RecorderRT<_S>::__poll(unsigned ins, int &error, struct pollfd *fds, nfds_t nfds, int timeout)
 {
-  BLOCK_TIMER_START;
+  BLOCK_TIMER_START(poll, ins, error, fds, nfds, timeout);
   int ret = Runtime::__poll(ins, error, fds, nfds, timeout);
   BLOCK_TIMER_END(syncfunc::poll, (uint64_t)fds, (uint64_t)nfds, (uint64_t)timeout, (uint64_t)ret);
   return ret;
@@ -1833,7 +1981,7 @@ int RecorderRT<_S>::__poll(unsigned ins, int &error, struct pollfd *fds, nfds_t 
 template <typename _S>
 int RecorderRT<_S>::__bind(unsigned ins, int &error, int socket, const struct sockaddr *address, socklen_t address_len)
 {
-  BLOCK_TIMER_START;
+  BLOCK_TIMER_START(bind, ins, error, socket, address, address_len);
   int ret = Runtime::__bind(ins, error, socket, address, address_len);
   BLOCK_TIMER_END(syncfunc::bind, (uint64_t)socket, (uint64_t)address, (uint64_t)address_len, (uint64_t)ret);
   return ret;
@@ -1842,7 +1990,7 @@ int RecorderRT<_S>::__bind(unsigned ins, int &error, int socket, const struct so
 template <typename _S>
 int RecorderRT<_S>::__sigwait(unsigned ins, int &error, const sigset_t *set, int *sig)
 {
-  BLOCK_TIMER_START;
+  BLOCK_TIMER_START(sigwait, ins, error, set, sig);
   int ret = Runtime::__sigwait(ins, error, set, sig);
   BLOCK_TIMER_END(syncfunc::sigwait, (uint64_t) ret);
   return ret;
@@ -1856,7 +2004,7 @@ char *RecorderRT<_S>::__fgets(unsigned ins, int &error, char *s, int size, FILE 
     return fgets(s, size, stream);  // Directly call the libc fgets() for regular IO.
 
   // Second, handle inter-process IO.
-  BLOCK_TIMER_START;
+  BLOCK_TIMER_START(fgets, ins, error, s, size, stream);
   char * ret = Runtime::__fgets(ins, error, s, size, stream);
   BLOCK_TIMER_END(syncfunc::fgets, (uint64_t) ret);
   return ret;
@@ -1913,7 +2061,7 @@ pid_t RecorderRT<_S>::__fork(unsigned ins, int &error)
 template <typename _S>
 pid_t RecorderRT<_S>::__wait(unsigned ins, int &error, int *status)
 {
-  BLOCK_TIMER_START;
+  BLOCK_TIMER_START(wait, ins, error, status);
   pid_t ret = Runtime::__wait(ins, error, status);
   BLOCK_TIMER_END(syncfunc::wait, (uint64_t)*status, (uint64_t)ret);
   return ret;
@@ -1922,7 +2070,7 @@ pid_t RecorderRT<_S>::__wait(unsigned ins, int &error, int *status)
 template <typename _S>
 pid_t RecorderRT<_S>::__waitpid(unsigned ins, int &error, pid_t pid, int *status, int options)
 {
-  BLOCK_TIMER_START;
+  BLOCK_TIMER_START(waitpid, ins, error, pid, status, options);
   pid_t ret = Runtime::__waitpid(ins, error, pid, status, options);
   BLOCK_TIMER_END(syncfunc::waitpid, (uint64_t)pid, (uint64_t)*status, (uint64_t)options, (uint64_t)ret);
   return ret;
@@ -1978,7 +2126,7 @@ int RecorderRT<_S>::nanosleep(unsigned ins, int &error,
 template <typename _S>
 int RecorderRT<_S>::__socket(unsigned ins, int &error, int domain, int type, int protocol)
 {
-  BLOCK_TIMER_START;
+  BLOCK_TIMER_START(socket, ins, error, domain, type, protocol);
   int ret = Runtime::__socket(ins, error, domain, type, protocol);
   BLOCK_TIMER_END(syncfunc::socket, (uint64_t)domain, (uint64_t)type, (uint64_t)protocol, (uint64_t)ret);
   return ret;
@@ -1987,7 +2135,7 @@ int RecorderRT<_S>::__socket(unsigned ins, int &error, int domain, int type, int
 template <typename _S>
 int RecorderRT<_S>::__listen(unsigned ins, int &error, int sockfd, int backlog)
 {
-  BLOCK_TIMER_START;
+  BLOCK_TIMER_START(listen, ins, error, sockfd, backlog);
   int ret = Runtime::__listen(ins, error, sockfd, backlog);
   BLOCK_TIMER_END(syncfunc::listen, (uint64_t)sockfd, (uint64_t)backlog, (uint64_t)ret);
   return ret;
@@ -2025,7 +2173,7 @@ int RecorderRT<_S>::__close(unsigned ins, int &error, int fd)
     return close(fd);  // Directly call the libc close() for regular IO.
 
   // Second, handle inter-process IO.
-  BLOCK_TIMER_START;
+  BLOCK_TIMER_START(close, ins, error, fd);
   int ret = Runtime::__close(ins, error, fd);
   BLOCK_TIMER_END(syncfunc::close, (uint64_t)fd, (uint64_t)ret);
   return ret;
@@ -2149,7 +2297,7 @@ int RecorderRT<_S>::__settimeofday(unsigned ins, int &error, const struct timeva
 template <typename _S>
 struct hostent *RecorderRT<_S>::__gethostbyname(unsigned ins, int &error, const char *name)
 {
-  BLOCK_TIMER_START;
+  BLOCK_TIMER_START(gethostbyname, ins, error, name);
   struct hostent *ret = Runtime::__gethostbyname(ins, error, name);
   BLOCK_TIMER_END(syncfunc::gethostbyname, (uint64_t)ret);
   return ret;
@@ -2158,7 +2306,7 @@ struct hostent *RecorderRT<_S>::__gethostbyname(unsigned ins, int &error, const 
 template <typename _S>
 struct hostent *RecorderRT<_S>::__gethostbyaddr(unsigned ins, int &error, const void *addr, int len, int type)
 {
-  BLOCK_TIMER_START;
+  BLOCK_TIMER_START(gethostbyaddr, ins, error, addr, len, type);
   struct hostent *ret = Runtime::__gethostbyaddr(ins, error, addr, len, type);
   BLOCK_TIMER_END(syncfunc::gethostbyaddr, (uint64_t)ret);
   return ret;
@@ -2166,7 +2314,7 @@ struct hostent *RecorderRT<_S>::__gethostbyaddr(unsigned ins, int &error, const 
 
 template <typename _S>
 char *RecorderRT<_S>::__inet_ntoa(unsigned ins, int &error, struct in_addr in) {
-  BLOCK_TIMER_START;
+  BLOCK_TIMER_START(inet_ntoa, ins, error, in);
   char * ret = Runtime::__inet_ntoa(ins, error, in);
   BLOCK_TIMER_END(syncfunc::inet_ntoa, (uint64_t)ret);
   return ret;
@@ -2174,7 +2322,7 @@ char *RecorderRT<_S>::__inet_ntoa(unsigned ins, int &error, struct in_addr in) {
 
 template <typename _S>
 char *RecorderRT<_S>::__strtok(unsigned ins, int &error, char * str, const char * delimiters) {
-  BLOCK_TIMER_START;
+  BLOCK_TIMER_START(strtok, ins, error, str, delimiters);
   char * ret = Runtime::__strtok(ins, error, str, delimiters);
   BLOCK_TIMER_END(syncfunc::strtok, (uint64_t)ret);
   return ret;
