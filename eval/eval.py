@@ -492,7 +492,7 @@ if __name__ == "__main__":
         logging.error('there is no "$XTERN_ROOT/eval/rand-intercept/rand-intercept.so"')
         sys.exit(1)
     XTERN_PRELOAD = "LD_PRELOAD=%s/dync_hook/interpose.so" % XTERN_ROOT
-    RAND_PRELOAD = "LD_PRELOAD=%s/eval/rand-intercept/rand-intercept.so" % XTERN_ROOT
+    RAND_PRELOAD = "L2D_PRELOAD=%s/eval/rand-intercept/rand-intercept.so" % XTERN_ROOT
     # set environment variable
     logging.debug("set timeformat to '\\nreal %E\\nuser %U\\nsys %S'")
     os.environ['TIMEFORMAT'] = "\nreal %E\nuser %U\nsys %S"
