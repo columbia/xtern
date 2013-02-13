@@ -94,6 +94,9 @@ non_block_recv = 0
 # if we should launch a monitor
 launch_monitor = 0
 
+# If turned on, enforce the non-deterministic primitive at runtime.
+enforce_non_det_annotations = 0
+
 # if turned on, sync operations will be logged.
 log_sync = 1
 

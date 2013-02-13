@@ -26,6 +26,14 @@ void tern_lineup(long opaque_type) {
   //fprintf(stderr, "Non-deterministic tern_lineup\n");
 }
 
+void tern_non_det_start() {
+  //fprintf(stderr, "Non-deterministic tern_non_det_start\n");
+}
+
+void tern_non_det_end() {
+  //fprintf(stderr, "Non-deterministic tern_non_det_end\n");
+}
+
 #ifdef __cplusplus
 }
 #endif

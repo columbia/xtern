@@ -30,6 +30,8 @@ extern "C" {
   void tern_lineup_destroy_real(long opaque_type);
   void tern_lineup_start_real(long opaque_type);
   void tern_lineup_end_real(long opaque_type);
+  void tern_non_det_start_real();
+  void tern_non_det_end_real();
 
   /// hooks tern automatically inserts.  start with the ones tern provides
   void tern_prog_begin(void);   /// initializes tern internal data

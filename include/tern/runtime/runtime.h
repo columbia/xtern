@@ -67,6 +67,8 @@ struct Runtime {
   virtual void lineupDestroy(long opaque_type) = 0;
   virtual void lineupStart(long opaque_type) = 0;
   virtual void lineupEnd(long opaque_type) = 0;
+  virtual void nonDetStart() = 0;
+  virtual void nonDetEnd() = 0;
 
 #ifdef XTERN_PLUS_DBUG
   static void *resolveDbugFunc(const char *func_name);

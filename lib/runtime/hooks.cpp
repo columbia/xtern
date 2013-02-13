@@ -326,20 +326,20 @@ void tern_lineup_end_real(long opaque_type) {
   errno = error;
 }
 
-void tern_workload_start(unsigned opaque_type, unsigned workload_hint) {
-  // TBD.
+void tern_non_det_start_real() {
+  int error = errno;
+  Space::enterSys();
+  Runtime::the->nonDetStart();
+  Space::exitSys();
+  errno = error;
 }
 
-void tern_workload_end(unsigned opaque_type) {
-  // TBD.
-}
-
-void tern_non_det_start() {
-  // TBD.
-}
-
-void tern_non_det_end() {
-  // TBD.
+void tern_non_det_end_real() {
+  int error = errno;
+  Space::enterSys();
+  Runtime::the->nonDetEnd();
+  Space::exitSys();
+  errno = error;
 }
 
 void tern_exit(unsigned ins, int status) {
