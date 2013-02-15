@@ -74,6 +74,17 @@ struct Runtime {
   static void *resolveDbugFunc(const char *func_name);
   static void initDbug();
 #endif
+
+
+  virtual int __pthread_mutex_init(unsigned insid, int &error, pthread_mutex_t *mutex, const  pthread_mutexattr_t *mutexattr);
+  virtual int __pthread_mutex_destroy(unsigned insid, int &error, pthread_mutex_t *mutex);
+  virtual int __pthread_mutex_lock(unsigned insid, int &error, pthread_mutex_t *mutex);
+  virtual int __pthread_mutex_unlock(unsigned insid, int &error, pthread_mutex_t *mutex); 
+
+  /* Special functions to attach/detach a thread from dbug. */
+  static int __attach_self_to_dbug();
+  static int __detach_self_from_dbug();
+
 /*
   virtual int __pthread_create(unsigned insid, int &error, pthread_t *th, const pthread_attr_t *a, void *(*func)(void*), void *arg)
   	{ return pthreadCreate(insid, th, const_cast<pthread_attr_t *>(a), func, arg); }

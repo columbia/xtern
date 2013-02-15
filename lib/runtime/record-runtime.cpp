@@ -545,7 +545,8 @@ int RecorderRT<_S>::pthreadMutexInit(unsigned ins, int &error, pthread_mutex_t *
   int ret;
   if (options::enforce_non_det_annotations && inNonDet) {
     add_non_det_var((void *)mutex);
-    return pthread_mutex_init(mutex, mutexattr);
+    fprintf(stderr, "Thread tid %d, self %u is calling non-det pthread_mutex_init.\n", _S::self(), (unsigned)pthread_self());
+    return Runtime::__pthread_mutex_init(ins, error, mutex, mutexattr);
   }
   SCHED_TIMER_START;
   errno = error;
@@ -561,7 +562,7 @@ int RecorderRT<_S>::pthreadMutexDestroy(unsigned ins, int &error, pthread_mutex_
   int ret;
   if (options::enforce_non_det_annotations && inNonDet) {
     add_non_det_var((void *)mutex);
-    return pthread_mutex_destroy(mutex);
+    return Runtime::__pthread_mutex_destroy(ins, error, mutex);
   }
   SCHED_TIMER_START;
   errno = error;
@@ -611,8 +612,8 @@ template <typename _S>
 int RecorderRT<_S>::pthreadMutexLock(unsigned ins, int &error, pthread_mutex_t *mu) {
   if (options::enforce_non_det_annotations && inNonDet) {
     add_non_det_var((void *)mu);
-    //fprintf(stderr, "Thread tid %d, self %u is calling non-det pthread_mutex_lock.\n", _S::self(), (unsigned)pthread_self());
-    return pthread_mutex_lock(mu);
+    fprintf(stderr, "Thread tid %d, self %u is calling non-det pthread_mutex_lock.\n", _S::self(), (unsigned)pthread_self());
+    return Runtime::__pthread_mutex_lock(ins, error, mu);
   }
   SCHED_TIMER_START;
   errno = error;
@@ -782,8 +783,8 @@ int RecorderRT<_S>::pthreadMutexUnlock(unsigned ins, int &error, pthread_mutex_t
   int ret;
   if (options::enforce_non_det_annotations && inNonDet) {
     add_non_det_var((void *)mu);
-    //fprintf(stderr, "Thread tid %d, self %u is calling non-det pthread_mutex_unlock.\n", _S::self(), (unsigned)pthread_self());
-    return pthread_mutex_unlock(mu);
+    fprintf(stderr, "Thread tid %d, self %u is calling non-det pthread_mutex_unlock.\n", _S::self(), (unsigned)pthread_self());
+    return Runtime::__pthread_mutex_unlock(ins, error, mu);
   }
   SCHED_TIMER_START;
 
@@ -1431,13 +1432,20 @@ template <typename _S>
 void RecorderRT<_S>::nonDetStart() {
   fprintf(stderr, "nonDetStart, tid %d\n", _S::self());
   assert(options::enforce_non_det_annotations == 1);
-  _S::block();    /** Reuse existing xtern API. Get turn, remove myself from runq, and then pass turn.
+  /*_S::block();*/    /** Reuse existing xtern API. Get turn, remove myself from runq, and then pass turn.
                         This operation is determinisitc since we get turn. **/
+  _S::getTurn();
+  // Must put this operation between getTurn() and next(), otherwise the # of 
+  // threads in non-det regions are non-deterministic.
+  Runtime::__attach_self_to_dbug();
+  _S::incTurnCount();
+  _S::next();
   inNonDet = true;
 }
 
 template <typename _S>
 void RecorderRT<_S>::nonDetEnd() {
+    Runtime::__detach_self_from_dbug();
   fprintf(stderr, "nonDetEnd, tid %d\n", _S::self());
   assert(options::enforce_non_det_annotations == 1);
   inNonDet = false;

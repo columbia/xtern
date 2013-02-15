@@ -23,6 +23,7 @@ extern "C" {
 
 typedef void * (*thread_func_t)(void*);
 static void *__tern_thread_func(void *arg) {
+  Runtime::__detach_self_from_dbug();
   void **args;
   void *ret_val;
   thread_func_t user_thread_func;
@@ -96,6 +97,7 @@ static bool prog_began = false; // sanity
 //  SYS -> SYS
 //  must be called by the main thread
 void __tern_prog_begin(void) {
+  Runtime::__detach_self_from_dbug();
   assert(!prog_began && "__tern_prog_begin() already called!");
   prog_began = true;
 
@@ -162,6 +164,7 @@ void __tern_prog_end (void) {
   // threads running yet, e.g., OpenMP. If delete this, will have seg fault sometimes.
   //delete tern::Runtime::the;
   //tern::Runtime::the = NULL;
+  Runtime::__attach_self_to_dbug();
   assert(Space::isSys() && "__tern_prog_end must end in system space");
 }
 
