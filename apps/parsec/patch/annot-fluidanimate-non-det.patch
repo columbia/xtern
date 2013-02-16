@@ -1,0 +1,67 @@
+diff -ruN parsec-2.0-orig/pkgs/apps/fluidanimate/src/pthreads.cpp parsec-2.0-modified/pkgs/apps/fluidanimate/src/pthreads.cpp
+--- parsec-2.0-orig/pkgs/apps/fluidanimate/src/pthreads.cpp	2013-02-07 14:42:54.896848798 -0500
++++ parsec-2.0-modified/pkgs/apps/fluidanimate/src/pthreads.cpp	2013-02-16 16:11:59.272834794 -0500
+@@ -10,6 +10,7 @@
+ #include <stdint.h>
+ #include <pthread.h>
+ #include <assert.h>
++#include "tern/user.h"
+ 
+ #ifdef ENABLE_PARSEC_HOOKS
+ #include <hooks.h>
+@@ -272,6 +273,7 @@
+ 	pthread_attr_init(&attr);
+ 	pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
+ 
++    tern_non_det_start();
+ 	mutex = new pthread_mutex_t *[numCells];
+ 	for(int i = 0; i < numCells; ++i)
+ 	{
+@@ -280,6 +282,8 @@
+ 		for(int j = 0; j < n; ++j)
+ 			pthread_mutex_init(&mutex[i][j], NULL);
+ 	}
++    tern_non_det_end();
++
+ 	pthread_barrier_init(&barrier, NULL, NUM_GRIDS);
+ 
+ 	cells = new Cell[numCells];
+@@ -438,6 +442,7 @@
+ {
+ 	pthread_attr_destroy(&attr);
+ 
++    tern_non_det_start();
+ 	for(int i = 0; i < numCells; ++i)
+ 	{
+ 		int n = (border[i] ? 16 : 1);
+@@ -445,6 +450,8 @@
+ 			pthread_mutex_destroy(&mutex[i][j]);
+ 		delete[] mutex[i];
+ 	}
++      tern_non_det_end();
++
+ 	pthread_barrier_destroy(&barrier);
+ 	delete[] mutex;
+ 
+@@ -778,15 +785,21 @@
+ {
+ 	ClearParticlesMT(i);
+ 	pthread_barrier_wait(&barrier);
++    tern_non_det_start();
+ 	RebuildGridMT(i);
++      tern_non_det_end();
+ 	pthread_barrier_wait(&barrier);
+ 	InitDensitiesAndForcesMT(i);
+ 	pthread_barrier_wait(&barrier);
++    tern_non_det_start();
+ 	ComputeDensitiesMT(i);
++      tern_non_det_end();
+ 	pthread_barrier_wait(&barrier);
+ 	ComputeDensities2MT(i);
+ 	pthread_barrier_wait(&barrier);
++    tern_non_det_start();
+ 	ComputeForcesMT(i);
++    tern_non_det_end();
+ 	pthread_barrier_wait(&barrier);
+ 	ProcessCollisionsMT(i);
+ 	pthread_barrier_wait(&barrier);

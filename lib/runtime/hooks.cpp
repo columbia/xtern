@@ -365,7 +365,9 @@ void tern_pthread_exit(unsigned ins, void *retval) {
     exit(0);
   }
   assert(Space::isSys());
+#ifdef XTERN_PLUS_DBUG
   Runtime::__attach_self_to_dbug();
+#endif
   Runtime::__pthread_exit(retval);
 }
 

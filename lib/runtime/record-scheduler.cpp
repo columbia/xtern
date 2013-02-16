@@ -54,6 +54,9 @@ extern pthread_cond_t idle_cond;
 extern int idle_done;
 extern ClockManager clockManager;
 
+extern int nNonDetWait;
+extern pthread_cond_t nonDetCV;
+
 void RRSchedulerCV::detect_blocking_threads(void)
 {
 /*
@@ -651,6 +654,14 @@ int RRScheduler::nextRunnable(bool at_thread_end) {
         }
         assert(self() != IdleThreadTid);
         wakeUpIdleThread();
+      }
+    } else {
+      /* If runq only contains idle thread and there are threads blocking on 
+      non-det-start, then just wake them up. */
+      if (nNonDetWait > 0 && self() == IdleThreadTid &&
+        runq.size() == 1 && runq.front() == IdleThreadTid) {
+        dprintf("nextRunnable() Tid %d wakes up nonDet start threads\n", self());
+        signal(&nonDetCV, true);
       }
     }
     assert(!runq.empty());
