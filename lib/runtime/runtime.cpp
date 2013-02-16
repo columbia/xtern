@@ -44,9 +44,11 @@ static bool sock_nonblock (int fd)
 }
 
 #ifdef XTERN_PLUS_DBUG
+
 #include <dlfcn.h>
 static bool __thread attachedToDbug = true;
 using namespace std;
+
 void *Runtime::resolveDbugFunc(const char *func_name) {
   static void * handle;
   void * ret;
@@ -79,17 +81,9 @@ void Runtime::initDbug() {
   //resolveDbugFunc("write");
   resolveDbugFunc("pthread_create");
 }
-#endif
-
-Runtime::Runtime() {
-#ifdef XTERN_PLUS_DBUG
-  initDbug();
-#endif
-}
 
 int Runtime::__attach_self_to_dbug() {
   int ret = 0;
-#ifdef XTERN_PLUS_DBUG
   fprintf(stderr, "\nuntime::__attach_self_to_dbug pid %d thread self %u to dbug\n\n", getpid(), (unsigned)pthread_self());
   //errno = error;
   assert(!attachedToDbug);
@@ -99,17 +93,14 @@ int Runtime::__attach_self_to_dbug() {
   if (!orig_func)
     orig_func = (orig_func_type)resolveDbugFunc("pthread_getconcurrency");
   ret = orig_func();
-#else
   //assert(false);
   //ret = pthread_getconcurrency();
-#endif
   //error = errno;
   return ret;
 }
 
 int Runtime::__detach_self_from_dbug() {
   int ret = 0;
-#ifdef XTERN_PLUS_DBUG
   fprintf(stderr, "\nuntime::__detach_self_from_dbug pid %d thread self %u from dbug\n\n", getpid(), (unsigned)pthread_self());
   //errno = error;
   assert(attachedToDbug);
@@ -119,14 +110,18 @@ int Runtime::__detach_self_from_dbug() {
   if (!orig_func)
     orig_func = (orig_func_type)resolveDbugFunc("pthread_setconcurrency");
   ret = orig_func(0);
-#else
   //assert(false);
   //ret = pthread_setconcurrency(0);
-#endif
   //error = errno;
   return ret;  
 }
+#endif
 
+Runtime::Runtime() {
+#ifdef XTERN_PLUS_DBUG
+  initDbug();
+#endif
+}
 
 int Runtime::pthreadCancel(unsigned insid, int &error, pthread_t thread)
 {
