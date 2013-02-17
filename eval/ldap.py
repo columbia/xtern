@@ -40,7 +40,10 @@ def evaluation(repeats = 100):
             proc.wait()
             os.chdir(root)
         # move log files into 'xtern' directory
-        os.renames('%s/apps/ldap/openldap-2.4.33/obj/tests/out-bdb' % XTERN_ROOT, '%s/out.%d' % (out_dir, i))
+        try:
+            os.renames('%s/apps/ldap/openldap-2.4.33/obj/tests/out-bdb' % XTERN_ROOT, '%s/out.%d' % (out_dir, i))
+        except OSError:
+            pass
 
     # non-det part
     cmd = ' '.join(['PRELOAD_LIB=%s/eval/rand-intercept/rand-intercept.so' % XTERN_ROOT, 'make', 'test'])
