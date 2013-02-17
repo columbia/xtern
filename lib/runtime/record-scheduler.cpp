@@ -191,11 +191,11 @@ void RRScheduler::wait_t::wait() {
     on my machine, or 14 ms on bug00. This is one order of magnitude bigger
     than context switch time (1ms). **/
     /**
-    2012-12-30: changed it to 4e4. By using a mencoder to convert a mpg file on bug00,
-    using 4e4 only has 902 broken busy wait events, while using 3e4 has 13814.
-    On bug00 the lib/runtime module is compiled with llvm optimized, I think.
+    2012-12-30: changed it to 4e5. It makes the parsec/flui* benchmark runs 
+    with very small overhead (2~4 busywait timeouts) on bug00. If we choose 4e4, then there
+    would be hundredsof timeouts.
     **/
-    const long waitCnt = 4e4;
+    const long waitCnt = 4e5;
     volatile long i = 0;
     while (!wakenUp && i < waitCnt) {
       sched_yield();
