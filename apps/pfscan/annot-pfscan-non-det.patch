@@ -1,0 +1,37 @@
+diff -ruN pfscan-1.0/Makefile pfscan-1.0-modified/Makefile
+--- pfscan-1.0/Makefile	2002-03-25 17:51:21.000000000 -0500
++++ pfscan-1.0-modified/Makefile	2013-02-17 00:56:06.159709645 -0500
+@@ -23,9 +23,9 @@
+ SOL_LIBS= -lpthread -lnsl -lsocket
+ 
+ ## Linux 2.4 with Gcc 2.96
+-LNX_CC=gcc -Wall -g -O
++LNX_CC=gcc -Wall -g -O -I$(XTERN_ROOT)/include
+ LNX_LDOPTS=-Wl,-s 
+-LNX_LIBS=-lpthread -lnsl
++LNX_LIBS=-lpthread -lnsl  -L$(XTERN_ROOT)/dync_hook -Wl,--rpath,$(XTERN_ROOT)/dync_hook -lxtern-annot
+ 
+ 
+ OBJS = pfscan.o bm.o version.o pqueue.o
+diff -ruN pfscan-1.0/pfscan.c pfscan-1.0-modified/pfscan.c
+--- pfscan-1.0/pfscan.c	2002-03-25 18:13:45.000000000 -0500
++++ pfscan-1.0-modified/pfscan.c	2013-02-17 00:56:53.479707950 -0500
+@@ -34,7 +34,7 @@
+ 
+ #include "pqueue.h"
+ #include "bm.h"
+-
++#include "tern/user.h"
+ 
+ 
+ extern char version[];
+@@ -472,7 +472,9 @@
+     
+     while (pqueue_get(&pqb, (void **) &path) == 1)
+     {
++    tern_non_det_start();
+ 	scan_file(path);
++    tern_non_det_end();
+ 	free(path);
+     }
+ 
