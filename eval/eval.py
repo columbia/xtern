@@ -57,6 +57,10 @@ def readConfigFile(config_file):
                                                 "GZIP": "",
                                                 "EXPORT": "",
                                                 "DTHREADS": "",
+                                                "DMP_O": "",
+                                                "DMP_B": "",
+                                                "DMP_PB": "",
+                                                "DMP_HB": "",
                                                 "INIT_ENV_CMD": "",
                                                 "C_WITH_XTERN": "0",
                                                 "C_CMD": "",
@@ -177,22 +181,29 @@ def write_stats(xtern, nondet, repeats):
         stats.write('xtern:\n\tavg {0}\n\tsem {1}\n'.format(xtern_avg, xtern_std/math.sqrt(repeats)))
         stats.write('non-det:\n\tavg {0}\n\tsem {1}\n'.format(nondet_avg, nondet_std/math.sqrt(repeats)))
 
-def write_stats_dthread(dthread, nondet, repeats):
+def write_other_stats(nondet, repeats, name):
+    cost=[]
+    for i in range(int(repeats)):
+        log_file_name = '%s/output.%d' % (name, i)
+        for line in reversed(open(log_file_name, 'r').readlines()):
+            if re.search('^real [0-9]+\.[0-9][0-9][0-9]$', line):
+                cost += [float(line.split()[1])]
+                break
     try:
         import numpy
     except ImportError:
         logging.error("please install 'numpy' module")
         sys.exit(1)
-    dthread_avg = numpy.average(dthread)
-    dthread_std = numpy.std(dthread)
+    avg = numpy.average(cost)
+    std = numpy.std(cost)
     nondet_avg = numpy.average(nondet)
     nondet_std = numpy.std(nondet)
-    overhead_avg = dthread_avg/nondet_avg - 1.0
+    overhead_avg = avg/nondet_avg - 1.0
     import math
     #overhead_std = math.fabs(overhead_avg)*(math.sqrt(((nondet_std/nondet_avg)**2) + (dthread_std/dthread_avg)**2))
     with open("stats.txt", "a") as stats:
-        stats.write('dthread-overhead: {1:.3f}%\n\tavg {0}\n'.format(overhead_avg, overhead_avg*100))
-        stats.write('dthread:\n\tavg {0}\n\tsem {1}\n'.format(dthread_avg, dthread_std/math.sqrt(repeats)))
+        stats.write('{2}-overhead: {1:.3f}%\n\tavg {0}\n'.format(overhead_avg, overhead_avg*100, name))
+        stats.write('{2}:\n\tavg {0}\n\tsem {1}\n'.format(avg, std/math.sqrt(repeats), name))
 
 
 def copy_required_files(app, files):
@@ -400,12 +411,62 @@ def processBench(config, bench):
         if client_cmd:
             logging.error("client-server with dthreads has not yet tested...")
             sys.exit(1)
-        dthread_exec_file = os.path.abspath('%s/%s/%s' % (APPS, apps_name, dthread))
-        dthread_command = ' '.join(['time', export, dthread_exec_file] + inputs.split())
-        logging.info("executing '%s'" % dthread_command)
-        execBench(dthread_command, repeats, 'dthreads')
+        dthread_exec_file = os.path.abspath('%s/apps/%s/%s' % (DMTTOOL_ROOT, os.path.basename(exec_file), dthread))
+        if checkExist(dthread_exec_file):
+            dthread_command = ' '.join(['time', export, dthread_exec_file] + inputs.split())
+            logging.info("executing '%s'" % dthread_command)
+            execBench(dthread_command, repeats, 'dthreads')
+        else:
+            logging.warning("cannot find %s" % dthread)
+            dthraed = ""
+
+    dmp_o = config.get(bench, 'DMP_O')
+    if dmp_o:
+        dmp_o_exec_file = os.path.abspath('%s/apps/%s/%s' % (DMTTOOL_ROOT, os.path.basename(exec_file), dmp_o))
+        print dmp_o_exec_file
+        if checkExist(dmp_o_exec_file):
+            dmp_o_command = ' '.join(['time', export, dmp_o_exec_file] + inputs.split())
+            logging.info("executing '%s'" % dmp_o_command)
+            execBench(dmp_o_command, repeats, 'dmp_o')
+        else:
+            logging.warning("cannot find %s" % dmp_o)
+            dmp_o = ""
+
+    dmp_b = config.get(bench, 'DMP_B')
+    if dmp_b:
+        dmp_b_exec_file = os.path.abspath('%s/apps/%s/%s' % (DMTTOOL_ROOT, os.path.basename(exec_file), dmp_b))
+        if checkExist(dmp_b_exec_file):
+            dmp_b_command = ' '.join(['time', export, dmp_b_exec_file] + inputs.split())
+            logging.info("executing '%s'" % dmp_b_command)
+            execBench(dmp_b_command, repeats, 'dmp_b')
+        else:
+            logging.warning("cannot find %s" % dmp_b)
+            dmp_b = ""
+
+    dmp_pb = config.get(bench, 'DMP_PB')
+    if dmp_pb:
+        dmp_pb_exec_file = os.path.abspath('%s/apps/%s/%s' % (DMTTOOL_ROOT, os.path.basename(exec_file), dmp_pb))
+        if checkExist(dmp_pb_exec_file):
+            dmp_pb_command = ' '.join(['time', export, dmp_pb_exec_file] + inputs.split())
+            logging.info("executing '%s'" % dmp_pb_command)
+            execBench(dmp_pb_command, repeats, 'dmp_pb')
+        else:
+            logging.warning("cannot find %s" % dmp_pb)
+            dmp_pb = ""
+
+    dmp_hb = config.get(bench, 'DMP_HB')
+    if dmp_hb:
+        dmp_hb_exec_file = os.path.abspath('%s/apps/%s/%s' % (DMTTOOL_ROOT, os.path.basename(exec_file), dmp_hb))
+        if checkExist(dmp_hb_exec_file):
+            dmp_hb_command = ' '.join(['time', export, dmp_hb_exec_file] + inputs.split())
+            logging.info("executing '%s'" % dmp_hb_command)
+            execBench(dmp_hb_command, repeats, 'dmp_hb')
+        else:
+            logging.warning("cannot find %s" % dmp_hb)
+            dmp_hb = ""
 
     # get stats
+    
     xtern_cost = []
     for i in range(int(repeats)):
         if client_cmd and use_client_stats:
@@ -416,6 +477,7 @@ def processBench(config, bench):
             if re.search('^real [0-9]+\.[0-9][0-9][0-9]$', line):
                 xtern_cost += [float(line.split()[1])]
                 break
+    
 
     nondet_cost = []
     for i in range(int(repeats)):
@@ -428,24 +490,30 @@ def processBench(config, bench):
                 nondet_cost += [float(line.split()[1])]
                 break
 
-    dthread_cost = []
-    if dthread:
-        for i in range(int(repeats)):
-            if client_cmd and use_client_stats:
-                log_file_name = 'dthreads/client.%d' % i
-            else:
-                log_file_name = 'dthreads/output.%d' % i
-            for line in reversed(open(log_file_name, 'r').readlines()):
-                if re.search('^real [0-9]+\.[0-9][0-9]$', line):
-                    dthread_cost += [float(line.split()[1])]
-                    break
-
     write_stats(xtern_cost, nondet_cost, int(repeats))
     if dthread:
-        write_stats_dthread(dthread_cost, nondet_cost, int(repeats))
+        write_other_stats(nondet_cost, int(repeats), 'dthreads')
+    if dmp_o:
+        write_other_stats(nondet_cost, int(repeats), 'dmp_o')
+    if dmp_b:
+        write_other_stats(nondet_cost, int(repeats), 'dmp_b')
+    if dmp_pb:
+        write_other_stats(nondet_cost, int(repeats), 'dmp_pb')
+    if dmp_hb:
+        write_other_stats(nondet_cost, int(repeats), 'dmp_hb')
 
     # copy exec file
     copy_file(os.path.realpath(exec_file), os.path.basename(exec_file))
+    if dthread:
+        copy_file(os.path.realpath(dthread_exec_file), os.path.basename(dthread_exec_file))
+    if dmp_o:
+        copy_file(os.path.realpath(dmp_o_exec_file), os.path.basename(dmp_o_exec_file))
+    if dmp_b:
+        copy_file(os.path.realpath(dmp_b_exec_file), os.path.basename(dmp_b_exec_file))
+    if dmp_pb:
+        copy_file(os.path.realpath(dmp_pb_exec_file), os.path.basename(dmp_pb_exec_file))
+    if dmp_hb:
+        copy_file(os.path.realpath(dmp_hb_exec_file), os.path.basename(dmp_hb_exec_file))
 
     os.chdir("..")
 
@@ -485,6 +553,7 @@ if __name__ == "__main__":
         logging.error("Please set the environment variable " + str(e))
         sys.exit(1)
     APPS = os.path.abspath(XTERN_ROOT + "/apps/")
+    DMTTOOL_ROOT = os.environ["DMTTOOL_ROOT"]
     if not checkExist("%s/dync_hook/interpose.so" % XTERN_ROOT, os.R_OK):
         logging.error('thre is no "$XTERN_ROOT/dync_hook/interpose.so"')
         sys.exit(1)
@@ -492,7 +561,7 @@ if __name__ == "__main__":
         logging.error('there is no "$XTERN_ROOT/eval/rand-intercept/rand-intercept.so"')
         sys.exit(1)
     XTERN_PRELOAD = "LD_PRELOAD=%s/dync_hook/interpose.so" % XTERN_ROOT
-    RAND_PRELOAD = "LD_PRELOAD=%s/eval/rand-intercept/rand-intercept.so" % XTERN_ROOT
+    RAND_PRELOAD = "LD_NOTPRELOAD=%s/eval/rand-intercept/rand-intercept.so" % XTERN_ROOT
     # set environment variable
     logging.debug("set timeformat to '\\nreal %E\\nuser %U\\nsys %S'")
     os.environ['TIMEFORMAT'] = "\nreal %E\nuser %U\nsys %S"

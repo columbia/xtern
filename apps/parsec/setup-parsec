@@ -66,6 +66,11 @@ patch -p1 < $XTERN_ROOT/apps/parsec/patch/bodytrack.diff
 patch -p1 < $XTERN_ROOT/apps/parsec/patch/vips.diff
 patch -p1 < $XTERN_ROOT/apps/parsec/patch/fluidanimate-serial.patch
 patch -p1 < $XTERN_ROOT/apps/parsec/patch/bodytrack_avoid_deadlock.patch # to avoid a bud in 'tern_pthread_cancel'
+# generate configs for dthreads
+set +e
+bin/bldconfdel -n gcc-dthreads
+set -e
+patch -p1 < $XTERN_ROOT/apps/parsec/patch/parsec_dthreads_1.patch
 popd
 # openssl compiling error
 if [ ! -f openssl-0.9.8x.tar.gz ]; then
@@ -84,6 +89,8 @@ sed -i 's/${LDFLAGS} ${LIBS}/${LDFLAGS} -lz ${LIBS}/g' $XTERN_ROOT/apps/parsec/p
 sed -i "51 s/%F_%T\"/%F_%T_%N\"/" $XTERN_ROOT/apps/parsec/parsec-2.0/config/linux.sysconf
 # posix time format
 sed -i "215 s/\"time\"/\"time -p\"/g" $XTERN_ROOT/apps/parsec/parsec-2.0/bin/parsecmgmt
+
+
 
 echo "Build Parsec"
 # patch building configs
