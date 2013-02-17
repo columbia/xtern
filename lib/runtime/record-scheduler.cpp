@@ -191,7 +191,7 @@ void RRScheduler::wait_t::wait() {
     on my machine, or 14 ms on bug00. This is one order of magnitude bigger
     than context switch time (1ms). **/
     /**
-    2012-12-30: changed it to 4e5. It makes the parsec/flui* benchmark runs 
+    2013-2-17: changed it to 4e5. It makes the parsec/flui* benchmark runs 
     with very small overhead (2~4 busywait timeouts) on bug00. If we choose 4e4, then there
     would be hundredsof timeouts.
     **/
