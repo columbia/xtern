@@ -621,26 +621,30 @@ TestLogger::~TestLogger()
 }
 
 void Logger::threadBegin(int tid) {
-  if(options::log_type == "txt") {
-    the = new TxtLogger(tid);
-  } else if(options::log_type == "bin") {
-    the = new BinLogger(tid);
-  } else if(options::log_type == "test") {
-    the = new TestLogger(tid);
-  } else
-    assert (0 && "unknown log_type");
+  if (options::log_sync) {
+    if(options::log_type == "txt") {
+      the = new TxtLogger(tid);
+    } else if(options::log_type == "bin") {
+      the = new BinLogger(tid);
+    } else if(options::log_type == "test") {
+      the = new TestLogger(tid);
+    } else
+      assert (0 && "unknown log_type");
 
-  assert(the && "can't allocate memory for logger!");
-  dprintf("Logger: new logger for thread %d = %p\n", tid, (void*)the);
+    assert(the && "can't allocate memory for logger!");
+    dprintf("Logger: new logger for thread %d = %p\n", tid, (void*)the);
+  }
 }
 
 void Logger::threadEnd(void) {
-  delete Logger::the;
+  if (options::log_sync)
+    delete Logger::the;
 }
 
 void Logger::progBegin(void) {
   tern_funcs_call_logged();
-  mkdir(options::output_dir.c_str(), 0777);
+  if (options::log_sync)
+    mkdir(options::output_dir.c_str(), 0777);
 }
 
 void Logger::progEnd(void) {

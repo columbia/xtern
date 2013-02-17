@@ -1435,7 +1435,7 @@ void RecorderRT<_S>::lineupEnd(long opaque_type) {
 template <typename _S>
 void RecorderRT<_S>::nonDetStart() {
   unsigned ins = 0;
-  fprintf(stderr, "nonDetStart, tid %d\n", _S::self());
+  dprintf("nonDetStart, tid %d\n", _S::self());
   SCHED_TIMER_START;
   nNonDetWait++;
   /** Although at this moment current thread is still in the xtern runq, we pre-attach it to dbug,
@@ -1462,7 +1462,7 @@ void RecorderRT<_S>::nonDetStart() {
 
 template <typename _S>
 void RecorderRT<_S>::nonDetEnd() {
-  fprintf(stderr, "nonDetEnd, tid %d\n", _S::self());
+  dprintf("nonDetEnd, tid %d\n", _S::self());
   assert(options::enforce_non_det_annotations == 1);
   inNonDet = false;
   /** At this moment current thread won't call any non-det sync op any more, so we 
@@ -2053,7 +2053,8 @@ pid_t RecorderRT<_S>::__fork(unsigned ins, int &error)
   dprintf("pid %d enters fork\n", getpid());
   pid_t ret;
 
-  Logger::the->flush(); // so child process won't write it again
+  if (options::log_sync)
+    Logger::the->flush(); // so child process won't write it again
 
   /* Although this is inter-process operation, and we need to involve dbug
     tool (debug needs to register/unregister threads based on fork()), we do

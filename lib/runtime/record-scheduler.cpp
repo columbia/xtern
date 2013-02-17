@@ -658,8 +658,8 @@ int RRScheduler::nextRunnable(bool at_thread_end) {
     } else {
       /* If runq only contains idle thread and there are threads blocking on 
       non-det-start, then just wake them up. */
-      if (nNonDetWait > 0 && self() == IdleThreadTid &&
-        runq.size() == 1 && runq.front() == IdleThreadTid) {
+      if (options::enforce_non_det_annotations && nNonDetWait > 0 &&
+        self() == IdleThreadTid && runq.size() == 1 && runq.front() == IdleThreadTid) {
         dprintf("nextRunnable() Tid %d wakes up nonDet start threads\n", self());
         signal(&nonDetCV, true);
       }
