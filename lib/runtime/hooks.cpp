@@ -124,8 +124,8 @@ int tern_pthread_mutex_init(unsigned ins, pthread_mutex_t *mutex, const pthread_
     pthread_mutexattr_settype(&psharedm, PTHREAD_MUTEX_ERRORCHECK);
     mutexattr = &psharedm;
   }
-  ret = pthread_mutex_init(mutex, mutexattr);
-    //Runtime::the->pthreadMutexInit(ins, error, mutex, mutexattr);
+  //ret = pthread_mutex_init(mutex, mutexattr);
+  ret = Runtime::the->pthreadMutexInit(ins, error, mutex, mutexattr);
   Space::exitSys();
   errno = error;
   return ret;
@@ -365,6 +365,9 @@ void tern_pthread_exit(unsigned ins, void *retval) {
     exit(0);
   }
   assert(Space::isSys());
+#ifdef XTERN_PLUS_DBUG
+  Runtime::__attach_self_to_dbug();
+#endif
   Runtime::__pthread_exit(retval);
 }
 

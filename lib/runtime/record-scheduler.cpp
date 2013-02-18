@@ -54,6 +54,9 @@ extern pthread_cond_t idle_cond;
 extern int idle_done;
 extern ClockManager clockManager;
 
+extern int nNonDetWait;
+extern pthread_cond_t nonDetCV;
+
 void RRSchedulerCV::detect_blocking_threads(void)
 {
 /*
@@ -188,11 +191,11 @@ void RRScheduler::wait_t::wait() {
     on my machine, or 14 ms on bug00. This is one order of magnitude bigger
     than context switch time (1ms). **/
     /**
-    2012-12-30: changed it to 4e4. By using a mencoder to convert a mpg file on bug00,
-    using 4e4 only has 902 broken busy wait events, while using 3e4 has 13814.
-    On bug00 the lib/runtime module is compiled with llvm optimized, I think.
+    2013-2-17: changed it to 4e5. It makes the parsec/flui* benchmark runs 
+    with very small overhead (2~4 busywait timeouts) on bug00. If we choose 4e4, then there
+    would be hundredsof timeouts.
     **/
-    const long waitCnt = 4e4;
+    const long waitCnt = 4e5;
     volatile long i = 0;
     while (!wakenUp && i < waitCnt) {
       sched_yield();
@@ -651,6 +654,14 @@ int RRScheduler::nextRunnable(bool at_thread_end) {
         }
         assert(self() != IdleThreadTid);
         wakeUpIdleThread();
+      }
+    } else {
+      /* If runq only contains idle thread and there are threads blocking on 
+      non-det-start, then just wake them up. */
+      if (options::enforce_non_det_annotations && nNonDetWait > 0 &&
+        self() == IdleThreadTid && runq.size() == 1 && runq.front() == IdleThreadTid) {
+        dprintf("nextRunnable() Tid %d wakes up nonDet start threads\n", self());
+        signal(&nonDetCV, true);
       }
     }
     assert(!runq.empty());

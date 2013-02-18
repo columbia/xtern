@@ -81,7 +81,11 @@
 using namespace std;
 
 /// Variables for the non-det prfimitive.
-__thread bool inNonDet; /** Per-thread variable to denote whether current thread is within a non_det region. **/
+pthread_cond_t nonDetCV; /** This cond var does not actually work with other mutexes to do
+                                        real cond wait and signal, it just provides a cond var addr for 
+                                        _S::wait() and _S::signal(). **/
+int nNonDetWait = 0; /** This variable is only accessed when a thread gets a turn, so it is safe. **/
+__thread bool inNonDet = false; /** Per-thread variable to denote whether current thread is within a non_det region. **/
 tr1::unordered_set<void *> nonDetSyncs; /** Global set to store the sync vars that have ever been accessed within non_det regions of all threads. **/
 pthread_spinlock_t nonDetLock; /** a spinlock to protect the acccess to the global set "nonDetSyncs". **/
 
@@ -545,7 +549,8 @@ int RecorderRT<_S>::pthreadMutexInit(unsigned ins, int &error, pthread_mutex_t *
   int ret;
   if (options::enforce_non_det_annotations && inNonDet) {
     add_non_det_var((void *)mutex);
-    return pthread_mutex_init(mutex, mutexattr);
+    dprintf("Thread tid %d, self %u is calling non-det pthread_mutex_init.\n", _S::self(), (unsigned)pthread_self());
+    return Runtime::__pthread_mutex_init(ins, error, mutex, mutexattr);
   }
   SCHED_TIMER_START;
   errno = error;
@@ -561,7 +566,7 @@ int RecorderRT<_S>::pthreadMutexDestroy(unsigned ins, int &error, pthread_mutex_
   int ret;
   if (options::enforce_non_det_annotations && inNonDet) {
     add_non_det_var((void *)mutex);
-    return pthread_mutex_destroy(mutex);
+    return Runtime::__pthread_mutex_destroy(ins, error, mutex);
   }
   SCHED_TIMER_START;
   errno = error;
@@ -611,8 +616,8 @@ template <typename _S>
 int RecorderRT<_S>::pthreadMutexLock(unsigned ins, int &error, pthread_mutex_t *mu) {
   if (options::enforce_non_det_annotations && inNonDet) {
     add_non_det_var((void *)mu);
-    //fprintf(stderr, "Thread tid %d, self %u is calling non-det pthread_mutex_lock.\n", _S::self(), (unsigned)pthread_self());
-    return pthread_mutex_lock(mu);
+    dprintf("Thread tid %d, self %u is calling non-det pthread_mutex_lock.\n", _S::self(), (unsigned)pthread_self());
+    return Runtime::__pthread_mutex_lock(ins, error, mu);
   }
   SCHED_TIMER_START;
   errno = error;
@@ -782,8 +787,8 @@ int RecorderRT<_S>::pthreadMutexUnlock(unsigned ins, int &error, pthread_mutex_t
   int ret;
   if (options::enforce_non_det_annotations && inNonDet) {
     add_non_det_var((void *)mu);
-    //fprintf(stderr, "Thread tid %d, self %u is calling non-det pthread_mutex_unlock.\n", _S::self(), (unsigned)pthread_self());
-    return pthread_mutex_unlock(mu);
+    dprintf("Thread tid %d, self %u is calling non-det pthread_mutex_unlock.\n", _S::self(), (unsigned)pthread_self());
+    return Runtime::__pthread_mutex_unlock(ins, error, mu);
   }
   SCHED_TIMER_START;
 
@@ -1429,18 +1434,45 @@ void RecorderRT<_S>::lineupEnd(long opaque_type) {
 
 template <typename _S>
 void RecorderRT<_S>::nonDetStart() {
-  fprintf(stderr, "nonDetStart, tid %d\n", _S::self());
-  assert(options::enforce_non_det_annotations == 1);
-  _S::block();    /** Reuse existing xtern API. Get turn, remove myself from runq, and then pass turn.
-                        This operation is determinisitc since we get turn. **/
+  unsigned ins = 0;
+  dprintf("nonDetStart, tid %d\n", _S::self());
+  SCHED_TIMER_START;
+  nNonDetWait++;
+  /** Although at this moment current thread is still in the xtern runq, we pre-attach it to dbug,
+  so that after _S::block() below is called, for whatever operation current thread is going to call,                                    dbug will know totally how many threads 
+  should be blocked (so that dbug can explore the upper bound of non-determinism for these
+  non-det regions). **/
+#ifdef XTERN_PLUS_DBUG
+  Runtime::__attach_self_to_dbug();
+#endif
+
+  /** All non-det operations are blocked on this fake var until runq is empty, 
+  i.e., all valid (except idle thread) xtern threads are paused.
+  This wait works like a lineup with unlimited timeout, which is for 
+  maximizing the non-det regions. **/
+  _S::wait(&nonDetCV);
+
+  nNonDetWait--;
+  SCHED_TIMER_END(syncfunc::tern_non_det_start, 0);
+  /** Reuse existing xtern API. Get turn, remove myself from runq, and then pass turn. This 
+  operation is determinisitc since we get turn. **/
+  _S::block();
   inNonDet = true;
 }
 
 template <typename _S>
 void RecorderRT<_S>::nonDetEnd() {
-  fprintf(stderr, "nonDetEnd, tid %d\n", _S::self());
+  dprintf("nonDetEnd, tid %d\n", _S::self());
   assert(options::enforce_non_det_annotations == 1);
   inNonDet = false;
+  /** At this moment current thread won't call any non-det sync op any more, so we 
+  do not need to worry about the order between this non_det_end() and other non-det sync
+  in other threads' non-det regions, so we do not need to call the wait(NON_DET_BLOCKED)
+  as in non_det_start(). **/
+#ifdef XTERN_PLUS_DBUG
+  Runtime::__detach_self_from_dbug();
+#endif
+
   _S::wakeup(); /** Reuse existing xtern API. Put myself to wake-up queue, 
                             other threads grabbing the turn will put myself back to runq. This operation is non-
                             determinisit since we do not get turn, but it is fine, because there is already 
@@ -2021,7 +2053,8 @@ pid_t RecorderRT<_S>::__fork(unsigned ins, int &error)
   dprintf("pid %d enters fork\n", getpid());
   pid_t ret;
 
-  Logger::the->flush(); // so child process won't write it again
+  if (options::log_sync)
+    Logger::the->flush(); // so child process won't write it again
 
   /* Although this is inter-process operation, and we need to involve dbug
     tool (debug needs to register/unregister threads based on fork()), we do
