@@ -54,3 +54,25 @@ extern "C" void tern_lineup(long opaque_type){
 }
 #endif
 
+#ifndef __SPEC_HOOK_tern_non_det_start
+extern "C" void tern_non_det_start(){
+#ifdef __USE_TERN_RUNTIME
+  if (Space::isApp() && options::DMT && options::enforce_annotations && options::enforce_non_det_annotations) {
+    tern_non_det_start_real();
+  } 
+#endif
+  // If not runnning with xtern, NOP.
+}
+#endif
+
+#ifndef __SPEC_HOOK_tern_non_det_end
+extern "C" void tern_non_det_end(){
+#ifdef __USE_TERN_RUNTIME
+  if (Space::isApp() && options::DMT && options::enforce_annotations && options::enforce_non_det_annotations) {
+    tern_non_det_end_real();
+  } 
+#endif
+  // If not runnning with xtern, NOP.
+}
+#endif
+

@@ -46,13 +46,13 @@ F_INC = -I$(XTERN_ROOT)/include
 #---------------------------------------------------------------------------
 # Global *compile time* flags for Fortran programs
 #---------------------------------------------------------------------------
-FFLAGS	= -g -O2 -fopenmp
+FFLAGS	= -g -O3 -fopenmp
 
 #---------------------------------------------------------------------------
 # Global *link time* flags. Flags for increasing maximum executable 
 # size usually go here. 
 #---------------------------------------------------------------------------
-FLINKFLAGS = -g -O2 -fopenmp -L$(XTERN_ROOT)/apps/openmp/install/lib -Wl,--rpath,$(XTERN_ROOT)/apps/openmp/install/lib -L$(XTERN_ROOT)/apps/openmp/install/lib64 -Wl,--rpath,$(XTERN_ROOT)/apps/openmp/install/lib64 -L$(XTERN_ROOT)/dync_hook -Wl,--rpath,$(XTERN_ROOT)/dync_hook
+FLINKFLAGS = -g -O3 -fopenmp -L$(XTERN_ROOT)/apps/openmp/install/lib -Wl,--rpath,$(XTERN_ROOT)/apps/openmp/install/lib -L$(XTERN_ROOT)/apps/openmp/install/lib64 -Wl,--rpath,$(XTERN_ROOT)/apps/openmp/install/lib64 -L$(XTERN_ROOT)/dync_hook -Wl,--rpath,$(XTERN_ROOT)/dync_hook
 
 #---------------------------------------------------------------------------
 # Parallel C:
@@ -103,13 +103,13 @@ C_INC = -I$(XTERN_ROOT)/include
 # _LARGEFILE64_SOURCE - are standard compiler flags which allow to work with 
 # files larger than 2GB.
 #---------------------------------------------------------------------------
-CFLAGS	= -g -O2 -fopenmp -fPIC
+CFLAGS	= -g -O3 -fopenmp -fPIC
 
 #---------------------------------------------------------------------------
 # Global *link time* flags. Flags for increasing maximum executable 
 # size usually go here. 
 #---------------------------------------------------------------------------
-CLINKFLAGS = -g -O2 -fopenmp -L$(XTERN_ROOT)/apps/openmp/install/lib -Wl,--rpath,$(XTERN_ROOT)/apps/openmp/install/lib -L$(XTERN_ROOT)/apps/openmp/install/lib64 -Wl,--rpath,$(XTERN_ROOT)/apps/openmp/install/lib64 -L$(XTERN_ROOT)/dync_hook -Wl,--rpath,$(XTERN_ROOT)/dync_hook
+CLINKFLAGS = -g -O3 -fopenmp -L$(XTERN_ROOT)/apps/openmp/install/lib -Wl,--rpath,$(XTERN_ROOT)/apps/openmp/install/lib -L$(XTERN_ROOT)/apps/openmp/install/lib64 -Wl,--rpath,$(XTERN_ROOT)/apps/openmp/install/lib64 -L$(XTERN_ROOT)/dync_hook -Wl,--rpath,$(XTERN_ROOT)/dync_hook
 
 
 #---------------------------------------------------------------------------

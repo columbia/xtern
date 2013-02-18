@@ -87,6 +87,8 @@ struct RecorderRT: public Runtime, public _Scheduler {
   void lineupDestroy(long opaque_type);
   void lineupStart(long opaque_type);
   void lineupEnd(long opaque_type);
+  void nonDetStart();
+  void nonDetEnd();
 
   void symbolic(unsigned insid, int &error, void *addr, int nbytes, const char *name);
 

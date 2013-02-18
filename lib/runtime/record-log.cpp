@@ -116,6 +116,8 @@ void TxtLogger::logSync(unsigned insid, unsigned short sync,
   case syncfunc::wait:
   case syncfunc::waitpid:
   case syncfunc::tern_idle:
+  case syncfunc::tern_non_det_start:
+  case syncfunc::tern_non_det_end:
     break;
     // log one sync var (common case)
   case syncfunc::pthread_mutex_init:
@@ -503,6 +505,8 @@ void TestLogger::logSync(unsigned insid, unsigned short sync,
   case syncfunc::wait:
   case syncfunc::waitpid:
   case syncfunc::tern_idle:
+  case syncfunc::tern_non_det_start:
+  case syncfunc::tern_non_det_end:
     break;
     // log one sync var (common case)
   case syncfunc::pthread_mutex_init:
