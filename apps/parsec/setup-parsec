@@ -67,16 +67,16 @@ patch -p1 < $XTERN_ROOT/apps/parsec/patch/vips.diff
 patch -p1 < $XTERN_ROOT/apps/parsec/patch/fluidanimate-serial.patch
 patch -p1 < $XTERN_ROOT/apps/parsec/patch/bodytrack_avoid_deadlock.patch # to avoid a bud in 'tern_pthread_cancel'
 # generate configs for dthreads
-set +e
-bin/bldconfdel -n gcc-dthreads
-set -e
-patch -p1 < $XTERN_ROOT/apps/parsec/patch/parsec_dthreads_1.patch
+#set +e
+#bin/bldconfdel -n gcc-dthreads
+#set -e
+#patch -p1 < $XTERN_ROOT/apps/parsec/patch/parsec_dthreads_1.patch
 popd
 # openssl compiling error
 if [ ! -f openssl-0.9.8x.tar.gz ]; then
     $AXEL http://www.openssl.org/source/openssl-0.9.8x.tar.gz
 fi
-tar zxf openssl-0.9.8x.tar.gz > /dev/null 2>&1
+tar zxf openssl-0.9.8x.tar.gz
 rm -rf parsec-2.0/pkgs/libs/ssl/src
 mv openssl-0.9.8x parsec-2.0/pkgs/libs/ssl/src
 ln -s $XTERN_ROOT/apps/parsec/parsec-2.0/pkgs/libs/ssl/src/config $XTERN_ROOT/apps/parsec/parsec-2.0/pkgs/libs/ssl/src/configure
