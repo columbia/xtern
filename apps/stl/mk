@@ -1,0 +1,34 @@
+#!/bin/bash
+
+GCC="$XTERN_ROOT/apps/openmp/install/bin/g++"
+if [ -f $GCC ]; then
+    echo "Using $GCC as compiler..."
+else
+    echo "Please refer to $XTERN_ROOT/apps/openmp/readme.txt and build the g++ first."
+    exit
+fi
+
+ARCH=`uname -m`
+GCCLIB=""
+cd $XTERN_ROOT/apps/stl/
+XTERN_ANNOT_LIB="-I$XTERN_ROOT/include -L$XTERN_ROOT/dync_hook -Wl,--rpath,$XTERN_ROOT/dync_hook -lxtern-annot"
+if [ "$ARCH" == "x86_64" ]; then
+  GCCLIB="$XTERN_ROOT/apps/openmp/install/lib64"
+else
+  GCCLIB="$XTERN_ROOT/apps/openmp/install/lib"
+fi
+
+ln -s $GCCLIB/libgomp.a . &> /dev/null
+ln -s $GCCLIB/libstdc++.a . &> /dev/null
+
+cd src
+ALLSRC=`ls *.cpp`
+cd ..
+for SRC in $ALLSRC
+do
+  PROG=`echo $SRC | sed 's/\(.*\)\..*/\1/'`
+  CMD="$GCC -g -O2 -fno-stack-protector -static-libgcc -static-libstdc++ -D_GLIBCXX_PARALLEL -L. \
+    -fopenmp src/$SRC -o $PROG -lgomp $XTERN_ANNOT_LIB"
+  echo "Compiling src/$SRC..."   #" with command $CMD..."
+  `$CMD`
+done
