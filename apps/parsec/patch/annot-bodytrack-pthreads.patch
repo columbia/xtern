@@ -9,8 +9,8 @@ diff -ruN parsec-2.0-orig/pkgs/apps/bodytrack/src/TrackingBenchmark/main.cpp par
  //Body tracking threaded with explicit Posix threads
  int mainPthreads(string path, int cameras, int frames, int particles, int layers, int threads, bool OutputBMP)
  {
-+    tern_lineup_init(0, threads, 100);
-+    tern_lineup_init(1, threads, 100);
++    tern_lineup_init(0, threads, 20*threads);
++    tern_lineup_init(1, threads, 20*threads);
  	cout << "Threading with Posix Threads" << endl;
  	if(threads < 1) {
  		cout << "Warning: Illegal or unspecified number of threads, using 1 thread" << endl;
