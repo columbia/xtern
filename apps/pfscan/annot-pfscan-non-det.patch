@@ -1,6 +1,6 @@
 diff -ruN pfscan-1.0/Makefile pfscan-1.0-modified/Makefile
 --- pfscan-1.0/Makefile	2002-03-25 17:51:21.000000000 -0500
-+++ pfscan-1.0-modified/Makefile	2013-02-17 00:56:06.159709645 -0500
++++ pfscan-1.0-modified/Makefile	2013-02-18 21:48:36.561929316 -0500
 @@ -23,9 +23,9 @@
  SOL_LIBS= -lpthread -lnsl -lsocket
  
@@ -15,7 +15,7 @@ diff -ruN pfscan-1.0/Makefile pfscan-1.0-modified/Makefile
  OBJS = pfscan.o bm.o version.o pqueue.o
 diff -ruN pfscan-1.0/pfscan.c pfscan-1.0-modified/pfscan.c
 --- pfscan-1.0/pfscan.c	2002-03-25 18:13:45.000000000 -0500
-+++ pfscan-1.0-modified/pfscan.c	2013-02-17 00:56:53.479707950 -0500
++++ pfscan-1.0-modified/pfscan.c	2013-02-18 21:49:21.325927712 -0500
 @@ -34,7 +34,7 @@
  
  #include "pqueue.h"
@@ -35,3 +35,16 @@ diff -ruN pfscan-1.0/pfscan.c pfscan-1.0-modified/pfscan.c
  	free(path);
      }
  
+@@ -535,9 +537,11 @@
+ 
+     nworkers = 2;
+ 
+-    pthread_mutex_init(&print_lock, NULL);
+     pthread_mutex_init(&aworker_lock, NULL);
++    tern_non_det_start();
++    pthread_mutex_init(&print_lock, NULL);
+     pthread_mutex_init(&matches_lock, NULL);
++    tern_non_det_end();
+ 
+     for (i = 1; i < argc && argv[i][0] == '-'; i++)
+ 	for (j = 1; j > 0 && argv[i][j]; ++j)
