@@ -418,12 +418,11 @@ def processBench(config, bench):
             execBench(dthread_command, repeats, 'dthreads')
         else:
             logging.warning("cannot find %s" % dthread)
-            dthraed = ""
+            dthread = ""
 
     dmp_o = config.get(bench, 'DMP_O')
     if dmp_o:
         dmp_o_exec_file = os.path.abspath('%s/apps/%s/%s' % (DMTTOOL_ROOT, os.path.basename(exec_file), dmp_o))
-        print dmp_o_exec_file
         if checkExist(dmp_o_exec_file):
             dmp_o_command = ' '.join(['time', export, dmp_o_exec_file] + inputs.split())
             logging.info("executing '%s'" % dmp_o_command)
@@ -553,7 +552,10 @@ if __name__ == "__main__":
         logging.error("Please set the environment variable " + str(e))
         sys.exit(1)
     APPS = os.path.abspath(XTERN_ROOT + "/apps/")
-    DMTTOOL_ROOT = os.environ["DMTTOOL_ROOT"]
+    try: #TODO: refine this part..
+        DMTTOOL_ROOT = os.environ["DMTTOOL_ROOT"]
+    except:
+        DMTTOOL_ROOT = ""
     if not checkExist("%s/dync_hook/interpose.so" % XTERN_ROOT, os.R_OK):
         logging.error('thre is no "$XTERN_ROOT/dync_hook/interpose.so"')
         sys.exit(1)
