@@ -5,6 +5,7 @@ cd $XTERN_ROOT/apps/pfscan
 rm -rf pfscan-$VER 
 tar zxvf $APPS_DIR/sys/pfscan-$VER.tar.gz
 cd pfscan-$VER
+patch -p1 < ../fix_cvar_init.patch
 patch -p1 < ../annot-pfscan-non-det.patch
 make lnx
 cd ..
