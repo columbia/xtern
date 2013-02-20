@@ -1,6 +1,6 @@
 diff -ruN parsec-3.0-orig/ext/splash2x/kernels/radix/src/radix.C parsec-3.0-modified/ext/splash2x/kernels/radix/src/radix.C
---- parsec-3.0-orig/ext/splash2x/kernels/radix/src/radix.C	2013-02-19 00:53:56.093531456 -0500
-+++ parsec-3.0-modified/ext/splash2x/kernels/radix/src/radix.C	2013-02-19 00:54:42.013529815 -0500
+--- parsec-3.0/ext/splash2x/kernels/radix/src/radix.C	2013-02-19 00:53:56.093531456 -0500
++++ parsec-3.0/ext/splash2x/kernels/radix/src/radix.C	2013-02-19 00:54:42.013529815 -0500
 @@ -39,6 +39,7 @@
  #include <stdio.h>
  #include <math.h>
