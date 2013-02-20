@@ -38,6 +38,7 @@
 #include <string.h>
 #include <errno.h>
 #include <poll.h>
+#include <sched.h>
 #include "tern/runtime/clockmanager.h"
 #include "tern/runtime/record-log.h"
 #include "tern/runtime/record-runtime.h"
@@ -2109,6 +2110,15 @@ pid_t RecorderRT<_S>::__waitpid(unsigned ins, int &error, pid_t pid, int *status
   return ret;
 }
 
+
+template <typename _S>
+int RecorderRT<_S>::schedYield(unsigned ins, int &error)
+{
+  SCHED_TIMER_START;
+  int ret = sched_yield();
+  SCHED_TIMER_END(syncfunc::sched_yield, ret);
+  return ret;
+}
 
 // TODO: right now we treat sleep functions just as a turn; should convert
 // real time to logical time
