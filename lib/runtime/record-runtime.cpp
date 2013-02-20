@@ -2116,7 +2116,7 @@ int RecorderRT<_S>::schedYield(unsigned ins, int &error)
 {
   SCHED_TIMER_START;
   int ret = sched_yield();
-  SCHED_TIMER_END(syncfunc::sched_yield, ret);
+  SCHED_TIMER_END(syncfunc::sched_yield, (uint64_t)ret);
   return ret;
 }
 
