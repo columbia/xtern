@@ -66,7 +66,10 @@ def readConfigFile(config_file):
                                                 "C_CMD": "",
                                                 "C_TERMINATE_SERVER": "0",
                                                 "C_STATS": "0",
-                                                "EVALUATION": ""} )
+                                                "EVALUATION": "",
+                                                "DBUG_ARBITER_PORT": "12345",
+                                                "DBUG_EXPLORER_PORT": "12346",
+                                                "DBUG_TIMEOUT": "60"} )
         ret = newConfig.read(config_file)
     except ConfigParser.MissingSectionHeaderError as e:
         logging.error(str(e))
@@ -110,23 +113,27 @@ def mkdir_p(path):
         else: raise
 
 def genRunDir(config_file, git_info):
+    if args.model_checking:
+        dir_name = "M"
+    else:
+        dir_name = ""
     from os.path import basename
     config_name = os.path.splitext( basename(config_file) )[0]
     from time import strftime
-    dir_name = config_name + strftime("%Y%b%d_%H%M%S") + '_' + git_info[0] + git_info[1]
+    dir_name += config_name + strftime("%Y%b%d_%H%M%S") + '_' + git_info[0] + git_info[1]
     mkdir_p(dir_name)
     logging.debug("creating %s" % dir_name)
     return os.path.abspath(dir_name)
 
-def extract_apps_exec(bench):
+def extract_apps_exec(bench, apps_dir=""):
     bench = bench.partition('"')[0].partition("'")[0]
     apps = bench.split()
     if apps.__len__() < 1:
         raise Exception("cannot parse executible file name")
     elif apps.__len__() == 1:
-        return apps[0], os.path.abspath(APPS + '/' + apps[0] + '/' + apps[0])
+        return apps[0], os.path.abspath(apps_dir + '/' + apps[0] + '/' + apps[0])
     else:
-        return apps[0], os.path.abspath(APPS + '/' + apps[0] + '/' + apps[1])
+        return apps[0], os.path.abspath(apps_dir + '/' + apps[0] + '/' + apps[1])
 
 def generate_local_options(config, bench):
     config_options = config.options(bench)
@@ -335,7 +342,7 @@ def processBench(config, bench):
     # for each bench, generate running directory
     logging.debug("processing: " + bench)
     specified_evaluation = config.get(bench, 'EVALUATION')
-    apps_name, exec_file = extract_apps_exec(bench)
+    apps_name, exec_file = extract_apps_exec(bench, APPS)
     logging.debug("app = %s" % apps_name)
     logging.debug("executible file = %s" % exec_file)
     if not specified_evaluation and not checkExist(exec_file, os.X_OK):
@@ -360,6 +367,13 @@ def processBench(config, bench):
 
     # get required files
     preSetting(config, bench, apps_name)
+
+    ### dbug ###
+    if args.model_checking:
+        import dbug
+        dbug.model_checking(config, bench)
+        os.chdir("..")
+        return
 
     # get 'export' environment variable
     export = config.get(bench, 'EXPORT')
@@ -516,6 +530,7 @@ def processBench(config, bench):
 
     os.chdir("..")
 
+
 if __name__ == "__main__":
     # setting log format
     logger = logging.getLogger()
@@ -527,23 +542,6 @@ if __name__ == "__main__":
     logger.addHandler(ch)
     logger.setLevel(logging.DEBUG)
 
-    # parse input arguments
-    parser = argparse.ArgumentParser(
-        description="Evaluate the perforamnce of xtern")
-    parser.add_argument('filename', nargs='*',
-        type=str,
-        default = ["xtern.cfg"],
-        help = "list of configuration files (default: xtern.cfg)")
-    args = parser.parse_args()
-
-    if args.filename.__len__() == 0:
-        logging.critical('no configuration file specified??')
-        sys.exit(1)
-    elif args.filename.__len__() == 1:
-        logging.debug('config file: ' + ''.join(args.filename))
-    else:
-        logging.debug('config files: ' + ', '.join(args.filename))
-    
     # get environment variable
     try:
         XTERN_ROOT = os.environ["XTERN_ROOT"]
@@ -556,12 +554,33 @@ if __name__ == "__main__":
         DMTTOOL_ROOT = os.environ["DMTTOOL_ROOT"]
     except:
         DMTTOOL_ROOT = ""
+ 
+    # parse input arguments
+    parser = argparse.ArgumentParser(
+        description="Evaluate the perforamnce of xtern")
+    parser.add_argument('filename', nargs='*',
+        type=str,
+        default = ["xtern.cfg"],
+        help = "list of configuration files (default: xtern.cfg)")
+    parser.add_argument("-mc", "--model-checking",
+                        action="store_true", 
+                        help="run model-checking tools only")
+    args = parser.parse_args()
+
+    if args.filename.__len__() == 0:
+        logging.critical('no configuration file specified??')
+        sys.exit(1)
+    elif args.filename.__len__() == 1:
+        logging.debug('config file: ' + ''.join(args.filename))
+    else:
+        logging.debug('config files: ' + ', '.join(args.filename))
+    
+    # check xtern files
     if not checkExist("%s/dync_hook/interpose.so" % XTERN_ROOT, os.R_OK):
         logging.error('thre is no "$XTERN_ROOT/dync_hook/interpose.so"')
         sys.exit(1)
     if not checkExist("%s/eval/rand-intercept/rand-intercept.so" % XTERN_ROOT, os.R_OK):
-        logging.error('there is no "$XTERN_ROOT/eval/rand-intercept/rand-intercept.so"')
-        sys.exit(1)
+        logging.warning('there is no "$XTERN_ROOT/eval/rand-intercept/rand-intercept.so"')
     XTERN_PRELOAD = "LD_PRELOAD=%s/dync_hook/interpose.so" % XTERN_ROOT
     RAND_PRELOAD = "LD_NOTPRELOAD=%s/eval/rand-intercept/rand-intercept.so" % XTERN_ROOT
     # set environment variable
@@ -576,7 +595,6 @@ if __name__ == "__main__":
     else:
         bash_path = bash_path[0]
         logging.debug("find 'bash' at %s" % bash_path)
-
 
     # get default xtern options
     default_options = getXternDefaultOptions()
