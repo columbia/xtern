@@ -469,6 +469,13 @@ END_SHORT_DEFINE
 
 START_SHORT_DEFINE
 /libc.so.6
+int 
+sched_yield
+(void)
+END_SHORT_DEFINE
+
+START_SHORT_DEFINE
+/libc.so.6
 unsigned int 
 sleep
 (unsigned int seconds)

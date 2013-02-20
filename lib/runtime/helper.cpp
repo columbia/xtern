@@ -134,6 +134,7 @@ void __tern_prog_begin(void) {
 
 //  SYS -> SYS
 void __tern_prog_end (void) {
+  fprintf(stderr, "tern_prog_end\n");
   assert(prog_began && "__tern_prog_begin() not called "\
          "or __tern_prog_end() already called!");
 
