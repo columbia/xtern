@@ -3,6 +3,7 @@ import re
 import sys
 import subprocess
 import logging
+import signal
 import eval
 
 def model_checking(configs, benchmark):
@@ -13,22 +14,22 @@ def model_checking(configs, benchmark):
         try:
             # Python 2.5
             import xml.etree.cElementTree as etree
-            logging.debug("running with cElementTree on Python 2.5+")
+            #logging.debug("running with cElementTree on Python 2.5+")
         except ImportError:
             try:
                 # Python 2.5
                 import xml.etree.ElementTree as etree
-                logging.debug("running with ElementTree on Python 2.5+")
+                #logging.debug("running with ElementTree on Python 2.5+")
             except ImportError:
                 try:
                     # normal cElementTree install
                     import cElementTree as etree
-                    logging.debug("running with cElementTree")
+                    #logging.debug("running with cElementTree")
                 except ImportError:
                     try:
                         # normal ElementTree install
                         import elementtree.ElementTree as etree
-                        logging.debug("running with ElementTree")
+                        #logging.debug("running with ElementTree")
                     except ImportError:
                         logging.error("Failed to import ElementTree from any known place") 
 
@@ -76,17 +77,21 @@ def model_checking(configs, benchmark):
     with open("run.xml", "w") as run_xml:
         run_xml.write(etree.tostring(dbug_config, pretty_print=True))
 
-    init_env_command = configs.get(benchmark, "INIT_ENV_CMD")
+    init_env_cmd = configs.get(benchmark, "INIT_ENV_CMD")
     if init_env_cmd:
         os.system(init_env_cmd)
+
+    # copy files
+    eval.copy_file(os.path.realpath(exec_file), os.path.basename(exec_file))
 
     bash_path = eval.which('bash')[0]
     dbug_cmd = '%s run.xml' % EXPLORER
     with open('dbug.log', 'w', 102400) as log_file:
-        #proc = subprocess.Popen(dbug_cmd, stdout=log_file, stderr=subprocess.STDOUT,
-        proc = subprocess.Popen(dbug_cmd, stdout=log_file, stderr=subprocess.STDOUT, shell=True, executable=bash_path, bufsize = 102400, preexec_fn=os.setsid)
+        proc = subprocess.Popen(dbug_cmd, stdout=log_file, stderr=subprocess.STDOUT,
+                                shell=True, executable=bash_path, bufsize = 102400, preexec_fn=os.setsid)
         proc.wait()
-        
+        try:
+            os.killpg(proc.pid, signal.SIGTERM)
+        except OSError:
+            pass
     
-    # copy files
-    eval.copy_file(os.path.realpath(exec_file), os.path.basename(exec_file))
