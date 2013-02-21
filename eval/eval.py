@@ -11,6 +11,7 @@ import re
 import subprocess
 import time
 import signal
+import threading
 
 def getXternDefaultOptions():
     default = {}
@@ -531,6 +532,19 @@ def processBench(config, bench):
     os.chdir("..")
 
 
+def workers(semaphore, lock, configs, bench):
+    from multiprocessing import Process
+    with semaphore:
+        p = Process(target=processBench, args=(configs, bench))
+        with lock:
+            if args.model_checking:
+                logging.debug("STARTING %s" % bench)
+            p.start()
+        p.join()
+        if args.model_checking:
+            with lock:
+                logging.debug("FINISH %s" % bench)
+
 if __name__ == "__main__":
     # setting log format
     logger = logging.getLogger()
@@ -565,6 +579,10 @@ if __name__ == "__main__":
     parser.add_argument("-mc", "--model-checking",
                         action="store_true", 
                         help="run model-checking tools only")
+    parser.add_argument("-p", "--parallel",
+                        default=1,
+                        type=int,
+                        help = "number of processes (model checking only)")
     args = parser.parse_args()
 
     if args.filename.__len__() == 0:
@@ -574,6 +592,12 @@ if __name__ == "__main__":
         logging.debug('config file: ' + ''.join(args.filename))
     else:
         logging.debug('config files: ' + ', '.join(args.filename))
+
+    if args.model_checking:
+        if args.parallel < 1:
+            logging.error("# of processes is %d", args.parallel)
+            sys.exit(1)
+        logging.info("# of processes is %d", args.parallel)
     
     # check xtern files
     if not checkExist("%s/dync_hook/interpose.so" % XTERN_ROOT, os.R_OK):
@@ -629,10 +653,18 @@ if __name__ == "__main__":
                 diff.write(git_info[3])
         
         benchmarks = local_config.sections()
+        all_threads = []
+        semaphore = threading.BoundedSemaphore(args.parallel if args.model_checking else 1)
+        log_lock = threading.Lock()
         for benchmark in benchmarks:
             if benchmark == "default" or benchmark == "example":
                 continue
-            processBench(local_config, benchmark)
+            t = threading.Thread(target=workers, args=(semaphore, log_lock, local_config, benchmark))
+            t.start()
+            all_threads.append(t)
+
+        for t in all_threads:
+            t.join()
 
         os.chdir(root_dir)
        

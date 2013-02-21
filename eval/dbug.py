@@ -9,7 +9,7 @@ import eval
 def model_checking(configs, benchmark):
     try:
         from lxml import etree
-        logging.debug("running with lxml.etree")
+        #logging.debug("running with lxml.etree")
     except ImportError:
         try:
             # Python 2.5
