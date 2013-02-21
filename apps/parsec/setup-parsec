@@ -67,7 +67,9 @@ patch -p1 < $XTERN_ROOT/apps/parsec/patch/simd-gcc.patch
 patch -p1 < $XTERN_ROOT/apps/parsec/patch/bodytrack.diff
 patch -p1 < $XTERN_ROOT/apps/parsec/patch/vips.diff
 patch -p1 < $XTERN_ROOT/apps/parsec/patch/fluidanimate-serial.patch
-patch -p1 < $XTERN_ROOT/apps/parsec/patch/bodytrack_avoid_deadlock.patch # to avoid a bud in 'tern_pthread_cancel'
+patch -p1 < $XTERN_ROOT/apps/parsec/patch/bodytrack_avoid_deadlock.patch
+#patch -p1 < $XTERN_ROOT/apps/parsec/patch/annot-x264.patch
+
 # generate configs for dthreads
 #set +e
 #bin/bldconfdel -n gcc-dthreads

@@ -125,3 +125,70 @@ diff -Naur src_orig/interactions.C src/interactions.C
        }
     }
  
+diff -Naur src_orig/cost_zones.C src/cost_zones.C
+--- parsec-3.0/ext/splash2x/apps/fmm/src_orig/cost_zones.C	2013-02-20 20:47:52.860438658 -0500
++++ parsec-3.0/ext/splash2x/apps/fmm/src/cost_zones.C	2013-02-20 20:48:52.652436317 -0500
+@@ -72,6 +72,8 @@
+       while (b->interaction_synch != b->num_children) {
+          WAITPAUSE(b->pause)
+          CLEARPAUSE(b->pause) 
++         if (b->interaction_synch == b->num_children)
++             SETPAUSE(b->pause)
+       }
+    }
+    b->interaction_synch = 0;
+diff -Naur src_orig/interactions.C src/interactions.C
+--- parsec-3.0/ext/splash2x/apps/fmm/src_orig/interactions.C	2013-02-20 20:47:52.860438658 -0500
++++ parsec-3.0/ext/splash2x/apps/fmm/src/interactions.C	2013-02-20 20:57:21.288418280 -0500
+@@ -103,6 +103,8 @@
+       while (b->interaction_synch != b->num_children) {
+ 	     WAITPAUSE(b->pause)
+          CLEARPAUSE(b->pause)
++         if (b->interaction_synch == b->num_children)
++            SETPAUSE(b->pause)
+       }
+    }
+    if (b->parent != NULL) {
+@@ -135,6 +137,8 @@
+       while (b->parent->interaction_synch != 0) {
+ 	     WAITPAUSE(b->parent->pause)
+          CLEARPAUSE(b->parent->pause)
++         if (b->parent->interaction_synch == 0)
++             SETPAUSE(b->parent->pause)
+       }
+       ShiftLocalExp(b->parent, b);
+    }
+@@ -373,12 +377,16 @@
+       while (source_box->interaction_synch != 1) {
+ 	     WAITPAUSE(source_box->pause)
+          CLEARPAUSE(source_box->pause)
++         if (source_box->interaction_synch == 1)
++             SETPAUSE(source_box->pause)
+       }
+    }
+    else {
+       while (source_box->interaction_synch != source_box->num_children) {
+ 	     WAITPAUSE(source_box->pause)
+          CLEARPAUSE(source_box->pause)
++         if (source_box->interaction_synch == source_box->num_children)
++             SETPAUSE(source_box->pause)
+       }
+    }
+ 
+@@ -454,12 +462,16 @@
+       while (source_box->interaction_synch != 1) {
+ 	     WAITPAUSE(source_box->pause)
+          CLEARPAUSE(source_box->pause)
++         if (source_box->interaction_synch == 1)
++             SETPAUSE(source_box->pause)
+       }
+    }
+    else {
+       while (source_box->interaction_synch != source_box->num_children) {
+          WAITPAUSE(source_box->pause)
+          CLEARPAUSE(source_box->pause)
++         if (source_box->interaction_synch == source_box->num_children)
++             SETPAUSE(source_box->pause)
+       }
+    }
+ 
