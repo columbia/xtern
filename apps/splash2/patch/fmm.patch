@@ -5,7 +5,7 @@ diff -Naur src_orig/box.C src/box.C
     b->subtree_cost = 0;
     b->next = NULL;
     b->prev = NULL;
-+   PAUSEINIT(b->pause)
++   //AUSEINIT(b->pause)
  }
  
  
@@ -16,7 +16,7 @@ diff -Naur src_orig/box.H src/box.H
    box *prev;
    box *link1;
    box *link2;
-+  PAUSEDEC(pause)
++  //AUSEDEC(pause)
  };
  
  
@@ -27,12 +27,12 @@ diff -Naur src_orig/cost_zones.C src/cost_zones.C
  
     if (b->type == PARENT) {
        while (b->interaction_synch != b->num_children) {
-+         WAITPAUSE(b->pause)
-+         CLEARPAUSE(b->pause) 
++         sched_yield();//AITPAUSE(b->pause)
++         //LEARPAUSE(b->pause) 
        }
     }
     b->interaction_synch = 0;
-+   SETPAUSE(b->pause)
++   //ETPAUSE(b->pause)
     ComputeCostOfBox(b);
     b->subtree_cost += b->cost;
     pb = b->parent;
@@ -40,7 +40,7 @@ diff -Naur src_orig/cost_zones.C src/cost_zones.C
        ALOCK(G_Memory->lock_array, pb->exp_lock_index);
        pb->subtree_cost += b->subtree_cost;
        pb->interaction_synch += 1;
-+      SETPAUSE(pb->pause)
++      //ETPAUSE(pb->pause)
        AULOCK(G_Memory->lock_array, pb->exp_lock_index);
     }
  }
@@ -51,21 +51,21 @@ diff -Naur src_orig/interactions.C src/interactions.C
        ComputeMPExp(b);
        ALOCK(G_Memory->lock_array, b->exp_lock_index);
        b->interaction_synch = 1;
-+      SETPAUSE(b->pause)
++      //ETPAUSE(b->pause)
        AULOCK(G_Memory->lock_array, b->exp_lock_index);
     }
     else {
        while (b->interaction_synch != b->num_children) {
 -	 /* wait */;
-+	     WAITPAUSE(b->pause)
-+         CLEARPAUSE(b->pause)
++	     sched_yield();//AITPAUSE(b->pause)
++         //LEARPAUSE(b->pause)
        }
     }
     if (b->parent != NULL) {
        ShiftMPExp(b, b->parent);
        ALOCK(G_Memory->lock_array, b->parent->exp_lock_index);
        b->parent->interaction_synch += 1;
-+      SETPAUSE(b->parent->pause)
++      //ETPAUSE(b->parent->pause)
        AULOCK(G_Memory->lock_array, b->parent->exp_lock_index);
     }
  }
@@ -74,20 +74,20 @@ diff -Naur src_orig/interactions.C src/interactions.C
     if (b->parent != NULL) {
        while (b->parent->interaction_synch != 0) {
 -	 /* wait */;
-+	     WAITPAUSE(b->parent->pause)
-+         CLEARPAUSE(b->parent->pause)
++	     sched_yield();//AITPAUSE(b->parent->pause)
++         //LEARPAUSE(b->parent->pause)
        }
        ShiftLocalExp(b->parent, b);
     }
     if (b->type == CHILDLESS) {
        EvaluateLocalExp(b);
        b->interaction_synch = 0;
-+      SETPAUSE(b->pause)
++      //ETPAUSE(b->pause)
     }
     else {
        ALOCK(G_Memory->lock_array, b->exp_lock_index);
        b->interaction_synch = 0;
-+      SETPAUSE(b->pause)
++      //ETPAUSE(b->pause)
        AULOCK(G_Memory->lock_array, b->exp_lock_index);
     }
  }
@@ -96,15 +96,15 @@ diff -Naur src_orig/interactions.C src/interactions.C
     if (source_box->type == CHILDLESS) {
        while (source_box->interaction_synch != 1) {
 -	 /* wait */;
-+	     WAITPAUSE(source_box->pause)
-+         CLEARPAUSE(source_box->pause)
++	 sched_yield();//    AITPAUSE(source_box->pause)
++         //LEARPAUSE(source_box->pause)
        }
     }
     else {
        while (source_box->interaction_synch != source_box->num_children) {
 -	 /* wait */;
-+	     WAITPAUSE(source_box->pause)
-+         CLEARPAUSE(source_box->pause)
++	    sched_yield();// AITPAUSE(source_box->pause)
++         //LEARPAUSE(source_box->pause)
        }
     }
  
@@ -113,15 +113,15 @@ diff -Naur src_orig/interactions.C src/interactions.C
     if (source_box->type == CHILDLESS) {
        while (source_box->interaction_synch != 1) {
 -	 /* wait */;
-+	     WAITPAUSE(source_box->pause)
-+         CLEARPAUSE(source_box->pause)
++	    sched_yield();// AITPAUSE(source_box->pause)
++         //LEARPAUSE(source_box->pause)
        }
     }
     else {
        while (source_box->interaction_synch != source_box->num_children) {
 -	 /* wait */;
-+         WAITPAUSE(source_box->pause)
-+         CLEARPAUSE(source_box->pause)
++        sched_yield();// AITPAUSE(source_box->pause)
++         //LEARPAUSE(source_box->pause)
        }
     }
  
@@ -144,8 +144,8 @@ diff -Naur src_orig/interactions.C src/interactions.C
        while (b->interaction_synch != b->num_children) {
  	     WAITPAUSE(b->pause)
           CLEARPAUSE(b->pause)
-+         if (b->interaction_synch == b->num_children)
-+            SETPAUSE(b->pause)
++         //if (b->interaction_synch == b->num_children)
++            //TPAUSE(b->pause)
        }
     }
     if (b->parent != NULL) {
@@ -153,8 +153,8 @@ diff -Naur src_orig/interactions.C src/interactions.C
        while (b->parent->interaction_synch != 0) {
  	     WAITPAUSE(b->parent->pause)
           CLEARPAUSE(b->parent->pause)
-+         if (b->parent->interaction_synch == 0)
-+             SETPAUSE(b->parent->pause)
++         //if (b->parent->interaction_synch == 0)
++           //TPAUSE(b->parent->pause)
        }
        ShiftLocalExp(b->parent, b);
     }
@@ -162,16 +162,16 @@ diff -Naur src_orig/interactions.C src/interactions.C
        while (source_box->interaction_synch != 1) {
  	     WAITPAUSE(source_box->pause)
           CLEARPAUSE(source_box->pause)
-+         if (source_box->interaction_synch == 1)
-+             SETPAUSE(source_box->pause)
++         //if (source_box->interaction_synch == 1)
++             //TPAUSE(source_box->pause)
        }
     }
     else {
        while (source_box->interaction_synch != source_box->num_children) {
  	     WAITPAUSE(source_box->pause)
           CLEARPAUSE(source_box->pause)
-+         if (source_box->interaction_synch == source_box->num_children)
-+             SETPAUSE(source_box->pause)
++         //if (source_box->interaction_synch == source_box->num_children)
++             //TPAUSE(source_box->pause)
        }
     }
  
@@ -179,16 +179,16 @@ diff -Naur src_orig/interactions.C src/interactions.C
        while (source_box->interaction_synch != 1) {
  	     WAITPAUSE(source_box->pause)
           CLEARPAUSE(source_box->pause)
-+         if (source_box->interaction_synch == 1)
-+             SETPAUSE(source_box->pause)
++         //if (source_box->interaction_synch == 1)
++             //TPAUSE(source_box->pause)
        }
     }
     else {
        while (source_box->interaction_synch != source_box->num_children) {
           WAITPAUSE(source_box->pause)
           CLEARPAUSE(source_box->pause)
-+         if (source_box->interaction_synch == source_box->num_children)
-+             SETPAUSE(source_box->pause)
++         //if (source_box->interaction_synch == source_box->num_children)
++             //TPAUSE(source_box->pause)
        }
     }
  

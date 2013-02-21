@@ -5,7 +5,7 @@ diff -Naur src_orig/matrix.H src/matrix.H
  
  struct GlobalMemory {
  	BARDEC(start)
-+    PAUSEDEC(pause)
++    //AUSEDEC(pause)
  	LOCKDEC(waitLock)
  	LOCKDEC(memLock)
  	unsigned long runtime[MAX_PROC];
@@ -16,7 +16,7 @@ diff -Naur src_orig/mf.C src/mf.C
    for (;;) {
  
      if (tasks[MyNum].taskQ || tasks[MyNum].probeQ) {
-+      SETPAUSE(Global->pause)
++      //ETPAUSE(Global->pause)
        LOCK(tasks[MyNum].taskLock)
        t = NULL;
        if (tasks[MyNum].probeQ) {
@@ -27,8 +27,8 @@ diff -Naur src_orig/mf.C src/mf.C
 -    while (!tasks[MyNum].taskQ && !tasks[MyNum].probeQ)
 -      ;
 +      while (!tasks[MyNum].taskQ && !tasks[MyNum].probeQ) {
-+        WAITPAUSE(Global->pause)
-+        CLEARPAUSE(Global->pause)
++        sched_yield();//AITPAUSE(Global->pause)
++        //LEARPAUSE(Global->pause)
 +      }
      }
    }
@@ -40,7 +40,7 @@ diff -Naur src_orig/solve.C src/solve.C
    gp->pid = 0;
    Global = (struct GlobalMemory *)
      G_MALLOC(sizeof(struct GlobalMemory), 0);
-+  PAUSEINIT(Global->pause)
++  //AUSEINIT(Global->pause)
    BARINIT(Global->start, P)
    LOCKINIT(Global->waitLock)
    LOCKINIT(Global->memLock)

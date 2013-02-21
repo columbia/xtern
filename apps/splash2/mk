@@ -74,7 +74,10 @@ patch -p0 < patch/radiosity.patch
 patch -p0 < patch/volrend.patch
 
 # annotations
-patch -p0 < patch/annot-radix.patch
+cd parsec-3.0
+patch -p1 < ../patch/annot-radix.patch
+patch -p1 < ../patch/annot-fmm-non-det.patch
+cd ..
 
 ./parsec-3.0/bin/parsecmgmt -a build -p splash2x
 ./parsec-3.0/bin/parsecmgmt -a status -p splash2x
