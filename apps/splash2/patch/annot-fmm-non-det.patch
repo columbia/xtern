@@ -22,7 +22,7 @@ diff -ruN parsec-3.0-orig/ext/splash2x/apps/fmm/src/box.C parsec-3.0-modified/ex
     b->next = NULL;
     b->prev = NULL;
 +   tern_non_det_start();
-+   PAUSEINIT(b->pause)
+    PAUSEINIT(b->pause)
 +   tern_non_det_end();
  }
  
