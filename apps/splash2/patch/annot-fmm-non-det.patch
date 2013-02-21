@@ -13,9 +13,9 @@ diff -ruN parsec-3.0-orig/ext/splash2x/apps/fmm/src/fmm.C parsec-3.0-modified/ex
  #ifdef ENABLE_PARSEC_HOOKS
  	__parsec_roi_begin();
  #endif
-+   tern_lineup_init(0, Number_Of_Processors, Number_Of_Processors*20);
-+   tern_lineup_init(1, Number_Of_Processors, Number_Of_Processors*20);
-+   tern_lineup_init(2, Number_Of_Processors, Number_Of_Processors*20);
++   //tern_lineup_init(0, Number_Of_Processors, Number_Of_Processors*20);
++   //tern_lineup_init(1, Number_Of_Processors, Number_Of_Processors*20);
++   //tern_lineup_init(2, Number_Of_Processors, Number_Of_Processors*20);
     CREATE(ParallelExecute, Number_Of_Processors);
     WAIT_FOR_END(Number_Of_Processors);
  #ifdef ENABLE_PARSEC_HOOKS
@@ -23,7 +23,7 @@ diff -ruN parsec-3.0-orig/ext/splash2x/apps/fmm/src/fmm.C parsec-3.0-modified/ex
  
     if (time_all)
        CLOCK(start);
-+   tern_lineup(0);
++   //tern_lineup(0);
 +   tern_non_det_start();
     PartitionIterate(my_id, UpwardPass, BOTTOM);
     if (time_all)
