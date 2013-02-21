@@ -2114,6 +2114,9 @@ pid_t RecorderRT<_S>::__waitpid(unsigned ins, int &error, pid_t pid, int *status
 template <typename _S>
 int RecorderRT<_S>::schedYield(unsigned ins, int &error)
 {
+  if (options::enforce_non_det_annotations && inNonDet) {
+    return sched_yield();
+  }
   SCHED_TIMER_START;
   int ret = sched_yield();
   SCHED_TIMER_END(syncfunc::sched_yield, (uint64_t)ret);

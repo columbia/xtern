@@ -6,7 +6,7 @@ diff -Naur src/radiosity.H src_modified/radiosity.H
      StatisticalInfo stat_info[ MAX_PROCESSORS ] ;
  
 +    /* replace ad-hoc sync */
-+    PAUSEDEC(pause)
++    //AUSEDEC(pause)
  } Global ;
  
  
@@ -18,7 +18,7 @@ diff -Naur src/rad_main.C src_modified/rad_main.C
      init_stat_info(process_id) ;
  
 +    /* Initialize PAUSE */
-+    PAUSEINIT(global->pause)
++    //AUSEINIT(global->pause)
  }
  
  
@@ -30,19 +30,19 @@ diff -Naur src/taskman.C src_modified/taskman.C
      UNLOCK(global->pbar_lock);
  
 -    /* barrier spin-wait loop */
-+    if ( global->pbar_count == n_processors )
-+        SETPAUSE(global->pause)
++    //if ( global->pbar_count == n_processors )
++        //ETPAUSE(global->pause)
      while( global->pbar_count < n_processors )
          {
              /* Wait for a while and then retry dequeue */
 -            if( _process_task_wait_loop() )
 -                break ;
-+            WAITPAUSE(global->pause)
-+            CLEARPAUSE(global->pause)
-+            if ( global->pbar_count == n_processors ) {
-+                SETPAUSE(global->pause)
-+                break;
-+            }
++            sched_yield();//AITPAUSE(global->pause)
++            //LEARPAUSE(global->pause)
++            //if ( global->pbar_count == n_processors ) {
++                //ETPAUSE(global->pause)
++                //break;
++            //}
  
              /* Waited for a while but other processors are still running.
                 Poll the task queue again */
@@ -50,7 +50,7 @@ diff -Naur src/taskman.C src_modified/taskman.C
  
      /* Unlock the task queue */
      UNLOCK(tq->q_lock);
-+    SETPAUSE(global->pause)
++    //ETPAUSE(global->pause)
  }
  
  
