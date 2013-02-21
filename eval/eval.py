@@ -68,6 +68,7 @@ def readConfigFile(config_file):
                                                 "C_TERMINATE_SERVER": "0",
                                                 "C_STATS": "0",
                                                 "EVALUATION": "",
+                                                "DBUG": "-1", 
                                                 "DBUG_ARBITER_PORT": "12345",
                                                 "DBUG_EXPLORER_PORT": "12346",
                                                 "DBUG_TIMEOUT": "60"} )
@@ -142,7 +143,7 @@ def generate_local_options(config, bench):
     for option in default_options:
         if option in config_options:
             entry = option + ' = ' + config.get(bench, option)
-            logging.info(entry)
+            logging.debug(entry)
         else:
             entry = option + ' = ' + default_options[option]
             #logging.debug(entry)
@@ -340,6 +341,10 @@ def execBench(cmd, repeats, out_dir,
             pass
 
 def processBench(config, bench):
+    # slient the output in parallel model-checking
+    if args.model_checking and args.parallel > 1:
+        logger.setLevel(logging.INFO)
+
     # for each bench, generate running directory
     logging.debug("processing: " + bench)
     specified_evaluation = config.get(bench, 'EVALUATION')
@@ -351,7 +356,11 @@ def processBench(config, bench):
         return
 
     segs = re.sub(r'(\")|(\.)|/|\'', '', bench).split()
-    dir_name =  '_'.join(segs)
+    if args.model_checking and not args.check_all:
+        dir_name = config.get(bench, 'DBUG') + '_'
+    else:
+        dir_name = ""
+    dir_name +=  '_'.join(segs)
     mkdir_p(dir_name)
     os.chdir(dir_name)
 
@@ -582,7 +591,11 @@ if __name__ == "__main__":
     parser.add_argument("-p", "--parallel",
                         default=1,
                         type=int,
+                        metavar='NUM',
                         help = "number of processes (model checking only)")
+    parser.add_argument("--check-all",
+                        action="store_true",
+                        help="run model-checking on all configs. (By default, only check those with 'DBUG' id in configs)")
     args = parser.parse_args()
 
     if args.filename.__len__() == 0:
@@ -659,12 +672,20 @@ if __name__ == "__main__":
         for benchmark in benchmarks:
             if benchmark == "default" or benchmark == "example":
                 continue
-            t = threading.Thread(target=workers, args=(semaphore, log_lock, local_config, benchmark))
-            t.start()
-            all_threads.append(t)
+            if args.model_checking:
+                if not args.check_all:
+                    if local_config.getint(benchmark, 'DBUG') < 0:
+                        logging.debug("Skip '%s'. Use '--check-all' option to check all configs." % benchmark)
+                        continue
+                t = threading.Thread(target=workers, args=(semaphore, log_lock, local_config, benchmark))
+                t.start()
+                all_threads.append(t)
+            else:
+                processBench(configs, bench)
 
-        for t in all_threads:
-            t.join()
+        if args.model_checking:
+            for t in all_threads:
+                t.join()
 
         os.chdir(root_dir)
        

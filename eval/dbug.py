@@ -87,6 +87,7 @@ def model_checking(configs, benchmark):
     bash_path = eval.which('bash')[0]
     dbug_cmd = '%s run.xml' % EXPLORER
     with open('dbug.log', 'w', 102400) as log_file:
+        #logging.info("executing '%s'" % dbug_cmd)
         proc = subprocess.Popen(dbug_cmd, stdout=log_file, stderr=subprocess.STDOUT,
                                 shell=True, executable=bash_path, bufsize = 102400, preexec_fn=os.setsid)
         proc.wait()
