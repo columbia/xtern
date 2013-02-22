@@ -22,6 +22,9 @@ cd $XTERN_ROOT/apps/openmp/imagick
 rm -rf ImageMagick-$VER install
 tar zxf $APPS_DIR/sys/ImageMagick-$VER.tar.gz
 
+# extract images
+tar zxf $APPS_DIR/sys/openmp_img.gz
+
 # patch ImageMagick
 cd ImageMagick-$VER
 patch -p1 < ../add-convert-xtern-annot.patch

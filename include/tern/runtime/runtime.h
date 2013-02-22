@@ -185,6 +185,7 @@ struct Runtime {
   virtual int __gettimeofday(unsigned ins, int &error, struct timeval *tv, struct timezone *tz);
   virtual int __settimeofday(unsigned ins, int &error, const struct timeval *tv, const struct timezone *tz);
   // sleep
+  virtual int schedYield(unsigned ins, int &error) = 0;
   virtual unsigned int sleep(unsigned insid, int &error, unsigned int seconds);
   virtual int usleep(unsigned insid, int &error, useconds_t usec);
   virtual int nanosleep(unsigned insid, int &error, const struct timespec *req, struct timespec *rem);

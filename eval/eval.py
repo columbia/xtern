@@ -11,6 +11,7 @@ import re
 import subprocess
 import time
 import signal
+import threading
 
 def getXternDefaultOptions():
     default = {}
@@ -66,7 +67,11 @@ def readConfigFile(config_file):
                                                 "C_CMD": "",
                                                 "C_TERMINATE_SERVER": "0",
                                                 "C_STATS": "0",
-                                                "EVALUATION": ""} )
+                                                "EVALUATION": "",
+                                                "DBUG": "-1", 
+                                                "DBUG_ARBITER_PORT": "12345",
+                                                "DBUG_EXPLORER_PORT": "12346",
+                                                "DBUG_TIMEOUT": "60"} )
         ret = newConfig.read(config_file)
     except ConfigParser.MissingSectionHeaderError as e:
         logging.error(str(e))
@@ -110,23 +115,27 @@ def mkdir_p(path):
         else: raise
 
 def genRunDir(config_file, git_info):
+    if args.model_checking:
+        dir_name = "M"
+    else:
+        dir_name = ""
     from os.path import basename
     config_name = os.path.splitext( basename(config_file) )[0]
     from time import strftime
-    dir_name = config_name + strftime("%Y%b%d_%H%M%S") + '_' + git_info[0] + git_info[1]
+    dir_name += config_name + strftime("%Y%b%d_%H%M%S") + '_' + git_info[0] + git_info[1]
     mkdir_p(dir_name)
     logging.debug("creating %s" % dir_name)
     return os.path.abspath(dir_name)
 
-def extract_apps_exec(bench):
+def extract_apps_exec(bench, apps_dir=""):
     bench = bench.partition('"')[0].partition("'")[0]
     apps = bench.split()
     if apps.__len__() < 1:
         raise Exception("cannot parse executible file name")
     elif apps.__len__() == 1:
-        return apps[0], os.path.abspath(APPS + '/' + apps[0] + '/' + apps[0])
+        return apps[0], os.path.abspath(apps_dir + '/' + apps[0] + '/' + apps[0])
     else:
-        return apps[0], os.path.abspath(APPS + '/' + apps[0] + '/' + apps[1])
+        return apps[0], os.path.abspath(apps_dir + '/' + apps[0] + '/' + apps[1])
 
 def generate_local_options(config, bench):
     config_options = config.options(bench)
@@ -134,7 +143,7 @@ def generate_local_options(config, bench):
     for option in default_options:
         if option in config_options:
             entry = option + ' = ' + config.get(bench, option)
-            logging.info(entry)
+            logging.debug(entry)
         else:
             entry = option + ' = ' + default_options[option]
             #logging.debug(entry)
@@ -332,10 +341,14 @@ def execBench(cmd, repeats, out_dir,
             pass
 
 def processBench(config, bench):
+    # slient the output in parallel model-checking
+    if args.model_checking and args.parallel > 1:
+        logger.setLevel(logging.INFO)
+
     # for each bench, generate running directory
     logging.debug("processing: " + bench)
     specified_evaluation = config.get(bench, 'EVALUATION')
-    apps_name, exec_file = extract_apps_exec(bench)
+    apps_name, exec_file = extract_apps_exec(bench, APPS)
     logging.debug("app = %s" % apps_name)
     logging.debug("executible file = %s" % exec_file)
     if not specified_evaluation and not checkExist(exec_file, os.X_OK):
@@ -343,7 +356,11 @@ def processBench(config, bench):
         return
 
     segs = re.sub(r'(\")|(\.)|/|\'', '', bench).split()
-    dir_name =  '_'.join(segs)
+    if args.model_checking and not args.check_all:
+        dir_name = config.get(bench, 'DBUG') + '_'
+    else:
+        dir_name = ""
+    dir_name +=  '_'.join(segs)
     mkdir_p(dir_name)
     os.chdir(dir_name)
 
@@ -360,6 +377,13 @@ def processBench(config, bench):
 
     # get required files
     preSetting(config, bench, apps_name)
+
+    ### dbug ###
+    if args.model_checking:
+        import dbug
+        dbug.model_checking(config, bench)
+        os.chdir("..")
+        return
 
     # get 'export' environment variable
     export = config.get(bench, 'EXPORT')
@@ -516,6 +540,20 @@ def processBench(config, bench):
 
     os.chdir("..")
 
+
+def workers(semaphore, lock, configs, bench):
+    from multiprocessing import Process
+    with semaphore:
+        p = Process(target=processBench, args=(configs, bench))
+        with lock:
+            if args.model_checking:
+                logging.debug("STARTING %s" % bench)
+            p.start()
+        p.join()
+        if args.model_checking:
+            with lock:
+                logging.debug("FINISH %s" % bench)
+
 if __name__ == "__main__":
     # setting log format
     logger = logging.getLogger()
@@ -527,23 +565,6 @@ if __name__ == "__main__":
     logger.addHandler(ch)
     logger.setLevel(logging.DEBUG)
 
-    # parse input arguments
-    parser = argparse.ArgumentParser(
-        description="Evaluate the perforamnce of xtern")
-    parser.add_argument('filename', nargs='*',
-        type=str,
-        default = ["xtern.cfg"],
-        help = "list of configuration files (default: xtern.cfg)")
-    args = parser.parse_args()
-
-    if args.filename.__len__() == 0:
-        logging.critical('no configuration file specified??')
-        sys.exit(1)
-    elif args.filename.__len__() == 1:
-        logging.debug('config file: ' + ''.join(args.filename))
-    else:
-        logging.debug('config files: ' + ', '.join(args.filename))
-    
     # get environment variable
     try:
         XTERN_ROOT = os.environ["XTERN_ROOT"]
@@ -556,12 +577,47 @@ if __name__ == "__main__":
         DMTTOOL_ROOT = os.environ["DMTTOOL_ROOT"]
     except:
         DMTTOOL_ROOT = ""
+ 
+    # parse input arguments
+    parser = argparse.ArgumentParser(
+        description="Evaluate the perforamnce of xtern")
+    parser.add_argument('filename', nargs='*',
+        type=str,
+        default = ["xtern.cfg"],
+        help = "list of configuration files (default: xtern.cfg)")
+    parser.add_argument("-mc", "--model-checking",
+                        action="store_true", 
+                        help="run model-checking tools only")
+    parser.add_argument("-p", "--parallel",
+                        default=1,
+                        type=int,
+                        metavar='NUM',
+                        help = "number of processes (model checking only)")
+    parser.add_argument("--check-all",
+                        action="store_true",
+                        help="run model-checking on all configs. (By default, only check those with 'DBUG' id in configs)")
+    args = parser.parse_args()
+
+    if args.filename.__len__() == 0:
+        logging.critical('no configuration file specified??')
+        sys.exit(1)
+    elif args.filename.__len__() == 1:
+        logging.debug('config file: ' + ''.join(args.filename))
+    else:
+        logging.debug('config files: ' + ', '.join(args.filename))
+
+    if args.model_checking:
+        if args.parallel < 1:
+            logging.error("# of processes is %d", args.parallel)
+            sys.exit(1)
+        logging.info("# of processes is %d", args.parallel)
+    
+    # check xtern files
     if not checkExist("%s/dync_hook/interpose.so" % XTERN_ROOT, os.R_OK):
         logging.error('thre is no "$XTERN_ROOT/dync_hook/interpose.so"')
         sys.exit(1)
     if not checkExist("%s/eval/rand-intercept/rand-intercept.so" % XTERN_ROOT, os.R_OK):
-        logging.error('there is no "$XTERN_ROOT/eval/rand-intercept/rand-intercept.so"')
-        sys.exit(1)
+        logging.warning('there is no "$XTERN_ROOT/eval/rand-intercept/rand-intercept.so"')
     XTERN_PRELOAD = "LD_PRELOAD=%s/dync_hook/interpose.so" % XTERN_ROOT
     RAND_PRELOAD = "LD_NOTPRELOAD=%s/eval/rand-intercept/rand-intercept.so" % XTERN_ROOT
     # set environment variable
@@ -576,7 +632,6 @@ if __name__ == "__main__":
     else:
         bash_path = bash_path[0]
         logging.debug("find 'bash' at %s" % bash_path)
-
 
     # get default xtern options
     default_options = getXternDefaultOptions()
@@ -611,10 +666,26 @@ if __name__ == "__main__":
                 diff.write(git_info[3])
         
         benchmarks = local_config.sections()
+        all_threads = []
+        semaphore = threading.BoundedSemaphore(args.parallel if args.model_checking else 1)
+        log_lock = threading.Lock()
         for benchmark in benchmarks:
             if benchmark == "default" or benchmark == "example":
                 continue
-            processBench(local_config, benchmark)
+            if args.model_checking:
+                if not args.check_all:
+                    if local_config.getint(benchmark, 'DBUG') < 0:
+                        logging.debug("Skip '%s'. Use '--check-all' option to check all configs." % benchmark)
+                        continue
+                t = threading.Thread(target=workers, args=(semaphore, log_lock, local_config, benchmark))
+                t.start()
+                all_threads.append(t)
+            else:
+                processBench(local_config, benchmark)
+
+        if args.model_checking:
+            for t in all_threads:
+                t.join()
 
         os.chdir(root_dir)
        

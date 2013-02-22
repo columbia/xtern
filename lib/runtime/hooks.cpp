@@ -688,6 +688,17 @@ int tern_bind(unsigned ins, int sockfd, const struct sockaddr *addr, socklen_t a
   return ret;
 }
 
+int tern_sched_yield(unsigned ins)
+{
+  int error = errno;
+  int ret;
+  Space::enterSys();
+  ret = Runtime::the->schedYield(ins, error);
+  Space::exitSys();
+  errno = error;
+  return ret;
+}
+
 unsigned int tern_sleep(unsigned ins, unsigned int seconds)
 {
   int error = errno;
