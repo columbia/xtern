@@ -82,17 +82,26 @@ cd ..
 ./parsec-3.0/bin/parsecmgmt -a build -p splash2x
 ./parsec-3.0/bin/parsecmgmt -a status -p splash2x
 
+ARCH=`uname -m`
+if [[ "$ARCH" == "x86_64" ]]; then
+    hosttype="amd64"
+elif [[ "$ARCH" == "amd64" ]]; then
+    hosttype="amd64"
+else
+    hosttype="i386"
+fi
+
 # copy files
 find . -maxdepth 1 -type l -exec rm -rf {} \;
 workloads=( barnes fmm ocean_cp ocean_ncp radiosity raytrace volrend water_nsquared water_spatial )
 for i in "${workloads[@]}"
 do
-    ln -s parsec-3.0/ext/splash2x/apps/$i/inst/amd64-linux.gcc/bin/$i
+    ln -s parsec-3.0/ext/splash2x/apps/$i/inst/$hosttype-linux.gcc/bin/$i
 done
 workloads=( cholesky fft lu_cb lu_ncb radix )
 for i in "${workloads[@]}"
 do
-    ln -s parsec-3.0/ext/splash2x/kernels/$i/inst/amd64-linux.gcc/bin/$i
+    ln -s parsec-3.0/ext/splash2x/kernels/$i/inst/$hosttype-linux.gcc/bin/$i
 done
 
 popd
