@@ -681,7 +681,7 @@ if __name__ == "__main__":
                 t.start()
                 all_threads.append(t)
             else:
-                processBench(configs, bench)
+                processBench(local_config, benchmark)
 
         if args.model_checking:
             for t in all_threads:
