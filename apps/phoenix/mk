@@ -50,6 +50,7 @@ pushd phoenix-2.0.0
 patch -p1 < ../patch/fix.patch
 patch -p1 < ../patch/defines.mk.patch
 patch -p1 < ../patch/annot-histogram-pthread.patch
+patch -p1 < ../patch/fix-histogram-pthread.patch
 patch -p1 < ../patch/annot-linear-regression-pthread.patch
 patch -p1 < ../patch/annot-pca-pthread.patch
 patch -p1 < ../patch/annot-word_count-pthread.patch
