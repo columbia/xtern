@@ -496,7 +496,7 @@ def processBench(config, bench):
             log_file_name = 'xtern/client.%d' % i
         else:
             log_file_name = 'xtern/output.%d' % i
-        for line in reversed(open(log_file_name, 'r').readlines()):
+        for line in (open(log_file_name, 'r').readlines() if args.stl_result else reversed(open(log_file_name, 'r').readlines())):
             if re.search('^real [0-9]+\.[0-9][0-9][0-9]$', line):
                 xtern_cost += [float(line.split()[1])]
                 break
@@ -508,7 +508,7 @@ def processBench(config, bench):
             log_file_name = 'non-det/client.%d' % i
         else:
             log_file_name = 'non-det/output.%d' % i
-        for line in reversed(open(log_file_name, 'r').readlines()):
+        for line in (open(log_file_name, 'r').readlines() if args.stl_result else reversed(open(log_file_name, 'r').readlines())):
             if re.search('^real [0-9]+\.[0-9][0-9][0-9]$', line):
                 nondet_cost += [float(line.split()[1])]
                 break
@@ -596,6 +596,9 @@ if __name__ == "__main__":
     parser.add_argument("--check-all",
                         action="store_true",
                         help="run model-checking on all configs. (By default, only check those with 'DBUG' id in configs)")
+    parser.add_argument("--stl-result",
+                        action="store_true",
+                        help="get stl result of parallel portion only")
     args = parser.parse_args()
 
     if args.filename.__len__() == 0:
