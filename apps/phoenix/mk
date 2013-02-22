@@ -47,7 +47,15 @@ tar zxf $APPS_DIR/sys/phoenix-2.0.0.tar.gz
 
 # patch && make
 pushd phoenix-2.0.0
-patch -p1 < ../fix.patch
+patch -p1 < ../patch/fix.patch
+patch -p1 < ../patch/defines.mk.patch
+patch -p1 < ../patch/annot-histogram-pthread.patch
+patch -p1 < ../patch/annot-linear-regression-pthread.patch
+patch -p1 < ../patch/annot-pca-pthread.patch
+patch -p1 < ../patch/annot-word_count-pthread.patch
+patch -p1 < ../patch/annot-kmeans-pthread.patch
+patch -p1 < ../patch/annot-matrix_multiply-pthread.patch
+patch -p1 < ../patch/annot-string_match-pthread.patch
 make
 popd
 
