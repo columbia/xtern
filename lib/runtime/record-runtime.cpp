@@ -1383,7 +1383,7 @@ void RecorderRT<_S>::lineupStart(long opaque_type) {
   assert(bi != refcnt_bars.end() && "refcnt barrier is not initialized!");
   ref_cnt_barrier_t &b = bi->second;
   b.nactive++;  
-  //fprintf(stderr, "lineupStart opaque_type %p, tid %d, nactive %u\n", (void *)opaque_type, _S::self(), b.nactive);
+  //fprintf(stderr, "lineupStart opaque_type %p, tid %d, count %d, nactive %u\n", (void *)opaque_type, _S::self(), b.count, b.nactive);
 
   if (b.nactive == b.count) {
     if (b.isArriving()) {

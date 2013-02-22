@@ -1,0 +1,15 @@
+--- phoenix-2.0.0-orig/Defines.mk	2009-05-27 23:00:58.000000000 -0400
++++ phoenix-2.0.0/Defines.mk	2013-02-21 16:09:08.597383830 -0500
+@@ -37,9 +37,9 @@
+ ifeq ($(OSTYPE),Linux)
+ OS = -D_LINUX_
+ CC = gcc
+-#DEBUG = -g
+-CFLAGS = -Wall $(OS) $(DEBUG) -O3
+-LIBS = -lpthread
++DEBUG = -g
++CFLAGS = -Wall $(OS) $(DEBUG) -O3 -I$(XTERN_ROOT)/include
++LIBS = -lpthread  -L$(XTERN_ROOT)/dync_hook -Wl,--rpath,$(XTERN_ROOT)/dync_hook -lxtern-annot
+ endif
+ 
+ ifeq ($(OSTYPE),SunOS)
