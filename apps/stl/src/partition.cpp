@@ -21,7 +21,7 @@ bool isOdd(int i) {
     return (i % 2) == 1;
 }
 
-std::vector<int> myvector(1000*1000*100);
+std::vector<int> myvector(1000*1000*1000);
 //std::vector<int> myvector(10);
 
 #define ITEM 1
