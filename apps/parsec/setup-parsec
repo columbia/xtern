@@ -68,6 +68,7 @@ patch -p1 < $XTERN_ROOT/apps/parsec/patch/bodytrack.diff
 patch -p1 < $XTERN_ROOT/apps/parsec/patch/vips.diff
 patch -p1 < $XTERN_ROOT/apps/parsec/patch/fluidanimate-serial.patch
 patch -p1 < $XTERN_ROOT/apps/parsec/patch/bodytrack_avoid_deadlock.patch
+patch -p1 < $XTERN_ROOT/apps/parsec/patch/fix-imagick-jpg.patch
 #patch -p1 < $XTERN_ROOT/apps/parsec/patch/annot-x264.patch
 
 # generate configs for dthreads
