@@ -36,13 +36,13 @@ if [ ! -f parsec-2.0/pkgs/apps/blackscholes/parsec/simdev.runconf ]; then
     tar zxvf parsec-2.0-sim.tar.gz
 fi
 
-#echo "Checking parsec native file..."
-#if [ ! -f parsec-2.0-native.tar.gz ]; then
-#    $AXEL http://coblitz.codeen.org/parsec.cs.princeton.edu/download/2.0/parsec-2.0-native.tar.gz
-#fi
-#if [ ! -f parsec-2.0/pkgs/apps/x264/parsec/native.runconf ]; then
-#    tar zxvf parsec-2.0-native.tar.gz
-#fi
+echo "Checking parsec native file..."
+if [ ! -f parsec-2.0-native.tar.gz ]; then
+    $AXEL http://coblitz.codeen.org/parsec.cs.princeton.edu/download/2.0/parsec-2.0-native.tar.gz
+fi
+if [ ! -f parsec-2.0/pkgs/apps/x264/parsec/native.runconf ]; then
+    tar zxvf parsec-2.0-native.tar.gz
+fi
 
 echo "Checking parsec core file..."
 if [ ! -f parsec-2.0-core.tar.gz ]; then
