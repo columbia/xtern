@@ -5,6 +5,7 @@
 #include <ctime>        // std::time
 #include <cstdlib>      // std::rand, std::srand
 #include <parallel/algorithm>
+#include "microbench.h"
 
 // function generator:
 //int RandomNumber () { return (std::rand()%10); }
@@ -26,6 +27,7 @@ std::vector<int> myvector(1000*1000*100);
 #define ITEM 1
 
 int main () {
+    struct timeval start, end;
     fprintf(stderr, "omp num threads %d\n", omp_get_max_threads());
 //    std::srand ( unsigned ( std::time(0) ) );
   
@@ -36,7 +38,11 @@ int main () {
   //    std::cout << ' ' << *it;
   //  std::cout << '\n';
   
+    gettimeofday(&start, NULL);
     __gnu_parallel::replace_if(myvector.begin(), myvector.end(), isZero, ITEM);
+    gettimeofday(&end, NULL);
+    fprintf(stderr, "real %.3f\n", ((end.tv_sec * 1000000 + end.tv_usec)
+          - (start.tv_sec * 1000000 + start.tv_usec)) / 1000000.0);
   
 //    std::cout << "myvector contains:";
 //    for (std::vector<int>::iterator it=myvector.begin(); it!=myvector.end(); ++it)
