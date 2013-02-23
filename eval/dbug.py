@@ -71,11 +71,17 @@ def model_checking(configs, benchmark):
     interposition.set("path", "%s/mc-tools/dbug/install/lib/libdbug.so" % SMT_MC_ROOT)
     inputs = configs.get(benchmark, "INPUTS")
     export = configs.get(benchmark, "EXPORT")
-    command = ' '.join([export, exec_file] + inputs.split())
+    command = ' '.join([exec_file] + inputs.split())
     program.set("command", command)
 
     with open("run.xml", "w") as run_xml:
         run_xml.write(etree.tostring(dbug_config, pretty_print=True))
+
+    # generate run_xtern.xml
+    interposition.set("path", "%s/xtern/dync_hook/interpose_mc.so" % SMT_MC_ROOT)
+
+    with open("run_xtern.xml", "w") as run_xtern_xml:
+        run_xtern_xml.write(etree.tostring(dbug_config, pretty_print=True))
 
     init_env_cmd = configs.get(benchmark, "INIT_ENV_CMD")
     if init_env_cmd:
@@ -87,7 +93,6 @@ def model_checking(configs, benchmark):
     bash_path = eval.which('bash')[0]
     dbug_cmd = '%s run.xml' % EXPLORER
     with open('dbug.log', 'w', 102400) as log_file:
-        #logging.info("executing '%s'" % dbug_cmd)
         proc = subprocess.Popen(dbug_cmd, stdout=log_file, stderr=subprocess.STDOUT,
                                 shell=True, executable=bash_path, bufsize = 102400, preexec_fn=os.setsid)
         proc.wait()
@@ -96,3 +101,13 @@ def model_checking(configs, benchmark):
         except OSError:
             pass
     
+    dbug_cmd = '%s run_xtern.xml' % EXPLORER
+    with open('dbug_xtern.log', 'w', 102400) as log_file:
+        proc = subprocess.Popen(dbug_cmd, stdout=log_file, stderr=subprocess.STDOUT,
+                                shell=True, executable=bash_path, bufsize = 102400, preexec_fn=os.setsid)
+        proc.wait()
+        try:
+            os.killpg(proc.pid, signal.SIGTERM)
+        except OSError:
+            pass
+ 
