@@ -1,0 +1,55 @@
+diff -ruN phoenix-2.0.0-orig/src/map_reduce.c phoenix-2.0.0-modified/src/map_reduce.c
+--- phoenix-2.0.0-orig/src/map_reduce.c	2013-02-22 18:36:39.833975708 -0500
++++ phoenix-2.0.0-modified/src/map_reduce.c	2013-02-23 00:19:50.569238969 -0500
+@@ -54,6 +54,7 @@
+ #include "locality.h"
+ #include "struct.h"
+ #include "tpool.h"
++#include "tern/user.h"
+ 
+ #if !defined(_LINUX_) && !defined(_SOLARIS_)
+ #error OS not supported
+@@ -704,6 +705,7 @@
+ 
+     /* Perform map task. */
+     get_time (&begin);
++    tern_lineup(0);
+     env->map (&thread_func_arg);
+     get_time (&end);
+ 
+@@ -874,6 +876,7 @@
+ 
+             if (env->reduce != identity_reduce) {
+                 get_time (&begin);
++    tern_lineup(1);
+                 env->reduce (min_key_val->key, &args->itr);
+                 get_time (&end);
+ #ifdef TIMING
+@@ -1635,7 +1638,6 @@
+     for (i = 0; i < length; i++) {
+         total_num_keys += vals[i].len;
+     }
+-
+     env->merge_vals[curr_thread].len = total_num_keys;
+     env->merge_vals[curr_thread].alloc_len = total_num_keys;
+     env->merge_vals[curr_thread].pos = 0;
+diff -ruN phoenix-2.0.0-orig/src/tpool.c phoenix-2.0.0-modified/src/tpool.c
+--- phoenix-2.0.0-orig/src/tpool.c	2013-02-22 18:36:39.833975708 -0500
++++ phoenix-2.0.0-modified/src/tpool.c	2013-02-23 00:19:48.913239017 -0500
+@@ -32,6 +32,7 @@
+ #include "memory.h"
+ #include "tpool.h"
+ #include "stddefines.h"
++#include "tern/user.h"
+ 
+ typedef struct {
+     sem_t           sem_run;
+@@ -93,6 +94,8 @@
+     CHECK_ERROR (pthread_attr_setdetachstate (&attr, PTHREAD_CREATE_DETACHED));
+ 
+     tpool->die = 0;
++    tern_lineup_init(0, num_threads, num_threads*20);
++    tern_lineup_init(1, num_threads, num_threads*20);
+     for (i = 0; i < num_threads; ++i) {
+         /* Initialize thread argument. */
+         CHECK_ERROR (sem_init (&(tpool->thread_args[i].sem_run), 0, 0));
