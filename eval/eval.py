@@ -496,7 +496,7 @@ def processBench(config, bench):
             log_file_name = 'xtern/client.%d' % i
         else:
             log_file_name = 'xtern/output.%d' % i
-        for line in reversed(open(log_file_name, 'r').readlines()):
+        for line in (open(log_file_name, 'r').readlines() if args.stl_result else reversed(open(log_file_name, 'r').readlines())):
             if re.search('^real [0-9]+\.[0-9][0-9][0-9]$', line):
                 xtern_cost += [float(line.split()[1])]
                 break
@@ -508,7 +508,7 @@ def processBench(config, bench):
             log_file_name = 'non-det/client.%d' % i
         else:
             log_file_name = 'non-det/output.%d' % i
-        for line in reversed(open(log_file_name, 'r').readlines()):
+        for line in (open(log_file_name, 'r').readlines() if args.stl_result else reversed(open(log_file_name, 'r').readlines())):
             if re.search('^real [0-9]+\.[0-9][0-9][0-9]$', line):
                 nondet_cost += [float(line.split()[1])]
                 break
@@ -546,13 +546,11 @@ def workers(semaphore, lock, configs, bench):
     with semaphore:
         p = Process(target=processBench, args=(configs, bench))
         with lock:
-            if args.model_checking:
-                logging.debug("STARTING %s" % bench)
+            logging.debug("STARTING %s" % bench)
             p.start()
         p.join()
-        if args.model_checking:
-            with lock:
-                logging.debug("FINISH %s" % bench)
+        with lock:
+            logging.debug("FINISH %s" % bench)
 
 if __name__ == "__main__":
     # setting log format
@@ -596,6 +594,9 @@ if __name__ == "__main__":
     parser.add_argument("--check-all",
                         action="store_true",
                         help="run model-checking on all configs. (By default, only check those with 'DBUG' id in configs)")
+    parser.add_argument("--stl-result",
+                        action="store_true",
+                        help="get stl result of parallel portion only")
     args = parser.parse_args()
 
     if args.filename.__len__() == 0:
@@ -677,9 +678,12 @@ if __name__ == "__main__":
                     if local_config.getint(benchmark, 'DBUG') < 0:
                         logging.debug("Skip '%s'. Use '--check-all' option to check all configs." % benchmark)
                         continue
-                t = threading.Thread(target=workers, args=(semaphore, log_lock, local_config, benchmark))
-                t.start()
-                all_threads.append(t)
+                if args.parallel > 1:
+                    t = threading.Thread(target=workers, args=(semaphore, log_lock, local_config, benchmark))
+                    t.start()
+                    all_threads.append(t)
+                else:
+                    processBench(local_config, benchmark)
             else:
                 processBench(local_config, benchmark)
 

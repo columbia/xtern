@@ -5,6 +5,7 @@
 #include <ctime>        // std::time
 #include <cstdlib>      // std::rand, std::srand
 #include <parallel/algorithm>
+#include "microbench.h"
 
 // function generator:
 //int RandomNumber () { return (std::rand()%100); }
@@ -16,18 +17,18 @@ struct c_unique {
   int operator()() {return ++current;}
 } UniqueNumber;
 
-std::vector<int> myvector(1000*1000*100);
+std::vector<int> myvector(1000*1000*1000);
+//std::vector<int> myvector(1000);
 
-#define ITEM 9999999
+#define ITEM -1
 
 bool isItem(int i) {
     return (i == ITEM);
 }
 
 int main () {
-//    std::vector<int>::iterator it;
+    struct timeval start, end;
     fprintf(stderr, "omp num threads %d\n", omp_get_max_threads());
-//    std::srand ( unsigned ( std::time(0) ) );
   
   //  __gnu_parallel::generate (myvector.begin(), myvector.end(), RandomNumber);
   
@@ -36,8 +37,14 @@ int main () {
   //    std::cout << ' ' << *it;
   //  std::cout << '\n';
   
-    generate (myvector.begin(), myvector.end(), UniqueNumber);
+    __gnu_parallel::generate (myvector.begin(), myvector.end(), UniqueNumber, __gnu_parallel::sequential_tag());
+
+    gettimeofday(&start, NULL);
     __gnu_parallel::find_if (myvector.begin(), myvector.end(), isItem);
+    gettimeofday(&end, NULL); 
+    fprintf(stderr, "real %.3f\n", ((end.tv_sec * 1000000 + end.tv_usec)
+        - (start.tv_sec * 1000000 + start.tv_usec)) / 1000000.0);
+    
 //    std::cout << "Found" << *it << "\n";
   
   //  std::cout << "myvector contains:";
