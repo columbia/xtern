@@ -1,4 +1,4 @@
-// equal algorithm example
+// search algorithm example
 #include <iostream>     // std::cout
 #include <algorithm>    // std::generate
 #include <vector>       // std::vector
@@ -19,44 +19,45 @@ int RandomNumber () { return (std::rand()%100); }
 //} UniqueNumber;
 
 std::vector<int> myvector(1000*1000*1000);
-std::vector<int> second(1000*1000*1000);
 //std::vector<int> myvector(1000);
-//std::vector<int> second(1000);
 
+#define START_OFF 10000
+#define SECOND_SIZE 1000000
+
+std::vector<int> second(SECOND_SIZE);
 
 int main () {
-//    bool a = false;
     struct timeval start, end;
+//    int items[] = {ITEM, 11, 42, 29, 73, 21, 19, 84, 37, 98, 24, 15, 70, 13, 26, 91, 80, 56, 73, 62};
+//    std::vector<int> second(items, items+19);
     fprintf(stderr, "omp num threads %d\n", omp_get_max_threads());
     std::srand(SEED);
     __gnu_parallel::generate (myvector.begin(), myvector.end(), RandomNumber, __gnu_parallel::sequential_tag());
-//    std::srand(SEED);
-//    __gnu_parallel::generate (second.begin(), second.end(), RandomNumber, __gnu_parallel::sequential_tag());
-    memcpy(&second[0], &myvector[0], myvector.size() * sizeof(int));
 
- 
-//    generate (myvector.begin(), myvector.end(), UniqueNumber, __gnu_parallel::sequential_tag());
-//    generate (second.begin(), second.end(), UniqueNumber, __gnu_parallel::sequential_tag());
+    memcpy(&second[0], &myvector[START_OFF], SECOND_SIZE * sizeof(int));
+  
+//    std::cout << "second contains:";
+//    for (std::vector<int>::iterator it=second.begin(); it!=second.end(); ++it)
+//      std::cout << ' ' << *it;
+//    std::cout << '\n';
+//    std::cout << *(second.end() - 1) << "\n";
 
-  //  std::cout << "myvector contains:";
-  //  for (std::vector<int>::iterator it=myvector.begin(); it!=myvector.end(); ++it)
-  //    std::cout << ' ' << *it;
-  //  std::cout << '\n';
   
     gettimeofday(&start, NULL);
-    __gnu_parallel::equal(myvector.begin(), myvector.end(), second.begin());
+    __gnu_parallel::search (myvector.begin(), myvector.end(), second.begin(), second.end());
     gettimeofday(&end, NULL);
     fprintf(stderr, "real %.3f\n", ((end.tv_sec * 1000000 + end.tv_usec)
           - (start.tv_sec * 1000000 + start.tv_usec)) / 1000000.0);
-
-
-//    if(a)
-//        std::cout << "equal \n";
+ 
+//    std::cout << "Found" << *it << "\n";
 //    std::cout << "myvector contains:";
-//    for (std::vector<int>::iterator it=myvector.begin(); it!=myvector.end(); ++it)
-//      std::cout << ' ' << *it;
-//
-//    std::cout << "counts " << a << '\n';
+//    std::vector<int>::iterator it;
+//    for (it=myvector.begin(); it!=myvector.end() && *it != ITEM; ++it)
+//      //std::cout << "\, " << *it;
+//        ;
+//    for(int i = 0; i < 20; i++)
+//        std::cout << *(it+i) << ' ';
+//    std::cout << '\n';
    
     return 0;
 }

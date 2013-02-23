@@ -5,9 +5,11 @@
 #include <ctime>        // std::time
 #include <cstdlib>      // std::rand, std::srand
 #include <parallel/algorithm>
+#include "microbench.h"
+#include <string.h>
 
 // function generator:
-//int RandomNumber () { return (std::rand()%100); }
+int RandomNumber () { return (std::rand()%100); }
 
 //class generator:
 //struct c_unique {
@@ -16,18 +18,24 @@
 //  int operator()() {return ++current;}
 //} UniqueNumber;
 
-std::vector<int> myvector(1000*1000*100);
-std::vector<int> second(1000*1000*100);
+std::vector<int> myvector(1000*1000*1000);
+std::vector<int> second(1000*1000*1000);
 //std::vector<int> myvector(10);
 //std::vector<int> second(10);
 
-//#define ITEM 9999999
 
 int main () {
-//    bool a = false;
+    struct timeval start, end;
     fprintf(stderr, "omp num threads %d\n", omp_get_max_threads());
-    myvector.push_back(10);    
-    second.push_back(11);
+
+    std::srand(SEED);
+    __gnu_parallel::generate (myvector.begin(), myvector.end(), RandomNumber, __gnu_parallel::sequential_tag());
+ 
+//    std::srand(SEED);
+//    __gnu_parallel::generate (second.begin(), second.end(), RandomNumber, __gnu_parallel::sequential_tag());
+    memcpy(&second[0], &myvector[0], myvector.size() * sizeof(int));
+
+
 //    std::pair<std::vector<int>::iterator,int*> mypair;
 //    std::srand ( unsigned ( std::time(0) ) );
 //    __gnu_parallel::generate (myvector.begin(), myvector.end(), RandomNumber);
@@ -40,8 +48,13 @@ int main () {
   //    std::cout << ' ' << *it;
   //  std::cout << '\n';
   
+    gettimeofday(&start, NULL);
     __gnu_parallel::mismatch(myvector.begin(), myvector.end(), second.begin());
-    
+    gettimeofday(&end, NULL);
+    fprintf(stderr, "real %.3f\n", ((end.tv_sec * 1000000 + end.tv_usec)
+          - (start.tv_sec * 1000000 + start.tv_usec)) / 1000000.0);
+
+   
 //    std::cout << *mypair.first << ":" << *mypair.second << "\n";
   
 //    if(a)
@@ -50,7 +63,6 @@ int main () {
 //    for (std::vector<int>::iterator it=myvector.begin(); it!=myvector.end(); ++it)
 //      std::cout << ' ' << *it;
 //
-//    std::cout << "counts " << a << '\n';
    
     return 0;
 }

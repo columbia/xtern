@@ -4,45 +4,63 @@
 #include <vector>       // std::vector
 #include <iterator>
 #include <parallel/algorithm>
+#include "microbench.h"
 
-using namespace std;
 
-#define DATA_SIZE 1000*1000*100
+#define DATA_SIZE 1000*1000*500
 //#define DATA_SIZE 4
 
 //int RandomNumber () { return (std::rand()%100); }
 
-//struct c_unique {
-//  int current;
-//  c_unique() {current=0;}
-//  int operator()() {return ++current;}
-//} UniqueNumber;
+//class generator:
+struct c_unique {
+  int current;
+  c_unique() {current=1;}
+  int operator()() {
+    current += 2; 
+    return current;
+  }
+} OddNumber;
 
+struct c_unique_1 {
+  int current;
+  c_unique_1() {current=0;}
+  int operator()() {
+    current += 2; 
+    return current;
+  }
+} EvenNumber;
+
+
+// @INPUT:
+// first: sequential odd number 
+// sencond: sequential even number 
+// Note: both inputs are sequential to reduce initialization time
   std::vector<int> first(DATA_SIZE);
   std::vector<int> second(DATA_SIZE);
   std::vector<int> v(DATA_SIZE*2);                     
 
 int main () {
-  //  int first[] = {5,10,15,20,25};
-  //  int second[] = {50,40,30,20,10};
-  //  std::vector<int> first(1000*1000*10);
-  //  std::vector<int> second(1000*1000*10);
-//    std::vector<int>::iterator it;
-      
-//    std::srand ( unsigned ( std::time(0) ) );
-//    generate (first.begin(), first.end(), RandomNumber);
-//    generate (second.begin(), second.end(), RandomNumber);  
+     
+    struct timeval start, end;
+    fprintf(stderr, "omp num threads %d\n", omp_get_max_threads());
+    __gnu_parallel::generate (first.begin(), first.end(), OddNumber, __gnu_parallel::sequential_tag());
+    __gnu_parallel::generate (second.begin(), second.end(), EvenNumber, __gnu_parallel::sequential_tag());
 
+
+    fprintf(stderr, "initialization done...\n");
 //    generate (first.begin(), first.end(), UniqueNumber, __gnu_parallel::sequential_tag());
 //    generate (second.begin(), second.end(), UniqueNumber, __gnu_parallel::sequential_tag());
 //  
 //    sort (first.begin(),first.end(), __gnu_parallel::sequential_tag()); 
 //    sort (second.begin(),second.end(), __gnu_parallel::sequential_tag());
   
-    fprintf(stderr, "omp num threads %d\n", omp_get_max_threads());
   
-//    it = __gnu_parallel::set_union (first.begin(), first.end(), second.begin(), second.end(), v.begin());
+    gettimeofday(&start, NULL);
     __gnu_parallel::merge(first.begin(), first.end(), second.begin(), second.end(), v.begin());
+    gettimeofday(&end, NULL);
+    fprintf(stderr, "real %.3f\n", ((end.tv_sec * 1000000 + end.tv_usec)
+          - (start.tv_sec * 1000000 + start.tv_usec)) / 1000000.0);
   
 //    v.resize(it-v.begin()); 
 //  
