@@ -546,13 +546,11 @@ def workers(semaphore, lock, configs, bench):
     with semaphore:
         p = Process(target=processBench, args=(configs, bench))
         with lock:
-            if args.model_checking:
-                logging.debug("STARTING %s" % bench)
+            logging.debug("STARTING %s" % bench)
             p.start()
         p.join()
-        if args.model_checking:
-            with lock:
-                logging.debug("FINISH %s" % bench)
+        with lock:
+            logging.debug("FINISH %s" % bench)
 
 if __name__ == "__main__":
     # setting log format
@@ -680,9 +678,12 @@ if __name__ == "__main__":
                     if local_config.getint(benchmark, 'DBUG') < 0:
                         logging.debug("Skip '%s'. Use '--check-all' option to check all configs." % benchmark)
                         continue
-                t = threading.Thread(target=workers, args=(semaphore, log_lock, local_config, benchmark))
-                t.start()
-                all_threads.append(t)
+                if args.parallel > 1:
+                    t = threading.Thread(target=workers, args=(semaphore, log_lock, local_config, benchmark))
+                    t.start()
+                    all_threads.append(t)
+                else:
+                    processBench(local_config, benchmark)
             else:
                 processBench(local_config, benchmark)
 
