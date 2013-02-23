@@ -21,7 +21,7 @@
 #include <sys/wait.h>
 
 #ifdef XTERN_PLUS_DBUG
-#include "dbug/interposition/interpose.h"
+//#include "dbug/interposition/interpose.h"
 //xxxxxx
 #endif
 
