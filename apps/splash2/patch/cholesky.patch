@@ -1,46 +1,15 @@
-diff -Naur src_orig/matrix.H src/matrix.H
---- parsec-3.0/ext/splash2x/kernels/cholesky/src_orig/matrix.H	2013-02-11 02:44:31.958334514 -0500
-+++ parsec-3.0/ext/splash2x/kernels/cholesky/src/matrix.H	2013-02-11 03:41:52.362216012 -0500
-@@ -76,6 +76,7 @@
- 
- struct GlobalMemory {
- 	BARDEC(start)
-+    //AUSEDEC(pause)
- 	LOCKDEC(waitLock)
- 	LOCKDEC(memLock)
- 	unsigned long runtime[MAX_PROC];
-diff -Naur src_orig/mf.C src/mf.C
 --- parsec-3.0/ext/splash2x/kernels/cholesky/src_orig/mf.C	2013-02-11 02:44:31.958334514 -0500
 +++ parsec-3.0/ext/splash2x/kernels/cholesky/src/mf.C	2013-02-11 03:42:30.414214125 -0500
-@@ -133,6 +133,7 @@
-   for (;;) {
- 
-     if (tasks[MyNum].taskQ || tasks[MyNum].probeQ) {
-+      //ETPAUSE(Global->pause)
-       LOCK(tasks[MyNum].taskLock)
-       t = NULL;
-       if (tasks[MyNum].probeQ) {
-@@ -152,8 +153,10 @@
+@@ -152,8 +153,9 @@
          break;
      }
      else {
 -    while (!tasks[MyNum].taskQ && !tasks[MyNum].probeQ)
 -      ;
 +      while (!tasks[MyNum].taskQ && !tasks[MyNum].probeQ) {
-+        sched_yield();//AITPAUSE(Global->pause)
-+        //LEARPAUSE(Global->pause)
++        sched_yield();
 +      }
      }
    }
  
-diff -Naur src_orig/solve.C src/solve.C
---- parsec-3.0/ext/splash2x/kernels/cholesky/src_orig/solve.C	2013-02-11 02:44:31.958334514 -0500
-+++ parsec-3.0/ext/splash2x/kernels/cholesky/src/solve.C	2013-02-11 02:50:26.394322341 -0500
-@@ -138,6 +138,7 @@
-   gp->pid = 0;
-   Global = (struct GlobalMemory *)
-     G_MALLOC(sizeof(struct GlobalMemory), 0);
-+  //AUSEINIT(Global->pause)
-   BARINIT(Global->start, P)
-   LOCKINIT(Global->waitLock)
-   LOCKINIT(Global->memLock)
+

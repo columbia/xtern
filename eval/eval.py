@@ -333,7 +333,15 @@ def execBench(cmd, repeats, out_dir,
                 proc.wait()
                 time.sleep(2)
             else:
-                proc.wait()
+                try: # TODO should handle whole block
+                    proc.wait()
+                except KeyboardInterrupt as k:
+                    try:
+                        os.killpg(proc.pid, signal.SIGTERM)
+                    except:
+                        pass
+                    raise k
+
         # move log files into 'xtern' directory
         try:
             os.renames('out', '%s/out.%d' % (out_dir, i))
