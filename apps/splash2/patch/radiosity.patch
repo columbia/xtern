@@ -1,56 +1,16 @@
-diff -Naur src/radiosity.H src_modified/radiosity.H
---- parsec-3.0/ext/splash2x/apps/radiosity/src/radiosity.H	2012-09-04 22:56:24.000000000 -0400
-+++ parsec-3.0/ext/splash2x/apps/radiosity/src_modified/radiosity.H	2013-02-11 18:11:58.976408009 -0500
-@@ -315,6 +315,8 @@
- 
-     StatisticalInfo stat_info[ MAX_PROCESSORS ] ;
- 
-+    /* replace ad-hoc sync */
-+    //AUSEDEC(pause)
- } Global ;
- 
- 
-diff -Naur src/rad_main.C src_modified/rad_main.C
---- parsec-3.0/ext/splash2x/apps/radiosity/src/rad_main.C	2012-09-04 22:56:24.000000000 -0400
-+++ parsec-3.0/ext/splash2x/apps/radiosity/src_modified/rad_main.C	2013-02-11 18:11:58.976408009 -0500
-@@ -1135,6 +1135,8 @@
-     /* Initialize statistical info */
-     init_stat_info(process_id) ;
- 
-+    /* Initialize PAUSE */
-+    //AUSEINIT(global->pause)
- }
- 
- 
-diff -Naur src/taskman.C src_modified/taskman.C
 --- parsec-3.0/ext/splash2x/apps/radiosity/src/taskman.C	2012-09-04 22:56:23.000000000 -0400
-+++ parsec-3.0/ext/splash2x/apps/radiosity/src_modified/taskman.C	2013-02-11 18:28:52.900372819 -0500
-@@ -114,12 +114,17 @@
++++ parsec-3.0/ext/splash2x/apps/radiosity/src_modified/taskman.C	2013-02-23 20:34:51.314726965 -0500
+@@ -114,12 +114,10 @@
      global->pbar_count++ ;
      UNLOCK(global->pbar_lock);
  
 -    /* barrier spin-wait loop */
-+    //if ( global->pbar_count == n_processors )
-+        //ETPAUSE(global->pause)
      while( global->pbar_count < n_processors )
          {
              /* Wait for a while and then retry dequeue */
 -            if( _process_task_wait_loop() )
 -                break ;
-+            sched_yield();//AITPAUSE(global->pause)
-+            //LEARPAUSE(global->pause)
-+            //if ( global->pbar_count == n_processors ) {
-+                //ETPAUSE(global->pause)
-+                //break;
-+            //}
++            sched_yield(); if (global->pbar_count >= n_processors ) break;
  
              /* Waited for a while but other processors are still running.
                 Poll the task queue again */
-@@ -410,6 +415,7 @@
- 
-     /* Unlock the task queue */
-     UNLOCK(tq->q_lock);
-+    //ETPAUSE(global->pause)
- }
- 
- 
