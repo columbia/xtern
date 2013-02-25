@@ -20,6 +20,7 @@ if [ ! -f $APPS_DIR/sys/phoenix-2.0.0.tar.gz ]; then
 fi
 
 pushd $XTERN_ROOT/apps/phoenix/
+rm linear_regression.tar.gz
 
 # download required files
 check=$(dpkg-query -W -f='${Status} ${Version}\n' axel 2>&1)
