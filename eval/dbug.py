@@ -4,6 +4,7 @@ import sys
 import subprocess
 import logging
 import signal
+import time
 import eval
 
 class DbugTimeout(Exception):
@@ -90,9 +91,11 @@ def model_checking(configs, benchmark):
             logging.warning("'%s' with dbug does not stop after %d seconds, kill it..." % (benchmark, local_timeout))
             signal.alarm(0)
         try:
-            os.killpg(proc.pid, signal.SIGTERM)
+            os.killpg(proc.pid, signal.SIGKILL)
+            proc.kill()
         except OSError:
             pass
+    time.sleep(1)
     
     dbug_cmd = '%s run_xtern.xml' % EXPLORER
     with open('dbug_xtern.log', 'w', 102400) as log_file:
@@ -106,7 +109,8 @@ def model_checking(configs, benchmark):
             logging.warning("'%s' with dbug_xtern does not stop after %d seconds, kill it..." % (benchmark, local_timeout))
             signal.alarm(0)
         try:
-            os.killpg(proc.pid, signal.SIGTERM)
+            os.killpg(proc.pid, signal.SIGKILL)
+            proc.kill()
         except OSError:
             pass
  
