@@ -70,4 +70,19 @@ do
 done
 
 popd
+
+# Generate a bigger input file for linear_regression, 500MB is too short.
+echo "Generating key_file_3GB.txt for linear_regression..."
+tar zxvf linear_regression.tar.gz
+cd linear_regression_datafiles
+rm key_file_3GB.txt
+cat key_file_500MB.txt >> key_file_3GB.txt
+cat key_file_500MB.txt >> key_file_3GB.txt
+cat key_file_500MB.txt >> key_file_3GB.txt
+cat key_file_500MB.txt >> key_file_3GB.txt
+cat key_file_500MB.txt >> key_file_3GB.txt
+cat key_file_500MB.txt >> key_file_3GB.txt
+cd ..
+tar zcvf linear_regression.tar.gz linear_regression_datafiles
+
 echo "DONE!"
