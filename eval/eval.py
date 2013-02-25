@@ -454,46 +454,46 @@ def processBench(config, bench):
 
     dmp_o = config.get(bench, 'DMP_O')
     if dmp_o:
-        dmp_o_exec_file = os.path.abspath('%s/apps/%s/%s' % (DMTTOOL_ROOT, os.path.basename(exec_file), dmp_o))
+        dmp_o_exec_file = os.path.abspath('%s/apps/%s/%s-dmp_o' % (DMTTOOL_ROOT, os.path.basename(exec_file), os.path.basename(exec_file)))
         if checkExist(dmp_o_exec_file):
-            dmp_o_command = ' '.join(['time', export, dmp_o_exec_file] + inputs.split())
+            dmp_o_command = ' '.join(['time', export, 'DMP_SCHEDULING_CHUNK_SIZE=%s' % dmp_o, dmp_o_exec_file] + inputs.split())
             logging.info("executing '%s'" % dmp_o_command)
             execBench(dmp_o_command, repeats, 'dmp_o')
         else:
-            logging.warning("cannot find %s" % dmp_o)
+            logging.warning("cannot find %s-dmp_o" % os.path.basename(exec_file))
             dmp_o = ""
 
     dmp_b = config.get(bench, 'DMP_B')
     if dmp_b:
-        dmp_b_exec_file = os.path.abspath('%s/apps/%s/%s' % (DMTTOOL_ROOT, os.path.basename(exec_file), dmp_b))
+        dmp_b_exec_file = os.path.abspath('%s/apps/%s/%s-dmp_b' % (DMTTOOL_ROOT, os.path.basename(exec_file), os.path.basename(exec_file)))
         if checkExist(dmp_b_exec_file):
-            dmp_b_command = ' '.join(['time', export, dmp_b_exec_file] + inputs.split())
+            dmp_b_command = ' '.join(['time', export, 'DMP_SCHEDULING_CHUNK_SIZE=%s' % dmp_b, dmp_b_exec_file] + inputs.split())
             logging.info("executing '%s'" % dmp_b_command)
             execBench(dmp_b_command, repeats, 'dmp_b')
         else:
-            logging.warning("cannot find %s" % dmp_b)
+            logging.warning("cannot find %s-dmp_b" % os.path.basename(exec_file))
             dmp_b = ""
 
     dmp_pb = config.get(bench, 'DMP_PB')
     if dmp_pb:
-        dmp_pb_exec_file = os.path.abspath('%s/apps/%s/%s' % (DMTTOOL_ROOT, os.path.basename(exec_file), dmp_pb))
+        dmp_pb_exec_file = os.path.abspath('%s/apps/%s/%s-dmp_pb' % (DMTTOOL_ROOT, os.path.basename(exec_file), os.path.basename(exec_file)))
         if checkExist(dmp_pb_exec_file):
-            dmp_pb_command = ' '.join(['time', export, dmp_pb_exec_file] + inputs.split())
+            dmp_pb_command = ' '.join(['time', export, 'DMP_SCHEDULING_CHUNK_SIZE=%s' % dmp_pb, dmp_pb_exec_file] + inputs.split())
             logging.info("executing '%s'" % dmp_pb_command)
             execBench(dmp_pb_command, repeats, 'dmp_pb')
         else:
-            logging.warning("cannot find %s" % dmp_pb)
+            logging.warning("cannot find %s-dmp_pb" % os.path.basename(exec_file))
             dmp_pb = ""
 
     dmp_hb = config.get(bench, 'DMP_HB')
     if dmp_hb:
-        dmp_hb_exec_file = os.path.abspath('%s/apps/%s/%s' % (DMTTOOL_ROOT, os.path.basename(exec_file), dmp_hb))
+        dmp_hb_exec_file = os.path.abspath('%s/apps/%s/%s-dmp_hb' % (DMTTOOL_ROOT, os.path.basename(exec_file), os.path.basename(exec_file)))
         if checkExist(dmp_hb_exec_file):
-            dmp_hb_command = ' '.join(['time', export, dmp_hb_exec_file] + inputs.split())
+            dmp_hb_command = ' '.join(['time', export, 'DMP_SCHEDULING_CHUNK_SIZE=%s' % dmp_hb, dmp_hb_exec_file] + inputs.split())
             logging.info("executing '%s'" % dmp_hb_command)
             execBench(dmp_hb_command, repeats, 'dmp_hb')
         else:
-            logging.warning("cannot find %s" % dmp_hb)
+            logging.warning("cannot find %s-dmp_hb" % os.path.basename(exec_file))
             dmp_hb = ""
 
     # get stats
