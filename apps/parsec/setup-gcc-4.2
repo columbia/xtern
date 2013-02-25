@@ -30,7 +30,7 @@ tar zxf $APPS_DIR/sys/gcc-4.2.4.tar.gz
 mv gcc-4.2.4 $SOURCE
 
 pushd $SOURCE
-cores=(grep "^physical id" /proc/cpuinfo |  wc -l)
+cores=$( grep "^physical id" /proc/cpuinfo | wc -l )
 job=$[cores*2]
 
 patch -p1 < ../patch/xtern_annot.patch
