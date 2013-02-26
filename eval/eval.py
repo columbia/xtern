@@ -422,7 +422,8 @@ def processBench(config, bench):
     else:
         xtern_command = ' '.join(['time', XTERN_PRELOAD, export, exec_file] + inputs.split())
     logging.info("executing '%s'" % xtern_command)
-    execBench(xtern_command, repeats, 'xtern', client_cmd, client_terminate_server, init_env_cmd)
+    if not args.compare_only:
+        execBench(xtern_command, repeats, 'xtern', client_cmd, client_terminate_server, init_env_cmd)
 
     client_cmd = config.get(bench, 'C_CMD')
     if client_cmd:
@@ -435,7 +436,8 @@ def processBench(config, bench):
     else:
         nondet_command = ' '.join(['time', RAND_PRELOAD, export, exec_file] + inputs.split())
     logging.info("executing '%s'" % nondet_command)
-    execBench(nondet_command, repeats, 'non-det', client_cmd, client_terminate_server, init_env_cmd)
+    if not args.compare_only:
+        execBench(nondet_command, repeats, 'non-det', client_cmd, client_terminate_server, init_env_cmd)
 
     # run additional benchmark for dthreads
     dthread = config.get(bench, 'DTHREADS')
@@ -500,6 +502,9 @@ def processBench(config, bench):
     
     xtern_cost = []
     for i in range(int(repeats)):
+        if args.compare_only:
+            xtern_cost += [1.0]
+            continue
         if client_cmd and use_client_stats:
             log_file_name = 'xtern/client.%d' % i
         else:
@@ -512,6 +517,9 @@ def processBench(config, bench):
 
     nondet_cost = []
     for i in range(int(repeats)):
+        if args.compare_only:
+            nondet_cost += [1.0]
+            continue
         if client_cmd and use_client_stats:
             log_file_name = 'non-det/client.%d' % i
         else:
@@ -605,6 +613,9 @@ if __name__ == "__main__":
     parser.add_argument("--stl-result",
                         action="store_true",
                         help="get stl result of parallel portion only")
+    parser.add_argument("--compare-only",
+                        action="store_true",
+                        help="skip 'xtern' and 'non-det' evaluation")
     args = parser.parse_args()
 
     if args.filename.__len__() == 0:
