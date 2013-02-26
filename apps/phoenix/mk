@@ -20,7 +20,7 @@ if [ ! -f $APPS_DIR/sys/phoenix-2.0.0.tar.gz ]; then
 fi
 
 pushd $XTERN_ROOT/apps/phoenix/
-rm linear_regression.tar.gz
+#rm linear_regression.tar.gz
 
 # download required files
 check=$(dpkg-query -W -f='${Status} ${Version}\n' axel 2>&1)
@@ -57,7 +57,7 @@ patch -p1 < ../patch/annot-phoenix-all-map-reduce.patch
 patch -p1 < ../patch/annot-histogram-mapreduce.patch
 patch -p1 < ../patch/annot-linear-regression-mapreduce.patch
 patch -p1 < ../patch/annot-pca-mapreduce.patch
-patch -p1 < ../patch/annot-word_count-mapreduce.patch
+#patch -p1 < ../patch/annot-word_count-mapreduce.patch
 patch -p1 < ../patch/annot-kmeans-mapreduce.patch
 patch -p1 < ../patch/annot-matrix_multiply-mapreduce.patch
 patch -p1 < ../patch/annot-string_match-mapreduce.patch
@@ -87,7 +87,7 @@ popd
 echo "Generating key_file_3GB.txt for linear_regression..."
 tar zxvf linear_regression.tar.gz
 cd linear_regression_datafiles
-rm key_file_3GB.txt
+#rm key_file_3GB.txt
 cat key_file_500MB.txt >> key_file_3GB.txt
 cat key_file_500MB.txt >> key_file_3GB.txt
 cat key_file_500MB.txt >> key_file_3GB.txt
