@@ -3,6 +3,7 @@
 set -e
 
 ROOT=`pwd`
+ARCH=`uname -m`
 
 if [ ! -d $XTERN_ROOT ]; then
 	echo "XTERN_ROOT is not defined"
@@ -33,6 +34,15 @@ tar zxf $APPS_DIR/sys/NPB3.3.1.tar.gz
 # link
 ln -s $XTERN_ROOT/apps/npb/make.def NPB3.3.1/NPB3.3-OMP/config/
 ln -s $XTERN_ROOT/apps/npb/suite.def NPB3.3.1/NPB3.3-OMP/config/
+pushd NPB3.3.1/NPB3.3-OMP
+if [ "$ARCH" == "x86_64" ]; then
+  ln -s $XTERN_ROOT/apps/openmp/install/lib64/libgomp.a
+  ln -s $XTERN_ROOT/apps/openmp/install/lib64/libstdc++.a
+else
+  ln -s $XTERN_ROOT/apps/openmp/install/lib/libgomp.a
+  ln -s $XTERN_ROOT/apps/openmp/install/lib/libstdc++.a
+fi
+popd
 
 pushd NPB3.3.1/NPB3.3-OMP
 make suite
