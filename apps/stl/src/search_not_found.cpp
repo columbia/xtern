@@ -18,7 +18,10 @@ int RandomNumber () { return (std::rand()%100); }
 //  int operator()() {return ++current;}
 //} UniqueNumber;
 
-std::vector<int> myvector(1000*1000*1000);
+unsigned int data_size = 0;
+
+//std::vector<int> myvector(1000*1000*1000);
+std::vector<int> myvector(data_size);
 //std::vector<int> myvector(1000);
 
 #define START_OFF 10000
@@ -27,13 +30,16 @@ std::vector<int> myvector(1000*1000*1000);
 
 std::vector<int> second(SECOND_SIZE);
 
-int main () {
+int main (int argc, char * argv[]) {
+    SET_INPUT_SIZE(argc, argv[1])
+    myvector.resize(data_size);
+
     struct timeval start, end;
 //    int items[] = {ITEM, 11, 42, 29, 73, 21, 19, 84, 37, 98, 24, 15, 70, 13, 26, 91, 80, 56, 73, 62};
 //    std::vector<int> second(items, items+19);
     fprintf(stderr, "omp num threads %d\n", omp_get_max_threads());
-    std::srand(SEED);
-    __gnu_parallel::generate (myvector.begin(), myvector.end(), RandomNumber, __gnu_parallel::sequential_tag());
+//    std::srand(SEED);
+//    __gnu_parallel::generate (myvector.begin(), myvector.end(), RandomNumber, __gnu_parallel::sequential_tag());
 
 //    memcpy(&second[0], &myvector[START_OFF], SECOND_SIZE * sizeof(int));
     for (std::vector<int>::iterator it=second.begin(); it!=second.end(); ++it)

@@ -21,12 +21,16 @@ bool isOdd(int i) {
     return (i % 2) == 1;
 }
 
-std::vector<int> myvector(1000*1000*1000);
+unsigned int data_size = 0;
+
+//std::vector<int> myvector(1000*1000*1000);
+std::vector<int> myvector(data_size);
 //std::vector<int> myvector(10);
 
-#define ITEM 1
+int main (int argc, char * argv[]) {
+    SET_INPUT_SIZE(argc, argv[1])
+    myvector.resize(data_size);
 
-int main () {
     struct timeval start, end;
     fprintf(stderr, "omp num threads %d\n", omp_get_max_threads());
 //    std::srand ( unsigned ( std::time(0) ) );

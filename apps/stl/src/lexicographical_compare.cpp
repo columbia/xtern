@@ -11,14 +11,21 @@
 // function generator:
 char RandomNumber () { return (std::rand()%100); }
 
+unsigned int data_size = 0;
 
-std::vector<int> myvector(1000*1000*1000);
-std::vector<int> result(1000*1000*1000);
+//std::vector<int> myvector(1000*1000*1000);
+//std::vector<int> result(1000*1000*1000);
+std::vector<int> myvector(data_size);
+std::vector<int> result(data_size);
 //std::vector<int> myvector(10);
 //std::vector<int> result(10);
 
-int main()
+int main(int argc, char * argv[])
 {
+    SET_INPUT_SIZE(argc, argv[1])
+    myvector.resize(data_size);
+    result.resize(data_size);
+
 //    bool a = false;
     struct timeval start, end;
     fprintf(stderr, "omp num threads %d\n", omp_get_max_threads());
