@@ -449,7 +449,7 @@ def processBench(config, bench):
         if checkExist(dthread_exec_file):
             dthread_command = ' '.join(['time', export, dthread_exec_file] + inputs.split())
             logging.info("executing '%s'" % dthread_command)
-            execBench(dthread_command, repeats, 'dthreads')
+            execBench(dthread_command, repeats, 'dthreads', "", False, init_env_cmd)
         else:
             logging.warning("cannot find %s" % dthread)
             dthread = ""
@@ -460,7 +460,7 @@ def processBench(config, bench):
         if checkExist(dmp_o_exec_file):
             dmp_o_command = ' '.join(['time', export, 'DMP_SCHEDULING_CHUNK_SIZE=%s' % dmp_o, dmp_o_exec_file] + inputs.split())
             logging.info("executing '%s'" % dmp_o_command)
-            execBench(dmp_o_command, repeats, 'dmp_o')
+            execBench(dmp_o_command, repeats, 'dmp_o', "", False, init_env_cmd)
         else:
             logging.warning("cannot find %s-dmp_o" % os.path.basename(exec_file))
             dmp_o = ""
@@ -471,7 +471,7 @@ def processBench(config, bench):
         if checkExist(dmp_b_exec_file):
             dmp_b_command = ' '.join(['time', export, 'DMP_SCHEDULING_CHUNK_SIZE=%s' % dmp_b, dmp_b_exec_file] + inputs.split())
             logging.info("executing '%s'" % dmp_b_command)
-            execBench(dmp_b_command, repeats, 'dmp_b')
+            execBench(dmp_b_command, repeats, 'dmp_b', "", False, init_env_cmd)
         else:
             logging.warning("cannot find %s-dmp_b" % os.path.basename(exec_file))
             dmp_b = ""
@@ -482,7 +482,7 @@ def processBench(config, bench):
         if checkExist(dmp_pb_exec_file):
             dmp_pb_command = ' '.join(['time', export, 'DMP_SCHEDULING_CHUNK_SIZE=%s' % dmp_pb, dmp_pb_exec_file] + inputs.split())
             logging.info("executing '%s'" % dmp_pb_command)
-            execBench(dmp_pb_command, repeats, 'dmp_pb')
+            execBench(dmp_pb_command, repeats, 'dmp_pb', "", False, init_env_cmd)
         else:
             logging.warning("cannot find %s-dmp_pb" % os.path.basename(exec_file))
             dmp_pb = ""
@@ -493,7 +493,7 @@ def processBench(config, bench):
         if checkExist(dmp_hb_exec_file):
             dmp_hb_command = ' '.join(['time', export, 'DMP_SCHEDULING_CHUNK_SIZE=%s' % dmp_hb, dmp_hb_exec_file] + inputs.split())
             logging.info("executing '%s'" % dmp_hb_command)
-            execBench(dmp_hb_command, repeats, 'dmp_hb')
+            execBench(dmp_hb_command, repeats, 'dmp_hb', "", False, init_env_cmd)
         else:
             logging.warning("cannot find %s-dmp_hb" % os.path.basename(exec_file))
             dmp_hb = ""
