@@ -46,7 +46,7 @@ popd
 
 # Add patches.
 pushd NPB3.3.1
-patch -p1 < ../annot-UA-omp-non-det.patch
+patch -p1 < ../patch/annot-UA-omp-non-det.patch
 popd
 
 pushd NPB3.3.1/NPB3.3-OMP
