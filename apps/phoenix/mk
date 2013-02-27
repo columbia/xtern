@@ -49,9 +49,9 @@ tar zxf $APPS_DIR/sys/phoenix-2.0.0.tar.gz
 # patch && make
 pushd phoenix-2.0.0
 patch -p1 < ../patch/fix.patch
+patch -p1 < ../patch/replace_pthread_specific.patch  # maximum # of threads will be 64 (hard coded)
 patch -p1 < ../patch/defines.mk.patch
 patch -p1 < ../patch/fix-histogram-pthread.patch
-
 # mapreduce patches
 patch -p1 < ../patch/annot-phoenix-all-map-reduce.patch
 patch -p1 < ../patch/annot-histogram-mapreduce.patch
@@ -83,6 +83,11 @@ done
 
 popd
 
+if [[ -f linear_regression_3g.tar.gz ]]; then
+    echo "DONE !"
+    exit 0
+fi
+
 # Generate a bigger input file for linear_regression, 500MB is too short.
 echo "Generating key_file_3GB.txt for linear_regression..."
 tar zxvf linear_regression.tar.gz
@@ -95,6 +100,6 @@ cat key_file_500MB.txt >> key_file_3GB.txt
 cat key_file_500MB.txt >> key_file_3GB.txt
 cat key_file_500MB.txt >> key_file_3GB.txt
 cd ..
-tar zcvf linear_regression.tar.gz linear_regression_datafiles
+tar zcvf linear_regression_3g.tar.gz linear_regression_datafiles/key_file_3GB.txt
 
 echo "DONE!"

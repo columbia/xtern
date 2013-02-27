@@ -422,7 +422,8 @@ def processBench(config, bench):
     else:
         xtern_command = ' '.join(['time', XTERN_PRELOAD, export, exec_file] + inputs.split())
     logging.info("executing '%s'" % xtern_command)
-    execBench(xtern_command, repeats, 'xtern', client_cmd, client_terminate_server, init_env_cmd)
+    if not args.compare_only:
+        execBench(xtern_command, repeats, 'xtern', client_cmd, client_terminate_server, init_env_cmd)
 
     client_cmd = config.get(bench, 'C_CMD')
     if client_cmd:
@@ -435,7 +436,8 @@ def processBench(config, bench):
     else:
         nondet_command = ' '.join(['time', RAND_PRELOAD, export, exec_file] + inputs.split())
     logging.info("executing '%s'" % nondet_command)
-    execBench(nondet_command, repeats, 'non-det', client_cmd, client_terminate_server, init_env_cmd)
+    if not args.compare_only:
+        execBench(nondet_command, repeats, 'non-det', client_cmd, client_terminate_server, init_env_cmd)
 
     # run additional benchmark for dthreads
     dthread = config.get(bench, 'DTHREADS')
@@ -447,59 +449,62 @@ def processBench(config, bench):
         if checkExist(dthread_exec_file):
             dthread_command = ' '.join(['time', export, dthread_exec_file] + inputs.split())
             logging.info("executing '%s'" % dthread_command)
-            execBench(dthread_command, repeats, 'dthreads')
+            execBench(dthread_command, repeats, 'dthreads', "", False, init_env_cmd)
         else:
             logging.warning("cannot find %s" % dthread)
             dthread = ""
 
     dmp_o = config.get(bench, 'DMP_O')
     if dmp_o:
-        dmp_o_exec_file = os.path.abspath('%s/apps/%s/%s' % (DMTTOOL_ROOT, os.path.basename(exec_file), dmp_o))
+        dmp_o_exec_file = os.path.abspath('%s/apps/%s/%s-dmp_o' % (DMTTOOL_ROOT, os.path.basename(exec_file), os.path.basename(exec_file)))
         if checkExist(dmp_o_exec_file):
-            dmp_o_command = ' '.join(['time', export, dmp_o_exec_file] + inputs.split())
+            dmp_o_command = ' '.join(['time', export, 'DMP_SCHEDULING_CHUNK_SIZE=%s' % dmp_o, dmp_o_exec_file] + inputs.split())
             logging.info("executing '%s'" % dmp_o_command)
-            execBench(dmp_o_command, repeats, 'dmp_o')
+            execBench(dmp_o_command, repeats, 'dmp_o', "", False, init_env_cmd)
         else:
-            logging.warning("cannot find %s" % dmp_o)
+            logging.warning("cannot find %s-dmp_o" % os.path.basename(exec_file))
             dmp_o = ""
 
     dmp_b = config.get(bench, 'DMP_B')
     if dmp_b:
-        dmp_b_exec_file = os.path.abspath('%s/apps/%s/%s' % (DMTTOOL_ROOT, os.path.basename(exec_file), dmp_b))
+        dmp_b_exec_file = os.path.abspath('%s/apps/%s/%s-dmp_b' % (DMTTOOL_ROOT, os.path.basename(exec_file), os.path.basename(exec_file)))
         if checkExist(dmp_b_exec_file):
-            dmp_b_command = ' '.join(['time', export, dmp_b_exec_file] + inputs.split())
+            dmp_b_command = ' '.join(['time', export, 'DMP_SCHEDULING_CHUNK_SIZE=%s' % dmp_b, dmp_b_exec_file] + inputs.split())
             logging.info("executing '%s'" % dmp_b_command)
-            execBench(dmp_b_command, repeats, 'dmp_b')
+            execBench(dmp_b_command, repeats, 'dmp_b', "", False, init_env_cmd)
         else:
-            logging.warning("cannot find %s" % dmp_b)
+            logging.warning("cannot find %s-dmp_b" % os.path.basename(exec_file))
             dmp_b = ""
 
     dmp_pb = config.get(bench, 'DMP_PB')
     if dmp_pb:
-        dmp_pb_exec_file = os.path.abspath('%s/apps/%s/%s' % (DMTTOOL_ROOT, os.path.basename(exec_file), dmp_pb))
+        dmp_pb_exec_file = os.path.abspath('%s/apps/%s/%s-dmp_pb' % (DMTTOOL_ROOT, os.path.basename(exec_file), os.path.basename(exec_file)))
         if checkExist(dmp_pb_exec_file):
-            dmp_pb_command = ' '.join(['time', export, dmp_pb_exec_file] + inputs.split())
+            dmp_pb_command = ' '.join(['time', export, 'DMP_SCHEDULING_CHUNK_SIZE=%s' % dmp_pb, dmp_pb_exec_file] + inputs.split())
             logging.info("executing '%s'" % dmp_pb_command)
-            execBench(dmp_pb_command, repeats, 'dmp_pb')
+            execBench(dmp_pb_command, repeats, 'dmp_pb', "", False, init_env_cmd)
         else:
-            logging.warning("cannot find %s" % dmp_pb)
+            logging.warning("cannot find %s-dmp_pb" % os.path.basename(exec_file))
             dmp_pb = ""
 
     dmp_hb = config.get(bench, 'DMP_HB')
     if dmp_hb:
-        dmp_hb_exec_file = os.path.abspath('%s/apps/%s/%s' % (DMTTOOL_ROOT, os.path.basename(exec_file), dmp_hb))
+        dmp_hb_exec_file = os.path.abspath('%s/apps/%s/%s-dmp_hb' % (DMTTOOL_ROOT, os.path.basename(exec_file), os.path.basename(exec_file)))
         if checkExist(dmp_hb_exec_file):
-            dmp_hb_command = ' '.join(['time', export, dmp_hb_exec_file] + inputs.split())
+            dmp_hb_command = ' '.join(['time', export, 'DMP_SCHEDULING_CHUNK_SIZE=%s' % dmp_hb, dmp_hb_exec_file] + inputs.split())
             logging.info("executing '%s'" % dmp_hb_command)
-            execBench(dmp_hb_command, repeats, 'dmp_hb')
+            execBench(dmp_hb_command, repeats, 'dmp_hb', "", False, init_env_cmd)
         else:
-            logging.warning("cannot find %s" % dmp_hb)
+            logging.warning("cannot find %s-dmp_hb" % os.path.basename(exec_file))
             dmp_hb = ""
 
     # get stats
     
     xtern_cost = []
     for i in range(int(repeats)):
+        if args.compare_only:
+            xtern_cost += [1.0]
+            continue
         if client_cmd and use_client_stats:
             log_file_name = 'xtern/client.%d' % i
         else:
@@ -512,6 +517,9 @@ def processBench(config, bench):
 
     nondet_cost = []
     for i in range(int(repeats)):
+        if args.compare_only:
+            nondet_cost += [1.0]
+            continue
         if client_cmd and use_client_stats:
             log_file_name = 'non-det/client.%d' % i
         else:
@@ -605,6 +613,9 @@ if __name__ == "__main__":
     parser.add_argument("--stl-result",
                         action="store_true",
                         help="get stl result of parallel portion only")
+    parser.add_argument("--compare-only",
+                        action="store_true",
+                        help="skip 'xtern' and 'non-det' evaluation")
     args = parser.parse_args()
 
     if args.filename.__len__() == 0:
