@@ -1377,6 +1377,10 @@ void RecorderRT<_S>::lineupDestroy(long opaque_type) {
 template <typename _S>
 void RecorderRT<_S>::lineupStart(long opaque_type) {
   unsigned ins = opaque_type;
+  if (options::enforce_non_det_annotations && inNonDet) {
+    add_non_det_var((void *)opaque_type);
+    return;
+  }
   //fprintf(stderr, "lineupStart opaque_type %p, tid %d, waiting for turn...\n", (void *)opaque_type, _S::self());
   SCHED_TIMER_START;
   refcnt_bar_map::iterator bi = refcnt_bars.find(opaque_type);
@@ -1421,6 +1425,10 @@ void RecorderRT<_S>::lineupStart(long opaque_type) {
 template <typename _S>
 void RecorderRT<_S>::lineupEnd(long opaque_type) {
   unsigned ins = opaque_type;
+  if (options::enforce_non_det_annotations && inNonDet) {
+    add_non_det_var((void *)opaque_type);
+    return;
+  }
   SCHED_TIMER_START;
   refcnt_bar_map::iterator bi = refcnt_bars.find(opaque_type);
   assert(bi != refcnt_bars.end() && "refcnt barrier is not initialized!");
