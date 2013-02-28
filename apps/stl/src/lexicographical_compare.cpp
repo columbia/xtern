@@ -29,11 +29,11 @@ int main(int argc, char * argv[])
 //    bool a = false;
     struct timeval start, end;
     fprintf(stderr, "omp num threads %d\n", omp_get_max_threads());
-    std::srand(SEED);
-    __gnu_parallel::generate (myvector.begin(), myvector.end(), RandomNumber, __gnu_parallel::sequential_tag());
+//    std::srand(SEED);
+//    __gnu_parallel::generate (myvector.begin(), myvector.end(), RandomNumber, __gnu_parallel::sequential_tag());
 //    std::srand(SEED);
 //    __gnu_parallel::generate (result.begin(), result.end(), RandomNumber, __gnu_parallel::sequential_tag());
-    memcpy(&result[0], &myvector[0], myvector.size() * sizeof(int));
+//    memcpy(&result[0], &myvector[0], myvector.size() * sizeof(int));
 
 
     //generate (myvector.begin(), myvector.end(), UniqueNumber, __gnu_parallel::sequential_tag());

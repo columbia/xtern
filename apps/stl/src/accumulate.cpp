@@ -25,8 +25,8 @@ int main(int argc, char * argv[])
     int init= 0;
 //    long result = 0;
     fprintf(stderr, "omp num threads %d\n", omp_get_max_threads());
-    std::srand(SEED);
-    __gnu_parallel::generate (myvector.begin(), myvector.end(), RandomNumber, __gnu_parallel::sequential_tag());
+//    std::srand(SEED);
+//    __gnu_parallel::generate (myvector.begin(), myvector.end(), RandomNumber, __gnu_parallel::sequential_tag());
     //generate (myvector.begin(), myvector.end(), UniqueNumber, __gnu_parallel::sequential_tag());
 
     //__gnu_parallel::partial_sum(myvector.begin(), myvector.end(), result.begin());

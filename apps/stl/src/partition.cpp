@@ -35,7 +35,7 @@ int main (int argc, char * argv[]) {
     fprintf(stderr, "omp num threads %d\n", omp_get_max_threads());
 //    std::srand ( unsigned ( std::time(0) ) );
 //    generate (myvector.begin(), myvector.end(), RandomNumber, __gnu_parallel::sequential_tag());
-    generate (myvector.begin(), myvector.end(), UniqueNumber, __gnu_parallel::sequential_tag());
+//    generate (myvector.begin(), myvector.end(), UniqueNumber, __gnu_parallel::sequential_tag());
   
   //  std::cout << "myvector contains:";
   //  for (std::vector<int>::iterator it=myvector.begin(); it!=myvector.end(); ++it)

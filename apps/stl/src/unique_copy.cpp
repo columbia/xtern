@@ -35,8 +35,8 @@ int main(int argc, char * argv[])
 //    __gnu_parallel::generate (myvector.begin(), myvector.end(), RandomNumber);
 
     //__gnu_parallel::partial_sum(myvector.begin(), myvector.end(), result.begin());
-    std::srand(SEED);
-    __gnu_parallel::generate (myvector.begin(), myvector.end(), RandomNumber, __gnu_parallel::sequential_tag());
+//    std::srand(SEED);
+//    __gnu_parallel::generate (myvector.begin(), myvector.end(), RandomNumber, __gnu_parallel::sequential_tag());
 
     gettimeofday(&start, NULL);
     __gnu_parallel::unique_copy(myvector.begin(), myvector.end(), result.begin());

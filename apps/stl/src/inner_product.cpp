@@ -31,12 +31,12 @@ int main(int argc, char * argv[])
     int init = 10;
     fprintf(stderr, "omp num threads %d\n", omp_get_max_threads());
     //generate (myvector.begin(), myvector.end(), UniqueNumber, __gnu_parallel::sequential_tag());
-    std::srand(SEED);
-    __gnu_parallel::generate (myvector.begin(), myvector.end(), RandomNumber, __gnu_parallel::sequential_tag());
+//    std::srand(SEED);
+//    __gnu_parallel::generate (myvector.begin(), myvector.end(), RandomNumber, __gnu_parallel::sequential_tag());
  
 //    std::srand(SEED);
 //    __gnu_parallel::generate (second.begin(), second.end(), RandomNumber, __gnu_parallel::sequential_tag());
-    memcpy(&second[0], &myvector[0], myvector.size() * sizeof(int));
+//    memcpy(&second[0], &myvector[0], myvector.size() * sizeof(int));
 
 
     //__gnu_parallel::partial_sum(myvector.begin(), myvector.end(), result.begin());

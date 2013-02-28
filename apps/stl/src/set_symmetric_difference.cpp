@@ -42,6 +42,8 @@ unsigned int data_size = 0;
 
 int main (int argc, char * argv[]) {
     SET_INPUT_SIZE(argc, argv[1])
+    if(data_size = LARGE)
+        data_size = 0x7f000000;
     first.resize(data_size / 2);
     second.resize(data_size / 2);
     v.resize(data_size);

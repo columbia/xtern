@@ -36,12 +36,12 @@ int main (int argc, char * argv[]) {
     struct timeval start, end;
     fprintf(stderr, "omp num threads %d\n", omp_get_max_threads());
 
-    std::srand(SEED);
-    __gnu_parallel::generate (myvector.begin(), myvector.end(), RandomNumber, __gnu_parallel::sequential_tag());
+//    std::srand(SEED);
+//    __gnu_parallel::generate (myvector.begin(), myvector.end(), RandomNumber, __gnu_parallel::sequential_tag());
  
 //    std::srand(SEED);
 //    __gnu_parallel::generate (second.begin(), second.end(), RandomNumber, __gnu_parallel::sequential_tag());
-    memcpy(&second[0], &myvector[0], myvector.size() * sizeof(int));
+//    memcpy(&second[0], &myvector[0], myvector.size() * sizeof(int));
 
 
 //    std::pair<std::vector<int>::iterator,int*> mypair;

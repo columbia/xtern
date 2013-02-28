@@ -45,7 +45,7 @@ int main (int argc, char * argv[]) {
     *(myvector.begin() + (unsigned int) data_size/n * (n-1) - 1) = ITEM;
 
     gettimeofday(&start, NULL);
-    std::vector<int>::iterator it =    __gnu_parallel::find (myvector.begin(), myvector.end(), ITEM);
+    __gnu_parallel::find (myvector.begin(), myvector.end(), ITEM);
     gettimeofday(&end, NULL); 
     fprintf(stderr, "real %.3f\n", ((end.tv_sec * 1000000 + end.tv_usec)
         - (start.tv_sec * 1000000 + start.tv_usec)) / 1000000.0);

@@ -38,8 +38,8 @@ int main (int argc, char * argv[]) {
   //  for (std::vector<int>::iterator it=myvector.begin(); it!=myvector.end(); ++it)
   //    std::cout << ' ' << *it;
   //  std::cout << '\n';
-    std::srand(SEED);
-    __gnu_parallel::generate (myvector.begin(), myvector.end(), RandomNumber, __gnu_parallel::sequential_tag());
+//    std::srand(SEED);
+//    __gnu_parallel::generate (myvector.begin(), myvector.end(), RandomNumber, __gnu_parallel::sequential_tag());
 
     gettimeofday(&start, NULL);
     __gnu_parallel::random_shuffle (myvector.begin(), myvector.end());

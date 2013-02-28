@@ -24,7 +24,8 @@ unsigned int data_size = 0;
 std::vector<int> myvector(data_size);
 //std::vector<int> myvector(1000);
 
-#define SECOND_SIZE 10
+//#define SECOND_SIZE 10
+#define SECOND_SIZE 2
 #define NOT_IN_ITEM 101
 
 std::vector<int> second(SECOND_SIZE);
@@ -32,6 +33,8 @@ std::vector<int> second(SECOND_SIZE);
 int main (int argc, char * argv[]) {
     SET_INPUT_SIZE(argc, argv[1])
     myvector.resize(data_size);
+
+    const int item = NOT_IN_ITEM;
 
     struct timeval start, end;
     fprintf(stderr, "omp num threads %d\n", omp_get_max_threads());

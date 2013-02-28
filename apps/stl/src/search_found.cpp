@@ -43,7 +43,9 @@ int main (int argc, char * argv[]) {
     fprintf(stderr, "omp num threads %d\n", omp_get_max_threads());
 //    std::srand(SEED);
 //    __gnu_parallel::generate (myvector.begin(), myvector.end(), RandomNumber, __gnu_parallel::sequential_tag());
-    __gnu_parallel::generate (myvector.begin(), myvector.end(), UniqueNumber, __gnu_parallel::sequential_tag());
+//    __gnu_parallel::generate (myvector.begin(), myvector.end(), UniqueNumber, __gnu_parallel::sequential_tag());
+    for(int i = 0; i < SECOND_SIZE; i++)
+        *(myvector.begin() + START_OFF + i) = 1;
 
 //    int size = 1;
 
@@ -60,17 +62,16 @@ int main (int argc, char * argv[]) {
 //    std::cout << '\n';
 //    std::cout << *(second.end() - 1) << "\n";
 
-    std::vector<int>::iterator it;
+//    std::vector<int>::iterator it;
   
     gettimeofday(&start, NULL);
-it=    __gnu_parallel::search (myvector.begin(), myvector.end(), second.begin(), second.end());
+    __gnu_parallel::search (myvector.begin(), myvector.end(), second.begin(), second.end());
     gettimeofday(&end, NULL);
     fprintf(stderr, "real %.3f\n", ((end.tv_sec * 1000000 + end.tv_usec)
           - (start.tv_sec * 1000000 + start.tv_usec)) / 1000000.0);
-//}
  
-    if( it != myvector.end())
-        std::cout << "Found" << *it << "\n";
+//    if( it != myvector.end())
+//        std::cout << "Found" << *it << "\n";
 //    std::cout << "myvector contains:";
 //    std::vector<int>::iterator it;
 //    for (it=myvector.begin(); it!=myvector.end() && *it != ITEM; ++it)

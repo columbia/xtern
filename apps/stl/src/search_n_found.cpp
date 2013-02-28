@@ -27,6 +27,9 @@ std::vector<int> myvector(data_size);
 #define ITEM 32 // 34 or 47 will appear 4 times with seed 1
 #define TIMES 4 // max n for search_n
 
+#define START_OFF 100000000       // old old
+#define SECOND_SIZE 500000
+
 // for vector size 1B with seed 1: (4 times)
 // 32 47 31 70 0 7 73 30 43 73
 
@@ -36,8 +39,10 @@ int main (int argc, char * argv[]) {
 
     struct timeval start, end;
     fprintf(stderr, "omp num threads %d\n", omp_get_max_threads());
-    std::srand(SEED);
-    __gnu_parallel::generate (myvector.begin(), myvector.end(), RandomNumber, __gnu_parallel::sequential_tag());
+//    std::srand(SEED);
+//    __gnu_parallel::generate (myvector.begin(), myvector.end(), RandomNumber, __gnu_parallel::sequential_tag());
+    for(int i = 0; i < SECOND_SIZE; i++)  
+        *(myvector.begin() + START_OFF + i) = 1; 
   
 //    //for (std::vector<int>::iterator it=myvector.begin(); it!=myvector.end()-5; ++it)
 //    for (std::vector<int>::iterator it=myvector.begin(); it!=myvector.end()-4; ++it)
@@ -46,10 +51,14 @@ int main (int argc, char * argv[]) {
 //            std::cout << ' ' << *it; 
   
     gettimeofday(&start, NULL);
-    __gnu_parallel::search_n (myvector.begin(), myvector.end(), TIMES, ITEM);
+    //__gnu_parallel::search_n (myvector.begin(), myvector.end(), TIMES, ITEM);
+    __gnu_parallel::search_n (myvector.begin(), myvector.end(), SECOND_SIZE, 1);
     gettimeofday(&end, NULL);
     fprintf(stderr, "real %.3f\n", ((end.tv_sec * 1000000 + end.tv_usec)
            - (start.tv_sec * 1000000 + start.tv_usec)) / 1000000.0);
+
+//    if(it != myvector.end())
+//        std::cout << "Found\n";
   
     return 0;
 }

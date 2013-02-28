@@ -8,14 +8,15 @@
 #include "microbench.h"
 
 // function generator:
-int RandomNumber () { return (std::rand()%100); }
+//int RandomNumber () { return (std::rand()%100); }
 
 //class generator:
-//struct c_unique {
-//  int current;
-//  c_unique() {current=0;}
-//  int operator()() {return ++current;}
-//} UniqueNumber;
+struct c_unique {
+  int current;
+  c_unique() {current=1;}
+  //int operator()() {return ++current;}
+  int operator()() {return current;}
+} UniqueNumber;
 
 unsigned int data_size = 0;
 
@@ -28,10 +29,11 @@ int main (int argc, char * argv[]) {
 
     struct timeval start, end;
     fprintf(stderr, "omp num threads %d\n", omp_get_max_threads());
-    std::srand(SEED);
+//    std::srand(SEED);
 
     gettimeofday(&start, NULL);
-    __gnu_parallel::generate_n (myvector.begin(), myvector.size(), RandomNumber);
+//    __gnu_parallel::generate_n (myvector.begin(), myvector.size(), RandomNumber);
+    __gnu_parallel::generate_n (myvector.begin(), myvector.size(), UniqueNumber);
     gettimeofday(&end, NULL);
     fprintf(stderr, "real %.3f\n", ((end.tv_sec * 1000000 + end.tv_usec)
           - (start.tv_sec * 1000000 + start.tv_usec)) / 1000000.0);

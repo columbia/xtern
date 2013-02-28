@@ -49,7 +49,7 @@ int main (int argc, char * argv[]) {
     struct timeval start, end;  
     fprintf(stderr, "omp num threads %d\n", omp_get_max_threads());
     __gnu_parallel::generate (first.begin(), first.end(), OddNumber, __gnu_parallel::sequential_tag());
-    __gnu_parallel::generate (second.begin(), second.end(), EvenNumber, __gnu_parallel::sequential_tag());
+//    __gnu_parallel::generate (second.begin(), second.end(), EvenNumber, __gnu_parallel::sequential_tag());
     
     gettimeofday(&start, NULL);
     __gnu_parallel::set_difference(first.begin(), first.end(), second.begin(), second.end(), v.begin());

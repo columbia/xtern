@@ -11,11 +11,12 @@
 int RandomNumber () { return (std::rand()%100); }
 
 //class generator:
-//struct c_unique {
-//  int current;
-//  c_unique() {current=0;}
+struct c_unique {
+  int current;
+  c_unique() {current=1;}
 //  int operator()() {return ++current;}
-//} UniqueNumber;
+  int operator()() {return current;}
+} UniqueNumber;
 
 unsigned int data_size = 0;
 
@@ -37,7 +38,8 @@ int main (int argc, char * argv[]) {
 //  std::cout << '\n';
 
     gettimeofday(&start, NULL);
-    __gnu_parallel::generate (myvector.begin(), myvector.end(), RandomNumber);
+//    __gnu_parallel::generate (myvector.begin(), myvector.end(), RandomNumber);
+    __gnu_parallel::generate (myvector.begin(), myvector.end(), UniqueNumber);
     gettimeofday(&end, NULL);
     fprintf(stderr, "real %.3f\n", ((end.tv_sec * 1000000 + end.tv_usec)
           - (start.tv_sec * 1000000 + start.tv_usec)) / 1000000.0);

@@ -32,6 +32,16 @@ struct c_unique_1 {
   }
 } EvenNumber;
 
+struct c_unique_2 {
+  int current;
+  c_unique_2() {current=1;}
+  int operator()() {
+    return current;
+  }
+} ConstNumber;
+
+
+
 unsigned int data_size = 0;
 
 // @INPUT:
@@ -56,7 +66,7 @@ int main (int argc, char * argv[]) {
     struct timeval start, end;
     fprintf(stderr, "omp num threads %d\n", omp_get_max_threads());
     
-    __gnu_parallel::generate (first.begin(), first.end(), OddNumber, __gnu_parallel::sequential_tag());
+    __gnu_parallel::generate (first.begin(), first.end(), ConstNumber, __gnu_parallel::sequential_tag());
     __gnu_parallel::generate (second.begin(), second.end(), EvenNumber, __gnu_parallel::sequential_tag());
  
     fprintf(stderr, "initialization done...\n");
