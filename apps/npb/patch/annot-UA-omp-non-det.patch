@@ -1,6 +1,6 @@
 --- NPB3.3.1-orig/NPB3.3-OMP/UA/transfer.f	2006-03-14 19:32:06.000000000 -0500
-+++ NPB3.3.1/NPB3.3-OMP/UA/transfer.f	2013-02-26 23:32:13.668975503 -0500
-@@ -5,6 +5,7 @@
++++ NPB3.3.1/NPB3.3-OMP/UA/transfer.f	2013-02-27 19:05:16.930457168 -0500
+@@ -5,13 +5,16 @@
  c------------------------------------------------------------------
  
        include 'header.h'
@@ -8,21 +8,32 @@
  
        integer i
  
-@@ -261,6 +262,7 @@
+ c.....initialize locks in parallel
+ c$OMP PARALLEL DO DEFAULT(SHARED) PRIVATE(i)
+ c$    do i=1,lmor
++c$      call tern_non_det_start()
+ c$      call omp_init_lock(tlock(i))
++c$      call tern_non_det_end()
+ c$    end do
+ 
+       return
+@@ -261,6 +264,8 @@
  c------------------------------------------------------------------
  
        include 'header.h'
 +      include 'tern/userF.h'
++c!$          use omp_lib
  
        double precision third
        parameter (third=1.d0/3.d0)
-@@ -268,11 +270,11 @@
+@@ -268,11 +273,12 @@
  
        double precision tmp,tmp1,tx(*),tmor(*),temp(lx1,lx1,2),
       &                 top(lx1,2)
 -      integer il1,il2,il3,il4,ig1,ig2,ig3,ig4,ie,iface,nnje,
 +      integer il1,il2,il3,il4,ig1,ig2,ig3,ig4,ie,iface,nnje,iii1,
       &        ije1,ije2,col,i,j,ije,ig,il
++      INTEGER OMP_GET_NUM_THREADS
  
  c$OMP PARALLEL DEFAULT(SHARED) PRIVATE(il,j,ig,i,col,ije2,ije1,ig4,
 -c$OMP& ig3,ig2,ig1,nnje,il4,il3,il2,il1,iface,ie,ije,
@@ -30,35 +41,35 @@
  c$OMP& tmp,shift,temp,top,tmp1)
  
  c$OMP DO
-@@ -282,6 +284,13 @@
+@@ -282,6 +288,13 @@
  c$OMP END DO
  
  c$OMP DO
-+      do iii1=1,2
++      do iii1=1,OMP_GET_NUM_THREADS()
 +        call tern_non_det_start()
 +      end do
-+c$OMP END DO
++c$OMP END DO NOWAIT
 +
 +
 +c$OMP DO
        do ie=1,nelt
          do iface=1,nsides
  c.........nnje=1 for conforming faces, nnje=2 for nonconforming faces
-@@ -561,6 +570,13 @@
+@@ -561,6 +574,13 @@
          end do
        end do
  c$OMP END DO NOWAIT
 +
 +c$OMP DO
-+      do iii1=1,2
++      do iii1=1,OMP_GET_NUM_THREADS()
 +        call tern_non_det_end()
 +      end do
-+c$OMP END DO
++c$OMP END DO NOWAIT
 +
  c$OMP END PARALLEL 
  
        return
-@@ -800,6 +816,7 @@
+@@ -800,6 +820,7 @@
  c------------------------------------------------------------------------
  
        include 'header.h'
@@ -66,17 +77,19 @@
  
        double precision tx(lx1,lx1),tmor(lx1,lx1),bottom(lx1),
       &                 temp(lx1,lx1)
-@@ -863,14 +880,15 @@
+@@ -863,14 +884,17 @@
  c-------------------------------------------------------------------
  
        include 'header.h'
 +      include 'tern/userF.h'
++c!$          use omp_lib
  
        double precision third
        parameter (third = 1.d0/3.d0)
        double precision tx(*)
 -      integer il1,il2,il3,il4,ig1,ig2,ig3,ig4,ie,iface,col,j,ig,il
 +      integer il1,il2,il3,il4,ig1,ig2,ig3,ig4,ie,iface,col,j,ig,il,iii2
++      INTEGER OMP_GET_NUM_THREADS
  
  c$OMP PARALLEL DEFAULT(SHARED) PRIVATE(IE,IFACE,IL1,IL2,
 -c$OMP& IL3,IL4,IG1,IG2,IG3,IG4,COL,J,IG,IL) 
@@ -84,44 +97,46 @@
  
  c$OMP DO
        do j=1,nmor
-@@ -879,6 +897,12 @@
+@@ -879,6 +903,12 @@
  c$OMP END DO
  
  c$OMP DO
-+      do iii2=1,2
++      do iii2=1,OMP_GET_NUM_THREADS()
 +        call tern_non_det_start()
 +      end do
-+c$OMP END DO
++c$OMP END DO NOWAIT
 +
 +c$OMP DO
        do ie=1,nelt
          do iface=1,nsides
            if(cbc(iface,ie).ne.3)then
-@@ -965,6 +989,13 @@
+@@ -965,6 +995,13 @@
          end do
        end do
  c$OMP END DO NOWAIT
 +
 +c$OMP DO
-+      do iii2=1,2
++      do iii2=1,OMP_GET_NUM_THREADS()
 +        call tern_non_det_end()
 +      end do
-+c$OMP END DO
++c$OMP END DO NOWAIT
 +
  c$OMP END PARALLEL
        return
        end
-@@ -978,14 +1009,15 @@
+@@ -978,14 +1015,17 @@
  c-------------------------------------------------------------------
  
        include 'header.h'
 +      include 'tern/userF.h'
++c!$          use omp_lib
  
        double precision third
        parameter (third = 1.d0/3.d0)
        double precision tx(*)
 -      integer il1,il2,il3,il4,ig1,ig2,ig3,ig4,ie,iface,col,j,ig,il
 +      integer il1,il2,il3,il4,ig1,ig2,ig3,ig4,ie,iface,col,j,ig,il,iii3
++      INTEGER OMP_GET_NUM_THREADS
  
  c$OMP PARALLEL DEFAULT(SHARED) PRIVATE(IE,IFACE,IL1,IL2,
 -c$OMP& IL3,IL4,IG1,IG2,IG3,IG4,COL,J,IG,IL)
@@ -129,15 +144,15 @@
  
  c$OMP DO     
        do j=1,nmor
-@@ -998,10 +1030,15 @@
+@@ -998,10 +1038,15 @@
        end do
  c$OMP END DO
  
 +c$OMP DO
-+      do iii3=1,2
++      do iii3=1,OMP_GET_NUM_THREADS()
 +        call tern_non_det_start()
 +      end do
-+c$OMP END DO
++c$OMP END DO NOWAIT
 +
  c$OMP DO 
        do ie=1,nelt
@@ -146,16 +161,16 @@
            if(cbc(iface,ie).ne.3)then
              il1 = idel(1,  1,  iface,ie)
              il2 = idel(lx1,1,  iface,ie)
-@@ -1095,6 +1132,13 @@
+@@ -1095,6 +1140,13 @@
          end do
        end do
  c$OMP END DO NOWAIT
 +
 +c$OMP DO
-+      do iii3=1,2
++      do iii3=1,OMP_GET_NUM_THREADS()
 +        call tern_non_det_end()
 +      end do
-+c$OMP END DO
++c$OMP END DO NOWAIT
 +
  c$OMP END PARALLEL
  

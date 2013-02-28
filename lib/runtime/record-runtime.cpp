@@ -1345,6 +1345,10 @@ int RecorderRT<_S>::semPost(unsigned ins, int &error, sem_t *sem){
 template <typename _S>
 void RecorderRT<_S>::lineupInit(long opaque_type, unsigned count, unsigned timeout_turns) {
   unsigned ins = opaque_type;
+  if (options::enforce_non_det_annotations && inNonDet) {
+    add_non_det_var((void *)opaque_type);
+    return;
+  }
   SCHED_TIMER_START;
   //fprintf(stderr, "lineupInit opaque_type %p, count %u, timeout %u\n", (void *)opaque_type, count, timeout_turns);
   if (refcnt_bars.find(opaque_type) != refcnt_bars.end()) {
@@ -1361,6 +1365,10 @@ void RecorderRT<_S>::lineupInit(long opaque_type, unsigned count, unsigned timeo
 template <typename _S>
 void RecorderRT<_S>::lineupDestroy(long opaque_type) {
   unsigned ins = opaque_type;
+  if (options::enforce_non_det_annotations && inNonDet) {
+    add_non_det_var((void *)opaque_type);
+    return;
+  }
   SCHED_TIMER_START;
   //fprintf(stderr, "lineupDestroy opaque_type %p\n", (void *)opaque_type);
   assert(refcnt_bars.find(opaque_type) != refcnt_bars.end() && "refcnt barrier is not initialized!");
@@ -1446,22 +1454,26 @@ void RecorderRT<_S>::nonDetStart() {
   unsigned ins = 0;
   dprintf("nonDetStart, tid %d\n", _S::self());
   SCHED_TIMER_START;
-  nNonDetWait++;
-  /** Although at this moment current thread is still in the xtern runq, we pre-attach it to dbug,
-  so that after _S::block() below is called, for whatever operation current thread is going to call,                                    dbug will know totally how many threads 
-  should be blocked (so that dbug can explore the upper bound of non-determinism for these
-  non-det regions). **/
+  if (_S::runq.size() == 1 && nNonDetWait > 0) { // a fast forward optimization.
+    _S::signal(&nonDetCV, true);
+  } else {
+    nNonDetWait++;
+    /** Although at this moment current thread is still in the xtern runq, we pre-attach it to dbug,
+    so that after _S::block() below is called, for whatever operation current thread is going to call,                                    dbug will know totally how many threads 
+    should be blocked (so that dbug can explore the upper bound of non-determinism for these
+    non-det regions). **/
 #ifdef XTERN_PLUS_DBUG
-  Runtime::__attach_self_to_dbug();
+    Runtime::__attach_self_to_dbug();
 #endif
 
-  /** All non-det operations are blocked on this fake var until runq is empty, 
-  i.e., all valid (except idle thread) xtern threads are paused.
-  This wait works like a lineup with unlimited timeout, which is for 
-  maximizing the non-det regions. **/
-  _S::wait(&nonDetCV);
+    /** All non-det operations are blocked on this fake var until runq is empty, 
+    i.e., all valid (except idle thread) xtern threads are paused.
+    This wait works like a lineup with unlimited timeout, which is for 
+    maximizing the non-det regions. **/
+    _S::wait(&nonDetCV);
 
-  nNonDetWait--;
+    nNonDetWait--;
+  }
   SCHED_TIMER_END(syncfunc::tern_non_det_start, 0);
   /** Reuse existing xtern API. Get turn, remove myself from runq, and then pass turn. This 
   operation is determinisitc since we get turn. **/
