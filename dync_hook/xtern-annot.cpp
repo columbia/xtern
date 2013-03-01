@@ -34,6 +34,10 @@ void tern_non_det_end() {
   //fprintf(stderr, "Non-deterministic tern_non_det_end\n");
 }
 
+void tern_set_base_time(struct timespec *ts) {
+  //fprintf(stderr, "Non-deterministic tern_set_base_time\n");
+}
+
 #ifdef __cplusplus
 }
 #endif

@@ -118,6 +118,12 @@ extern "C" {
 }
 static __thread timespec my_time;
 
+/** This var works with tern_set_base_time(). It is used to record the base 
+time for cond_timedwait(), sem_timedwait() and mutex_timedlock() to get
+deterministic physical time interval, so that this interval can be 
+deterministically converted to logical time interval. **/
+static __thread timespec my_base_time;
+
 timespec time_diff(const timespec &start, const timespec &end)
 {
   timespec tmp;
@@ -769,8 +775,10 @@ int RecorderRT<_S>::pthreadMutexTimedLock(unsigned ins, int &error, pthread_mute
   timespec cur_time, rel_time;
   if (options::epoch_mode)
     ClockManager::getClock(cur_time, clockManager.clock);
-  else
-    clock_gettime(CLOCK_REALTIME , &cur_time);
+  else {
+    cur_time.tv_sec = my_base_time.tv_sec;
+    cur_time.tv_nsec = my_base_time.tv_nsec;
+  }
   rel_time = time_diff(cur_time, *abstime);
 
   SCHED_TIMER_START;
@@ -1196,8 +1204,10 @@ int RecorderRT<_S>::pthreadCondTimedWait(unsigned ins, int &error,
   timespec cur_time, rel_time;
   if (options::epoch_mode)
     ClockManager::getClock(cur_time, clockManager.clock);
-  else
-    clock_gettime(CLOCK_REALTIME , &cur_time);
+  else {
+    cur_time.tv_sec = my_base_time.tv_sec;
+    cur_time.tv_nsec = my_base_time.tv_nsec;
+  }
   rel_time = time_diff(cur_time, *abstime);
 
   int ret;
@@ -1212,7 +1222,10 @@ int RecorderRT<_S>::pthreadCondTimedWait(unsigned ins, int &error,
   SCHED_TIMER_FAKE_END(syncfunc::pthread_cond_timedwait, (uint64_t)cv, (uint64_t)mu, (uint64_t) 0);
 
   _S::signal(mu);
-  unsigned timeout = _S::getTurnCount() + relTimeToTurn(&rel_time);
+  unsigned nTurns = relTimeToTurn(&rel_time);
+  printf("Tid %d pthreadCondTimedWait physical time interval %ld.%ld, logical turns %u\n",
+    _S::self(), (long)rel_time.tv_sec, (long)rel_time.tv_nsec, nTurns);
+  unsigned timeout = _S::getTurnCount() + nTurns;
   saved_ret = ret = _S::wait(cv, timeout);
   dprintf("timedwait return = %d, after %d turns\n", ret, _S::getTurnCount() - nturn);
 
@@ -1298,8 +1311,10 @@ int RecorderRT<_S>::semTimedWait(unsigned ins, int &error, sem_t *sem,
   timespec cur_time, rel_time;
   if (options::epoch_mode)
     ClockManager::getClock(cur_time, clockManager.clock);
-  else
-    clock_gettime(CLOCK_REALTIME , &cur_time);
+  else {
+    cur_time.tv_sec = my_base_time.tv_sec;
+    cur_time.tv_nsec = my_base_time.tv_nsec;
+  }
   rel_time = time_diff(cur_time, *abstime);
   
   int ret;
@@ -1499,6 +1514,15 @@ void RecorderRT<_S>::nonDetEnd() {
                             determinisit since we do not get turn, but it is fine, because there is already 
                             some non-det sync ops within the region already. Note that after this point, the 
                             status of the thread is still runnable. **/
+}
+
+template <typename _S>
+void RecorderRT<_S>::setBaseTime(struct timespec *ts) {
+  // Do not need to enforce any turn here.
+  printf("setBaseTime, tid %d, base time %ld.%ld\n", _S::self(), (long)ts->tv_sec, (long)ts->tv_nsec);
+  assert(ts);
+  my_base_time.tv_sec = ts->tv_sec;
+  my_base_time.tv_nsec = ts->tv_nsec;
 }
 
 template <typename _S>

@@ -342,6 +342,14 @@ void tern_non_det_end_real() {
   errno = error;
 }
 
+void tern_set_base_time_real(struct timespec *ts) {
+  int error = errno;
+  Space::enterSys();
+  Runtime::the->setBaseTime(ts);
+  Space::exitSys();
+  errno = error;
+}
+
 void tern_exit(unsigned ins, int status) {
   assert(0 && "why do we call tern_exit?");
   //  this will be called in __tern_prog_end after exit().
