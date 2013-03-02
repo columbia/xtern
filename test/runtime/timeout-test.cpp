@@ -9,6 +9,7 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include "tern/user.h"
 
 pthread_mutex_t mu = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t  cv = PTHREAD_COND_INITIALIZER;
@@ -22,12 +23,14 @@ void* thread_func(void*) {
   gettimeofday(&now, NULL);
   ts.tv_sec = now.tv_sec + 1;
   ts.tv_nsec = now.tv_usec * 1000; 
+  tern_set_base_timeval(&now);
   ret = sem_timedwait(&sem, &ts);
   assert(ret == -1 && errno == ETIMEDOUT);
 
   gettimeofday(&now, NULL);
   ts.tv_sec = now.tv_sec + 1;
   ts.tv_nsec = now.tv_usec * 1000;
+  tern_set_base_timeval(&now);
   ret = pthread_mutex_timedlock(&mu, &ts);
   assert(ret == ETIMEDOUT);
 }
@@ -49,6 +52,7 @@ int main(int argc, char *argv[], char *env[]) {
   gettimeofday(&now, NULL);
   ts.tv_sec = now.tv_sec + 1;
   ts.tv_nsec = now.tv_usec * 1000;
+  tern_set_base_timeval(&now);
   ret = sem_timedwait(&sem, &ts);
   assert(ret == -1 && errno == ETIMEDOUT);
 
@@ -58,6 +62,7 @@ int main(int argc, char *argv[], char *env[]) {
   gettimeofday(&now, NULL);
   ts.tv_sec = now.tv_sec + 1;
   ts.tv_nsec = now.tv_usec * 1000;
+  tern_set_base_timeval(&now);
   ret = pthread_cond_timedwait(&cv, &mu, &ts);
   assert(ret == ETIMEDOUT);
 

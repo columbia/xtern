@@ -28,7 +28,9 @@ int main()
     wait(NULL);
     return 0;
   }
+  printf("\ntest done start pid %d\n\n\n", getpid());
   pthread_mutex_init(&mutex, NULL);
+  printf("\ntest done start2 pid %d\n\n\n", getpid());
   pthread_mutex_lock(&mutex);
   pthread_mutex_unlock(&mutex);
   printf("test done\n\n\n");

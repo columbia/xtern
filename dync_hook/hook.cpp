@@ -80,7 +80,7 @@ void *get_eip()
   /* Fixme: sometimes after fork(), the child process may hang (100% cpu) here, weird.
   Saw this case when running the simple-fork-test.c testcase. */
   int count = backtrace(tracePtrs, len);
-
+      
   if (options::whole_stack_eip_signature)
   {
     ret = 0;

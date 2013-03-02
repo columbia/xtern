@@ -20,7 +20,7 @@ void* thread_func(void* arg) {
   struct timespec now;
   struct timespec next;
   clock_gettime(CLOCK_REALTIME, &now);
-  tern_set_base_time(&now);
+  tern_set_base_timespec(&now);
   next.tv_sec = now.tv_sec + 1; // timedwait for 1.234 second.
   next.tv_nsec = now.tv_nsec + 23400000;
   

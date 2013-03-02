@@ -122,7 +122,7 @@ static __thread timespec my_time;
 time for cond_timedwait(), sem_timedwait() and mutex_timedlock() to get
 deterministic physical time interval, so that this interval can be 
 deterministically converted to logical time interval. **/
-static __thread timespec my_base_time;
+static __thread timespec my_base_time = {0, 0};
 
 timespec time_diff(const timespec &start, const timespec &end)
 {
@@ -776,8 +776,14 @@ int RecorderRT<_S>::pthreadMutexTimedLock(unsigned ins, int &error, pthread_mute
   if (options::epoch_mode)
     ClockManager::getClock(cur_time, clockManager.clock);
   else {
-    cur_time.tv_sec = my_base_time.tv_sec;
-    cur_time.tv_nsec = my_base_time.tv_nsec;
+    if (my_base_time.tv_sec == 0) {
+      fprintf(stderr, "WARN: pthread_mutex_timedlock has a non-det timeout. \
+      Please use it with tern_set_base_timespec().\n");
+      clock_gettime(CLOCK_REALTIME, &cur_time);
+    } else {
+      cur_time.tv_sec = my_base_time.tv_sec;
+      cur_time.tv_nsec = my_base_time.tv_nsec;
+    }
   }
   rel_time = time_diff(cur_time, *abstime);
 
@@ -799,14 +805,16 @@ int RecorderRT<_S>::pthreadMutexUnlock(unsigned ins, int &error, pthread_mutex_t
     dprintf("Thread tid %d, self %u is calling non-det pthread_mutex_unlock.\n", _S::self(), (unsigned)pthread_self());
     return Runtime::__pthread_mutex_unlock(ins, error, mu);
   }
+  //fprintf(stderr, "pthreadMutexUnlock1\n");
   SCHED_TIMER_START;
-
+  //fprintf(stderr, "pthreadMutexUnlock2\n");
   errno = error;
   ret = pthread_mutex_unlock(mu);
   error = errno;
+  //fprintf(stderr, "pthreadMutexUnlock3\n");
   assert(!ret && "failed sync calls are not yet supported!");
   signal(mu);
- 
+  //fprintf(stderr, "pthreadMutexUnlock4\n");
   SCHED_TIMER_END(syncfunc::pthread_mutex_unlock, (uint64_t)mu, (uint64_t) ret);
 
   return ret;
@@ -1205,8 +1213,14 @@ int RecorderRT<_S>::pthreadCondTimedWait(unsigned ins, int &error,
   if (options::epoch_mode)
     ClockManager::getClock(cur_time, clockManager.clock);
   else {
-    cur_time.tv_sec = my_base_time.tv_sec;
-    cur_time.tv_nsec = my_base_time.tv_nsec;
+    if (my_base_time.tv_sec == 0) {
+      fprintf(stderr, "WARN: pthread_cond_timedwait has a non-det timeout. \
+      Please add tern_set_base_timespec().\n");
+      clock_gettime(CLOCK_REALTIME, &cur_time);
+    } else {
+      cur_time.tv_sec = my_base_time.tv_sec;
+      cur_time.tv_nsec = my_base_time.tv_nsec;
+    }
   }
   rel_time = time_diff(cur_time, *abstime);
 
@@ -1223,7 +1237,7 @@ int RecorderRT<_S>::pthreadCondTimedWait(unsigned ins, int &error,
 
   _S::signal(mu);
   unsigned nTurns = relTimeToTurn(&rel_time);
-  printf("Tid %d pthreadCondTimedWait physical time interval %ld.%ld, logical turns %u\n",
+  dprintf("Tid %d pthreadCondTimedWait physical time interval %ld.%ld, logical turns %u\n",
     _S::self(), (long)rel_time.tv_sec, (long)rel_time.tv_nsec, nTurns);
   unsigned timeout = _S::getTurnCount() + nTurns;
   saved_ret = ret = _S::wait(cv, timeout);
@@ -1244,10 +1258,13 @@ int RecorderRT<_S>::pthreadCondSignal(unsigned ins, int &error, pthread_cond_t *
     add_non_det_var((void *)cv);
     return pthread_cond_signal(cv);
   }
+  //fprintf(stderr, "pthreadCondSignal start...\n");
   SCHED_TIMER_START;
+  //fprintf(stderr, "pthreadCondSignal start got turn...\n");
   _S::signal(cv);
+  //fprintf(stderr, "pthreadCondSignal start got turn2...\n");
   SCHED_TIMER_END(syncfunc::pthread_cond_signal, (uint64_t)cv);
-
+  //fprintf(stderr, "pthreadCondSignal start put turn...\n");
   return 0;
 }
 
@@ -1312,8 +1329,14 @@ int RecorderRT<_S>::semTimedWait(unsigned ins, int &error, sem_t *sem,
   if (options::epoch_mode)
     ClockManager::getClock(cur_time, clockManager.clock);
   else {
-    cur_time.tv_sec = my_base_time.tv_sec;
-    cur_time.tv_nsec = my_base_time.tv_nsec;
+    if (my_base_time.tv_sec == 0) {
+      fprintf(stderr, "WARN: sem_timedwait has a non-det timeout. \
+      Please add tern_set_base_timespec().\n");
+      clock_gettime(CLOCK_REALTIME, &cur_time);
+    } else {
+      cur_time.tv_sec = my_base_time.tv_sec;
+      cur_time.tv_nsec = my_base_time.tv_nsec;
+    }
   }
   rel_time = time_diff(cur_time, *abstime);
   
@@ -1519,7 +1542,7 @@ void RecorderRT<_S>::nonDetEnd() {
 template <typename _S>
 void RecorderRT<_S>::setBaseTime(struct timespec *ts) {
   // Do not need to enforce any turn here.
-  printf("setBaseTime, tid %d, base time %ld.%ld\n", _S::self(), (long)ts->tv_sec, (long)ts->tv_nsec);
+  dprintf("setBaseTime, tid %d, base time %ld.%ld\n", _S::self(), (long)ts->tv_sec, (long)ts->tv_nsec);
   assert(ts);
   my_base_time.tv_sec = ts->tv_sec;
   my_base_time.tv_nsec = ts->tv_nsec;
@@ -2112,27 +2135,34 @@ pid_t RecorderRT<_S>::__fork(unsigned ins, int &error)
   ret = Runtime::__fork(ins, error);
   if(ret == 0) {
     // child process returns from fork; re-initializes scheduler and logger state
-    dprintf("fork return in child %d\n", (int)getpid());
+    printf("fork return in child %d\n", (int)getpid());
     Logger::threadEnd(); // close log
     Logger::threadBegin(_S::self()); // re-open log
     assert(!sem_init(&thread_begin_sem, 0, 0));
     assert(!sem_init(&thread_begin_done_sem, 0, 0));
     _S::childForkReturn();
+    printf("fork return done in child %d\n", (int)getpid());
   } else
     assert(ret > 0);
   SCHED_TIMER_END(syncfunc::fork, (uint64_t) ret);
 
   // FIXME: this is gross.  idle thread should be part of RecorderRT
   if (ret == 0 && options::launch_idle_thread) {
+    printf("pid %d child exit sys again\n", getpid());
+    void *tracePtrs[2] = {NULL, NULL};
+    backtrace(tracePtrs, 2);
     Space::exitSys();
+    printf("pid %d child exit sys again1\n", getpid());
     pthread_cond_init(&idle_cond, NULL);
-    tern_pthread_mutex_init(0xdead0000, &idle_mutex, NULL);
+    pthread_mutex_init(&idle_mutex, NULL);
+    printf("pid %d child creates idle thread again\n", getpid());
     int res = tern_pthread_create(0xdead0000, &idle_th, NULL, idle_thread, NULL);
     assert(res == 0 && "tern_pthread_create failed!");
+    printf("pid %d child enter sys again\n", getpid());
     Space::enterSys();
   }
 
-  dprintf("pid %d leaves fork\n", getpid());
+  printf("pid %d leaves fork\n", getpid());
   return ret;
 }
 
