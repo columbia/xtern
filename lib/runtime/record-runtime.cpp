@@ -617,7 +617,7 @@ template <typename _S>
 int RecorderRT<_S>::pthreadMutexLock(unsigned ins, int &error, pthread_mutex_t *mu) {
   if (options::enforce_non_det_annotations && inNonDet) {
     add_non_det_var((void *)mu);
-    dprintf("Thread tid %d, self %u is calling non-det pthread_mutex_lock.\n", _S::self(), (unsigned)pthread_self());
+    dprintf("Ins %p :   Thread tid %d, self %u is calling non-det pthread_mutex_lock.\n", (void *)ins, _S::self(), (unsigned)pthread_self());
     return Runtime::__pthread_mutex_lock(ins, error, mu);
   }
   SCHED_TIMER_START;
