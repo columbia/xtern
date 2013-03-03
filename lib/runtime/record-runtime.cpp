@@ -118,6 +118,12 @@ extern "C" {
 }
 static __thread timespec my_time;
 
+/** This var works with tern_set_base_time(). It is used to record the base 
+time for cond_timedwait(), sem_timedwait() and mutex_timedlock() to get
+deterministic physical time interval, so that this interval can be 
+deterministically converted to logical time interval. **/
+static __thread timespec my_base_time = {0, 0};
+
 timespec time_diff(const timespec &start, const timespec &end)
 {
   timespec tmp;
@@ -769,8 +775,16 @@ int RecorderRT<_S>::pthreadMutexTimedLock(unsigned ins, int &error, pthread_mute
   timespec cur_time, rel_time;
   if (options::epoch_mode)
     ClockManager::getClock(cur_time, clockManager.clock);
-  else
-    clock_gettime(CLOCK_REALTIME , &cur_time);
+  else {
+    if (my_base_time.tv_sec == 0) {
+      fprintf(stderr, "WARN: pthread_mutex_timedlock has a non-det timeout. \
+      Please use it with tern_set_base_timespec().\n");
+      clock_gettime(CLOCK_REALTIME, &cur_time);
+    } else {
+      cur_time.tv_sec = my_base_time.tv_sec;
+      cur_time.tv_nsec = my_base_time.tv_nsec;
+    }
+  }
   rel_time = time_diff(cur_time, *abstime);
 
   SCHED_TIMER_START;
@@ -791,14 +805,16 @@ int RecorderRT<_S>::pthreadMutexUnlock(unsigned ins, int &error, pthread_mutex_t
     dprintf("Thread tid %d, self %u is calling non-det pthread_mutex_unlock.\n", _S::self(), (unsigned)pthread_self());
     return Runtime::__pthread_mutex_unlock(ins, error, mu);
   }
+  //fprintf(stderr, "pthreadMutexUnlock1\n");
   SCHED_TIMER_START;
-
+  //fprintf(stderr, "pthreadMutexUnlock2\n");
   errno = error;
   ret = pthread_mutex_unlock(mu);
   error = errno;
+  //fprintf(stderr, "pthreadMutexUnlock3\n");
   assert(!ret && "failed sync calls are not yet supported!");
   signal(mu);
- 
+  //fprintf(stderr, "pthreadMutexUnlock4\n");
   SCHED_TIMER_END(syncfunc::pthread_mutex_unlock, (uint64_t)mu, (uint64_t) ret);
 
   return ret;
@@ -1196,8 +1212,16 @@ int RecorderRT<_S>::pthreadCondTimedWait(unsigned ins, int &error,
   timespec cur_time, rel_time;
   if (options::epoch_mode)
     ClockManager::getClock(cur_time, clockManager.clock);
-  else
-    clock_gettime(CLOCK_REALTIME , &cur_time);
+  else {
+    if (my_base_time.tv_sec == 0) {
+      fprintf(stderr, "WARN: pthread_cond_timedwait has a non-det timeout. \
+      Please add tern_set_base_timespec().\n");
+      clock_gettime(CLOCK_REALTIME, &cur_time);
+    } else {
+      cur_time.tv_sec = my_base_time.tv_sec;
+      cur_time.tv_nsec = my_base_time.tv_nsec;
+    }
+  }
   rel_time = time_diff(cur_time, *abstime);
 
   int ret;
@@ -1212,7 +1236,10 @@ int RecorderRT<_S>::pthreadCondTimedWait(unsigned ins, int &error,
   SCHED_TIMER_FAKE_END(syncfunc::pthread_cond_timedwait, (uint64_t)cv, (uint64_t)mu, (uint64_t) 0);
 
   _S::signal(mu);
-  unsigned timeout = _S::getTurnCount() + relTimeToTurn(&rel_time);
+  unsigned nTurns = relTimeToTurn(&rel_time);
+  dprintf("Tid %d pthreadCondTimedWait physical time interval %ld.%ld, logical turns %u\n",
+    _S::self(), (long)rel_time.tv_sec, (long)rel_time.tv_nsec, nTurns);
+  unsigned timeout = _S::getTurnCount() + nTurns;
   saved_ret = ret = _S::wait(cv, timeout);
   dprintf("timedwait return = %d, after %d turns\n", ret, _S::getTurnCount() - nturn);
 
@@ -1231,10 +1258,13 @@ int RecorderRT<_S>::pthreadCondSignal(unsigned ins, int &error, pthread_cond_t *
     add_non_det_var((void *)cv);
     return pthread_cond_signal(cv);
   }
+  //fprintf(stderr, "pthreadCondSignal start...\n");
   SCHED_TIMER_START;
+  //fprintf(stderr, "pthreadCondSignal start got turn...\n");
   _S::signal(cv);
+  //fprintf(stderr, "pthreadCondSignal start got turn2...\n");
   SCHED_TIMER_END(syncfunc::pthread_cond_signal, (uint64_t)cv);
-
+  //fprintf(stderr, "pthreadCondSignal start put turn...\n");
   return 0;
 }
 
@@ -1298,8 +1328,16 @@ int RecorderRT<_S>::semTimedWait(unsigned ins, int &error, sem_t *sem,
   timespec cur_time, rel_time;
   if (options::epoch_mode)
     ClockManager::getClock(cur_time, clockManager.clock);
-  else
-    clock_gettime(CLOCK_REALTIME , &cur_time);
+  else {
+    if (my_base_time.tv_sec == 0) {
+      fprintf(stderr, "WARN: sem_timedwait has a non-det timeout. \
+      Please add tern_set_base_timespec().\n");
+      clock_gettime(CLOCK_REALTIME, &cur_time);
+    } else {
+      cur_time.tv_sec = my_base_time.tv_sec;
+      cur_time.tv_nsec = my_base_time.tv_nsec;
+    }
+  }
   rel_time = time_diff(cur_time, *abstime);
   
   int ret;
@@ -1345,6 +1383,10 @@ int RecorderRT<_S>::semPost(unsigned ins, int &error, sem_t *sem){
 template <typename _S>
 void RecorderRT<_S>::lineupInit(long opaque_type, unsigned count, unsigned timeout_turns) {
   unsigned ins = opaque_type;
+  if (options::enforce_non_det_annotations && inNonDet) {
+    add_non_det_var((void *)opaque_type);
+    return;
+  }
   SCHED_TIMER_START;
   //fprintf(stderr, "lineupInit opaque_type %p, count %u, timeout %u\n", (void *)opaque_type, count, timeout_turns);
   if (refcnt_bars.find(opaque_type) != refcnt_bars.end()) {
@@ -1361,6 +1403,10 @@ void RecorderRT<_S>::lineupInit(long opaque_type, unsigned count, unsigned timeo
 template <typename _S>
 void RecorderRT<_S>::lineupDestroy(long opaque_type) {
   unsigned ins = opaque_type;
+  if (options::enforce_non_det_annotations && inNonDet) {
+    add_non_det_var((void *)opaque_type);
+    return;
+  }
   SCHED_TIMER_START;
   //fprintf(stderr, "lineupDestroy opaque_type %p\n", (void *)opaque_type);
   assert(refcnt_bars.find(opaque_type) != refcnt_bars.end() && "refcnt barrier is not initialized!");
@@ -1377,6 +1423,10 @@ void RecorderRT<_S>::lineupDestroy(long opaque_type) {
 template <typename _S>
 void RecorderRT<_S>::lineupStart(long opaque_type) {
   unsigned ins = opaque_type;
+  if (options::enforce_non_det_annotations && inNonDet) {
+    add_non_det_var((void *)opaque_type);
+    return;
+  }
   //fprintf(stderr, "lineupStart opaque_type %p, tid %d, waiting for turn...\n", (void *)opaque_type, _S::self());
   SCHED_TIMER_START;
   refcnt_bar_map::iterator bi = refcnt_bars.find(opaque_type);
@@ -1421,6 +1471,10 @@ void RecorderRT<_S>::lineupStart(long opaque_type) {
 template <typename _S>
 void RecorderRT<_S>::lineupEnd(long opaque_type) {
   unsigned ins = opaque_type;
+  if (options::enforce_non_det_annotations && inNonDet) {
+    add_non_det_var((void *)opaque_type);
+    return;
+  }
   SCHED_TIMER_START;
   refcnt_bar_map::iterator bi = refcnt_bars.find(opaque_type);
   assert(bi != refcnt_bars.end() && "refcnt barrier is not initialized!");
@@ -1438,22 +1492,26 @@ void RecorderRT<_S>::nonDetStart() {
   unsigned ins = 0;
   dprintf("nonDetStart, tid %d\n", _S::self());
   SCHED_TIMER_START;
-  nNonDetWait++;
-  /** Although at this moment current thread is still in the xtern runq, we pre-attach it to dbug,
-  so that after _S::block() below is called, for whatever operation current thread is going to call,                                    dbug will know totally how many threads 
-  should be blocked (so that dbug can explore the upper bound of non-determinism for these
-  non-det regions). **/
+  if (_S::runq.size() == 1 && nNonDetWait > 0) { // a fast forward optimization.
+    _S::signal(&nonDetCV, true);
+  } else {
+    nNonDetWait++;
+    /** Although at this moment current thread is still in the xtern runq, we pre-attach it to dbug,
+    so that after _S::block() below is called, for whatever operation current thread is going to call,                                    dbug will know totally how many threads 
+    should be blocked (so that dbug can explore the upper bound of non-determinism for these
+    non-det regions). **/
 #ifdef XTERN_PLUS_DBUG
-  Runtime::__attach_self_to_dbug();
+    Runtime::__attach_self_to_dbug();
 #endif
 
-  /** All non-det operations are blocked on this fake var until runq is empty, 
-  i.e., all valid (except idle thread) xtern threads are paused.
-  This wait works like a lineup with unlimited timeout, which is for 
-  maximizing the non-det regions. **/
-  _S::wait(&nonDetCV);
+    /** All non-det operations are blocked on this fake var until runq is empty, 
+    i.e., all valid (except idle thread) xtern threads are paused.
+    This wait works like a lineup with unlimited timeout, which is for 
+    maximizing the non-det regions. **/
+    _S::wait(&nonDetCV);
 
-  nNonDetWait--;
+    nNonDetWait--;
+  }
   SCHED_TIMER_END(syncfunc::tern_non_det_start, 0);
   /** Reuse existing xtern API. Get turn, remove myself from runq, and then pass turn. This 
   operation is determinisitc since we get turn. **/
@@ -1479,6 +1537,15 @@ void RecorderRT<_S>::nonDetEnd() {
                             determinisit since we do not get turn, but it is fine, because there is already 
                             some non-det sync ops within the region already. Note that after this point, the 
                             status of the thread is still runnable. **/
+}
+
+template <typename _S>
+void RecorderRT<_S>::setBaseTime(struct timespec *ts) {
+  // Do not need to enforce any turn here.
+  dprintf("setBaseTime, tid %d, base time %ld.%ld\n", _S::self(), (long)ts->tv_sec, (long)ts->tv_nsec);
+  assert(ts);
+  my_base_time.tv_sec = ts->tv_sec;
+  my_base_time.tv_nsec = ts->tv_nsec;
 }
 
 template <typename _S>
@@ -2068,7 +2135,6 @@ pid_t RecorderRT<_S>::__fork(unsigned ins, int &error)
   ret = Runtime::__fork(ins, error);
   if(ret == 0) {
     // child process returns from fork; re-initializes scheduler and logger state
-    dprintf("fork return in child %d\n", (int)getpid());
     Logger::threadEnd(); // close log
     Logger::threadBegin(_S::self()); // re-open log
     assert(!sem_init(&thread_begin_sem, 0, 0));
@@ -2082,7 +2148,7 @@ pid_t RecorderRT<_S>::__fork(unsigned ins, int &error)
   if (ret == 0 && options::launch_idle_thread) {
     Space::exitSys();
     pthread_cond_init(&idle_cond, NULL);
-    tern_pthread_mutex_init(0xdead0000, &idle_mutex, NULL);
+    pthread_mutex_init(&idle_mutex, NULL);
     int res = tern_pthread_create(0xdead0000, &idle_th, NULL, idle_thread, NULL);
     assert(res == 0 && "tern_pthread_create failed!");
     Space::enterSys();

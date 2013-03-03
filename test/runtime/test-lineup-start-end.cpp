@@ -18,7 +18,7 @@ void loop(const char *tag, long loopCount, long workLoad) {
     //tern_lineup(0);
 
     for (long j = 0; j < workLoad; j++)
-      sum += j*j*j*j;
+      sum += j*j;
       
     tern_lineup_end(0);
 

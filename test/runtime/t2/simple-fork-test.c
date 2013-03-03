@@ -9,7 +9,6 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <stdio.h>
-#include <assert.h>
 
 pthread_mutex_t mutex;
 
@@ -25,13 +24,10 @@ int main()
   pthread_t t;
   pthread_mutex_init(&mutex, NULL);
   pthread_create(&t, NULL, myfunc, NULL);
-  int ret;
-  if ((ret = fork()) > 0) {
+  if (fork() != 0) {
     wait(NULL);
-    printf("\ntest done by parent: pid %d, ret pid %d\n\n\n", getpid(), ret);
     return 0;
   }
-  assert(ret == 0);
   printf("\ntest done start pid %d\n\n\n", getpid());
   pthread_mutex_init(&mutex, NULL);
   printf("\ntest done start2 pid %d\n\n\n", getpid());

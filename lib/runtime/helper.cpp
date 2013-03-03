@@ -82,13 +82,14 @@ pthread_cond_t idle_cond;
 void *idle_thread(void *)
 {
   while (true) {
-    volatile int x;
     tern_pthread_mutex_lock(IDLE_MUTEX_INS, &idle_mutex);
-    x = idle_done;
-    if (!idle_done)
+    if (!idle_done) {
       tern_idle_cond_wait();
+    } else {
+      tern_pthread_mutex_unlock(IDLE_MUTEX_INS, &idle_mutex);
+      break;
+    }
     tern_pthread_mutex_unlock(IDLE_MUTEX_INS, &idle_mutex);
-    if (x) break;
     tern_idle_sleep();
   }
   return NULL;
@@ -143,7 +144,7 @@ void __tern_prog_end (void) {
   // terminate the idle thread because it references the runtime which we
   // are about to free
   tern_pthread_mutex_lock(IDLE_MUTEX_INS, &idle_mutex);
-  idle_done = 1;    //  do this in threadEnd where protected by mutex
+  idle_done = 1;
   tern_pthread_mutex_unlock(IDLE_MUTEX_INS, &idle_mutex);
   tern_pthread_cond_signal(IDLE_MUTEX_INS, &idle_cond);
 
@@ -152,7 +153,7 @@ void __tern_prog_end (void) {
   pthread_cond_signal(&idle_cond);
   pthread_mutex_unlock(&idle_mutex);
   Space::exitSys();
-
+  
   //  use tern_pthread_join because we want to fake the eip
   if (options::launch_idle_thread)
   {

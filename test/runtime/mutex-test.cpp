@@ -9,6 +9,7 @@
 #include <assert.h>
 #include <unistd.h>
 #include <errno.h>
+#include "tern/user.h"
 
 #define N (1000)
 
@@ -43,6 +44,7 @@ void* thread_func(void *arg) {
       gettimeofday(&tp, NULL);
       ts.tv_sec  = tp.tv_sec;
       ts.tv_nsec = tp.tv_usec * 1000 + 100;
+      tern_set_base_timeval(&tp);
       ret = pthread_mutex_timedlock(&m, &ts);
     } while(ret == ETIMEDOUT);
     break;

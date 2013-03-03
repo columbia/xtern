@@ -76,3 +76,29 @@ extern "C" void tern_non_det_end(){
 }
 #endif
 
+#ifndef __SPEC_HOOK_tern_set_base_time
+extern "C" void tern_set_base_timespec(struct timespec *ts){
+#ifdef __USE_TERN_RUNTIME
+  if (Space::isApp() && options::DMT && options::enforce_annotations) {
+    tern_set_base_time_real(ts);
+  } 
+#endif
+  // If not runnning with xtern, NOP.
+}
+#endif
+
+#ifndef __SPEC_HOOK_tern_set_base_time
+extern "C" void tern_set_base_timeval(struct timeval *tv){
+#ifdef __USE_TERN_RUNTIME
+  struct timespec ts;
+  ts.tv_sec = tv->tv_sec;
+  ts.tv_nsec = tv->tv_usec * 1000;
+  if (Space::isApp() && options::DMT && options::enforce_annotations) {
+    tern_set_base_time_real(&ts);
+  }
+#endif
+  // If not runnning with xtern, NOP.
+}
+#endif
+
+

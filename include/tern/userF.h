@@ -16,4 +16,10 @@ c----------------------------------------------------------
               use iso_c_binding
               integer(kind=c_int), VALUE :: opaque_type
           end subroutine tern_lineup
+          subroutine tern_non_det_start() bind ( c )
+              use iso_c_binding
+          end subroutine tern_non_det_start
+          subroutine tern_non_det_end() bind ( c )
+              use iso_c_binding
+          end subroutine tern_non_det_end
       end interface

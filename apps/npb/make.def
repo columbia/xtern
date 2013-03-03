@@ -36,7 +36,7 @@ FLINK	= $(F77)
 #---------------------------------------------------------------------------
 # These macros are passed to the linker 
 #---------------------------------------------------------------------------
-F_LIB  = -lgomp -lxtern-annot
+F_LIB  = -lgomp -lxtern-annot -lrt
 
 #---------------------------------------------------------------------------
 # These macros are passed to the compiler 
@@ -52,7 +52,7 @@ FFLAGS	= -g -O3 -fopenmp
 # Global *link time* flags. Flags for increasing maximum executable 
 # size usually go here. 
 #---------------------------------------------------------------------------
-FLINKFLAGS = -g -O3 -fopenmp -L$(XTERN_ROOT)/apps/openmp/install/lib -Wl,--rpath,$(XTERN_ROOT)/apps/openmp/install/lib -L$(XTERN_ROOT)/apps/openmp/install/lib64 -Wl,--rpath,$(XTERN_ROOT)/apps/openmp/install/lib64 -L$(XTERN_ROOT)/dync_hook -Wl,--rpath,$(XTERN_ROOT)/dync_hook
+FLINKFLAGS = -static-libgcc -g -O3 -fopenmp -L$(XTERN_ROOT)/apps/openmp/install/lib -Wl,--rpath,$(XTERN_ROOT)/apps/openmp/install/lib -L../ -Wl,--rpath,$(XTERN_ROOT)/apps/openmp/install/lib64 -L$(XTERN_ROOT)/dync_hook -Wl,--rpath,$(XTERN_ROOT)/dync_hook
 
 #---------------------------------------------------------------------------
 # Parallel C:
@@ -81,7 +81,7 @@ CLINK	= $(CC)
 #---------------------------------------------------------------------------
 # These macros are passed to the linker 
 #---------------------------------------------------------------------------
-C_LIB  = -lm -lgomp -lxtern-annot
+C_LIB  = -lm -lgomp -lxtern-annot -lrt
 
 #---------------------------------------------------------------------------
 # These macros are passed to the compiler 
@@ -109,7 +109,7 @@ CFLAGS	= -g -O3 -fopenmp -fPIC
 # Global *link time* flags. Flags for increasing maximum executable 
 # size usually go here. 
 #---------------------------------------------------------------------------
-CLINKFLAGS = -g -O3 -fopenmp -L$(XTERN_ROOT)/apps/openmp/install/lib -Wl,--rpath,$(XTERN_ROOT)/apps/openmp/install/lib -L$(XTERN_ROOT)/apps/openmp/install/lib64 -Wl,--rpath,$(XTERN_ROOT)/apps/openmp/install/lib64 -L$(XTERN_ROOT)/dync_hook -Wl,--rpath,$(XTERN_ROOT)/dync_hook
+CLINKFLAGS = -static-libgcc -g -O3 -fopenmp -L$(XTERN_ROOT)/apps/openmp/install/lib -Wl,--rpath,$(XTERN_ROOT)/apps/openmp/install/lib -L../ -Wl,--rpath,$(XTERN_ROOT)/apps/openmp/install/lib64 -L$(XTERN_ROOT)/dync_hook -Wl,--rpath,$(XTERN_ROOT)/dync_hook
 
 
 #---------------------------------------------------------------------------

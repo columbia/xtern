@@ -9,6 +9,7 @@
 #include <assert.h>
 #include <unistd.h>
 #include <errno.h>
+#include "tern/user.h"
 
 pthread_mutex_t mu = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t  cv = PTHREAD_COND_INITIALIZER;
@@ -41,6 +42,7 @@ int main(int argc, char *argv[], char *env[]) {
     gettimeofday(&tp, NULL);
     ts.tv_sec  = tp.tv_sec;
     ts.tv_nsec = tp.tv_usec * 1000 + 100;
+    tern_set_base_timeval(&tp);
     pthread_cond_timedwait(&cv, &mu, &ts);
   }
   printf("THIRD\n");

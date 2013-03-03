@@ -89,7 +89,8 @@ struct RecorderRT: public Runtime, public _Scheduler {
   void lineupEnd(long opaque_type);
   void nonDetStart();
   void nonDetEnd();
-
+  void setBaseTime(struct timespec *ts);
+  
   void symbolic(unsigned insid, int &error, void *addr, int nbytes, const char *name);
 
   // socket & file
