@@ -2135,34 +2135,26 @@ pid_t RecorderRT<_S>::__fork(unsigned ins, int &error)
   ret = Runtime::__fork(ins, error);
   if(ret == 0) {
     // child process returns from fork; re-initializes scheduler and logger state
-    printf("fork return in child %d\n", (int)getpid());
     Logger::threadEnd(); // close log
     Logger::threadBegin(_S::self()); // re-open log
     assert(!sem_init(&thread_begin_sem, 0, 0));
     assert(!sem_init(&thread_begin_done_sem, 0, 0));
     _S::childForkReturn();
-    printf("fork return done in child %d\n", (int)getpid());
   } else
     assert(ret > 0);
   SCHED_TIMER_END(syncfunc::fork, (uint64_t) ret);
 
   // FIXME: this is gross.  idle thread should be part of RecorderRT
   if (ret == 0 && options::launch_idle_thread) {
-    printf("pid %d child exit sys again\n", getpid());
-    void *tracePtrs[2] = {NULL, NULL};
-    backtrace(tracePtrs, 2);
     Space::exitSys();
-    printf("pid %d child exit sys again1\n", getpid());
     pthread_cond_init(&idle_cond, NULL);
     pthread_mutex_init(&idle_mutex, NULL);
-    printf("pid %d child creates idle thread again\n", getpid());
     int res = tern_pthread_create(0xdead0000, &idle_th, NULL, idle_thread, NULL);
     assert(res == 0 && "tern_pthread_create failed!");
-    printf("pid %d child enter sys again\n", getpid());
     Space::enterSys();
   }
 
-  printf("pid %d leaves fork\n", getpid());
+  dprintf("pid %d leaves fork\n", getpid());
   return ret;
 }
 

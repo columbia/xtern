@@ -82,22 +82,16 @@ pthread_cond_t idle_cond;
 void *idle_thread(void *)
 {
   while (true) {
-    volatile int x;
     tern_pthread_mutex_lock(IDLE_MUTEX_INS, &idle_mutex);
-    x = idle_done;
     if (!idle_done) {
-      fprintf(stderr, "idle thread of pid %d sleep...\n", getpid());
       tern_idle_cond_wait();
-      fprintf(stderr, "idle thread of pid %d waken up...\n", getpid());
+    } else {
+      tern_pthread_mutex_unlock(IDLE_MUTEX_INS, &idle_mutex);
+      break;
     }
     tern_pthread_mutex_unlock(IDLE_MUTEX_INS, &idle_mutex);
-    fprintf(stderr, "idle thread of pid %d unlocked...\n", getpid());
-    if (x)
-      break;
-    fprintf(stderr, "idle thread of pid %d idle sleep...\n", getpid());
     tern_idle_sleep();
   }
-  fprintf(stderr, "idle thread of pid %d exit...\n", getpid());
   return NULL;
 }
 
@@ -141,7 +135,6 @@ void __tern_prog_begin(void) {
 
 //  SYS -> SYS
 void __tern_prog_end (void) {
-  fprintf(stderr, "__tern_prog_end pid %d\n", getpid());
   assert(prog_began && "__tern_prog_begin() not called "\
          "or __tern_prog_end() already called!");
 
@@ -150,37 +143,23 @@ void __tern_prog_end (void) {
 
   // terminate the idle thread because it references the runtime which we
   // are about to free
-  fprintf(stderr, "__tern_prog_end 0 pid %d\n", getpid());
-  Space::enterSys();
-  pthread_mutex_lock(&idle_mutex);
-  fprintf(stderr, "__tern_prog_end 0.0 pid %d\n", getpid());
-  pthread_cond_signal(&idle_cond);
-  Space::exitSys();
-
-  tern_pthread_cond_signal(IDLE_MUTEX_INS, &idle_cond);
+  tern_pthread_mutex_lock(IDLE_MUTEX_INS, &idle_mutex);
   idle_done = 1;
-
-
-  fprintf(stderr, "__tern_prog_end 1 pid %d\n", getpid());
+  tern_pthread_mutex_unlock(IDLE_MUTEX_INS, &idle_mutex);
+  tern_pthread_cond_signal(IDLE_MUTEX_INS, &idle_cond);
 
   Space::enterSys();
+  pthread_mutex_lock(&idle_mutex);
+  pthread_cond_signal(&idle_cond);
   pthread_mutex_unlock(&idle_mutex);
   Space::exitSys();
-  fprintf(stderr, "__tern_prog_end 2 pid %d\n", getpid());
-
-  /*Space::enterSys();
-  pthread_mutex_lock(&idle_mutex);
-  pthread_mutex_unlock(&idle_mutex);
-  Space::exitSys();*/
   
-  fprintf(stderr, "__tern_prog_end 3 pid %d\n", getpid());
   //  use tern_pthread_join because we want to fake the eip
   if (options::launch_idle_thread)
   {
     assert(pthread_self() != idle_th && "idle_th should never reach __tern_prog_end");
     tern_pthread_join(0xdeadffff, idle_th, NULL);
   }
-  fprintf(stderr, "__tern_prog_end 4 pid %d\n", getpid());
   tern_thread_end(-1); // main thread ends
 
   assert(Space::isSys());

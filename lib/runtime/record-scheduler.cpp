@@ -366,7 +366,6 @@ void RRScheduler::idleThreadCondWait() {
   idle thread looks at the runq, but after the idle thread decides to cond wait,
   all threads in the runq can be calling blocking network operations.
   So we need tryPutTurn(). **/
-  fprintf(stderr, "RRScheduler::idleThreadCondWait idle thread of pid %d enter...\n", getpid());
   if (tryPutTurn()) {
     int tid = self();
     assert(tid == IdleThreadTid);
@@ -375,9 +374,7 @@ void RRScheduler::idleThreadCondWait() {
     waitq.push_back(tid);
     assert(tid == runq.front());
     next();
-    fprintf(stderr, "RRScheduler::idleThreadCondWait idle thread of pid %d sleep cond wait...\n", getpid());
     pthread_cond_wait(&idle_cond, &idle_mutex);
-    fprintf(stderr, "RRScheduler::idleThreadCondWait idle thread of pid %d waken up from cond wait...\n", getpid());
   } else 
     putTurn();  // TBD: this seems not that nice, need refactored. Refer to record-runtime.
 }
