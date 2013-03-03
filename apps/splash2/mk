@@ -77,6 +77,7 @@ patch -p0 < patch/volrend.patch
 cd parsec-3.0
 patch -p1 < ../patch/annot-radix.patch
 patch -p1 < ../patch/annot-fmm-non-det.patch
+patch -p1 < ../patch/annot-raytrace-non-det.patch
 cd ..
 
 ./parsec-3.0/bin/parsecmgmt -a build -p splash2x

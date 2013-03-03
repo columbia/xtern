@@ -1,0 +1,27 @@
+--- parsec-3.0-orig/ext/splash2x/apps/raytrace/src/trace.C	2012-09-04 22:56:29.000000000 -0400
++++ parsec-3.0/ext/splash2x/apps/raytrace/src/trace.C	2013-03-03 02:12:54.068542307 -0500
+@@ -219,7 +219,7 @@
+  * RETURNS
+  *	Nothing.
+  */
+-
++#include "tern/user.h"
+ VOID	RayTrace(pid)
+ INT	pid;
+ 	{
+@@ -247,6 +247,7 @@
+ 			xx = (REAL)x;
+ 			yy = (REAL)y;
+ 
++			tern_non_det_start();
+ 			if (AntiAlias)
+ 				for (j = 0; j < NumSubRays; j++)
+ 					{
+@@ -312,6 +313,7 @@
+ 					AddPixelColor(c, ray->x, ray->y);
+ 					}
+ 				}
++			tern_non_det_end();
+ 			}
+ 		}
+ 	}
