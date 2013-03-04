@@ -43,6 +43,8 @@ def model_checking(configs, benchmark):
     arbiter_port = configs.get(benchmark, 'DBUG_ARBITER_PORT')
     explorer_port = configs.get(benchmark, 'DBUG_EXPLORER_PORT')
     dbug_timeout = configs.get(benchmark, 'DBUG_TIMEOUT')
+    program_input = configs.get(benchmark, 'DBUG_INPUT')
+    program_output = configs.get(benchmark, 'DBUG_OUTPUT')
 
     dbug_config = etree.Element("config")
     arbiter = etree.SubElement(dbug_config, "arbiter")
@@ -60,6 +62,10 @@ def model_checking(configs, benchmark):
     export = configs.get(benchmark, "EXPORT")
     command = ' '.join([exec_file] + inputs.split())
     program.set("command", command)
+    if program_input:
+        program.set("input", program_input)
+    if program_output:
+        program.set("output", program_output)
 
     with open("run.xml", "w") as run_xml:
         run_xml.write(etree.tostring(dbug_config, pretty_print=True))
@@ -87,6 +93,7 @@ def model_checking(configs, benchmark):
             proc = subprocess.Popen(dbug_cmd, stdout=log_file, stderr=subprocess.STDOUT,
                                 shell=True, executable=bash_path, bufsize = 102400, preexec_fn=os.setsid)
             proc.wait()
+            signal.alarm(0)
         except DbugTimeout:
             logging.warning("'%s' with dbug does not stop after %d seconds, kill it..." % (benchmark, local_timeout))
             signal.alarm(0)
@@ -105,6 +112,7 @@ def model_checking(configs, benchmark):
             proc = subprocess.Popen(dbug_cmd, stdout=log_file, stderr=subprocess.STDOUT,
                                 shell=True, executable=bash_path, bufsize = 102400, preexec_fn=os.setsid)
             proc.wait()
+            signal.alarm(0)
         except DbugTimeout:
             logging.warning("'%s' with dbug_xtern does not stop after %d seconds, kill it..." % (benchmark, local_timeout))
             signal.alarm(0)
