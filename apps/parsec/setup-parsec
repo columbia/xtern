@@ -107,8 +107,21 @@ sed -i '75 s|\"$|-lxtern-annot\"''|' parsec-2.0/config/gcc.bldconf
 sed -i '70 s/\"$/ -march=native\"/g' parsec-2.0/config/gcc.bldconf
 sed -i '71 s/\"$/ -march=native\"/g' parsec-2.0/config/gcc.bldconf
 cd parsec-2.0/bin
-./parsecmgmt -a build -p blackscholes bodytrack facesim swaptions fluidanimate vips x264 canneal dedup streamcluster raytrace ferret
-./parsecmgmt -a build -c gcc-openmp -p blackscholes freqmine bodytrack
+./parsecmgmt -a build -p blackscholes
+./parsecmgmt -a build -p bodytrack
+./parsecmgmt -a build -p facesim
+./parsecmgmt -a build -p swaptions
+./parsecmgmt -a build -p fluidanimate
+./parsecmgmt -a build -p vips
+./parsecmgmt -a build -p x264
+./parsecmgmt -a build -p canneal
+./parsecmgmt -a build -p dedup
+./parsecmgmt -a build -p streamcluster
+./parsecmgmt -a build -p raytrace
+./parsecmgmt -a build -p ferret
+./parsecmgmt -a build -c gcc-openmp -p blackscholes
+./parsecmgmt -a build -c gcc-openmp -p freqmine
+./parsecmgmt -a build -c gcc-openmp -p bodytrack
 
 ./parsecmgmt -a status
 

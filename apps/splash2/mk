@@ -82,7 +82,20 @@ patch -p1 < ../patch/annot-raytrace-non-det.patch
 patch -p1 < ../patch/annot-cholesky-non-det.patch
 cd ..
 
-./parsec-3.0/bin/parsecmgmt -a build -p splash2x
+./parsec-3.0/bin/parsecmgmt -a build -p splash2x.barnes
+./parsec-3.0/bin/parsecmgmt -a build -p splash2x.fmm
+./parsec-3.0/bin/parsecmgmt -a build -p splash2x.ocean_cp
+./parsec-3.0/bin/parsecmgmt -a build -p splash2x.ocean_ncp
+./parsec-3.0/bin/parsecmgmt -a build -p splash2x.radiosity
+./parsec-3.0/bin/parsecmgmt -a build -p splash2x.raytrace
+./parsec-3.0/bin/parsecmgmt -a build -p splash2x.volrend
+./parsec-3.0/bin/parsecmgmt -a build -p splash2x.water_nsquared
+./parsec-3.0/bin/parsecmgmt -a build -p splash2x.water_spatial
+./parsec-3.0/bin/parsecmgmt -a build -p splash2x.cholesky
+./parsec-3.0/bin/parsecmgmt -a build -p splash2x.fft
+./parsec-3.0/bin/parsecmgmt -a build -p splash2x.lu_cb
+./parsec-3.0/bin/parsecmgmt -a build -p splash2x.lu_ncb
+./parsec-3.0/bin/parsecmgmt -a build -p splash2x.radix
 ./parsec-3.0/bin/parsecmgmt -a status -p splash2x
 
 ARCH=`uname -m`
