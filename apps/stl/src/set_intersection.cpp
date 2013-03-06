@@ -32,20 +32,41 @@ struct c_unique_1 {
   }
 } EvenNumber;
 
+struct c_unique_2 {
+  int current;
+  c_unique_2() {current=1;}
+  int operator()() {
+    return current;
+  }
+} ConstNumber;
+
+
+
+unsigned int data_size = 0;
+
 // @INPUT:
 // first: sequential odd number 
 // sencond: sequential even number 
 // Note: both inputs are sequential to reduce initialization time
 
-  std::vector<int> first(DATA_SIZE);
-  std::vector<int> second(DATA_SIZE);
-  std::vector<int> v(DATA_SIZE);                     
+//  std::vector<int> first(DATA_SIZE);
+//  std::vector<int> second(DATA_SIZE);
+//  std::vector<int> v(DATA_SIZE);                     
+  std::vector<int> first(data_size);
+  std::vector<int> second(data_size);
+  std::vector<int> v(data_size);                     
 
-int main () {
+int main (int argc, char * argv[]) {
+    SET_INPUT_SIZE(argc, argv[1])
+    first.resize(data_size);
+    second.resize(data_size);
+    v.resize(data_size);
+    
+
     struct timeval start, end;
     fprintf(stderr, "omp num threads %d\n", omp_get_max_threads());
     
-    __gnu_parallel::generate (first.begin(), first.end(), OddNumber, __gnu_parallel::sequential_tag());
+    __gnu_parallel::generate (first.begin(), first.end(), ConstNumber, __gnu_parallel::sequential_tag());
     __gnu_parallel::generate (second.begin(), second.end(), EvenNumber, __gnu_parallel::sequential_tag());
  
     fprintf(stderr, "initialization done...\n");

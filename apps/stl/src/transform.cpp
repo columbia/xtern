@@ -21,16 +21,24 @@ int myfunc(int i) {
 //  int operator()() {return ++current;}
 //} UniqueNumber;
 
-std::vector<int> myvector(1000*1000*1000);
-std::vector<int> result(1000*1000*1000);
+unsigned int data_size = 0;
+
+//std::vector<int> myvector(1000*1000*1000);
+//std::vector<int> result(1000*1000*1000);
 //std::vector<int> myvector(1000);
 //std::vector<int> result(1000);
+std::vector<int> myvector(data_size);
+std::vector<int> result(data_size);
 
-int main () {
+int main (int argc, char * argv[]) {
+    SET_INPUT_SIZE(argc, argv[1])
+    myvector.resize(data_size);
+    result.resize(data_size);
+
     struct timeval start, end;
     fprintf(stderr, "omp num threads %d\n", omp_get_max_threads());
-    std::srand(SEED);
-    __gnu_parallel::generate (myvector.begin(), myvector.end(), RandomNumber, __gnu_parallel::sequential_tag());
+//    std::srand(SEED);
+//    __gnu_parallel::generate (myvector.begin(), myvector.end(), RandomNumber, __gnu_parallel::sequential_tag());
   
 //    generate (myvector.begin(), myvector.end(), UniqueNumber, __gnu_parallel::sequential_tag());
 
