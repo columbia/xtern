@@ -1,5 +1,5 @@
 --- gcc-4.5.4-orig/libstdc++-v3/include/parallel/partition.h	2011-02-25 09:04:40.000000000 -0500
-+++ gcc-4.5.4/libstdc++-v3/include/parallel/partition.h	2013-03-06 17:15:48.981692263 -0500
++++ gcc-4.5.4/libstdc++-v3/include/parallel/partition.h	2013-03-06 17:31:29.597659713 -0500
 @@ -38,6 +38,7 @@
  #include <parallel/random_number.h>
  #include <bits/stl_algo.h>
@@ -8,14 +8,14 @@
  
  /** @brief Decide whether to declare certain variables volatile. */
  #define _GLIBCXX_VOLATILE volatile
-@@ -87,6 +88,7 @@
- 	    __num_threads = omp_get_num_threads();
- 	    __reserved_left = new bool[__num_threads];
- 	    __reserved_right = new bool[__num_threads];
-+		tern_lineup_init(0, __num_threads, __num_threads*10000);
+@@ -77,6 +78,7 @@
  
- 	    if (__s.partition_chunk_share > 0.0)
- 	      __chunk_size = std::max<_DifferenceType>
+       omp_lock_t __result_lock;
+       omp_init_lock(&__result_lock);
++	tern_lineup_init(0, __num_threads, __num_threads*10000);
+ 
+       //at least two chunks per thread
+       if (__right - __left + 1 >= 2 * __num_threads * __chunk_size)
 @@ -121,6 +123,8 @@
  	      __thread_left_border = __thread_left - 1;
  	      __thread_right = __n - 1;
