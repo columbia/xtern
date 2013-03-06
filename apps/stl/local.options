@@ -105,4 +105,5 @@ enforce_turn_type = 2
 
 # if turned on, enforce xtern annotations such as lineup, workload and non_det.
 enforce_annotations = 1
+enforce_non_det_annotations = 1
 

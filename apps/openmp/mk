@@ -17,8 +17,8 @@ tar zxf $APPS_DIR/sys/gcc-$VER.tar.gz
 
 # compile gcc
 cd gcc-$VER
-#patch -p1 < ../disable-sync-builtins.patch
-patch -p1 < ../add-xtern-annot.patch
+patch -p1 < ../patch/add-xtern-annot.patch
+patch -p1 < ../patch/annot-partition-non-det.patch
 mkdir obj
 cd obj
 CFLAGS+="$XTERN_ANNOT_LIB" ../configure \
