@@ -13,7 +13,7 @@ class DbugTimeout(Exception):
 def DbugTimeoutHandler(signum, frame):
     raise DbugTimeout
 
-def model_checking(configs, benchmark):
+def model_checking(configs, benchmark, args):
     try:
         from lxml import etree
     except ImportError:
@@ -85,42 +85,54 @@ def model_checking(configs, benchmark):
 
     bash_path = eval.which('bash')[0]
     dbug_cmd = '%s %s run.xml' % (export, EXPLORER)
+    dbug_xtern_cmd = '%s %s run_xtern.xml' % (export, EXPLORER)
+
+    if args.generate_xml_only:
+        logging.info(dbug_cmd);
+        logging.info(dbug_xtern_cmd);
+        return
+
     local_timeout = int(float(dbug_timeout)*1.1)
-    with open('dbug.log', 'w', 102400) as log_file:
-        signal.signal(signal.SIGALRM, DbugTimeoutHandler)
-        signal.alarm(local_timeout)
-        try:
-            logging.info(dbug_cmd)
-            proc = subprocess.Popen(dbug_cmd, stdout=log_file, stderr=subprocess.STDOUT,
-                                shell=True, executable=bash_path, bufsize = 102400, preexec_fn=os.setsid)
-            proc.wait()
-            signal.alarm(0)
-        except DbugTimeout:
-            logging.warning("'%s' with dbug does not stop after %d seconds, kill it..." % (benchmark, local_timeout))
-            signal.alarm(0)
-        try:
-            os.killpg(proc.pid, signal.SIGKILL)
-            proc.kill()
-        except OSError:
-            pass
-    time.sleep(1)
+    if not args.smtmc_only:
+        with open('dbug.log', 'w', 102400) as log_file:
+            signal.signal(signal.SIGALRM, DbugTimeoutHandler)
+            signal.alarm(local_timeout)
+            try:
+                logging.info(dbug_cmd)
+                proc = subprocess.Popen(dbug_cmd, stdout=log_file, stderr=subprocess.STDOUT,
+                                    shell=True, executable=bash_path, bufsize = 102400, preexec_fn=os.setsid)
+                proc.wait()
+                signal.alarm(0)
+            except DbugTimeout:
+                signal.alarm(0)
+                logging.warning("'%s' with dbug does not stop after %d seconds, kill it..." % (benchmark, local_timeout))
+            except KeyboardInterrupt:
+                pass
+            try:
+                os.killpg(proc.pid, signal.SIGKILL)
+                proc.kill()
+            except OSError:
+                pass
+        time.sleep(1)
     
-    dbug_cmd = '%s %s run_xtern.xml' % (export, EXPLORER)
-    with open('dbug_xtern.log', 'w', 102400) as log_file:
-        signal.signal(signal.SIGALRM, DbugTimeoutHandler)
-        signal.alarm(local_timeout)
-        try:
-            logging.info(dbug_cmd)
-            proc = subprocess.Popen(dbug_cmd, stdout=log_file, stderr=subprocess.STDOUT,
-                                shell=True, executable=bash_path, bufsize = 102400, preexec_fn=os.setsid)
-            proc.wait()
-            signal.alarm(0)
-        except DbugTimeout:
-            logging.warning("'%s' with dbug_xtern does not stop after %d seconds, kill it..." % (benchmark, local_timeout))
-            signal.alarm(0)
-        try:
-            os.killpg(proc.pid, signal.SIGKILL)
-            proc.kill()
-        except OSError:
-            pass
+    if not args.dbug_only:
+        with open('dbug_xtern.log', 'w', 102400) as log_file:
+            signal.signal(signal.SIGALRM, DbugTimeoutHandler)
+            signal.alarm(local_timeout)
+            try:
+                logging.info(dbug_xtern_cmd)
+                proc = subprocess.Popen(dbug_xtern_cmd, stdout=log_file, stderr=subprocess.STDOUT,
+                                    shell=True, executable=bash_path, bufsize = 102400, preexec_fn=os.setsid)
+                proc.wait()
+                signal.alarm(0)
+            except DbugTimeout:
+                signal.alarm(0)
+                logging.warning("'%s' with dbug_xtern does not stop after %d seconds, kill it..." % (benchmark, local_timeout))
+            except KeyboardInterrupt:
+                pass
+            try:
+                os.killpg(proc.pid, signal.SIGKILL)
+                proc.kill()
+            except OSError:
+                pass
  

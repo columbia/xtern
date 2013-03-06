@@ -391,7 +391,7 @@ def processBench(config, bench):
     ### dbug ###
     if args.model_checking:
         import dbug
-        dbug.model_checking(config, bench)
+        dbug.model_checking(config, bench, args)
         os.chdir("..")
         return
 
@@ -618,6 +618,15 @@ if __name__ == "__main__":
     parser.add_argument("--compare-only",
                         action="store_true",
                         help="skip 'xtern' and 'non-det' evaluation")
+    parser.add_argument("--generate-xml-only",
+                        action="store_true",
+                        help="do not run model-checking in model-checking mode")
+    parser.add_argument("--dbug-only",
+                        action="store_true",
+                        help="do not run dbug model-checking in model-checking mode")
+    parser.add_argument("--smtmc-only",
+                        action="store_true",
+                        help="do not run dbug+xtern model-checking in model-checking mode")
     args = parser.parse_args()
 
     if args.filename.__len__() == 0:
