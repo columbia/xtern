@@ -84,12 +84,13 @@ def model_checking(configs, benchmark):
     eval.copy_file(os.path.realpath(exec_file), os.path.basename(exec_file))
 
     bash_path = eval.which('bash')[0]
-    dbug_cmd = '%s run.xml' % EXPLORER
+    dbug_cmd = '%s %s run.xml' % (export, EXPLORER)
     local_timeout = int(float(dbug_timeout)*1.1)
     with open('dbug.log', 'w', 102400) as log_file:
         signal.signal(signal.SIGALRM, DbugTimeoutHandler)
         signal.alarm(local_timeout)
         try:
+            logging.info(dbug_cmd)
             proc = subprocess.Popen(dbug_cmd, stdout=log_file, stderr=subprocess.STDOUT,
                                 shell=True, executable=bash_path, bufsize = 102400, preexec_fn=os.setsid)
             proc.wait()
@@ -104,11 +105,12 @@ def model_checking(configs, benchmark):
             pass
     time.sleep(1)
     
-    dbug_cmd = '%s run_xtern.xml' % EXPLORER
+    dbug_cmd = '%s %s run_xtern.xml' % (export, EXPLORER)
     with open('dbug_xtern.log', 'w', 102400) as log_file:
+        signal.signal(signal.SIGALRM, DbugTimeoutHandler)
+        signal.alarm(local_timeout)
         try:
-            signal.signal(signal.SIGALRM, DbugTimeoutHandler)
-            signal.alarm(local_timeout)
+            logging.info(dbug_cmd)
             proc = subprocess.Popen(dbug_cmd, stdout=log_file, stderr=subprocess.STDOUT,
                                 shell=True, executable=bash_path, bufsize = 102400, preexec_fn=os.setsid)
             proc.wait()
