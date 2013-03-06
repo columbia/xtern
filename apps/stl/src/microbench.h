@@ -10,7 +10,7 @@
 
 #define SET_INPUT_SIZE(x, y) \
     if(x == 1) \
-        data_size = MEDIUM; \
+        data_size = LARGE; \
     else if(x == 2) { \
         if(!strcmp(y, "small")) \
             data_size = SMALL; \
