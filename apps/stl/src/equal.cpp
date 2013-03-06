@@ -18,21 +18,27 @@ int RandomNumber () { return (std::rand()%100); }
 //  int operator()() {return ++current;}
 //} UniqueNumber;
 
-std::vector<int> myvector(1000*1000*1000);
-std::vector<int> second(1000*1000*1000);
+unsigned int data_size = 0;
+
+std::vector<int> myvector(data_size);
+std::vector<int> second(data_size);
 //std::vector<int> myvector(1000);
 //std::vector<int> second(1000);
 
 
-int main () {
+int main (int argc, char * argv[]) {
 //    bool a = false;
+    SET_INPUT_SIZE(argc, argv[1])
+    myvector.resize(data_size);
+    second.resize(data_size);
+
     struct timeval start, end;
     fprintf(stderr, "omp num threads %d\n", omp_get_max_threads());
-    std::srand(SEED);
-    __gnu_parallel::generate (myvector.begin(), myvector.end(), RandomNumber, __gnu_parallel::sequential_tag());
+//    std::srand(SEED);
+//    __gnu_parallel::generate (myvector.begin(), myvector.end(), RandomNumber, __gnu_parallel::sequential_tag());
 //    std::srand(SEED);
 //    __gnu_parallel::generate (second.begin(), second.end(), RandomNumber, __gnu_parallel::sequential_tag());
-    memcpy(&second[0], &myvector[0], myvector.size() * sizeof(int));
+//    memcpy(&second[0], &myvector[0], myvector.size() * sizeof(int));
 
  
 //    generate (myvector.begin(), myvector.end(), UniqueNumber, __gnu_parallel::sequential_tag());
