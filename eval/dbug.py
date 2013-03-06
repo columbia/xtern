@@ -34,7 +34,7 @@ def model_checking(configs, benchmark, args):
     # check dbug
     ARBITER = "%s/mc-tools/dbug/install/bin/dbug-arbiter" % SMT_MC_ROOT
     if not eval.checkExist(ARBITER):
-        logging.error("%s does not exist" % ARBITOR)
+        logging.error("%s does not exist" % ARBITER)
     EXPLORER = "%s/mc-tools/dbug/install/bin/dbug-explorer" % SMT_MC_ROOT
     if not eval.checkExist(EXPLORER):
         logging.error("%s does not exist" % EXPLORER)
