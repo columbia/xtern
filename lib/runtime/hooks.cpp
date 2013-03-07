@@ -373,10 +373,13 @@ void tern_pthread_exit(unsigned ins, void *retval) {
     exit(0);
   }
   assert(Space::isSys());
+  if (Scheduler::self() != Scheduler::IdleThreadTid) {
 #ifdef XTERN_PLUS_DBUG
-  Runtime::__attach_self_to_dbug();
+    Runtime::__attach_self_to_dbug();
 #endif
-  Runtime::__pthread_exit(retval);
+    Runtime::__pthread_exit(retval);
+  } else
+    pthread_exit(retval);
 }
 
 int tern_sigwait(unsigned ins, const sigset_t *set, int *sig)

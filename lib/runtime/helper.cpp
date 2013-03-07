@@ -21,10 +21,28 @@ using namespace tern;
 
 extern "C" {
 
+/*
+    This idle thread is created to avoid empty runq.
+    In the implementation with semaphore, there's a global token that must be 
+    held by some threads. In the case that all threads are executing blocking
+    function calls, the global token can be held by nothing. So we create this
+    idle thread to ensure there's at least one thread in the runq to hold the 
+    global token.
+
+    Another solution is to add a flag in schedule showing if it happens that 
+    runq is empty and the global token is held by no one. And recover the global
+    token when some thread comes back to runq from blocking function call. 
+ */
+volatile int idle_done = 0;
+pthread_t idle_th;
+pthread_mutex_t idle_mutex;
+pthread_cond_t idle_cond;
+
 typedef void * (*thread_func_t)(void*);
 static void *__tern_thread_func(void *arg) {
 #ifdef XTERN_PLUS_DBUG
-  Runtime::__detach_self_from_dbug();
+  if (idle_th != pthread_self())
+    Runtime::__detach_self_from_dbug();
 #endif
   void **args;
   void *ret_val;
@@ -61,23 +79,6 @@ int __tern_pthread_create(pthread_t *thread,  const pthread_attr_t *attr,
     delete[] (void**)args; // clean up memory for @args
   return ret;
 }
-
-/*
-    This idle thread is created to avoid empty runq.
-    In the implementation with semaphore, there's a global token that must be 
-    held by some threads. In the case that all threads are executing blocking
-    function calls, the global token can be held by nothing. So we create this
-    idle thread to ensure there's at least one thread in the runq to hold the 
-    global token.
-
-    Another solution is to add a flag in schedule showing if it happens that 
-    runq is empty and the global token is held by no one. And recover the global
-    token when some thread comes back to runq from blocking function call. 
- */
-volatile int idle_done = 0;
-pthread_t idle_th;
-pthread_mutex_t idle_mutex;
-pthread_cond_t idle_cond;
 
 void *idle_thread(void *)
 {

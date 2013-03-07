@@ -1492,9 +1492,7 @@ void RecorderRT<_S>::nonDetStart() {
   unsigned ins = 0;
   dprintf("nonDetStart, tid %d\n", _S::self());
   SCHED_TIMER_START;
-  if (_S::runq.size() == 1 && nNonDetWait > 0) { // a fast forward optimization.
-    _S::signal(&nonDetCV, true);
-  } else {
+
     nNonDetWait++;
     /** Although at this moment current thread is still in the xtern runq, we pre-attach it to dbug,
     so that after _S::block() below is called, for whatever operation current thread is going to call,                                    dbug will know totally how many threads 
@@ -1511,7 +1509,7 @@ void RecorderRT<_S>::nonDetStart() {
     _S::wait(&nonDetCV);
 
     nNonDetWait--;
-  }
+
   SCHED_TIMER_END(syncfunc::tern_non_det_start, 0);
   /** Reuse existing xtern API. Get turn, remove myself from runq, and then pass turn. This 
   operation is determinisitc since we get turn. **/
