@@ -60,6 +60,7 @@ pushd parsec-2.0
 patch -p1 < $XTERN_ROOT/apps/parsec/patch/annot-bodytrack-pthreads.patch
 patch -p1 < $XTERN_ROOT/apps/parsec/patch/annot-fluidanimate-non-det.patch
 patch -p1 < $XTERN_ROOT/apps/parsec/patch/fix-ferret-crash.patch
+patch -p1 < $XTERN_ROOT/apps/parsec/patch/annot-ferret.patch
 patch -p1 < $XTERN_ROOT/apps/parsec/patch/annot-swaptions.patch
 patch -p1 < $XTERN_ROOT/apps/parsec/patch/annot-facesim.patch
 patch -p1 < $XTERN_ROOT/apps/parsec/patch/annot-vips.patch
