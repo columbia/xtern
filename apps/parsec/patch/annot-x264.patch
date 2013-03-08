@@ -1,39 +1,39 @@
-diff -ruN parsec-2.0-orig/pkgs/apps/x264/src/encoder/encoder.c parsec-2.0/pkgs/apps/x264/src/encoder/encoder.c
---- parsec-2.0-orig/pkgs/apps/x264/src/encoder/encoder.c	2013-02-07 14:42:54.880848799 -0500
-+++ parsec-2.0/pkgs/apps/x264/src/encoder/encoder.c	2013-02-09 01:16:08.535421000 -0500
-@@ -31,6 +31,7 @@
- #include "analyse.h"
- #include "ratecontrol.h"
- #include "macroblock.h"
+diff -ruN parsec-2.0-orig-core/pkgs/apps/x264/src/encoder/analyse.c parsec-2.0-x264/pkgs/apps/x264/src/encoder/analyse.c
+--- parsec-2.0-orig-core/pkgs/apps/x264/src/encoder/analyse.c	2008-12-08 17:11:52.000000000 -0500
++++ parsec-2.0-x264/pkgs/apps/x264/src/encoder/analyse.c	2013-03-08 01:14:06.661707213 -0500
+@@ -22,6 +22,7 @@
+  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111, USA.
+  *****************************************************************************/
+ 
 +#include "tern/user.h"
- 
- #if VISUALIZE
- #include "common/visualize.h"
-@@ -1176,6 +1177,7 @@
-          * Slice P: choose between using P mode or intra (4x4 or 16x16)
-          * */
-         x264_macroblock_analyse( h );
-+	tern_lineup(0);// The x264_macroblock_analyse and x264_fdec_filter_row contain sync op, so we have to put it here.
- 
-         /* encode this macroblock -> be careful it can change the mb type to P_SKIP if needed */
-         x264_macroblock_encode( h );
-diff -ruN parsec-2.0-orig/pkgs/apps/x264/src/x264.c parsec-2.0/pkgs/apps/x264/src/x264.c
---- parsec-2.0-orig/pkgs/apps/x264/src/x264.c	2013-02-07 14:42:54.880848799 -0500
-+++ parsec-2.0/pkgs/apps/x264/src/x264.c	2013-02-09 01:17:03.703562000 -0500
-@@ -32,6 +32,7 @@
- #include "common/cpu.h"
- #include "x264.h"
- #include "muxers.h"
-+#include "tern/user.h"
- 
+ #include <math.h>
+ #include <limits.h>
  #ifndef _MSC_VER
- #include "config.h"
+@@ -2122,6 +2123,7 @@
+         x264_adaptive_quant( h );
+ 
+     x264_mb_analyse_init( h, &analysis, h->mb.i_qp );
++	tern_lineup(0);
+ 
+     /*--------------------------- Do the analysis ---------------------------*/
+     if( h->sh.i_type == SLICE_TYPE_I )
+diff -ruN parsec-2.0-orig-core/pkgs/apps/x264/src/x264.c parsec-2.0-x264/pkgs/apps/x264/src/x264.c
+--- parsec-2.0-orig-core/pkgs/apps/x264/src/x264.c	2008-12-10 15:44:53.000000000 -0500
++++ parsec-2.0-x264/pkgs/apps/x264/src/x264.c	2013-03-08 01:13:52.765707677 -0500
+@@ -21,6 +21,7 @@
+  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111, USA.
+  *****************************************************************************/
+ 
++#include "tern/user.h"
+ #include <stdlib.h>
+ #include <math.h>
+ 
 @@ -126,7 +127,7 @@
  
      /* Control-C handler */
      signal( SIGINT, SigIntHandler );
 -
-+	tern_lineup_init(0, param.i_threads, param.i_threads*50);
++tern_lineup_init(0, param.i_threads, param.i_threads*10);
      ret = Encode( &param, &opt );
  
  #ifdef PTW32_STATIC_LIB
