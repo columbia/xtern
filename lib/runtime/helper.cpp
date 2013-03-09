@@ -170,6 +170,9 @@ void __tern_prog_end (void) {
   // threads running yet, e.g., OpenMP. If delete this, will have seg fault sometimes.
   //delete tern::Runtime::the;
   //tern::Runtime::the = NULL;
+  if (options::record_runtime_stat)
+    tern::Runtime::the->printStat();
+
 #ifdef XTERN_PLUS_DBUG
   Runtime::__attach_self_to_dbug();
 #endif

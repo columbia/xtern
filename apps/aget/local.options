@@ -102,3 +102,5 @@ log_sync = 0
 # 2.  Value: 2              busy wait flag + cond wait.
 # 3.  Value: 3              busy wait only.
 enforce_turn_type = 1
+
+record_runtime_stat = 0
