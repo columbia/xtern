@@ -8,6 +8,7 @@
 #include "tern/runtime/runtime.h"
 #include "tern/runtime/monitor.h"
 #include "tern/runtime/record-scheduler.h"
+#include "runtime-stat.h"
 #include <time.h>
 
 namespace tern {
@@ -148,6 +149,9 @@ struct RecorderRT: public Runtime, public _Scheduler {
   int __pthread_rwlock_destroy(unsigned ins, int &error, pthread_rwlock_t *rwlock);
   int __pthread_rwlock_init(unsigned ins, int &error, pthread_rwlock_t *rwlock, const pthread_rwlockattr_t * attr);
 
+  // print stat.
+  void printStat();
+
   RecorderRT(): _Scheduler() {
     int ret;
     ret = sem_init(&thread_begin_sem, 0, 0);
@@ -193,6 +197,7 @@ protected:
   sem_t thread_begin_done_sem;
 
   RuntimeMonitor *monitor;
+  RuntimeStat stat;
 };
 #if 0
 struct RRuntime: public Runtime {

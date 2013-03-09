@@ -323,6 +323,8 @@ void RecorderRT<RecordSerializer>::idle_sleep(void) {
 #define BLOCK_TIMER_START(sync_op, ...) \
   timespec app_time, sched_block_time, syscall_time; \
   int block_turn; \
+  if (options::record_runtime_stat) \
+    stat.nInterProcSyncOp++; \
   if (options::enforce_non_det_annotations && inNonDet) { \
     return Runtime::__##sync_op(__VA_ARGS__); \
   } \
@@ -373,6 +375,8 @@ void RecorderRT<RecordSerializer>::idle_sleep(void) {
      assert(!inNonDet); \
   timespec app_time = update_time(); \
   _S::getTurn(); \
+  if (options::record_runtime_stat) \
+     stat.nDetPthreadSyncOp++; \
   timespec sched_time = update_time();
   //fprintf(stderr, "\n\nSCHED_TIMER_START ins %p, pid %d, self %u, tid %d, function %s\n", (void *)ins, getpid(), (unsigned)pthread_self(), _S::self(), __FUNCTION__);
 
@@ -399,6 +403,12 @@ void RecorderRT<RecordSerializer>::idle_sleep(void) {
   timespec fake_time = update_time(); \
   if (options::log_sync) \
     Logger::the->logSync(ins, syncop, nturn, app_time, fake_time, sched_time, /* before */ false, __VA_ARGS__); 
+
+
+template <typename _S>
+void RecorderRT<_S>::printStat(){
+  stat.print();
+}
   
 template <typename _S>
 void RecorderRT<_S>::threadBegin(void) {
@@ -555,6 +565,8 @@ int RecorderRT<_S>::pthreadMutexInit(unsigned ins, int &error, pthread_mutex_t *
 {
   int ret;
   if (options::enforce_non_det_annotations && inNonDet) {
+    if (options::record_runtime_stat)
+      stat.nNonDetPthreadSync++;
     add_non_det_var((void *)mutex);
     dprintf("Thread tid %d, self %u is calling non-det pthread_mutex_init.\n", _S::self(), (unsigned)pthread_self());
     return Runtime::__pthread_mutex_init(ins, error, mutex, mutexattr);
@@ -572,6 +584,8 @@ int RecorderRT<_S>::pthreadMutexDestroy(unsigned ins, int &error, pthread_mutex_
 {
   int ret;
   if (options::enforce_non_det_annotations && inNonDet) {
+    if (options::record_runtime_stat)
+      stat.nNonDetPthreadSync++;
     add_non_det_var((void *)mutex);
     return Runtime::__pthread_mutex_destroy(ins, error, mutex);
   }
@@ -622,6 +636,8 @@ int RecorderRT<_S>::pthreadRWLockRdLockHelper(pthread_rwlock_t *rwlock, unsigned
 template <typename _S>
 int RecorderRT<_S>::pthreadMutexLock(unsigned ins, int &error, pthread_mutex_t *mu) {
   if (options::enforce_non_det_annotations && inNonDet) {
+    if (options::record_runtime_stat)
+      stat.nNonDetPthreadSync++;
     add_non_det_var((void *)mu);
     dprintf("Ins %p :   Thread tid %d, self %u is calling non-det pthread_mutex_lock.\n", (void *)ins, _S::self(), (unsigned)pthread_self());
     return Runtime::__pthread_mutex_lock(ins, error, mu);
@@ -638,6 +654,8 @@ template <typename _S>
 int RecorderRT<_S>::__pthread_rwlock_rdlock(unsigned ins, int &error, pthread_rwlock_t *rwlock)
 {
   if (options::enforce_non_det_annotations && inNonDet) {
+    if (options::record_runtime_stat)
+      stat.nNonDetPthreadSync++;
     add_non_det_var((void *)rwlock);
     return pthread_rwlock_rdlock(rwlock);
   }
@@ -653,6 +671,8 @@ template <typename _S>
 int RecorderRT<_S>::__pthread_rwlock_wrlock(unsigned ins, int &error, pthread_rwlock_t *rwlock)
 {
   if (options::enforce_non_det_annotations && inNonDet) {
+    if (options::record_runtime_stat)
+      stat.nNonDetPthreadSync++;
     add_non_det_var((void *)rwlock);
     return pthread_rwlock_wrlock(rwlock);
   }
@@ -668,6 +688,8 @@ template <typename _S>
 int RecorderRT<_S>::__pthread_rwlock_tryrdlock(unsigned ins, int &error, pthread_rwlock_t *rwlock)
 {
   if (options::enforce_non_det_annotations && inNonDet) {
+    if (options::record_runtime_stat)
+      stat.nNonDetPthreadSync++;
     add_non_det_var((void *)rwlock);
     return pthread_rwlock_tryrdlock(rwlock);
   }
@@ -683,6 +705,8 @@ template <typename _S>
 int RecorderRT<_S>::__pthread_rwlock_trywrlock(unsigned ins, int &error, pthread_rwlock_t *rwlock)
 {
   if (options::enforce_non_det_annotations && inNonDet) {
+    if (options::record_runtime_stat)
+      stat.nNonDetPthreadSync++;
     add_non_det_var((void *)rwlock);
     return pthread_rwlock_trywrlock(rwlock);
   }
@@ -699,6 +723,8 @@ int RecorderRT<_S>::__pthread_rwlock_unlock(unsigned ins, int &error, pthread_rw
 {
   int ret;
   if (options::enforce_non_det_annotations && inNonDet) {
+    if (options::record_runtime_stat)
+      stat.nNonDetPthreadSync++;
     add_non_det_var((void *)rwlock);
     return pthread_rwlock_unlock(rwlock);
   }
@@ -717,6 +743,8 @@ int RecorderRT<_S>::__pthread_rwlock_unlock(unsigned ins, int &error, pthread_rw
 template <typename _S>
 int RecorderRT<_S>::__pthread_rwlock_destroy(unsigned ins, int &error, pthread_rwlock_t *rwlock) {
   if (options::enforce_non_det_annotations && inNonDet) {
+    if (options::record_runtime_stat)
+      stat.nNonDetPthreadSync++;
     add_non_det_var((void *)rwlock);
     return pthread_rwlock_destroy(rwlock);
   }
@@ -731,6 +759,8 @@ int RecorderRT<_S>::__pthread_rwlock_destroy(unsigned ins, int &error, pthread_r
 template <typename _S>
 int RecorderRT<_S>::__pthread_rwlock_init(unsigned ins, int &error, pthread_rwlock_t *rwlock, const pthread_rwlockattr_t *attr) {
   if (options::enforce_non_det_annotations && inNonDet) {
+    if (options::record_runtime_stat)
+      stat.nNonDetPthreadSync++;
     add_non_det_var((void *)rwlock);
     return pthread_rwlock_init(rwlock, attr);
   }
@@ -749,6 +779,8 @@ template <typename _S>
 int RecorderRT<_S>::pthreadMutexTryLock(unsigned ins, int &error, pthread_mutex_t *mu) {
   int ret;
   if (options::enforce_non_det_annotations && inNonDet) {
+    if (options::record_runtime_stat)
+      stat.nNonDetPthreadSync++;
     add_non_det_var((void *)mu);
     return pthread_mutex_trylock(mu);
   }
@@ -766,6 +798,8 @@ template <typename _S>
 int RecorderRT<_S>::pthreadMutexTimedLock(unsigned ins, int &error, pthread_mutex_t *mu,
                                                 const struct timespec *abstime) {
   if (options::enforce_non_det_annotations && inNonDet) {
+    if (options::record_runtime_stat)
+      stat.nNonDetPthreadSync++;
     add_non_det_var((void *)mu);
     return pthread_mutex_timedlock(mu, abstime);
   }
@@ -801,6 +835,8 @@ template <typename _S>
 int RecorderRT<_S>::pthreadMutexUnlock(unsigned ins, int &error, pthread_mutex_t *mu){
   int ret;
   if (options::enforce_non_det_annotations && inNonDet) {
+    if (options::record_runtime_stat)
+      stat.nNonDetPthreadSync++;
     add_non_det_var((void *)mu);
     dprintf("Thread tid %d, self %u is calling non-det pthread_mutex_unlock.\n", _S::self(), (unsigned)pthread_self());
     return Runtime::__pthread_mutex_unlock(ins, error, mu);
@@ -825,6 +861,8 @@ int RecorderRT<_S>::pthreadBarrierInit(unsigned ins, int &error, pthread_barrier
                                        unsigned count) {
   int ret;
   if (options::enforce_non_det_annotations && inNonDet) {
+    if (options::record_runtime_stat)
+      stat.nNonDetPthreadSync++;
     add_non_det_var((void *)barrier);
     return pthread_barrier_init(barrier, NULL, count);
   }
@@ -878,6 +916,8 @@ int RecorderRT<_S>::pthreadBarrierWait(unsigned ins, int &error,
   
   int ret;
   if (options::enforce_non_det_annotations && inNonDet) {
+    if (options::record_runtime_stat)
+      stat.nNonDetPthreadSync++;
     add_non_det_var((void *)barrier);
     return pthread_barrier_wait(barrier);
   }
@@ -934,6 +974,8 @@ int RecorderRT<_S>::pthreadBarrierDestroy(unsigned ins, int &error,
                                           pthread_barrier_t *barrier) {
   int ret;
   if (options::enforce_non_det_annotations && inNonDet) {
+    if (options::record_runtime_stat)
+      stat.nNonDetPthreadSync++;
     add_non_det_var((void *)barrier);
     return pthread_barrier_destroy(barrier);
   }
@@ -1181,6 +1223,8 @@ template <typename _S>
 int RecorderRT<_S>::pthreadCondWait(unsigned ins, int &error, 
                                     pthread_cond_t *cv, pthread_mutex_t *mu){
   if (options::enforce_non_det_annotations && inNonDet) {
+    if (options::record_runtime_stat)
+      stat.nNonDetPthreadSync++;
     add_non_det_var((void *)cv);
     add_non_det_var((void *)mu);
     return pthread_cond_wait(cv, mu);
@@ -1226,6 +1270,8 @@ int RecorderRT<_S>::pthreadCondTimedWait(unsigned ins, int &error,
 
   int ret;
   if (options::enforce_non_det_annotations && inNonDet) {
+    if (options::record_runtime_stat)
+      stat.nNonDetPthreadSync++;
     add_non_det_var((void *)cv);
     add_non_det_var((void *)mu);
     return pthread_cond_timedwait(cv, mu, abstime);
@@ -1255,6 +1301,8 @@ int RecorderRT<_S>::pthreadCondTimedWait(unsigned ins, int &error,
 template <typename _S>
 int RecorderRT<_S>::pthreadCondSignal(unsigned ins, int &error, pthread_cond_t *cv){
   if (options::enforce_non_det_annotations && inNonDet) {
+    if (options::record_runtime_stat)
+      stat.nNonDetPthreadSync++;
     add_non_det_var((void *)cv);
     return pthread_cond_signal(cv);
   }
@@ -1271,6 +1319,8 @@ int RecorderRT<_S>::pthreadCondSignal(unsigned ins, int &error, pthread_cond_t *
 template <typename _S>
 int RecorderRT<_S>::pthreadCondBroadcast(unsigned ins, int &error, pthread_cond_t*cv){
   if (options::enforce_non_det_annotations && inNonDet) {
+    if (options::record_runtime_stat)
+      stat.nNonDetPthreadSync++;
     add_non_det_var((void *)cv);
     return pthread_cond_broadcast(cv);
   }
@@ -1284,6 +1334,8 @@ template <typename _S>
 int RecorderRT<_S>::semWait(unsigned ins, int &error, sem_t *sem) {
   int ret;
   if (options::enforce_non_det_annotations && inNonDet) {
+    if (options::record_runtime_stat)
+      stat.nNonDetPthreadSync++;
     add_non_det_var((void *)sem);
     return sem_wait(sem);
   }
@@ -1304,6 +1356,8 @@ template <typename _S>
 int RecorderRT<_S>::semTryWait(unsigned ins, int &error, sem_t *sem) {
   int ret;
   if (options::enforce_non_det_annotations && inNonDet) {
+    if (options::record_runtime_stat)
+      stat.nNonDetPthreadSync++;
     add_non_det_var((void *)sem);
     return sem_trywait(sem);
   }
@@ -1342,6 +1396,8 @@ int RecorderRT<_S>::semTimedWait(unsigned ins, int &error, sem_t *sem,
   
   int ret;
   if (options::enforce_non_det_annotations && inNonDet) {
+    if (options::record_runtime_stat)
+      stat.nNonDetPthreadSync++;
     add_non_det_var((void *)sem);
     return sem_timedwait(sem, abstime);
   }
@@ -1368,6 +1424,8 @@ template <typename _S>
 int RecorderRT<_S>::semPost(unsigned ins, int &error, sem_t *sem){
   int ret;
   if (options::enforce_non_det_annotations && inNonDet) {
+    if (options::record_runtime_stat)
+      stat.nNonDetPthreadSync++;
     add_non_det_var((void *)sem);
     return sem_post(sem);
   }
@@ -1384,6 +1442,8 @@ template <typename _S>
 void RecorderRT<_S>::lineupInit(long opaque_type, unsigned count, unsigned timeout_turns) {
   unsigned ins = opaque_type;
   if (options::enforce_non_det_annotations && inNonDet) {
+    if (options::record_runtime_stat)
+      stat.nNonDetPthreadSync++;
     add_non_det_var((void *)opaque_type);
     return;
   }
@@ -1404,6 +1464,8 @@ template <typename _S>
 void RecorderRT<_S>::lineupDestroy(long opaque_type) {
   unsigned ins = opaque_type;
   if (options::enforce_non_det_annotations && inNonDet) {
+    if (options::record_runtime_stat)
+      stat.nNonDetPthreadSync++;
     add_non_det_var((void *)opaque_type);
     return;
   }
@@ -1424,6 +1486,8 @@ template <typename _S>
 void RecorderRT<_S>::lineupStart(long opaque_type) {
   unsigned ins = opaque_type;
   if (options::enforce_non_det_annotations && inNonDet) {
+    if (options::record_runtime_stat)
+      stat.nNonDetPthreadSync++;
     add_non_det_var((void *)opaque_type);
     return;
   }
@@ -1442,6 +1506,8 @@ void RecorderRT<_S>::lineupStart(long opaque_type) {
       if (b.nSuccess%1000 == 0)
         fprintf(stderr, "lineupStart opaque_type %p, tid %d, full and success (%ld:%ld)!\n",
           (void *)opaque_type, _S::self(), b.nSuccess, b.nTimeout);*/
+      if (options::record_runtime_stat)
+        stat.nLineupSucc++;
       b.setLeaving();
       _S::signal(&b, true); // Signal all threads blocking on this barrier.
     } else {
@@ -1457,6 +1523,8 @@ void RecorderRT<_S>::lineupStart(long opaque_type) {
         /*b.nTimeout++;
         fprintf(stderr, "lineupStart opaque_type %p, tid %d, timeout  (%ld:%ld)!\n",
           (void *)opaque_type, _S::self(), b.nSuccess, b.nTimeout);*/
+        if (options::record_runtime_stat)
+          stat.nLineupTimeout++;
         b.setLeaving();
         _S::signal(&b, true); // Signal all threads blocking on this barrier.
       }
@@ -1472,6 +1540,8 @@ template <typename _S>
 void RecorderRT<_S>::lineupEnd(long opaque_type) {
   unsigned ins = opaque_type;
   if (options::enforce_non_det_annotations && inNonDet) {
+    if (options::record_runtime_stat)
+      stat.nNonDetPthreadSync++;
     add_non_det_var((void *)opaque_type);
     return;
   }
@@ -1492,23 +1562,25 @@ void RecorderRT<_S>::nonDetStart() {
   unsigned ins = 0;
   dprintf("nonDetStart, tid %d\n", _S::self());
   SCHED_TIMER_START;
+  if (options::record_runtime_stat)
+    stat.nNonDetRegions++;
 
-    nNonDetWait++;
-    /** Although at this moment current thread is still in the xtern runq, we pre-attach it to dbug,
-    so that after _S::block() below is called, for whatever operation current thread is going to call,                                    dbug will know totally how many threads 
-    should be blocked (so that dbug can explore the upper bound of non-determinism for these
-    non-det regions). **/
+  nNonDetWait++;
+  /** Although at this moment current thread is still in the xtern runq, we pre-attach it to dbug,
+  so that after _S::block() below is called, for whatever operation current thread is going to call,                                    dbug will know totally how many threads 
+  should be blocked (so that dbug can explore the upper bound of non-determinism for these
+  non-det regions). **/
 #ifdef XTERN_PLUS_DBUG
-    Runtime::__attach_self_to_dbug();
+  Runtime::__attach_self_to_dbug();
 #endif
 
-    /** All non-det operations are blocked on this fake var until runq is empty, 
-    i.e., all valid (except idle thread) xtern threads are paused.
-    This wait works like a lineup with unlimited timeout, which is for 
-    maximizing the non-det regions. **/
-    _S::wait(&nonDetCV);
+  /** All non-det operations are blocked on this fake var until runq is empty, 
+  i.e., all valid (except idle thread) xtern threads are paused.
+  This wait works like a lineup with unlimited timeout, which is for 
+  maximizing the non-det regions. **/
+  _S::wait(&nonDetCV);
 
-    nNonDetWait--;
+  nNonDetWait--;
 
   SCHED_TIMER_END(syncfunc::tern_non_det_start, 0);
   /** Reuse existing xtern API. Get turn, remove myself from runq, and then pass turn. This 
@@ -2179,6 +2251,7 @@ template <typename _S>
 int RecorderRT<_S>::schedYield(unsigned ins, int &error)
 {
   if (options::enforce_non_det_annotations && inNonDet) {
+    // Do not need to count nNonDetPthreadSync for this op.
     return sched_yield();
   }
   SCHED_TIMER_START;

@@ -71,6 +71,9 @@ struct Runtime {
   virtual void nonDetEnd() = 0;
   virtual void setBaseTime(struct timespec *ts) = 0;
 
+  // print runtime stat.
+  virtual void printStat() = 0;
+
 #ifdef XTERN_PLUS_DBUG
   static void *resolveDbugFunc(const char *func_name);
   static void initDbug();
