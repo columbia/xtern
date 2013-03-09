@@ -19,7 +19,7 @@ extern "C" {
   //  used by idle thread to skip empty rounds
   void tern_idle_sleep();
   void tern_idle_cond_wait();
-
+  
   /// hooks that users insert translate into these
   void tern_symbolic_real(unsigned insid, void *addr,
                           int nbytes, const char *symname);
@@ -39,6 +39,9 @@ extern "C" {
   void tern_prog_end(void);     /// cleans up tern internal data
   void tern_thread_begin(void); /// called at the beginning of a thread
   void tern_thread_end(unsigned insid); /// called at the end of a thread
+
+  /// print stat.
+  void tern_print_runtime_stat();
 
   void tern___libc_start_main(void *func_ptr, int argc, char* argv[], void *init_func,
     void *fini_func, void *stack_end);   /// called in dynamic hook mode

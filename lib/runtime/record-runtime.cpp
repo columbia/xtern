@@ -407,7 +407,13 @@ void RecorderRT<RecordSerializer>::idle_sleep(void) {
 
 template <typename _S>
 void RecorderRT<_S>::printStat(){
-  stat.print();
+  // We must get turn, and print, and then put turn. This is a solid way of 
+  // getting deterministic runtime stat.
+  _S::getTurn();
+  if (options::record_runtime_stat)
+    stat.print();
+  _S::incTurnCount();
+  _S::putTurn();
 }
   
 template <typename _S>

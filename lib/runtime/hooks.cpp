@@ -944,6 +944,13 @@ int tern_pthread_rwlock_init(unsigned ins, pthread_rwlock_t *rwlock, const pthre
   return ret; 
 }
 
+void tern_print_runtime_stat()
+{
+  Space::enterSys();
+  Runtime::the->printStat();
+  Space::exitSys();
+}
+
 /*
 int tern_poll(unsigned ins, struct pollfd *fds, nfds_t nfds, int timeout)
 {

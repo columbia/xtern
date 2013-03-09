@@ -142,6 +142,8 @@ void __tern_prog_end (void) {
   prog_began = false;
   assert(Space::isApp() && "__tern_prog_end must start in app space");
 
+  tern_print_runtime_stat();
+
   // terminate the idle thread because it references the runtime which we
   // are about to free
   tern_pthread_mutex_lock(IDLE_MUTEX_INS, &idle_mutex);
@@ -170,9 +172,6 @@ void __tern_prog_end (void) {
   // threads running yet, e.g., OpenMP. If delete this, will have seg fault sometimes.
   //delete tern::Runtime::the;
   //tern::Runtime::the = NULL;
-  if (options::record_runtime_stat)
-    tern::Runtime::the->printStat();
-
 #ifdef XTERN_PLUS_DBUG
   Runtime::__attach_self_to_dbug();
 #endif
