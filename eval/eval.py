@@ -623,10 +623,10 @@ if __name__ == "__main__":
                         help="do not run model-checking in model-checking mode")
     parser.add_argument("--dbug-only",
                         action="store_true",
-                        help="do not run dbug model-checking in model-checking mode")
+                        help="run only dbug model-checking in model-checking mode")
     parser.add_argument("--smtmc-only",
                         action="store_true",
-                        help="do not run dbug+xtern model-checking in model-checking mode")
+                        help="run only run dbug+xtern model-checking in model-checking mode")
     args = parser.parse_args()
 
     if args.filename.__len__() == 0:
