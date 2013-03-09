@@ -4,6 +4,7 @@
 
 #define SEED 1
 
+#define TINY    0xffffff
 #define SMALL   0xfffffff
 #define MEDIUM  0x3fffffff
 #define LARGE   0xffffffff
@@ -18,4 +19,6 @@
             data_size = MEDIUM;   \
         else if(!strcmp(y, "large")) \
             data_size = LARGE;  \
+        else if(!strcmp(y, "tiny")) \
+            data_size = TINY;  \
     }  
