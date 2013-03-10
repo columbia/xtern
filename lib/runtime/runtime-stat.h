@@ -7,12 +7,12 @@
 namespace tern {
 class RuntimeStat {
 public:
-  long nDetPthreadSyncOp;
-  long nInterProcSyncOp;
-  long nLineupSucc;
-  long nLineupTimeout;
-  long nNonDetRegions;
-  long nNonDetPthreadSync;
+  long nDetPthreadSyncOp; /* Number of deterministic pthread sync operations called (excluded idle thread and non-det sync operations).*/
+  long nInterProcSyncOp;/* Number of inter-process sync operations called (networks, signals, wait, fork is scheduled by us and counted as nDetPthreadSyncOp).*/
+  long nLineupSucc; /* Number of successful lineup operations (if multiple threads lineup and succeed for once, count as 1). */
+  long nLineupTimeout; /* Number of lineup timeouts. */
+  long nNonDetRegions;  /* Number of times all threads entering the non-det regions (and exiting the regions must be the same value). */
+  long nNonDetPthreadSync; /* Number of non-det pthread sync operations called within a non-det region. */
   
 public:
   RuntimeStat() {

@@ -118,6 +118,11 @@ extern "C" {
 }
 static __thread timespec my_time;
 
+extern "C" void *idle_thread(void*);
+extern "C" pthread_t idle_th;
+extern "C" pthread_mutex_t idle_mutex;
+extern "C" pthread_cond_t idle_cond;
+
 /** This var works with tern_set_base_time(). It is used to record the base 
 time for cond_timedwait(), sem_timedwait() and mutex_timedlock() to get
 deterministic physical time interval, so that this interval can be 
@@ -375,7 +380,7 @@ void RecorderRT<RecordSerializer>::idle_sleep(void) {
      assert(!inNonDet); \
   timespec app_time = update_time(); \
   _S::getTurn(); \
-  if (options::record_runtime_stat) \
+  if (options::record_runtime_stat && pthread_self() != idle_th) \
      stat.nDetPthreadSyncOp++; \
   timespec sched_time = update_time();
   //fprintf(stderr, "\n\nSCHED_TIMER_START ins %p, pid %d, self %u, tid %d, function %s\n", (void *)ins, getpid(), (unsigned)pthread_self(), _S::self(), __FUNCTION__);
@@ -403,7 +408,6 @@ void RecorderRT<RecordSerializer>::idle_sleep(void) {
   timespec fake_time = update_time(); \
   if (options::log_sync) \
     Logger::the->logSync(ins, syncop, nturn, app_time, fake_time, sched_time, /* before */ false, __VA_ARGS__); 
-
 
 template <typename _S>
 void RecorderRT<_S>::printStat(){
@@ -2186,11 +2190,6 @@ char *RecorderRT<_S>::__fgets(unsigned ins, int &error, char *s, int size, FILE 
   return ret;
 }
 
-extern "C" void *idle_thread(void*);
-extern "C" pthread_t idle_th;
-extern "C" pthread_mutex_t idle_mutex;
-extern "C" pthread_cond_t idle_cond;
-
 template <typename _S>
 pid_t RecorderRT<_S>::__fork(unsigned ins, int &error)
 {
@@ -2365,6 +2364,9 @@ int RecorderRT<_S>::__close(unsigned ins, int &error, int fd)
   BLOCK_TIMER_START(close, ins, error, fd);
   int ret = Runtime::__close(ins, error, fd);
   BLOCK_TIMER_END(syncfunc::close, (uint64_t)fd, (uint64_t)ret);
+  // For servers, print stat here, at this point it could be non-det but it is fine, network is non-det anyway.
+  if (options::record_runtime_stat)
+    stat.print();  
   return ret;
 }
 

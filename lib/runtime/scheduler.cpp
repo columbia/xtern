@@ -20,17 +20,19 @@ using namespace tern;
 
 Serializer::~Serializer()
 {
-  fclose(logger);
+  if (options::log_sync)
+    fclose(logger);
 }
 
 Serializer::Serializer(): 
   TidMap(pthread_self()), turnCount(0) 
 {
-  if (options::log_sync)
+  if (options::log_sync) {
     mkdir(options::output_dir.c_str(), 0777);
-  std::string logPath = options::output_dir + "/serializer.log";
-  logger = fopen(logPath.c_str(), "w");
-  assert(logger);
+    std::string logPath = options::output_dir + "/serializer.log";
+    logger = fopen(logPath.c_str(), "w");
+    assert(logger);
+  }
 }
 
 unsigned Serializer::incTurnCount(void) { 
