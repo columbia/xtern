@@ -9,8 +9,12 @@ $numThreads = 0;
 $curDir;
 $threadMargin = "                                                  "; # 40 blanks.
 $skipTid1 = 1;
+$outputTime = 1;
 if (scalar(@ARGV) >= 2 && @ARGV[1] eq "--keep-tid1") {
 	$skipTid1 = 0;
+}
+if (scalar(@ARGV) >= 2 && @ARGV[1] eq "--no-time") {
+	$outputTime = 0;
 }
 
 sub parseSchedule {
@@ -31,6 +35,7 @@ sub parseSchedule {
 	opendir (DIR, ".");
 	while (my $file = readdir(DIR)) {
 		next if ($file =~ m/^\./);
+		next if ($file =~ m/\.log/);
 		#print "$file\n";
 
 		@fields1 = split(/-/, $file);
@@ -186,18 +191,26 @@ sub drawTimeChart {
 			$gap = ($curTime{$tid} - $prevTime{$tid})/($prevTime{$tid} - $prevPrevTime{$tid});
 			if ($gap > $factor50 && $gap < $factor1K) {
 				printThreadMargin($tid);
-				print CHART $gapSep50.":".$gap."\n";
+				if ($outputTime == 1) {
+					print CHART $gapSep50.":".$gap."\n";
+				}
 			} else {
 				if ($gap > $factor1K) {
 					printThreadMargin($tid);
-					print CHART $gapSep1K.":".$gap."\n";
+					if ($outputTime == 1) {
+						print CHART $gapSep1K.":".$gap."\n";
+					}
 				}
 			}
 		}
 
 		# Print op stat.
 		printThreadMargin($tid);
-		print CHART $op."(".$instrId.")"." ".$finishTime." ".$waitTurnTime."\n";	
+		if ($outputTime == 1) {
+			print CHART $op."(".$instrId.")"." ".$finishTime." ".$waitTurnTime."\n";	
+		} else {
+			print CHART $op."()"."\n";	
+		}
 	}
 }
 

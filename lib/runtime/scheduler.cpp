@@ -11,6 +11,7 @@
 #include <stdlib.h>
 #include <cstring>
 #include <algorithm>
+#include <sys/stat.h>
 #include "tern/options.h"
 
 using namespace std;
@@ -25,7 +26,10 @@ Serializer::~Serializer()
 Serializer::Serializer(): 
   TidMap(pthread_self()), turnCount(0) 
 {
-  logger = fopen("serializer.log", "w");
+  if (options::log_sync)
+    mkdir(options::output_dir.c_str(), 0777);
+  std::string logPath = options::output_dir + "/serializer.log";
+  logger = fopen(logPath.c_str(), "w");
   assert(logger);
 }
 
