@@ -31,9 +31,6 @@ pushd $XTERN_ROOT/apps/npb/
 rm -rf NPB3.3.1
 tar zxf $APPS_DIR/sys/NPB3.3.1.tar.gz
 
-# link
-ln -s $XTERN_ROOT/apps/npb/make.def NPB3.3.1/NPB3.3-OMP/config/
-ln -s $XTERN_ROOT/apps/npb/suite.def NPB3.3.1/NPB3.3-OMP/config/
 pushd NPB3.3.1/NPB3.3-OMP
 if [ "$ARCH" == "x86_64" ]; then
   ln -s $XTERN_ROOT/apps/openmp/install/lib64/libgomp.a
@@ -49,9 +46,28 @@ pushd NPB3.3.1
 patch -p1 < ../patch/annot-UA-omp-non-det.patch
 popd
 
+# make
+mkdir -p NPB3.3.1/NPB3.3-OMP/bin-s
+ln -s $XTERN_ROOT/apps/npb/make-small.def NPB3.3.1/NPB3.3-OMP/config/make.def
+ln -s $XTERN_ROOT/apps/npb/suite-small.def NPB3.3.1/NPB3.3-OMP/config/suite.def
 pushd NPB3.3.1/NPB3.3-OMP
 make suite
 popd
+
+rm -rf NPB3.3.1/NPB3.3-OMP/config/make.def
+ln -s $XTERN_ROOT/apps/npb/make.def NPB3.3.1/NPB3.3-OMP/config/
+rm -rf NPB3.3.1/NPB3.3-OMP/config/suite.def
+ln -s $XTERN_ROOT/apps/npb/suite.def NPB3.3.1/NPB3.3-OMP/config/
+pushd NPB3.3.1/NPB3.3-OMP
+make suite
+popd
+
+rm -rf ft-s mg-s sp-s lu-s bt-s is-s ep-s cg-s ua-s dc-s
+bench=( ft mg sp lu bt is ep cg ua dc )
+for i in "${bench[@]}"
+do
+    ln -s NPB3.3.1/NPB3.3-OMP/bin-s/$i.?.x $i-s
+done
 
 rm -rf ft mg sp lu bt is ep cg ua dc
 bench=( ft mg sp lu bt is ep cg ua dc )
