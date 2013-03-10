@@ -28,7 +28,7 @@ public:
       << "nDetPthreadSyncOp\t" << "nInterProcSyncOp\t" << "nLineupSucc\t" << "nLineupTimeout\t" << "nNonDetRegions\t" << "nNonDetPthreadSync\t" << "\n"    
       << "RUNTIME_STAT: "
       << nDetPthreadSyncOp << "\t" << nInterProcSyncOp << "\t" << nLineupSucc << "\t" << nLineupTimeout << "\t" << nNonDetRegions << "\t" << nNonDetPthreadSync
-      << "\n\n";
+      << "\n\n" << std::flush;
   }
 
 };
