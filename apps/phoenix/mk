@@ -70,6 +70,9 @@ patch -p1 < ../patch/annot-word_count-pthread.patch
 patch -p1 < ../patch/annot-kmeans-pthread.patch
 patch -p1 < ../patch/annot-matrix_multiply-pthread.patch
 patch -p1 < ../patch/annot-string_match-pthread.patch
+
+# threads number
+patch -p1 < ../patch/thread_number.patch
 make
 popd
 
