@@ -1,5 +1,5 @@
---- racey/racey-orig.c	2013-03-09 22:28:55.483105782 -0500
-+++ racey/racey.c	2013-03-09 22:53:24.683053214 -0500
+--- racey/racey-orig.c	2013-03-09 22:56:29.531046599 -0500
++++ racey/racey.c	2013-03-09 22:57:02.459045422 -0500
 @@ -126,14 +126,24 @@
     */
    
@@ -25,3 +25,12 @@
      /* Optionally, yield to other processors (Solaris use sched_yield()) */
      /* pthread_yield(); */
    }
+@@ -159,7 +169,7 @@
+     exit(1);
+   }
+   NumProcs = atoi(argv[1]);
+-  assert(NumProcs > 0 && NumProcs < 16);
++  assert(NumProcs > 0 && NumProcs < 128);
+   assert(argc == (NumProcs+2));
+   ProcessorIds = (int *) malloc(sizeof(int) * NumProcs);
+   assert(ProcessorIds != NULL);
