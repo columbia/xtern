@@ -35,7 +35,7 @@
 //#define PHASE_MARKER assert(0)
 #define PHASE_MARKER assert(1)
 
-#define   MAX_LOOP 100
+#define   MAX_LOOP 1000
 #define   MAX_ELEM 64
 
 #define   PRIME1   103072243
