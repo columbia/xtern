@@ -1,4 +1,5 @@
 #!/bin/bash
 
 cd $XTERN_ROOT/apps/racey
+patch -p1 < add-lock-protect.patch
 make
