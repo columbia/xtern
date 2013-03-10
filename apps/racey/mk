@@ -1,0 +1,4 @@
+#!/bin/bash
+
+cd $XTERN_ROOT/apps/racey
+make
