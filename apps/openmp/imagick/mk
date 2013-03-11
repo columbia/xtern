@@ -43,7 +43,7 @@ CC_HOME=$XTERN_ROOT/apps/openmp/install
 
 CC="$CC_HOME/bin/gcc" \
   CXX="$CC_HOME/bin/g++" \
-  CFLAGS+="-g -O2 -I$XTERN_ROOT/include -fopenmp" \
+  CFLAGS+="-g -O2 -I/usr/include/x86_64-linux-gnu -I$XTERN_ROOT/include -fopenmp" \
   CXXFLAGS+="-g -O2 -I$XTERN_ROOT/include -fopenmp" \
   LDFLAGS+="-L$CC_HOME/lib -Wl,--rpath,$CC_HOME/lib -L$CC_HOME/lib64 -Wl,--rpath,$CC_HOME/lib64 -L$XTERN_ROOT/dync_hook -Wl,--rpath,$XTERN_ROOT/dync_hook " \
   LIBS+="-lgomp -lxtern-annot" \

@@ -126,14 +126,24 @@ void* ThreadBody(void* tid)
    */
   
   for(i = 0 ; i < MAX_LOOP; i++) {
+    pthread_mutex_lock(&mutex);
     unsigned num = sig[threadId];
+    pthread_mutex_unlock(&mutex);
     unsigned index1 = num%MAX_ELEM;
     unsigned index2;
+    pthread_mutex_lock(&mutex);
     num = mix(num, m[index1].value);
+    pthread_mutex_unlock(&mutex);
     index2 = num%MAX_ELEM;
+    pthread_mutex_lock(&mutex);
     num = mix(num, m[index2].value);
+    pthread_mutex_unlock(&mutex);
+    pthread_mutex_lock(&mutex);
     m[index2].value = num;
+    pthread_mutex_unlock(&mutex);
+    pthread_mutex_lock(&mutex);
     sig[threadId] = num;
+    pthread_mutex_unlock(&mutex);
     /* Optionally, yield to other processors (Solaris use sched_yield()) */
     /* pthread_yield(); */
   }
@@ -159,7 +169,7 @@ main(int argc, char* argv[])
     exit(1);
   }
   NumProcs = atoi(argv[1]);
-  assert(NumProcs > 0 && NumProcs < 16);
+  assert(NumProcs > 0 && NumProcs < 128);
   assert(argc == (NumProcs+2));
   ProcessorIds = (int *) malloc(sizeof(int) * NumProcs);
   assert(ProcessorIds != NULL);
