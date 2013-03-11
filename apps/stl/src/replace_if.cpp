@@ -45,7 +45,7 @@ int main (int argc, char * argv[]) {
   //  std::cout << '\n';
   
     gettimeofday(&start, NULL);
-    __gnu_parallel::replace_if(myvector.begin(), myvector.end(), isZero, ITEM);
+    __gnu_parallel::replace_if(myvector.begin(), myvector.end(), isZero, ITEM, __gnu_parallel::parallel_balanced);
     gettimeofday(&end, NULL);
     fprintf(stderr, "real %.3f\n", ((end.tv_sec * 1000000 + end.tv_usec)
           - (start.tv_sec * 1000000 + start.tv_usec)) / 1000000.0);
