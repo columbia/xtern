@@ -8,7 +8,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#define MAX_THREAD_NUM 1111
+#define MAX_THREAD_NUM 5000///1111
 //#define DEBUG_RUN_QUEUE // "defined" means enable the debug check; "undef" means disable it (faster).
 
 #ifdef DEBUG_RUN_QUEUE
