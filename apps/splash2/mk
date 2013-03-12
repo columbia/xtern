@@ -72,6 +72,7 @@ patch -p0 < patch/cholesky.patch
 patch -p0 < patch/fmm.patch
 patch -p0 < patch/radiosity.patch
 patch -p0 < patch/volrend.patch
+patch -p0 < patch/barnes.patch
 
 # annotations
 cd parsec-3.0
