@@ -1,4 +1,9 @@
-// unique_copy algorithm
+// Parallel mode STL algorithms
+// Name: unique_copy
+// Function: Copies the elements in the range [first,last) 
+// to the range beginning at result, except consecutive 
+// duplicates (elements that compare equal to the element preceding).
+// Test case: Worst case (All elements)
 #include <stdio.h>
 #include <algorithm>
 #include <vector>

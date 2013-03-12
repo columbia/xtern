@@ -1,4 +1,9 @@
-// set_intersection example
+// Parallel mode STL algorithms
+// Name: set_intersection
+// Function: Constructs a sorted range beginning in the location 
+// pointed by result with the set intersection of the two sorted 
+// ranges [first1,last1) and [first2,last2).
+// Test case: Worst case (All elements)
 #include <iostream>     // std::cout
 #include <algorithm>    // std::set_union, std::sort
 #include <vector>       // std::vector

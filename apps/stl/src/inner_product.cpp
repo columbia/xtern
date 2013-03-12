@@ -1,4 +1,8 @@
-// inner_product algorithm
+// Parallel mode STL algorithms
+// Name: inner_product
+// Function: Returns the result of accumulating init with the inner products of the
+// pairs formed by the elements of two ranges starting at first1 and first2.
+// Test case: Worst case (All elements)
 #include <stdio.h>
 #include <algorithm>
 #include <vector>

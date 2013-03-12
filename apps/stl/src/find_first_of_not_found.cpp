@@ -1,4 +1,9 @@
-// find_first_of algorithm example
+// Parallel mode STL algorithms
+// Name: find_first_of
+// Function: Returns an iterator to the first element in 
+// the range [first1,last1) that matches any of the elements 
+// in[first2,last2). If no such element is found, the function returns last1.
+// Test case: Worst case (not found)
 #include <iostream>     // std::cout
 #include <algorithm>    // std::generate
 #include <vector>       // std::vector

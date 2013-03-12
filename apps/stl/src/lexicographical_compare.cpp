@@ -1,4 +1,8 @@
-// lexicographical_compare algorithm
+// Parallel mode STL algorithms
+// Name: lexicographical_compare
+// Function: Returns true if the range [first1,last1) compares 
+// lexicographically less than the range [first2,last2).
+// Test case: Worst case (All elements)
 #include <stdio.h>
 #include <algorithm>
 #include <vector>

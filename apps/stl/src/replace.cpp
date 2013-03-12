@@ -1,4 +1,9 @@
-// replace algorithm example
+// Parallel mode STL algorithms
+// Name: replace
+// Function: Assigns new_value to all the elements in the range 
+// [first,last) that compare equal to old_value.
+// Test case: Worst case (All elements)
+// Note: sequential implementation in gcc 4.5.4.
 #include <iostream>     // std::cout
 #include <algorithm>    // std::generate
 #include <vector>       // std::vector

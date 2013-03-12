@@ -1,4 +1,8 @@
-// generate algorithm example
+// Parallel mode STL algorithms
+// Name: generate
+// Function: Assigns the value returned by successive calls 
+// to gen to the elements in the range [first,last).
+// Test case: Worst case (All elements)
 #include <iostream>     // std::cout
 #include <algorithm>    // std::generate
 #include <vector>       // std::vector

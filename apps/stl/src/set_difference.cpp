@@ -1,4 +1,9 @@
-// set_difference example
+// Parallel mode STL algorithms
+// Name: set_difference
+// Function: Constructs a sorted range beginning in the location 
+// pointed by result with the set difference of the sorted 
+// range[first1,last1) with respect to the sorted range [first2,last2).
+// Test case: Worst case (All elements)
 #include <iostream>     // std::cout
 #include <algorithm>    // std::set_union, std::sort
 #include <vector>       // std::vector

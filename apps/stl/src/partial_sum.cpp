@@ -1,4 +1,8 @@
-// partial_sum algorithm
+// Parallel mode STL algorithms
+// Name: partial_sum
+// Function: Assigns to every element in the range starting at result 
+// the partial sum of the corresponding elements in the range[first,last).
+// Test case: Worst case (All elements)
 #include <stdio.h>
 #include <algorithm>
 #include <vector>

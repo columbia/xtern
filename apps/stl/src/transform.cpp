@@ -1,4 +1,8 @@
-// transform algorithm example
+// Parallel mode STL algorithms
+// Name: transform
+// Function: Applies an operation sequentially to the elements of 
+// one (1) or two (2) ranges and stores the result in the range that begins at result.
+// Test case: Worst case (All elements)
 #include <iostream>     // std::cout
 #include <algorithm>    // std::generate
 #include <vector>       // std::vector

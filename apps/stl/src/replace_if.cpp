@@ -1,4 +1,10 @@
-// replace_if algorithm example
+// Parallel mode STL algorithms
+// Name: replace_if
+// Function: Assigns new_value to all the elements in the range 
+// [first,last) for which pred returns true.
+// Test case: Worst case (All elements)
+// Note: require passing __gnu_parallel::parallel_balanced explicitly 
+// for gcc 4.5.4.
 #include <iostream>     // std::cout
 #include <algorithm>    // std::generate
 #include <vector>       // std::vector

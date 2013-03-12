@@ -1,4 +1,7 @@
-// for_each algorithm example
+// Parallel mode STL algorithms
+// Name: for_each
+// Function: Applies function fn to each of the elements in the range [first,last).
+// Test case: Worst case (All elements)
 #include <iostream>     // std::cout
 #include <algorithm>    // std::generate
 #include <vector>       // std::vector

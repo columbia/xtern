@@ -1,4 +1,10 @@
-// partial_sort algorithm
+// Parallel mode STL algorithms
+// Name: partial_sort
+// Function: Rearranges the elements in the range [first,last), 
+// in such a way that the elements before middle are the smallest 
+// elements in the entire range and are sorted in ascending order, 
+// while the remaining elements are left without any specific order.
+// Test case: Worst case (All elements)
 #include <stdio.h>
 #include <algorithm>
 #include <vector>

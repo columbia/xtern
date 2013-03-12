@@ -1,4 +1,8 @@
-// accumulate algorithm
+// Parallel mode STL algorithms
+// Name: accumulate
+// Function: Returns the result of accumulating all the values 
+// in the range [first,last) to init.
+// Test case: Worst case (All elements)
 #include <stdio.h>
 #include <algorithm>
 #include <vector>
