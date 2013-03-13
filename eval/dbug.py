@@ -40,32 +40,51 @@ def model_checking(configs, benchmark, args):
         logging.error("%s does not exist" % EXPLORER)
 
     # generate run.xml
+    client = configs.get(benchmark, 'DBUG_CLIENT')
+    client_inputs = configs.get(benchmark, 'DBUG_CLIENT_INPUTS')
     arbiter_port = configs.get(benchmark, 'DBUG_ARBITER_PORT')
     explorer_port = configs.get(benchmark, 'DBUG_EXPLORER_PORT')
     dbug_timeout = configs.get(benchmark, 'DBUG_TIMEOUT')
     program_input = configs.get(benchmark, 'DBUG_INPUT')
     program_output = configs.get(benchmark, 'DBUG_OUTPUT')
+    prefix = configs.get(benchmark, "DBUG_PREFIX")
+    inputs = configs.get(benchmark, "INPUTS")
+    export = configs.get(benchmark, "EXPORT")
 
+    if prefix:
+        prefix_filename = "%s.prefix" % benchmark.split()[0]
+        with open(prefix_filename, "w") as prefix_file:
+            prefix_file.write(prefix.replace("\\n", "\n"))
     dbug_config = etree.Element("config")
+    if prefix:
+        dbug_prefix = etree.SubElement(dbug_config, "prefix")
+        dbug_prefix.set("path", prefix_filename)
     arbiter = etree.SubElement(dbug_config, "arbiter")
     explorer = etree.SubElement(dbug_config, "explorer")
     interposition = etree.SubElement(dbug_config, "interposition")
     program = etree.SubElement(dbug_config, "program")
+    if client:
+        program2 = etree.SubElement(dbug_config, "program")
 
     arbiter.set("port", arbiter_port)
-    arbiter.set("command", "%s -l" % ARBITER)
+    if client:
+        arbiter.set("command", "%s -l -b 2 -e 3" % ARBITER)
+    else:
+        arbiter.set("command", "%s -l" % ARBITER)
     explorer.set("log_dir", ".")
     explorer.set("port", explorer_port)
     explorer.set("timeout", dbug_timeout)
     interposition.set("path", "%s/mc-tools/dbug/install/lib/libdbug.so" % SMT_MC_ROOT)
-    inputs = configs.get(benchmark, "INPUTS")
-    export = configs.get(benchmark, "EXPORT")
     command = ' '.join([exec_file] + inputs.split())
     program.set("command", command)
     if program_input:
         program.set("input", program_input)
     if program_output:
         program.set("output", program_output)
+    if client:
+        exec_file2 = os.path.abspath(APPS + '/' + benchmark.split()[0] + '/' + client)
+        command2= ' '.join([exec_file2] + client_inputs.split())
+        program2.set("command", command2)
 
     with open("run.xml", "w") as run_xml:
         run_xml.write(etree.tostring(dbug_config, pretty_print=True))

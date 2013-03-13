@@ -69,8 +69,11 @@ def readConfigFile(config_file):
                                                 "C_STATS": "0",
                                                 "EVALUATION": "",
                                                 "DBUG": "-1",
+                                                "DBUG_PREFIX": "",
                                                 "DBUG_INPUT": "",
                                                 "DBUG_OUTPUT": "",
+                                                "DBUG_CLIENT": "",
+                                                "DBUG_CLIENT_INPUTS": "",
                                                 "DBUG_ARBITER_PORT": "12345",
                                                 "DBUG_EXPLORER_PORT": "12346",
                                                 "DBUG_TIMEOUT": "60"} )
