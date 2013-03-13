@@ -28,6 +28,7 @@ if test x$TESTLOOPS = x ; then
 	TESTLOOPS=50
 fi
 
+echo "mkdir -p $TESTDIR $DBDIR1"
 mkdir -p $TESTDIR $DBDIR1
 
 #
@@ -47,7 +48,9 @@ fi
 
 echo "Running slapindex to index slapd database..."
 echo "======================================================"
+echo "$CONFFILTER $BACKEND $MONITORDB < $CONF > $CONF1"
 . $CONFFILTER $BACKEND $MONITORDB < $CONF > $CONF1
+echo "$SLAPINDEX -f $CONF1"
 time -p $SLAPINDEX -f $CONF1
 RC=$?
 if test $RC != 0 ; then
