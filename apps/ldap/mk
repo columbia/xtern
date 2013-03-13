@@ -29,3 +29,5 @@ patch -p1 < ../only-xtern-test-mt-hot.patch
 patch -p1 < ../only-run-bdb-tests.patch
 cd $APP_DIR
 
+ln -s $APP_DIR/openldap-$VER/obj/servers/slapd/slapd
+ln -s $APP_DIR/openldap-$VER/obj/tests/progs/slapd-mtread
