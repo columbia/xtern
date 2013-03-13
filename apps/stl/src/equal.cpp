@@ -1,4 +1,9 @@
-// equal algorithm example
+// Parallel mode STL algorithms
+// Name: equal
+// Function: Compares the elements in the range [first1,last1) 
+// with those in the range beginning at first2, and returns 
+// true if all of the elements in both ranges match.
+// Test case: Worst case (All elements)
 #include <iostream>     // std::cout
 #include <algorithm>    // std::generate
 #include <vector>       // std::vector

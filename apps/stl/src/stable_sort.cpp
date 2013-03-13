@@ -1,3 +1,9 @@
+// Parallel mode STL algorithms
+// Name: stable_sort
+// Function: Sorts the elements in the range [first,last) 
+// into ascending order, like sort, but stable_sort preserves 
+// the relative order of the elements with equivalent values.
+// Test case: Worst case (All elements)
 #include <stdio.h>
 #include <algorithm>
 #include <vector>

@@ -1,4 +1,9 @@
-// mismatch algorithm example
+// Parallel mode STL algorithms
+// Name: mismatch
+// Function: Compares the elements in the range [first1,last1) 
+// with those in the range beginning at first2, and returns the 
+// first element of both sequences that does not match.
+// Test case: Worst case (All elements)
 #include <iostream>     // std::cout
 #include <algorithm>    // std::generate
 #include <vector>       // std::vector

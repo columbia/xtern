@@ -1,4 +1,8 @@
-// count algorithm example
+// Parallel mode STL algorithms
+// Name: count 
+// Function: Returns the number of elements in the range [first,last) 
+// that compare equal to val. 
+// Test case: Worst case (All elements)
 #include <iostream>     // std::cout
 #include <algorithm>    // std::generate
 #include <vector>       // std::vector

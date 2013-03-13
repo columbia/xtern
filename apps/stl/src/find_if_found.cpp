@@ -1,4 +1,9 @@
-// find_if algorithm example
+// Parallel mode STL algorithms
+// Name: find_if
+// Function: Returns an iterator to the first element in the 
+// range [first,last) for which pred returns true. If no such 
+// element is found, the function returns last.
+// Test case: Normal case (found)
 #include <iostream>     // std::cout
 #include <algorithm>    // std::generate
 #include <vector>       // std::vector

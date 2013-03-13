@@ -1,4 +1,10 @@
-// nth_element algorithm example
+// Parallel mode STL algorithms
+// Name: nth_element
+// Function: Rearranges the elements in the range 
+// [first,last), in such a way that the element at 
+// the nth position is the element that would be in
+// that position in a sorted sequence.
+// Test case: Worst case (All elements)
 #include <iostream>     // std::cout
 #include <algorithm>    // std::generate
 #include <vector>       // std::vector

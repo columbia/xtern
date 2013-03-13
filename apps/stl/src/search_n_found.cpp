@@ -1,4 +1,9 @@
-// search_n algorithm example
+// Parallel mode STL algorithms
+// Name: search_n
+// Function: Searches the range [first1,last1) for the first 
+// occurrence of the sequence defined by [first2,last2), and 
+// returns an iterator to its first element, or last1 if no occurrences are found.
+// Test case: Normal case (found)
 #include <iostream>     // std::cout
 #include <algorithm>    // std::generate
 #include <vector>       // std::vector

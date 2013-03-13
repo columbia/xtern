@@ -1,4 +1,7 @@
-// random_shuffle algorithm example
+// Parallel mode STL algorithms
+// Name: random_shuffle
+// Function: Rearranges the elements in the range [first,last) randomly.
+// Test case: Worst case (All elements)
 #include <iostream>     // std::cout
 #include <algorithm>    // std::generate
 #include <vector>       // std::vector

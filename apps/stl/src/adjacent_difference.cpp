@@ -1,4 +1,10 @@
-// adjacent_difference algorithm
+// Parallel mode STL algorithms
+// Name: adjacent_difference
+// Function: Assigns to every element in the range starting at 
+// result the difference between its corresponding elements in 
+// the range [first,last) and the one preceding it (except for 
+// *result which is assigned *first).
+// Test case: Worst case (All elements)
 #include <stdio.h>
 #include <algorithm>
 #include <vector>

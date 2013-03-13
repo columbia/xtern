@@ -1,3 +1,7 @@
+// Parallel mode STL algorithms
+// Name: sort
+// Function: Sorts the elements in the range [first,last) into ascending order.
+// Test case: Worst case (All elements)
 #include <stdio.h>
 #include <algorithm>
 #include <vector>

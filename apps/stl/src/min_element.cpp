@@ -1,4 +1,8 @@
-// min_element algorithm example
+// Parallel mode STL algorithms
+// Name: min_element
+// Function: Returns an iterator pointing to the element with 
+// the smallest value in the range [first,last).
+// Test case: Worst case (All elements)
 #include <iostream>     // std::cout
 #include <algorithm>    // std::generate
 #include <vector>       // std::vector

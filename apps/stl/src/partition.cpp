@@ -1,4 +1,10 @@
-// partition algorithm example
+// Parallel mode STL algorithms
+// Name: partition
+// Function: Rearranges the elements from the range [first,last),
+// in such a way that all the elements for which pred returns true 
+// precede all those for which it returns false. The iterator 
+// returned points to the first element of the second group.
+// Test case: Worst case (All elements)
 #include <iostream>     // std::cout
 #include <algorithm>    // std::generate
 #include <vector>       // std::vector

@@ -1,4 +1,9 @@
-// adjacent_find algorithm
+// Parallel mode STL algorithms
+// Name: adjacent_find
+// Function: Searches the range [first,last) for the first 
+// occurrence of two consecutive elements that match, and returns an 
+// iterator to the first of these two elements, or last if no such pair is found.
+// Test case: Worst case (not found)
 #include <stdio.h>
 #include <algorithm>
 #include <vector>

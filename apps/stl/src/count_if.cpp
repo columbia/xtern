@@ -1,4 +1,8 @@
-// count_if algorithm example
+// Parallel mode STL algorithms
+// Name: count_if
+// Function: Returns the number of elements in the range [first,last) 
+// for which pred is true.
+// Test case: Worst case (All elements)
 #include <iostream>     // std::cout
 #include <algorithm>    // std::generate
 #include <vector>       // std::vector

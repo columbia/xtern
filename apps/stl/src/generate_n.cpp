@@ -1,4 +1,9 @@
-// generate algorithm example
+// Parallel mode STL algorithms
+// Name: generate_n
+// Function: Assigns the value returned by successive calls to 
+// gen to the first n elements of the sequence pointed by first.
+// Test case: Worst case (All elements)
+// Note: sequential implementation in gcc 4.5.4.
 #include <iostream>     // std::cout
 #include <algorithm>    // std::generate
 #include <vector>       // std::vector

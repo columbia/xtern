@@ -1,4 +1,9 @@
-// merge example
+// Parallel mode STL algorithms
+// Name: merge
+// Function: Combines the elements in the sorted ranges 
+// [first1,last1) and [first2,last2), into a new range 
+// beginning at result with all its elements sorted.
+// Test case: Normal case
 #include <iostream>     // std::cout
 #include <algorithm>    // std::set_union, std::sort
 #include <vector>       // std::vector

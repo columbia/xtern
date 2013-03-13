@@ -1,4 +1,9 @@
-// set_symmetric_difference example
+// Parallel mode STL algorithms
+// Name: set_symmetric_difference
+// Function: Constructs a sorted range beginning in the location 
+// pointed by result with the set symmetric difference of the two 
+// sorted ranges [first1,last1) and [first2,last2).
+// Test case: Worst case (All elements)
 #include <iostream>     // std::cout
 #include <algorithm>    // std::set_union, std::sort
 #include <vector>       // std::vector
