@@ -1,6 +1,6 @@
-diff -ruN pfscan-1.0/Makefile pfscan-1.0-modified/Makefile
+diff -ruN pfscan-1.0/Makefile pfscan-1.0-dbug/Makefile
 --- pfscan-1.0/Makefile	2002-03-25 17:51:21.000000000 -0500
-+++ pfscan-1.0-modified/Makefile	2013-02-18 21:48:36.561929316 -0500
++++ pfscan-1.0-dbug/Makefile	2013-03-16 01:14:04.020331539 -0400
 @@ -23,9 +23,9 @@
  SOL_LIBS= -lpthread -lnsl -lsocket
  
@@ -13,9 +13,9 @@ diff -ruN pfscan-1.0/Makefile pfscan-1.0-modified/Makefile
  
  
  OBJS = pfscan.o bm.o version.o pqueue.o
-diff -ruN pfscan-1.0/pfscan.c pfscan-1.0-modified/pfscan.c
---- pfscan-1.0/pfscan.c	2002-03-25 18:13:45.000000000 -0500
-+++ pfscan-1.0-modified/pfscan.c	2013-02-18 21:49:21.325927712 -0500
+diff -ruN pfscan-1.0/pfscan.c pfscan-1.0-dbug/pfscan.c
+--- pfscan-1.0/pfscan.c	2013-03-16 15:26:46.770500919 -0400
++++ pfscan-1.0-dbug/pfscan.c	2013-03-16 15:28:08.698497993 -0400
 @@ -34,7 +34,7 @@
  
  #include "pqueue.h"
@@ -25,7 +25,7 @@ diff -ruN pfscan-1.0/pfscan.c pfscan-1.0-modified/pfscan.c
  
  
  extern char version[];
-@@ -472,7 +472,9 @@
+@@ -472,16 +472,18 @@
      
      while (pqueue_get(&pqb, (void **) &path) == 1)
      {
@@ -35,16 +35,62 @@ diff -ruN pfscan-1.0/pfscan.c pfscan-1.0-modified/pfscan.c
  	free(path);
      }
  
-@@ -535,9 +537,11 @@
+     fflush(stdout);
+ 
+-    pthread_mutex_lock(&aworker_lock);
++    /*pthread_mutex_lock(&aworker_lock);
+     --aworkers;
+     pthread_mutex_unlock(&aworker_lock);
+-    pthread_cond_signal(&aworker_cv);
++    pthread_cond_signal(&aworker_cv);*/
+ 
+     return NULL;
+ }
+@@ -519,7 +521,7 @@
+     int i, j;
+     struct rlimit rlb;
+     char *arg;
+-    pthread_t tid;
++    pthread_t tid[100];
+     pthread_attr_t pab;
+     
+     
+@@ -535,9 +537,13 @@
  
      nworkers = 2;
  
 -    pthread_mutex_init(&print_lock, NULL);
      pthread_mutex_init(&aworker_lock, NULL);
++
 +    tern_non_det_start();
-+    pthread_mutex_init(&print_lock, NULL);
      pthread_mutex_init(&matches_lock, NULL);
++    pthread_mutex_init(&print_lock, NULL);
 +    tern_non_det_end();
- 
++    
+     pthread_cond_init(&aworker_cv, NULL);
+     
      for (i = 1; i < argc && argv[i][0] == '-'; i++)
- 	for (j = 1; j > 0 && argv[i][j]; ++j)
+@@ -635,7 +641,7 @@
+     aworkers = nworkers;
+     
+     for (j = 0; j < nworkers; ++j)
+-	if (pthread_create(&tid, &pab, worker, NULL) != 0)
++	if (pthread_create(&tid[j], &pab, worker, NULL) != 0)
+ 	{
+ 	    fprintf(stderr, "%s: pthread_create: failed to create worker thread\n",
+ 		    argv[0]);
+@@ -650,10 +656,12 @@
+     if (debug)
+ 	fprintf(stderr, "Waiting for workers to finish...\n");
+     
+-    pthread_mutex_lock(&aworker_lock);
++    /*pthread_mutex_lock(&aworker_lock);
+     while (aworkers > 0)
+ 	pthread_cond_wait(&aworker_cv, &aworker_lock);
+-    pthread_mutex_unlock(&aworker_lock);
++    pthread_mutex_unlock(&aworker_lock);*/
++     for (j = 0; j < nworkers; ++j)
++      pthread_join(tid[j], NULL);
+ 
+     if (debug)
+ 	fprintf(stderr, "n_files = %d, n_matches = %d, n_workers = %d, n_Mbytes = %d\n",
