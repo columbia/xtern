@@ -4,5 +4,5 @@
   <interposition path="/home/heming/rcs/smt+mc/xtern/dync_hook/interpose_mc.so"/>
 <!-- <interposition path="/home/heming/rcs/smt+mc/mc-tools/dbug/install/lib/libdbug.so"/> -->
 <!--  <program command="/home/heming/rcs/smt+mc/mc-tools/ex2"/> -->
-  <program command="/home/heming/rcs/smt+mc/xtern/apps/pfscan/pfscan  -n2 non_det_start /home/heming/rcs/smt+mc/xtern/apps/pfscan/pfscan-1.0"/>
+  <program command="/home/heming/rcs/smt+mc/xtern/apps/pfscan/pfscan  -n2 non_det_start /home/heming/rcs/smt+mc/xtern/apps/pfscan/input-dir"/>
 </config>

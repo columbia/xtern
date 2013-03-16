@@ -552,7 +552,7 @@ int RecorderRT<_S>::pthreadJoin(unsigned ins, int &error, pthread_t th, void **r
     ret = Runtime::__pthread_join(th, rv);
     _S::join(th); // This may be dangerous because current thread is not having the turn.
     _S::wakeup();
-    fprintf(stderr, "\n\nxtern::Thread %u calls pthreadJoin end, ok...\n\n\n", (unsigned)pthread_self());
+    //fprintf(stderr, "\n\nxtern::Thread %u calls pthreadJoin end, ok...\n\n\n", (unsigned)pthread_self());
     return ret;
   }
 #endif

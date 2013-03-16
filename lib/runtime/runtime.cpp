@@ -20,6 +20,14 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 
+//#define DEBUG_RUNTIME
+
+#ifdef DEBUG_RUNTIME
+#define dprintf(fmt...) fprintf(stderr, fmt);
+#else
+#define dprintf(fmt...)
+#endif
+
 #ifdef XTERN_PLUS_DBUG
 #include <dbug/interposition/stubs.h>
 #endif
@@ -51,7 +59,7 @@ using namespace std;
 void *Runtime::resolveDbugFunc(const char *func_name) {
   static void * handle;
   void * ret;
-  fprintf(stderr, "Pid %d: self %u: resolveDbugFunc %s start\n", getpid(), (unsigned)pthread_self(), func_name);
+  dprintf("Pid %d: self %u: resolveDbugFunc %s start\n", getpid(), (unsigned)pthread_self(), func_name);
   if (!handle) {
     std::string libDbugPath = getenv("SMT_MC_ROOT");
     libDbugPath += "/mc-tools/dbug/install/lib/libdbug.so";
@@ -83,7 +91,7 @@ void Runtime::initDbug() {
 
 int Runtime::__attach_self_to_dbug() {
   int ret = 0;
-  fprintf(stderr, "\nxtern::Runtime::__attach_self_to_mc pid %d thread self %u to dbug\n\n", getpid(), (unsigned)pthread_self());
+  dprintf("\nxtern::Runtime::__attach_self_to_mc pid %d thread self %u to dbug\n\n", getpid(), (unsigned)pthread_self());
   //errno = error;
   assert(!attachedToDbug);
   attachedToDbug = true;
@@ -101,7 +109,7 @@ int Runtime::__attach_self_to_dbug() {
 
 int Runtime::__detach_self_from_dbug() {
   int ret = 0;
-  fprintf(stderr, "\nxtern::Runtime::__detach_self_from_mc pid %d thread self %u from dbug\n\n", getpid(), (unsigned)pthread_self());
+  dprintf("\nxtern::Runtime::__detach_self_from_mc pid %d thread self %u from dbug\n\n", getpid(), (unsigned)pthread_self());
   //errno = error;
   assert(attachedToDbug);
   attachedToDbug = false;
@@ -857,9 +865,9 @@ int Runtime::__pthread_mutex_init(unsigned insid, int &error, pthread_mutex_t *m
   static orig_func_type orig_func;
   if (!orig_func)
     orig_func = (orig_func_type)resolveDbugFunc("pthread_mutex_init");
-  //fprintf(stdout, "Runtime::%s pid %d, self %u start %p\n", __FUNCTION__, getpid(), (unsigned)pthread_self(), (void *)mutex);
+  dprintf("Runtime::%s pid %d, self %u start %p\n", __FUNCTION__, getpid(), (unsigned)pthread_self(), (void *)mutex);
   ret = orig_func(mutex, mutexattr);
-  //fprintf(stdout, "Runtime::%s pid %d, self %u end\n", __FUNCTION__, getpid(), (unsigned)pthread_self());
+  dprintf("Runtime::%s pid %d, self %u end\n", __FUNCTION__, getpid(), (unsigned)pthread_self());
 #else
   ret = pthread_mutex_init(mutex, mutexattr);
 #endif
@@ -875,9 +883,9 @@ int Runtime::__pthread_mutex_destroy(unsigned insid, int &error, pthread_mutex_t
   static orig_func_type orig_func;
   if (!orig_func)
     orig_func = (orig_func_type)resolveDbugFunc("pthread_mutex_destroy");
-  //fprintf(stdout, "Runtime::%s pid %d, self %u start\n", __FUNCTION__, getpid(), (unsigned)pthread_self());
+  dprintf("Runtime::%s pid %d, self %u start\n", __FUNCTION__, getpid(), (unsigned)pthread_self());
   ret = orig_func(mutex);
-  //fprintf(stdout, "Runtime::%s pid %d, self %u end\n", __FUNCTION__, getpid(), (unsigned)pthread_self());
+  dprintf("Runtime::%s pid %d, self %u end\n", __FUNCTION__, getpid(), (unsigned)pthread_self());
 #else
   ret = pthread_mutex_destroy(mutex);
 #endif
@@ -893,9 +901,9 @@ int Runtime::__pthread_mutex_lock(unsigned insid, int &error, pthread_mutex_t *m
   static orig_func_type orig_func;
   if (!orig_func)
     orig_func = (orig_func_type)resolveDbugFunc("pthread_mutex_lock");
-  //fprintf(stdout, "Runtime::%s pid %d, self %u start mutex %p, ins %p\n", __FUNCTION__, getpid(), (unsigned)pthread_self(), (void *)mutex, (void *)insid);
+  dprintf("Runtime::%s pid %d, self %u start mutex %p, ins %p\n", __FUNCTION__, getpid(), (unsigned)pthread_self(), (void *)mutex, (void *)insid);
   ret = orig_func(mutex);
-  //fprintf(stdout, "Runtime::%s pid %d, self %u end\n", __FUNCTION__, getpid(), (unsigned)pthread_self());
+  dprintf("Runtime::%s pid %d, self %u end\n", __FUNCTION__, getpid(), (unsigned)pthread_self());
 #else
   ret = pthread_mutex_lock(mutex);
 #endif
@@ -911,9 +919,9 @@ int Runtime::__pthread_mutex_unlock(unsigned insid, int &error, pthread_mutex_t 
   static orig_func_type orig_func;
   if (!orig_func)
     orig_func = (orig_func_type)resolveDbugFunc("pthread_mutex_unlock");
-  //fprintf(stdout, "Runtime::%s pid %d, self %u start\n", __FUNCTION__, getpid(), (unsigned)pthread_self());
+  dprintf("Runtime::%s pid %d, self %u start\n", __FUNCTION__, getpid(), (unsigned)pthread_self());
   ret = orig_func(mutex);
-  //fprintf(stdout, "Runtime::%s pid %d, self %u end\n", __FUNCTION__, getpid(), (unsigned)pthread_self());
+  dprintf("Runtime::%s pid %d, self %u end\n", __FUNCTION__, getpid(), (unsigned)pthread_self());
 #else
   ret = pthread_mutex_unlock(mutex);
 #endif
