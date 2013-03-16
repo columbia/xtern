@@ -147,6 +147,7 @@ struct Runtime {
   // thread management
   static int __pthread_create(pthread_t *th, const pthread_attr_t *a, void *(*func)(void*), void *arg);
   static void __pthread_exit(void *value_ptr);
+  static int __pthread_join(pthread_t th, void **retval);
 
   // socket and files
   virtual int __socket(unsigned insid, int &error, int domain, int type, int protocol);
@@ -193,6 +194,7 @@ struct Runtime {
   virtual unsigned int sleep(unsigned insid, int &error, unsigned int seconds);
   virtual int usleep(unsigned insid, int &error, useconds_t usec);
   virtual int nanosleep(unsigned insid, int &error, const struct timespec *req, struct timespec *rem);
+  virtual int __sched_yield(unsigned ins, int &error);
 
 #define XDEF(op, sync, ret_type, args...)  \
   virtual ret_type __ ## op(unsigned insid, int &error, args);

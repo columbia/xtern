@@ -534,6 +534,29 @@ int RecorderRT<_S>::pthreadCreate(unsigned ins, int &error, pthread_t *thread,
 template <typename _S>
 int RecorderRT<_S>::pthreadJoin(unsigned ins, int &error, pthread_t th, void **rv) {
   int ret;
+
+#ifdef XTERN_PLUS_DBUG
+  /*
+    This is a temp hack, because currently there is conflict between the join 
+    of xtern and join of dbug. Xtern actually waits for the child thread to be 
+    dead and then proceed, and dbug actually have to pairwise both 
+    child-thread-exit and join of parent. This is conflicting.
+    So the current hack (xtern gives up the order) is just do not involve xtern but just directly move 
+    parent from runq first (because there may be non-det to wait for runq
+    to be empty), calls the real join (and jump into dbug), and then call 
+    _S::join() to clean the zombies set, and then put myself back to runq.
+  */
+  if (th != idle_th) {
+    //fprintf(stderr, "\n\nxtern::Thread %u calls pthreadJoin start...\n\n\n", (unsigned)pthread_self());
+    _S::block();
+    ret = Runtime::__pthread_join(th, rv);
+    _S::join(th); // This may be dangerous because current thread is not having the turn.
+    _S::wakeup();
+    fprintf(stderr, "\n\nxtern::Thread %u calls pthreadJoin end, ok...\n\n\n", (unsigned)pthread_self());
+    return ret;
+  }
+#endif
+
   SCHED_TIMER_START;
   // NOTE: can actually use if(!_S::zombie(th)) for DMT schedulers because
   // their wait() won't return until some thread signal().
@@ -566,7 +589,6 @@ int RecorderRT<_S>::pthreadJoin(unsigned ins, int &error, pthread_t th, void **r
   _S::join(th);
 
   SCHED_TIMER_END(syncfunc::pthread_join, (uint64_t)th);
-
   return ret;
 }
 
@@ -2257,7 +2279,10 @@ int RecorderRT<_S>::schedYield(unsigned ins, int &error)
 {
   if (options::enforce_non_det_annotations && inNonDet) {
     // Do not need to count nNonDetPthreadSync for this op.
-    return sched_yield();
+    fprintf(stderr, "non-det yield start tid %d...\n", _S::self());  
+    int ret = Runtime::__sched_yield(ins, error);
+    fprintf(stderr, "non-det yield end tid %d...\n", _S::self());  
+    return ret;
   }
   SCHED_TIMER_START;
   int ret = sched_yield();

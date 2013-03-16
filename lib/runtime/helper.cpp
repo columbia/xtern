@@ -83,6 +83,7 @@ int __tern_pthread_create(pthread_t *thread,  const pthread_attr_t *attr,
 void *idle_thread(void *)
 {
   while (true) {
+    //fprintf(stderr, "idle thread...\n");
     tern_pthread_mutex_lock(IDLE_MUTEX_INS, &idle_mutex);
     if (!idle_done) {
       tern_idle_cond_wait();

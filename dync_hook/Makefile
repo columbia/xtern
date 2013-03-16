@@ -1,4 +1,4 @@
-all: interpose.so interpose_mc.so libxtern-annot.so usermonitor
+all: interpose.so libxtern-annot.so usermonitor interpose_mc.so
 
 INC_DIRS=-I$(TERN_ROOT)/include/ -I$(XTERN_ROOT)/include/ -I$(XTERN_ROOT)/obj/include
 STD_LIBS=-lsupc++ -lpthread -lstdc++ -lrt
@@ -15,8 +15,8 @@ usermonitor: usermonitor.cpp
 xternruntime:
 	cd $(XTERN_ROOT)/obj && \
 	make ENABLE_OPTIMIZED=$(ENABLE_OPTIMIZED) clean && \
-	make ENABLE_OPTIMIZED=$(ENABLE_OPTIMIZED) && \
-	make ENABLE_OPTIMIZED=$(ENABLE_OPTIMIZED) install
+	make ENABLE_OPTIMIZED=$(ENABLE_OPTIMIZED) XTERN_PLUS_DBUG=0 && \
+	make ENABLE_OPTIMIZED=$(ENABLE_OPTIMIZED) XTERN_PLUS_DBUG=0 install
 
 xternruntime_mc:
 	cd $(XTERN_ROOT)/obj && \
@@ -28,9 +28,12 @@ interpose.so: template.cpp spec_hooks.cpp hook.cpp xternruntime
 	gcc -fPIC -rdynamic hook.cpp $(CFLAGS) -c -o interpose.o
 	gcc $(CFLAGS) -shared -Wl,-soname,interpose.so interpose.o -o interpose.so -ldl $(TERN_LIBS) $(STD_LIBS)
 
-interpose_mc.so: template.cpp spec_hooks.cpp hook.cpp xternruntime_mc
+interpose_mc.so: template.cpp spec_hooks.cpp hook.cpp xternruntime_mc 
+ifeq ($(XTERN_PLUS_DBUG),1)
 	gcc -fPIC -rdynamic hook.cpp $(CFLAGS) -c -o interpose.o
-	gcc $(CFLAGS) -shared -Wl,-soname,interpose_mc.so interpose.o -o interpose_mc.so -ldl $(TERN_LIBS) $(STD_LIBS)
+	gcc $(CFLAGS) -shared -Wl,-soname,interpose_mc.so interpose.o -o interpose_mc.so -ldl $(TERN_LIBS) $(STD_LIBS) \
+	-Wl,--rpath,$(SMT_MC_ROOT)/mc-tools/dbug/install/lib -L$(SMT_MC_ROOT)/mc-tools/dbug/install/lib -ldbug-stubs
+endif
 
 libxtern-annot.so: xtern-annot.cpp
 	gcc -fPIC -rdynamic xtern-annot.cpp $(CFLAGS) -c -o xtern-annot.o
