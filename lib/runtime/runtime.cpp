@@ -199,17 +199,19 @@ void Runtime::__pthread_exit(void *value_ptr) {
 }
 
 int Runtime::__pthread_join(pthread_t th, void **retval) {
+  int ret;
 #ifdef XTERN_PLUS_DBUG
   __attach_self_to_dbug();
   typedef int (*orig_func_type)(pthread_t, void **);
   static orig_func_type orig_func;
   if (!orig_func)
     orig_func = (orig_func_type)resolveDbugFunc("pthread_join");
-  orig_func(th, retval);
+  ret = orig_func(th, retval);
   __detach_self_from_dbug();
 #else
-  pthread_join(th, retval);
+  ret = pthread_join(th, retval);
 #endif
+  return ret;
 }
 
 int Runtime::__socket(unsigned ins, int &error, int domain, int type, int protocol)
