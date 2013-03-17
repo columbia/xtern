@@ -1592,7 +1592,7 @@ void RecorderRT<_S>::lineupEnd(long opaque_type) {
 template <typename _S>
 void RecorderRT<_S>::nonDetStart() {
   unsigned ins = 0;
-  dprintf("nonDetStart, tid %d\n", _S::self());
+  //fprintf(stderr, "nonDetStart, tid %d, self %u\n", _S::self(), (unsigned)pthread_self());
   SCHED_TIMER_START;
   if (options::record_runtime_stat)
     stat.nNonDetRegions++;
@@ -1623,7 +1623,7 @@ void RecorderRT<_S>::nonDetStart() {
 
 template <typename _S>
 void RecorderRT<_S>::nonDetEnd() {
-  dprintf("nonDetEnd, tid %d\n", _S::self());
+  //fprintf(stderr, "nonDetEnd, tid %d, self %u\n", _S::self(), (unsigned)pthread_self());
   assert(options::enforce_non_det_annotations == 1);
   inNonDet = false;
   /** At this moment current thread won't call any non-det sync op any more, so we 

@@ -125,6 +125,7 @@ int tern_pthread_mutex_init(unsigned ins, pthread_mutex_t *mutex, const pthread_
     mutexattr = &psharedm;
   }
   //ret = pthread_mutex_init(mutex, mutexattr);
+  //fprintf(stderr, "Hooks %s: pid %d, self %u start mutex %p, ins %p\n", __FUNCTION__, getpid(), (unsigned)pthread_self(), (void *)mutex, (void *)ins);
   ret = Runtime::the->pthreadMutexInit(ins, error, mutex, mutexattr);
   Space::exitSys();
   errno = error;
