@@ -343,6 +343,14 @@ void tern_non_det_end_real() {
   errno = error;
 }
 
+void tern_detach_real() {
+  int error = errno;
+  Space::enterSys();
+  Runtime::the->threadDetach();
+  Space::exitSys();
+  errno = error;
+}
+
 void tern_set_base_time_real(struct timespec *ts) {
   int error = errno;
   Space::enterSys();

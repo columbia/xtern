@@ -1642,6 +1642,13 @@ void RecorderRT<_S>::nonDetEnd() {
 }
 
 template <typename _S>
+void RecorderRT<_S>::threadDetach() {
+#ifdef XTERN_PLUS_DBUG
+  Runtime::__thread_detach();
+#endif
+}
+
+template <typename _S>
 void RecorderRT<_S>::setBaseTime(struct timespec *ts) {
   // Do not need to enforce any turn here.
   dprintf("setBaseTime, tid %d, base time %ld.%ld\n", _S::self(), (long)ts->tv_sec, (long)ts->tv_nsec);

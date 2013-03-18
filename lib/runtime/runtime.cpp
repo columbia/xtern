@@ -107,6 +107,18 @@ int Runtime::__attach_self_to_dbug() {
   return ret;
 }
 
+int Runtime::__thread_detach() {
+  dprintf("\nxtern::Runtime::__thread_detach pid %d thread self %u from dbug\n\n", getpid(), (unsigned)pthread_self());
+  //assert(attachedToDbug);
+  //attachedToDbug = false;
+  //dbug_detach();
+  typedef int (*orig_func_type)();
+  static orig_func_type orig_func;
+  if (!orig_func)
+    orig_func = (orig_func_type)resolveDbugFunc("dbug_detach");
+  orig_func();
+}
+
 int Runtime::__detach_self_from_dbug() {
   int ret = 0;
   dprintf("\nxtern::Runtime::__detach_self_from_mc pid %d thread self %u from dbug\n\n", getpid(), (unsigned)pthread_self());

@@ -69,6 +69,7 @@ struct Runtime {
   virtual void lineupEnd(long opaque_type) = 0;
   virtual void nonDetStart() = 0;
   virtual void nonDetEnd() = 0;
+  virtual void threadDetach() = 0;
   virtual void setBaseTime(struct timespec *ts) = 0;
 
   // print runtime stat.
@@ -79,8 +80,9 @@ struct Runtime {
   static void initDbug();
 
   /* Special functions to attach/detach a thread from dbug. */
-  static int __attach_self_to_dbug();
-  static int __detach_self_from_dbug();
+  static int __attach_self_to_dbug(); // dbug_on
+  static int __detach_self_from_dbug(); // dbug_off
+  static int __thread_detach(); // dbug_detach
 #endif
 
 

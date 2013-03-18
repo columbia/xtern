@@ -19,6 +19,7 @@ tar zxf $APPS_DIR/sys/gcc-$VER.tar.gz
 cd gcc-$VER
 patch -p1 < ../patch/add-xtern-annot.patch
 patch -p1 < ../patch/annot-partition-non-det.patch
+patch -p1 < ../patch/add-detach.patch
 mkdir obj
 cd obj
 CFLAGS+="$XTERN_ANNOT_LIB" ../configure \

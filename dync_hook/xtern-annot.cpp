@@ -42,6 +42,10 @@ void tern_set_base_timeval(struct timeval *tv) {
   //fprintf(stderr, "Non-deterministic tern_set_base_timeval\n");
 }
 
+void tern_detach() {
+  //fprintf(stderr, "Non-deterministic tern_detach\n");
+}
+
 #ifdef __cplusplus
 }
 #endif

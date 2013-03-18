@@ -101,4 +101,13 @@ extern "C" void tern_set_base_timeval(struct timeval *tv){
 }
 #endif
 
-
+#ifndef __SPEC_HOOK_tern_detach
+extern "C" void tern_detach(){
+#ifdef __USE_TERN_RUNTIME
+  if (Space::isApp() && options::DMT && options::enforce_annotations) {
+    tern_detach_real();
+  }
+#endif
+  // If not runnning with xtern, NOP.
+}
+#endif
