@@ -175,6 +175,7 @@ void __tern_prog_end (void) {
   //tern::Runtime::the = NULL;
 #ifdef XTERN_PLUS_DBUG
   Runtime::__attach_self_to_dbug();
+  _exit(0);// a temp hack for Hao to get stl results. If Jiri fixed this, we can remove this.
 #endif
   assert(Space::isSys() && "__tern_prog_end must end in system space");
 }
