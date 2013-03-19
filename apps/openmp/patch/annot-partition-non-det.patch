@@ -40,7 +40,7 @@
  		      --__thread_right;
  		    }
  		}
-+		tern_non_det_end();
++		tern_non_det_barrier_end(0, __num_threads);
 +		tern_lineup(1);
 +
  

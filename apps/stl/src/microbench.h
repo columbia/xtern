@@ -4,7 +4,7 @@
 
 #define SEED 1
 
-#define TINY    0xffffff
+#define TINY    0x2fff
 #define SMALL   0xfffffff
 #define MEDIUM  0x3fffffff
 #define LARGE   0xffffffff
