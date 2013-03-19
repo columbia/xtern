@@ -1610,7 +1610,7 @@ void RecorderRT<_S>::lineupEnd(long opaque_type) {
 template <typename _S>
 void RecorderRT<_S>::nonDetStart() {
   unsigned ins = 0;
-  fprintf(stderr, "nonDetStart, tid %d, self %u\n", _S::self(), (unsigned)pthread_self());
+  dprintf("nonDetStart, tid %d, self %u\n", _S::self(), (unsigned)pthread_self());
   SCHED_TIMER_START;
   if (options::record_runtime_stat)
     stat.nNonDetRegions++;
@@ -1638,12 +1638,11 @@ void RecorderRT<_S>::nonDetStart() {
   _S::block();
   assert(!inNonDet);
   inNonDet = true;
-  fprintf(stderr, "in non det true %p, %d...\n", (void *)&inNonDet, inNonDet);
 }
 
 template <typename _S>
 void RecorderRT<_S>::nonDetEnd() {
-  fprintf(stderr, "nonDetEnd, tid %d, self %u\n", _S::self(), (unsigned)pthread_self());
+  dprintf("nonDetEnd, tid %d, self %u\n", _S::self(), (unsigned)pthread_self());
   assert(options::enforce_non_det_annotations == 1);
   assert(inNonDet);
   inNonDet = false;
@@ -1671,7 +1670,7 @@ void RecorderRT<_S>::threadDetach() {
 
 template <typename _S>
 void RecorderRT<_S>::nonDetBarrierEnd(int bar_id, int cnt) {
-  fprintf(stderr, "nonDetBarrierEnd, tid %d, self %u\n", _S::self(), (unsigned)pthread_self());
+  dprintf("nonDetBarrierEnd, tid %d, self %u\n", _S::self(), (unsigned)pthread_self());
   assert(options::enforce_non_det_annotations == 1);
   assert(inNonDet);
   inNonDet = false;
@@ -2328,9 +2327,9 @@ int RecorderRT<_S>::schedYield(unsigned ins, int &error)
 {
   if (options::enforce_non_det_annotations && inNonDet) {
     // Do not need to count nNonDetPthreadSync for this op.
-    fprintf(stderr, "non-det yield start tid %d...\n", _S::self());  
+    //fprintf(stderr, "non-det yield start tid %d...\n", _S::self());  
     int ret = Runtime::__sched_yield(ins, error);
-    fprintf(stderr, "non-det yield end tid %d...\n", _S::self());  
+    //fprintf(stderr, "non-det yield end tid %d...\n", _S::self());  
     return ret;
   }
   SCHED_TIMER_START;
