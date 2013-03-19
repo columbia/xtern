@@ -1670,6 +1670,27 @@ void RecorderRT<_S>::threadDetach() {
 }
 
 template <typename _S>
+void RecorderRT<_S>::nonDetBarrierEnd(int bar_id, int cnt) {
+  fprintf(stderr, "nonDetBarrierEnd, tid %d, self %u\n", _S::self(), (unsigned)pthread_self());
+  assert(options::enforce_non_det_annotations == 1);
+  assert(inNonDet);
+  inNonDet = false;
+  /** At this moment current thread won't call any non-det sync op any more, so we
+  do not need to worry about the order between this non_det_end() and other non-det sync
+  in other threads' non-det regions, so we do not need to call the wait(NON_DET_BLOCKED)
+  as in non_det_start(). **/
+#ifdef XTERN_PLUS_DBUG
+  Runtime::__detach_barrier_end(bar_id, cnt);
+#endif
+
+  _S::wakeup(); /** Reuse existing xtern API. Put myself to wake-up queue,
+                            other threads grabbing the turn will put myself back to runq. This operation is non-
+                            determinisit since we do not get turn, but it is fine, because there is already
+                            some non-det sync ops within the region already. Note that after this point, the
+                            status of the thread is still runnable. **/
+}
+
+template <typename _S>
 void RecorderRT<_S>::setBaseTime(struct timespec *ts) {
   // Do not need to enforce any turn here.
   dprintf("setBaseTime, tid %d, base time %ld.%ld\n", _S::self(), (long)ts->tv_sec, (long)ts->tv_nsec);

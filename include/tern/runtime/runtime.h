@@ -71,6 +71,7 @@ struct Runtime {
   virtual void nonDetStart() = 0;
   virtual void nonDetEnd() = 0;
   virtual void threadDetach() = 0;
+  virtual void nonDetBarrierEnd(int bar_id, int cnt) = 0;
   virtual void setBaseTime(struct timespec *ts) = 0;
 
   // print runtime stat.
@@ -84,6 +85,7 @@ struct Runtime {
   static int __attach_self_to_dbug(); // dbug_on
   static int __detach_self_from_dbug(); // dbug_off
   static int __thread_detach(); // dbug_detach
+  static int __detach_barrier_end(int bar_id, int cnt); // dbug_barrier_off
 #endif
 
 

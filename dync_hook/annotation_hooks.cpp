@@ -111,3 +111,14 @@ extern "C" void tern_detach(){
   // If not runnning with xtern, NOP.
 }
 #endif
+
+#ifndef __SPEC_HOOK_tern_non_det_barrier_end
+extern "C" void tern_non_det_barrier_end(int bar_id, int cnt){
+#ifdef __USE_TERN_RUNTIME
+  if (Space::isApp() && options::DMT && options::enforce_annotations && options::enforce_non_det_annotations) {
+    tern_non_det_barrier_end_real(bar_id, cnt);
+  }
+#endif
+  // If not runnning with xtern, NOP.
+}
+#endif

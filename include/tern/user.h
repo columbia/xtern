@@ -32,6 +32,7 @@ extern "C" {
   void tern_non_det_start();
   void tern_non_det_end();
   void tern_detach();
+  void tern_non_det_barrier_end(int bar_id, int cnt);
 
   /// Set thread local base time. This is for pthread_cond_timedwait(), sem_timedwait() and pthread_mutex_timedlock().
   void tern_set_base_timespec(struct timespec *ts);

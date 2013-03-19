@@ -33,6 +33,7 @@ extern "C" {
   void tern_non_det_start_real();
   void tern_non_det_end_real();
   void tern_detach_real();
+  void tern_non_det_barrier_end_real(int bar_id, int cnt);
   void tern_set_base_time_real(struct timespec *ts);
 
   /// hooks tern automatically inserts.  start with the ones tern provides

@@ -119,6 +119,17 @@ int Runtime::__thread_detach() {
   orig_func();
 }
 
+int Runtime::__detach_barrier_end(int bar_id, int cnt) {
+  assert(attachedToDbug);
+  attachedToDbug = false;
+  dprintf("\nxtern::Runtime::__detach_barrier_end pid %d thread self %u from dbug\n\n", getpid(), (unsigned)pthread_self());
+  typedef int (*orig_func_type)(int, int);
+  static orig_func_type orig_func;
+  if (!orig_func)
+    orig_func = (orig_func_type)resolveDbugFunc("dbug_off_barrier");
+  orig_func(bar_id, cnt);
+}
+
 int Runtime::__detach_self_from_dbug() {
   int ret = 0;
   dprintf("\nxtern::Runtime::__detach_self_from_mc pid %d thread self %u from dbug\n\n", getpid(), (unsigned)pthread_self());

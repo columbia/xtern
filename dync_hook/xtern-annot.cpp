@@ -46,6 +46,10 @@ void tern_detach() {
   //fprintf(stderr, "Non-deterministic tern_detach\n");
 }
 
+void tern_non_det_barrier_end(int bar_id, int cnt) {
+  //fprintf(stderr, "Non-deterministic tern_non_det_barrier_end\n");
+}
+
 #ifdef __cplusplus
 }
 #endif

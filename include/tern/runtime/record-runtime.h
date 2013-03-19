@@ -92,6 +92,7 @@ struct RecorderRT: public Runtime, public _Scheduler {
   void nonDetStart();
   void nonDetEnd();
   void threadDetach();
+  void nonDetBarrierEnd(int bar_id, int cnt);
   void setBaseTime(struct timespec *ts);
   
   void symbolic(unsigned insid, int &error, void *addr, int nbytes, const char *name);
