@@ -78,6 +78,7 @@ struct RecorderRT: public Runtime, public _Scheduler {
   int pthreadBarrierDestroy(unsigned insid, int &error, pthread_barrier_t *barrier);
 
   // semaphore
+  int semInit(unsigned insid, int &error, sem_t *sem, int pshared, unsigned int value);
   int semWait(unsigned insid, int &error, sem_t *sem);
   int semTryWait(unsigned insid, int &error, sem_t *sem);
   int semTimedWait(unsigned insid, int &error, sem_t *sem, const struct timespec *abstime);

@@ -56,6 +56,7 @@ struct Runtime {
                                     pthread_barrier_t *barrier) = 0;
 
   // semaphore
+  virtual int semInit(unsigned insid, int &error, sem_t *sem, int pshared, unsigned int value) = 0;
   virtual int semWait(unsigned insid, int &error, sem_t *sem) = 0;
   virtual int semTryWait(unsigned insid, int &error, sem_t *sem) = 0;
   virtual int semTimedWait(unsigned insid, int &error, sem_t *sem,
@@ -145,6 +146,10 @@ struct Runtime {
   virtual int __sem_post(unsigned insid, int &error, sem_t *sem)
   	{ return semPost(insid, sem); }
 */
+
+  virtual int __sem_init(unsigned insid, int &error, sem_t *sem, int pshared, unsigned int value);
+  virtual int __sem_wait(unsigned insid, int &error, sem_t *sem);
+  virtual int __sem_post(unsigned insid, int &error, sem_t *sem);
 
   // thread management
   static int __pthread_create(pthread_t *th, const pthread_attr_t *a, void *(*func)(void*), void *arg);

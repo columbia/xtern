@@ -871,6 +871,60 @@ int Runtime::__settimeofday(unsigned ins, int &error, const struct timeval *tv, 
   return ret;
 }
 
+int Runtime::__sem_init(unsigned insid, int &error, sem_t *sem, int pshared, unsigned int value) {
+  errno = error;
+  int ret;
+#ifdef XTERN_PLUS_DBUG
+  typedef int (*orig_func_type)(sem_t *sem, int pshared, unsigned int value);
+  static orig_func_type orig_func;
+  if (!orig_func)
+    orig_func = (orig_func_type)resolveDbugFunc("sem_init");
+  dprintf("Runtime::%s pid %d, self %u start %p\n", __FUNCTION__, getpid(), (unsigned)pthread_self(), (void *)sem);
+  ret = orig_func(sem, pshared, value);
+  dprintf("Runtime::%s pid %d, self %u end\n", __FUNCTION__, getpid(), (unsigned)pthread_self());
+#else
+  ret = sem_init(sem, pshared, value);
+#endif
+  error = errno;
+  return ret;
+}
+
+int Runtime::__sem_wait(unsigned insid, int &error, sem_t *sem) {
+  errno = error;
+  int ret;
+#ifdef XTERN_PLUS_DBUG
+  typedef int (*orig_func_type)(sem_t *sem);
+  static orig_func_type orig_func;
+  if (!orig_func)
+    orig_func = (orig_func_type)resolveDbugFunc("sem_wait");
+  dprintf("Runtime::%s pid %d, self %u start %p\n", __FUNCTION__, getpid(), (unsigned)pthread_self(), (void *)sem);
+  ret = orig_func(sem);
+  dprintf("Runtime::%s pid %d, self %u end\n", __FUNCTION__, getpid(), (unsigned)pthread_self());
+#else
+  ret = sem_wait(sem);
+#endif
+  error = errno;
+  return ret;
+}
+
+int Runtime::__sem_post(unsigned insid, int &error, sem_t *sem) {
+  errno = error;
+  int ret;
+#ifdef XTERN_PLUS_DBUG
+  typedef int (*orig_func_type)(sem_t *sem);
+  static orig_func_type orig_func;
+  if (!orig_func)
+    orig_func = (orig_func_type)resolveDbugFunc("sem_post");
+  dprintf("Runtime::%s pid %d, self %u start %p\n", __FUNCTION__, getpid(), (unsigned)pthread_self(), (void *)sem);
+  ret = orig_func(sem);
+  dprintf("Runtime::%s pid %d, self %u end\n", __FUNCTION__, getpid(), (unsigned)pthread_self());
+#else
+  ret = sem_post(sem);
+#endif
+  error = errno;
+  return ret;
+}
+
 int Runtime::__pthread_mutex_init(unsigned insid, int &error, pthread_mutex_t *mutex, const  pthread_mutexattr_t *mutexattr) {
   errno = error;
   int ret;

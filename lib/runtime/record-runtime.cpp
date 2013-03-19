@@ -85,8 +85,8 @@ using namespace std;
 pthread_cond_t nonDetCV; /** This cond var does not actually work with other mutexes to do
                                         real cond wait and signal, it just provides a cond var addr for 
                                         _S::wait() and _S::signal(). **/
+__thread volatile bool inNonDet = false; /** Per-thread variable to denote whether current thread is within a non_det region. **/
 int nNonDetWait = 0; /** This variable is only accessed when a thread gets a turn, so it is safe. **/
-__thread bool inNonDet = false; /** Per-thread variable to denote whether current thread is within a non_det region. **/
 tr1::unordered_set<void *> nonDetSyncs; /** Global set to store the sync vars that have ever been accessed within non_det regions of all threads. **/
 pthread_spinlock_t nonDetLock; /** a spinlock to protect the acccess to the global set "nonDetSyncs". **/
 
@@ -1369,7 +1369,8 @@ int RecorderRT<_S>::semWait(unsigned ins, int &error, sem_t *sem) {
     if (options::record_runtime_stat)
       stat.nNonDetPthreadSync++;
     add_non_det_var((void *)sem);
-    return sem_wait(sem);
+    //fprintf(stderr, "non det sem wait...\n");
+    return Runtime::__sem_wait(ins, error, sem);
   }
   SCHED_TIMER_START;
   while((ret=sem_trywait(sem)) != 0) {
@@ -1459,7 +1460,7 @@ int RecorderRT<_S>::semPost(unsigned ins, int &error, sem_t *sem){
     if (options::record_runtime_stat)
       stat.nNonDetPthreadSync++;
     add_non_det_var((void *)sem);
-    return sem_post(sem);
+    return Runtime::__sem_post(ins, error, sem);
   }
   SCHED_TIMER_START;
   ret = sem_post(sem);
@@ -1467,6 +1468,23 @@ int RecorderRT<_S>::semPost(unsigned ins, int &error, sem_t *sem){
   signal(sem);
   SCHED_TIMER_END(syncfunc::sem_post, (uint64_t)sem, (uint64_t)ret);
  
+  return 0;
+}
+
+template <typename _S>
+int RecorderRT<_S>::semInit(unsigned ins, int &error, sem_t *sem, int pshared, unsigned int value){
+  int ret;
+  if (options::enforce_non_det_annotations && inNonDet) {
+    if (options::record_runtime_stat)
+      stat.nNonDetPthreadSync++;
+    add_non_det_var((void *)sem);
+    return Runtime::__sem_init(ins, error, sem, pshared, value);
+  }
+  SCHED_TIMER_START;
+  ret = sem_init(sem, pshared, value);
+  assert(!ret && "failed sync calls are not yet supported!");
+  SCHED_TIMER_END(syncfunc::sem_init, (uint64_t)sem, (uint64_t)ret);
+
   return 0;
 }
 
@@ -1592,7 +1610,7 @@ void RecorderRT<_S>::lineupEnd(long opaque_type) {
 template <typename _S>
 void RecorderRT<_S>::nonDetStart() {
   unsigned ins = 0;
-  //fprintf(stderr, "nonDetStart, tid %d, self %u\n", _S::self(), (unsigned)pthread_self());
+  fprintf(stderr, "nonDetStart, tid %d, self %u\n", _S::self(), (unsigned)pthread_self());
   SCHED_TIMER_START;
   if (options::record_runtime_stat)
     stat.nNonDetRegions++;
@@ -1618,13 +1636,16 @@ void RecorderRT<_S>::nonDetStart() {
   /** Reuse existing xtern API. Get turn, remove myself from runq, and then pass turn. This 
   operation is determinisitc since we get turn. **/
   _S::block();
+  assert(!inNonDet);
   inNonDet = true;
+  fprintf(stderr, "in non det true %p, %d...\n", (void *)&inNonDet, inNonDet);
 }
 
 template <typename _S>
 void RecorderRT<_S>::nonDetEnd() {
-  //fprintf(stderr, "nonDetEnd, tid %d, self %u\n", _S::self(), (unsigned)pthread_self());
+  fprintf(stderr, "nonDetEnd, tid %d, self %u\n", _S::self(), (unsigned)pthread_self());
   assert(options::enforce_non_det_annotations == 1);
+  assert(inNonDet);
   inNonDet = false;
   /** At this moment current thread won't call any non-det sync op any more, so we 
   do not need to worry about the order between this non_det_end() and other non-det sync

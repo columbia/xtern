@@ -255,6 +255,16 @@ int tern_pthread_barrier_destroy(unsigned ins, pthread_barrier_t *barrier) {
   return ret;
 }
 
+int tern_sem_init(unsigned ins, sem_t *sem, int pshared, unsigned int value) {
+  int error = errno;
+  int ret;
+  Space::enterSys();
+  ret = Runtime::the->semInit(ins, error, sem, pshared, value);
+  Space::exitSys();
+  errno = error;
+  return ret;
+}
+
 int tern_sem_wait(unsigned ins, sem_t *sem) {
   int error = errno;
   int ret;
