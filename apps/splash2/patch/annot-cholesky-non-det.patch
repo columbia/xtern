@@ -28,7 +28,7 @@ diff -ruN parsec-3.0-orig/ext/splash2x/kernels/cholesky/src/fo.C parsec-3.0-chol
 +  tern_lineup(0);
 +  tern_non_det_start();
      DriveParallelFO(MyNum, lc);
-+  tern_non_det_end();
++  tern_non_det_barrier_end(0, P);
 +  tern_lineup(0);
  }
  

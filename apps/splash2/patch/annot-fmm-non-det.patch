@@ -29,7 +29,7 @@ diff -ruN parsec-3.0-orig/ext/splash2x/apps/fmm/src/fmm.C parsec-3.0-modified/ex
     if (time_all)
        CLOCK(upward_end);
     PartitionIterate(my_id, ComputeInteractions, BOTTOM);
-+   tern_non_det_end();
++   tern_non_det_barrier_end(0, Number_Of_Processors);
     if (time_all)
        CLOCK(interaction_end);
     BARRIER(G_Memory->synch, Number_Of_Processors);
