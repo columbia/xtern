@@ -62,7 +62,7 @@
 +
 +c$OMP DO
 +      do iii1=1,OMP_GET_NUM_THREADS()
-+        call tern_non_det_end()
++        call tern_non_det_barrier_end(0, OMP_GET_NUM_THREADS())
 +      end do
 +c$OMP END DO NOWAIT
 +
@@ -117,7 +117,7 @@
 +
 +c$OMP DO
 +      do iii2=1,OMP_GET_NUM_THREADS()
-+        call tern_non_det_end()
++        call tern_non_det_barrier_end(1, OMP_GET_NUM_THREADS())
 +      end do
 +c$OMP END DO NOWAIT
 +
@@ -168,7 +168,7 @@
 +
 +c$OMP DO
 +      do iii3=1,OMP_GET_NUM_THREADS()
-+        call tern_non_det_end()
++        call tern_non_det_barrier_end(2, OMP_GET_NUM_THREADS())
 +      end do
 +c$OMP END DO NOWAIT
 +

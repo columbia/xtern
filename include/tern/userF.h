@@ -22,4 +22,9 @@ c----------------------------------------------------------
           subroutine tern_non_det_end() bind ( c )
               use iso_c_binding
           end subroutine tern_non_det_end
+	  subroutine tern_non_det_barrier_end(bar_id, cnt) bind ( c )
+              use iso_c_binding
+              integer(kind=c_int), VALUE :: bar_id
+              integer(kind=c_int), VALUE :: cnt
+          end subroutine tern_non_det_barrier_end
       end interface
