@@ -8,4 +8,5 @@ cd mongoose
 make linux
 mv mongoose ../mg-server
 cd $XTERN_ROOT/apps/mongoose
-ln -s $XTERN_ROOT/apps/aget
+rm -rf aget
+ln -s $XTERN_ROOT/apps/aget/aget
