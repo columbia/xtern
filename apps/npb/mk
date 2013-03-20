@@ -55,6 +55,24 @@ pushd NPB3.3.1/NPB3.3-OMP
 make suite
 popd
 
+mkdir -p NPB3.3.1/NPB3.3-OMP/bin-m
+rm -rf NPB3.3.1/NPB3.3-OMP/config/make.def
+rm -rf NPB3.3.1/NPB3.3-OMP/config/suite.def
+ln -s $XTERN_ROOT/apps/npb/make-medium.def NPB3.3.1/NPB3.3-OMP/config/make.def
+ln -s $XTERN_ROOT/apps/npb/suite-medium.def NPB3.3.1/NPB3.3-OMP/config/suite.def
+pushd NPB3.3.1/NPB3.3-OMP
+make suite
+popd
+
+mkdir -p NPB3.3.1/NPB3.3-OMP/bin-l
+rm -rf NPB3.3.1/NPB3.3-OMP/config/make.def
+rm -rf NPB3.3.1/NPB3.3-OMP/config/suite.def
+ln -s $XTERN_ROOT/apps/npb/make-large.def NPB3.3.1/NPB3.3-OMP/config/make.def
+ln -s $XTERN_ROOT/apps/npb/suite-large.def NPB3.3.1/NPB3.3-OMP/config/suite.def
+pushd NPB3.3.1/NPB3.3-OMP
+make suite
+popd
+
 rm -rf NPB3.3.1/NPB3.3-OMP/config/make.def
 ln -s $XTERN_ROOT/apps/npb/make.def NPB3.3.1/NPB3.3-OMP/config/
 rm -rf NPB3.3.1/NPB3.3-OMP/config/suite.def
@@ -64,10 +82,14 @@ make suite
 popd
 
 rm -rf ft-s mg-s sp-s lu-s bt-s is-s ep-s cg-s ua-s dc-s
+rm -rf ft-m mg-m sp-m lu-m bt-m is-m ep-m cg-m ua-m dc-m
+rm -rf ft-l mg-l sp-l lu-l bt-l is-l ep-l cg-l ua-l dc-l
 bench=( ft mg sp lu bt is ep cg ua dc )
 for i in "${bench[@]}"
 do
     ln -s NPB3.3.1/NPB3.3-OMP/bin-s/$i.?.x $i-s
+    ln -s NPB3.3.1/NPB3.3-OMP/bin-m/$i.?.x $i-m
+    ln -s NPB3.3.1/NPB3.3-OMP/bin-l/$i.?.x $i-l
 done
 
 rm -rf ft mg sp lu bt is ep cg ua dc
