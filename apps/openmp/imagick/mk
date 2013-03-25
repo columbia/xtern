@@ -35,6 +35,8 @@ patch -p1 < ../add-colorspace-xtern-annot.patch
 patch -p1 < ../add-fx-xtern-annot.patch
 patch -p1 < ../add-morph-xtern-annot.patch
 patch -p1 < ../add-shear-xtern-annot.patch
+patch -p1 < ../add-segment-xtern-annot.patch
+patch -p1 < ../add-fourier-xtern-annot.patch
 
 # compile ImageMagick
 mkdir obj
