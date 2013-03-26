@@ -1,19 +1,5 @@
-diff -ruN pbzip2-0.9.5/Makefile pbzip2-0.9.5-modified/Makefile
---- pbzip2-0.9.5/Makefile	2005-12-31 13:41:42.000000000 -0500
-+++ pbzip2-0.9.5-modified/Makefile	2013-01-20 02:10:21.690461160 -0500
-@@ -11,7 +11,8 @@
- 
- # Standard pbzip2 compile
- pbzip2: pbzip2.cpp
--	$(CC) -O3 -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64 -o pbzip2 pbzip2.cpp -pthread -lpthread -lbz2
-+	$(CC) -O3 -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64 -o pbzip2 pbzip2.cpp -pthread -lpthread -lbz2 \
-+	-g -I$(XTERN_ROOT)/include -L$(XTERN_ROOT)/dync_hook -Wl,--rpath,$(XTERN_ROOT)/dync_hook -lxtern-annot
- 
- # Choose this if you want to compile in a static version of the libbz2 library
- pbzip2-static: libbz2.a pbzip2.cpp
-diff -ruN pbzip2-0.9.5/pbzip2.cpp pbzip2-0.9.5-modified/pbzip2.cpp
 --- pbzip2-0.9.5/pbzip2.cpp	2005-12-31 13:41:42.000000000 -0500
-+++ pbzip2-0.9.5-modified/pbzip2.cpp	2013-01-20 02:18:44.610092000 -0500
++++ pbzip2-0.9.5-modified/pbzip2.cpp	2013-03-26 01:45:35.756194715 -0400
 @@ -87,6 +87,7 @@
  #include <time.h>
  #include <utime.h>
@@ -46,11 +32,12 @@ diff -ruN pbzip2-0.9.5/pbzip2.cpp pbzip2-0.9.5-modified/pbzip2.cpp
  		// compress the memory buffer (blocksize=9*100k, verbose=0, worklevel=30)
  		ret = BZ2_bzBuffToBuffCompress(CompressedData, &outSize, FileData, inSize, BWTblockSize, Verbosity, 30);
  		if (ret != BZ_OK)
-@@ -1505,6 +1509,7 @@
- 	#elif defined(_SC_NPROCESSORS_ONLN)
- 		numCPU = sysconf(_SC_NPROCESSORS_ONLN);
- 	#endif
-+	tern_lineup_init(0, numCPU, 100);
+@@ -1666,6 +1670,8 @@
+ 	}
+ 	pthread_mutex_init(MemMutex, NULL);
  
- 	// parse command line switches
- 	for (i=1; i < argc; i++)
++	tern_lineup_init(0, numCPU, 20*numCPU);
++
+ 	// create queue
+ 	fifo = queueInit(numCPU);
+ 	if (fifo == NULL)
