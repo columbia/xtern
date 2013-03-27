@@ -73,6 +73,9 @@ patch -p1 < ../patch/annot-string_match-pthread.patch
 
 # threads number
 patch -p1 < ../patch/thread_number.patch
+
+# repalce pthread_specific w/o global lock; replace semaphore with cond variable
+patch -p1 < ../patch/semaphore.patch
 make
 popd
 
