@@ -394,7 +394,7 @@ BinLogger::BinLogger(int tid) {
   fd = open(logFile, O_RDWR|O_CREAT, 0600);
   dprintf("logFile = %s\n", logFile);
   assert(fd >= 0 && "can't open log file!");
-  ftruncate(fd, LOG_SIZE);
+  assert(ftruncate(fd, LOG_SIZE) == 0);
 
   buf = NULL;
   mapLogTrunk();
@@ -408,7 +408,7 @@ BinLogger::~BinLogger() {
 
   // truncate unused portion of log
   off_t size = foff - TRUNK_SIZE + off;
-  ftruncate(fd, size);
+  assert(ftruncate(fd, size) == 0);
 
   if(fd >= 0)
     close(fd);
