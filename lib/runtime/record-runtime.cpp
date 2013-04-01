@@ -323,8 +323,8 @@ void RecorderRT<RecordSerializer>::idle_sleep(void) {
 */
 
 #define BLOCK_TIMER_START(sync_op, ...) \
-  timespec app_time, sched_block_time, syscall_time; \
-  int block_turn; \
+  timespec app_time = {0, 0}, sched_block_time = {0, 0}, syscall_time = {0, 0}; \
+  int block_turn = -1; \
   if (options::record_runtime_stat) \
     stat.nInterProcSyncOp++; \
   if (options::enforce_non_det_annotations && inNonDet) { \
