@@ -40,15 +40,6 @@ int __thread TidMap::self_tid  = -1;
 
 extern pthread_t idle_th;
 
-static bool sock_nonblock (int fd)
-{
-#ifndef __WIN32__
-  return fcntl (fd, F_SETFL, O_NONBLOCK) >= 0;
-#else
-  u_long a = 1;
-  return ioctlsocket (fd, FIONBIO, &a) >= 0;
-#endif
-}
 
 #ifdef XTERN_PLUS_DBUG
 
@@ -90,7 +81,6 @@ void Runtime::initDbug() {
 }
 
 void Runtime::__attach_self_to_dbug() {
-  int ret = 0;
   dprintf("\nxtern::Runtime::__attach_self_to_mc pid %d thread self %u to dbug\n\n", getpid(), (unsigned)pthread_self());
   //errno = error;
   assert(!attachedToDbug);
@@ -100,7 +90,7 @@ void Runtime::__attach_self_to_dbug() {
   static orig_func_type orig_func;
   if (!orig_func)
     orig_func = (orig_func_type)resolveDbugFunc("dbug_on");
-  ret = orig_func();
+  orig_func();
 }
 
 void Runtime::__thread_detach() {
@@ -127,7 +117,6 @@ void Runtime::__detach_barrier_end(int bar_id, int cnt) {
 }
 
 void Runtime::__detach_self_from_dbug() {
-  int ret = 0;
   dprintf("\nxtern::Runtime::__detach_self_from_mc pid %d thread self %u from dbug\n\n", getpid(), (unsigned)pthread_self());
   //errno = error;
   assert(attachedToDbug);
@@ -137,7 +126,17 @@ void Runtime::__detach_self_from_dbug() {
   static orig_func_type orig_func;
   if (!orig_func)
     orig_func = (orig_func_type)resolveDbugFunc("dbug_off");
-  ret = orig_func();
+  orig_func();
+}
+#else
+static bool sock_nonblock (int fd)
+{
+#ifndef __WIN32__
+  return fcntl (fd, F_SETFL, O_NONBLOCK) >= 0;
+#else
+  u_long a = 1;
+  return ioctlsocket (fd, FIONBIO, &a) >= 0;
+#endif
 }
 #endif
 
