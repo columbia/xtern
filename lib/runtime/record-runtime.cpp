@@ -172,9 +172,6 @@ void check_options()
 }
 
 void InstallRuntime() {
-//  if (options::runtime_type == "RRuntime")
-//    Runtime::the = new RRuntime();
-//  else 
   check_options();
   if (options::runtime_type == "RR")
     //Runtime::the = new RecorderRT<RRSchedulerCV>;
