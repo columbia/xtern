@@ -182,9 +182,7 @@ void InstallRuntime() {
     Runtime::the = rt;
   } else if (options::runtime_type == "FCFS") {
     Runtime::the = new RecorderRT<FCFSScheduler>;
-  }/* else if (options::runtime_type == "Replay") {
-    Runtime::the = new RecorderRT<ReplaySchedulerSem>;
-  }*/
+  }
   assert(Runtime::the && "can't create runtime!");
   clockManager = tern::ClockManager(time(NULL) * (uint64_t)1000000000);
 }

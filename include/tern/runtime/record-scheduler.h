@@ -205,51 +205,6 @@ struct SeededRRScheduler: public RRScheduler {
   void setSeed(unsigned seed);
   Random rand;
 };
-
-
-/// replay scheduler using semaphores
-struct ReplaySchedulerSem: public RecordSerializer {
-public:
-  ReplaySchedulerSem();
-  ~ReplaySchedulerSem();
-
-  /*  inherent from parent  */
-  virtual void getTurn();
-  virtual void putTurn(bool at_thread_end = false);
-  //int  wait(void *chan, unsigned timeout = Scheduler::FOREVER);
-  //void signal(void *chan, bool all=false);
-  //virtual int block(); 
-  //void wakeup();
-  //unsigned incTurnCount(void);
-  //unsigned getTurnCount(void);
-  //void childForkReturn();
-
-  typedef std::map<std::string, std::string> record_type;
-  struct record_list : public std::vector<record_type>
-  {
-    record_list()
-      : std::vector<record_type>(), pos(0) {}
-    record_type &next() { return (*this)[pos]; }
-    bool has_next() { return pos < (int) this->size(); }
-    void move_next() { ++pos; }
-    int pos;
-  };
-
-protected:
-  sem_t waits[MAX_THREAD_NUM];
-  std::vector<record_list> logdata;
-  void readrecords(FILE * fin, record_list &records);
-
-  bool wakeup_flag;
-  void check_wakeup() {}
-
-};
-
-/// replay scheduler using integer flags
-struct ReplaySchedulerFlag: public Scheduler {
-  // TODO
-};
-
 } // namespace tern
 
 #endif
