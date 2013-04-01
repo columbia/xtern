@@ -82,10 +82,10 @@ struct Runtime {
   static void initDbug();
 
   /* Special functions to attach/detach a thread from dbug. */
-  static int __attach_self_to_dbug(); // dbug_on
-  static int __detach_self_from_dbug(); // dbug_off
-  static int __thread_detach(); // dbug_detach
-  static int __detach_barrier_end(int bar_id, int cnt); // dbug_barrier_off
+  static void __attach_self_to_dbug(); // dbug_on
+  static void __detach_self_from_dbug(); // dbug_off
+  static void __thread_detach(); // dbug_detach
+  static void __detach_barrier_end(int bar_id, int cnt); // dbug_barrier_off
 #endif
 
 

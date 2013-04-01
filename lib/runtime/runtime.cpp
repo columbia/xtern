@@ -89,68 +89,55 @@ void Runtime::initDbug() {
   resolveDbugFunc("pthread_create");
 }
 
-int Runtime::__attach_self_to_dbug() {
+void Runtime::__attach_self_to_dbug() {
   int ret = 0;
   dprintf("\nxtern::Runtime::__attach_self_to_mc pid %d thread self %u to dbug\n\n", getpid(), (unsigned)pthread_self());
   //errno = error;
   assert(!attachedToDbug);
   attachedToDbug = true;
   //dbug_on();
-  typedef int (*orig_func_type)();
+  typedef void (*orig_func_type)();
   static orig_func_type orig_func;
   if (!orig_func)
     orig_func = (orig_func_type)resolveDbugFunc("dbug_on");
   ret = orig_func();
-  //assert(false);
-  //ret = pthread_getconcurrency();
-  //error = errno;
-  return ret;
 }
 
-int Runtime::__thread_detach() {
+void Runtime::__thread_detach() {
   dprintf("\nxtern::Runtime::__thread_detach pid %d thread self %u from dbug\n\n", getpid(), (unsigned)pthread_self());
   //assert(attachedToDbug);
   //attachedToDbug = false;
   //dbug_detach();
-  typedef int (*orig_func_type)();
+  typedef void (*orig_func_type)();
   static orig_func_type orig_func;
   if (!orig_func)
     orig_func = (orig_func_type)resolveDbugFunc("dbug_detach");
   orig_func();
 }
 
-int Runtime::__detach_barrier_end(int bar_id, int cnt) {
+void Runtime::__detach_barrier_end(int bar_id, int cnt) {
   assert(attachedToDbug);
   attachedToDbug = false;
   dprintf("\nxtern::Runtime::__detach_barrier_end pid %d thread self %u from dbug\n\n", getpid(), (unsigned)pthread_self());
-  typedef int (*orig_func_type)(int, int);
+  typedef void (*orig_func_type)(int, int);
   static orig_func_type orig_func;
   if (!orig_func)
     orig_func = (orig_func_type)resolveDbugFunc("dbug_off_barrier");
   orig_func(bar_id, cnt);
 }
 
-int Runtime::__detach_self_from_dbug() {
+void Runtime::__detach_self_from_dbug() {
   int ret = 0;
   dprintf("\nxtern::Runtime::__detach_self_from_mc pid %d thread self %u from dbug\n\n", getpid(), (unsigned)pthread_self());
   //errno = error;
   assert(attachedToDbug);
   attachedToDbug = false;
   //dbug_off();
-  typedef int (*orig_func_type)();
+  typedef void (*orig_func_type)();
   static orig_func_type orig_func;
   if (!orig_func)
     orig_func = (orig_func_type)resolveDbugFunc("dbug_off");
   ret = orig_func();
-  /*typedef int (*orig_func_type)(int new_level);
-  static orig_func_type orig_func;
-  if (!orig_func)
-    orig_func = (orig_func_type)resolveDbugFunc("pthread_setconcurrency");
-  ret = orig_func(0);*/
-  //assert(false);
-  //ret = pthread_setconcurrency(0);
-  //error = errno;
-  return ret;  
 }
 #endif
 
