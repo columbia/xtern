@@ -44,29 +44,6 @@ extern int nNonDetWait;
 extern pthread_cond_t nonDetCV;
 
 
-void SeededRRScheduler::setSeed(unsigned seed)
-{
-  rand.srand(seed);
-}
-
-void SeededRRScheduler::reorderRunq(void)
-{
-  // find next thread using @rand.  complexity is O(runq.size()), but
-  // shouldn't matter much anyway as the number of threads is small
-  assert(!runq.empty());
-  int i = rand.rand(runq.size()-1);
-  assert(i >=0 && i < (int)runq.size() && "rand.rand() off bound");
-  dprintf("SeededRRScheduler: reorder runq so %d is the front (size %d)\n",
-          i, (int)runq.size());
-  run_queue::iterator it = runq.begin();
-  while(i--) ++it;
-  assert(it != runq.end());
-  int tid = *it;
-  assert(tid >=0 && tid < Scheduler::nthread);
-  runq.erase(it); // NOTE: this invalidates iterator @it!
-  runq.push_front(tid);
-}
-
 void RRScheduler::wait_t::wait() {
   if (options::enforce_turn_type == 1) {  // Semaphore relay.
     sem_wait(&sem);
@@ -581,93 +558,5 @@ bool RRScheduler::tryPutTurn() {
     pthread_spin_unlock(&cur->spin_lock);
   }
   return false;
-}
-
-
-void FCFSScheduler::getTurn() {  
-  pthread_mutex_lock(&fcfs_lock);
-  //  fake
-  runq.push_front(self());
-}
-
-void FCFSScheduler::putTurn(bool at_thread_end) {  
-  int tid = self();
-  assert(runq.size() && runq.front() == tid);
-
-  if(at_thread_end) 
-  {
-    signal((void*)pthread_self());
-    Parent::zombify(pthread_self());
-  }
-
-  next(at_thread_end);
-}
-
-FCFSScheduler::FCFSScheduler()
-  : RRScheduler()
-{  
-  pthread_mutex_init(&fcfs_lock, NULL);
-
-  assert(self() == MainThreadTid && "tid hasn't been initialized!");
-  sem_init(&waits[MainThreadTid].sem, 0, 0);  //  clear it
-}
-
-FCFSScheduler::~FCFSScheduler() {  
-  pthread_mutex_destroy(&fcfs_lock);
-}
-
-void FCFSScheduler::next(bool at_thread_end, bool hasPoppedFront)
-{
-  int tid = self();
-  assert(runq.size() && runq.front() == tid);
-  runq.pop_front();
-  pthread_mutex_unlock(&fcfs_lock);
-}
-
-void FCFSScheduler::signal(void *chan, bool all)
-{
-  list<int>::iterator prv, cur;
-
-  assert(chan && "can't signal/broadcast NULL");
-  assert(self() == runq.front());
-  dprintf("RRScheduler: %d: %s %p\n",
-          self(), (all?"broadcast":"signal"), chan);
-
-  // use delete-safe way of iterating the list in case @all is true
-  for(cur=waitq.begin(); cur!=waitq.end();) {
-    prv = cur ++;
-
-    int tid = *prv;
-    assert(tid >=0 && tid < Scheduler::nthread);
-    if(waits[tid].chan == chan) {
-      dprintf("RRScheduler: %d signals %d(%p)\n", self(), tid, chan);
-      waits[tid].reset();
-      waitq.erase(prv);
-      //runq.push_back(tid);
-
-      sem_post(&waits[tid].sem); //  added for FCFSScheduler
-      if(!all)
-        break;
-    }
-  }
-  SELFCHECK;
-}
-
-int FCFSScheduler::wait(void *chan, unsigned nturn)
-{
-  incTurnCount();
-  int tid = self();
-  assert(tid>=0 && tid < Scheduler::nthread);
-  assert(tid == runq.front());
-  waits[tid].chan = chan;
-  waits[tid].timeout = nturn;
-  waitq.push_back(tid);
-
-  next();
-
-  sem_wait(&waits[tid].sem); // added from RRScheduler's wait()
-
-  getTurn();
-  return waits[tid].status;
 }
 

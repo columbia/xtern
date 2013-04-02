@@ -172,16 +172,7 @@ void check_options()
 
 void InstallRuntime() {
   check_options();
-  if (options::runtime_type == "RR")
-    Runtime::the = new RecorderRT<RRScheduler>;
-  else if (options::runtime_type == "SeededRR") {
-    RecorderRT<SeededRRScheduler> *rt = new RecorderRT<SeededRRScheduler>;
-    static_cast<SeededRRScheduler*>(rt)->setSeed(options::scheduler_seed);
-    Runtime::the = rt;
-  } else if (options::runtime_type == "FCFS") {
-    Runtime::the = new RecorderRT<FCFSScheduler>;
-  }
-  assert(Runtime::the && "can't create runtime!");
+  Runtime::the = new RecorderRT<RRScheduler>;
   clockManager = tern::ClockManager(time(NULL) * (uint64_t)1000000000);
 }
 
