@@ -117,7 +117,6 @@ struct RRScheduler: public Scheduler {
   RRScheduler();
   ~RRScheduler();
 
-  void detect_blocking_threads();
 protected:
 
   /// timeout threads on @waitq
@@ -148,11 +147,6 @@ protected:
   // MAYBE: can use a thread-local wait struct for each thread if it
   // improves performance
   wait_t waits[MAX_THREAD_NUM];
-
-  //  for monitor
-  pthread_t monitor_th;
-  int timer;
-  int timemark[MAX_THREAD_NUM];
 
   //  for inter-process operation wakeup
   typedef std::tr1::unordered_set<int> tid_set;

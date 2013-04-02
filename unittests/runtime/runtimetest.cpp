@@ -4,7 +4,7 @@
 using namespace tern;
 
 TEST(runtime, single_thread) {
-  RecorderRT<FCFSScheduler> fcfsRT;
-  RecorderRT<RRSchedulerCV> rrcvRT;
+  //RecorderRT<FCFSScheduler> fcfsRT;
+  //RecorderRT<RRSchedulerCV> rrcvRT;
   // TODO: unit test cases
 }

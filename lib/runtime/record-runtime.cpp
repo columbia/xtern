@@ -48,7 +48,6 @@
 #include "tern/space.h"
 #include "tern/options.h"
 #include "tern/hooks.h"
-#include "tern/runtime/monitor.h"
 
 #include <fstream>
 #include <map>
@@ -174,7 +173,6 @@ void check_options()
 void InstallRuntime() {
   check_options();
   if (options::runtime_type == "RR")
-    //Runtime::the = new RecorderRT<RRSchedulerCV>;
     Runtime::the = new RecorderRT<RRScheduler>;
   else if (options::runtime_type == "SeededRR") {
     RecorderRT<SeededRRScheduler> *rt = new RecorderRT<SeededRRScheduler>;

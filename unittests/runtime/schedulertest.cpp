@@ -4,7 +4,7 @@
 using namespace tern;
 
 TEST(scheduler, single_thread) {
-  FCFSScheduler fcfs(pthread_self());
-  RRSchedulerCV rrcv(pthread_self());
+  //FCFSScheduler fcfs(pthread_self());
+  //RRSchedulerCV rrcv(pthread_self());
   // TODO: unit test cases
 }

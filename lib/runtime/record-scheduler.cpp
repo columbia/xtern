@@ -34,20 +34,6 @@ using namespace tern;
 #  define dprintf(fmt...) ;
 #endif
 
-#if 1
-#define RRSchedulerCV RRScheduler
-extern int idle_done;
-static void *monitor(void *arg)
-{
-  RRSchedulerCV * sched = (RRSchedulerCV*) arg;
-  while (!idle_done)
-  {
-    usleep(options::RR_skip_threshold * 1000);
-    //dprintf( "checking zombie\n");
-    sched->detect_blocking_threads();
-  }
-  return 0;
-}
 
 extern pthread_mutex_t idle_mutex;
 extern pthread_cond_t idle_cond;
@@ -57,108 +43,6 @@ extern ClockManager clockManager;
 extern int nNonDetWait;
 extern pthread_cond_t nonDetCV;
 
-void RRSchedulerCV::detect_blocking_threads(void)
-{
-/*
- *  Each thread will update its timemark whenever getTurn or wakeup from wait,
- *  so that the value of timemark can be used to determine whether a thread has
- *  been in zombie state for a while.
- *
- *  If a thread is in zombie state, we simply skip its turn for once.
- */
-
-#ifdef RRSchedulerCV
-  //  we are using RRScheduler
-  //  RRScheduler uses semaphore to pass turns. This algorithm is basically like
-  //  a global token passing algorithm. What we do in the monitor is trying to 
-  //  grab the global token, check liveness and repeat.
-
-  int tid = -1;
-#if 0
-  //  the first solution is to check the list front, which is not thread safe,
-  //  but is efficient.
-  if (runq.size() && !sem_trywait(&waits[runq.front()].sem))
-    tid = runq.front();
-#else
-  //  the second solution is to check all semaphore and grab the global token 
-  //  if possible.
-  int nt = nthread;
-  for (int i = 0; i < nt; ++i)
-    if (!sem_trywait(&waits[i].sem))
-    {
-      tid = i;
-      break;
-    }
-#endif
-
-  dprintf( "checking blocking threads\n");
-  if (tid < 0)
-  {
-    dprintf( "checking blocking threads: first thread %d is enabled, so return\n",
-      runq.size() ? runq.front() : -1);
-    ++timer;
-    return;
-  }
-
-  //  from this point, it should be thread safe, as we've grabbed the global token.
-  assert(runq.size() && runq.front() == tid);
-  int n = runq.size();
-  bool find_live = false;
-  while (runq.size() && n-- && !find_live)
-  {
-    int t = runq.front();
-    if (timemark[t] >= 0 && timemark[t] < timer)
-    {
-      //  this means the thread enters user space before the previous check point. 
-      //  put it another way, the thread didn't come back in the threshold. 
-
-      //  so we skip it.
-      runq.pop_front();
-      runq.push_back(t);
-      dprintf( "checking blocking threads: skip thread %d\n", t);
-    } else
-      find_live = true; //   this thread is either live or unknown.
-  }
-
-  if (!find_live) 
-  {
-    dprintf( "WARNING: all threads are blocked!!\n");
-  }
-  dprintf( "checking blocking threads: continue on thread %d\n", runq.front());
-  sem_post(&waits[runq.front()].sem);
-
-  ++timer;
-
-#else
-  pthread_mutex_lock(&lock);
-  int n = runq.size() ;
-
-  if (n > 0)
-  {
-    ++n;
-    while (n--)
-    {
-      int tid = runq.front();
-      if (timemark[tid] == timer || timemark[tid] == -1)
-        break;
-      runq.pop_front();
-      runq.push_back(tid);
-      dprintf( "we skipped %d\n", tid);
-      SELFCHECK;
-    }
-  }
-  ++timer;
-
-  if(!runq.empty()) {
-    int tid = runq.front();
-    pthread_cond_signal(&waitcv[tid]);
-  }
-  pthread_mutex_unlock(&lock);
-#endif
-
-}
-#undef RRSchedulerCV
-#endif
 
 void SeededRRScheduler::setSeed(unsigned seed)
 {
@@ -385,7 +269,6 @@ void RRScheduler::getTurn()
 {
   int tid = self();
   assert(tid>=0 && tid < Scheduler::nthread);
-  timemark[tid] = -1;  //  back to system space
   waits[tid].wait();
   dprintf("RRScheduler: %d gets turn\n", self());
   SELFCHECK;
@@ -419,8 +302,6 @@ void RRScheduler::putTurn(bool at_thread_end)
   assert(tid>=0 && tid < Scheduler::nthread);
   assert(tid == runq.front());
   bool hasPoppedFront = false;
-
-  timemark[tid] = timer;  //  return to user space at "timer"
 
   if(at_thread_end) {
     signal((void*)pthread_self());
@@ -458,8 +339,6 @@ int RRScheduler::wait(void *chan, unsigned nturn)
   dprintf("RRScheduler: %d waits on (%p, %u)\n", tid, chan, nturn);
 
   next();
-
-  timemark[tid] = -1; //  It's always ready to proceed when back to runq.
 
   getTurn();
   return waits[tid].status;
@@ -531,14 +410,6 @@ RRScheduler::RRScheduler()
   inter_pro_wakeup_tids.clear();
   inter_pro_wakeup_flag = 0;
   pthread_mutex_init(&inter_pro_wakeup_mutex, NULL);
-
-  if (options::RR_skip_zombie)
-  {
-    timer = 0;
-    memset(timemark, 0, sizeof(timemark));
-    pthread_create(&monitor_th, NULL, monitor, this);
-  } else
-    monitor_th = 0;
 }
 
 void RRScheduler::selfcheck(void)
