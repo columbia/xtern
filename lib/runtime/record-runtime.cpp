@@ -107,9 +107,6 @@ bool is_non_det_var(void *var) {
   return ret;*/
 }
 
-/// clockmanager
-tern::ClockManager clockManager(time(NULL) * (uint64_t)1000000000);
-
 namespace tern {
 
 extern "C" {
@@ -173,7 +170,6 @@ void check_options()
 void InstallRuntime() {
   check_options();
   Runtime::the = new RecorderRT<RRScheduler>;
-  clockManager = tern::ClockManager(time(NULL) * (uint64_t)1000000000);
 }
 
 template <typename _S>
@@ -246,46 +242,13 @@ void RecorderRT<_S>::progEnd(void) {
  */
 template <typename _S>
 void RecorderRT<_S>::idle_sleep(void) {
-/*  if (options::runtime_type == "Replay")
-  {
-    _S::getTurn();
-    _S::putTurn();
-    return;
-  } */
-
-#if 0
-  assert(false && "fix the codes following");
-#else
   _S::getTurn();
   int turn = _S::incTurnCount();
   assert(turn >= 0);
   timespec ts;
   if (options::log_sync)
     Logger::the->logSync(0, syncfunc::tern_idle, turn, ts, ts, ts, true);
-
-/*  while (_S::runq.size() == 1 && _S::waitq.empty())
-  {
-    if (_S::wakeup_flag)
-    {
-      _S::check_wakeup();
-      clockManager.reset_rclock();
-
-      //  check_wakeup sometimes won't wake up any thread because of 
-      //  options::wakeup_period. Use the folowing break to avoid deadlock
-      break;
-
-    } else
-      ::usleep(1);
-  } 
-  if (_S::runq.size() == 1)
-  {
-    if (!options::epoch_mode)
-      ::usleep(1);  //  in epoch_mode, delay is added by clockManager
-    _S::incTurnCount();  //  TODO fix the convertion rate
-  } */ 
   _S::putTurn();
-
-#endif
 }
 
 template <typename _S>
@@ -823,17 +786,13 @@ int RecorderRT<_S>::pthreadMutexTimedLock(unsigned ins, int &error, pthread_mute
     return pthreadMutexLock(ins, error, mu);
 
   timespec cur_time, rel_time;
-  if (options::epoch_mode)
-    ClockManager::getClock(cur_time, clockManager.clock);
-  else {
-    if (my_base_time.tv_sec == 0) {
-      fprintf(stderr, "WARN: pthread_mutex_timedlock has a non-det timeout. \
-      Please use it with tern_set_base_timespec().\n");
-      clock_gettime(CLOCK_REALTIME, &cur_time);
-    } else {
-      cur_time.tv_sec = my_base_time.tv_sec;
-      cur_time.tv_nsec = my_base_time.tv_nsec;
-    }
+  if (my_base_time.tv_sec == 0) {
+    fprintf(stderr, "WARN: pthread_mutex_timedlock has a non-det timeout. \
+    Please use it with tern_set_base_timespec().\n");
+    clock_gettime(CLOCK_REALTIME, &cur_time);
+  } else {
+    cur_time.tv_sec = my_base_time.tv_sec;
+    cur_time.tv_nsec = my_base_time.tv_nsec;
   }
   rel_time = time_diff(cur_time, *abstime);
 
@@ -1270,17 +1229,13 @@ int RecorderRT<_S>::pthreadCondTimedWait(unsigned ins, int &error,
     return pthreadCondWait(ins, error, cv, mu);
 
   timespec cur_time, rel_time;
-  if (options::epoch_mode)
-    ClockManager::getClock(cur_time, clockManager.clock);
-  else {
-    if (my_base_time.tv_sec == 0) {
-      fprintf(stderr, "WARN: pthread_cond_timedwait has a non-det timeout. \
-      Please add tern_set_base_timespec().\n");
-      clock_gettime(CLOCK_REALTIME, &cur_time);
-    } else {
-      cur_time.tv_sec = my_base_time.tv_sec;
-      cur_time.tv_nsec = my_base_time.tv_nsec;
-    }
+  if (my_base_time.tv_sec == 0) {
+    fprintf(stderr, "WARN: pthread_cond_timedwait has a non-det timeout. \
+    Please add tern_set_base_timespec().\n");
+    clock_gettime(CLOCK_REALTIME, &cur_time);
+  } else {
+    cur_time.tv_sec = my_base_time.tv_sec;
+    cur_time.tv_nsec = my_base_time.tv_nsec;
   }
   rel_time = time_diff(cur_time, *abstime);
 
@@ -1397,17 +1352,13 @@ int RecorderRT<_S>::semTimedWait(unsigned ins, int &error, sem_t *sem,
     return semWait(ins, error, sem);
 
   timespec cur_time, rel_time;
-  if (options::epoch_mode)
-    ClockManager::getClock(cur_time, clockManager.clock);
-  else {
-    if (my_base_time.tv_sec == 0) {
-      fprintf(stderr, "WARN: sem_timedwait has a non-det timeout. \
-      Please add tern_set_base_timespec().\n");
-      clock_gettime(CLOCK_REALTIME, &cur_time);
-    } else {
-      cur_time.tv_sec = my_base_time.tv_sec;
-      cur_time.tv_nsec = my_base_time.tv_nsec;
-    }
+  if (my_base_time.tv_sec == 0) {
+    fprintf(stderr, "WARN: sem_timedwait has a non-det timeout. \
+    Please add tern_set_base_timespec().\n");
+    clock_gettime(CLOCK_REALTIME, &cur_time);
+  } else {
+    cur_time.tv_sec = my_base_time.tv_sec;
+    cur_time.tv_nsec = my_base_time.tv_nsec;
   }
   rel_time = time_diff(cur_time, *abstime);
   
@@ -2110,96 +2061,18 @@ ssize_t RecorderRT<_S>::__pwrite(unsigned ins, int &error, int fd, const void *b
 template <typename _S>
 int RecorderRT<_S>::__select(unsigned ins, int &error, int nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds, struct timeval *timeout)
 {
-  int wt = 0;
-  if (timeout && options::schedule_network && options::runtime_type == "RR")
-  {
-    uint64_t next = ClockManager::getTick(*timeout);
-    //uint64_t c = clockManager.clock;
-    wt = time2turn(next);
-  }
-
   BLOCK_TIMER_START(select, ins, error, nfds, readfds, writefds, exceptfds, timeout);
-
-  if (timeout && options::schedule_network && options::runtime_type == "RR" && options::adjust_timeout_for_vc)
-  {
-    uint64_t tick = ClockManager::getTick(*timeout);
-    tick = clockManager.adjust_timeout(tick);
-    clockManager.getClock(*timeout, tick);
-  }
-#if 0
-  struct timespec now; 
-  clock_gettime(CLOCK_REALTIME, &now);
-  uint64_t old_tick = clockManager.clock;
-  uint64_t old_rclock = ClockManager::getTick(now);
-  int old_turn = _S::getTurnCount();
-  fprintf(stderr, "starting select at %ld, %d\n", ClockManager::getTick(now), _S::getTurnCount());
-#endif
   int ret = Runtime::__select(ins, error, nfds, readfds, writefds, exceptfds, timeout);
-#if 0
-  clock_gettime(CLOCK_REALTIME, &now);
-  fprintf(stderr, "finishing select at %ld, %d, clockmanager_diff = %ld, turn_diff = %d\n", 
-    ClockManager::getTick(now) - old_rclock, _S::getTurnCount(), clockManager.clock - old_tick, _S::getTurnCount() - old_turn);
-  fprintf(stderr, "current clock = %ld\n", ClockManager::getTick(now));
-  fprintf(stderr, "clockManager.next_clock = %ld\n", clockManager.next_rclock);
-  fprintf(stderr, "return from blocking function at turn %d\n", _S::getTurnCount());
-#endif
   BLOCK_TIMER_END(syncfunc::select, (uint64_t) ret);
-
-  //  enforce determinism in RR if it times out.
-  if (!ret && options::schedule_network && options::runtime_type == "RR")
-  {
-    //  timeout happens
-    _S::getTurn();
-    assert(timeout && "NULL timeout indicates infinite waiting time");
-    int extra = time2turn(options::blocked_timeout_delay * 1000);
-    int deadline = block_turn + wt + extra;
-
-    dprintf(stderr, "block_turn = %d, exit turn = %d, deadline = %d\n", 
-      block_turn, _S::getTurnCount(), deadline);
-    assert((uint64_t) _S::getTurnCount() < (uint64_t) deadline && "virtual time must not elapse faster than the real time");
-    dprintf(stderr, "return from blocking function, delay until turn %d, block_turn = %d, wt = %d, extra = %d\n", 
-      deadline, block_turn, wt, extra);
-    _S::wait(NULL, deadline);
-    _S::putTurn();
-  }
   return ret;
 }
 
 template <typename _S>
 int RecorderRT<_S>::__epoll_wait(unsigned ins, int &error, int epfd, struct epoll_event *events, int maxevents, int timeout)
 {  
-  int wt = 0;
-  if (timeout >= 0 && options::schedule_network && options::runtime_type == "RR")
-  {
-    //  timeout is measured in milliseconds
-    uint64_t next = (uint64_t) timeout * 1000000;
-    wt = time2turn(next);
-  }
-
   BLOCK_TIMER_START(epoll_wait, ins, error, epfd, events, maxevents, timeout);
-  if (timeout && options::schedule_network && options::runtime_type == "RR" && options::adjust_timeout_for_vc)
-  {
-    uint64_t tick = (uint64_t) timeout * 1000000;
-    tick = clockManager.adjust_timeout(tick);
-    timeout = tick / 1000000;
-  }
   int ret = Runtime::__epoll_wait(ins, error, epfd, events, maxevents, timeout);
   BLOCK_TIMER_END(syncfunc::epoll_wait, (uint64_t) ret);
-
-  //  enforce determinism in RR if it times out.
-  if (!ret && options::schedule_network && options::runtime_type == "RR")
-  {
-    //  timeout happens
-    _S::getTurn();
-    assert(timeout >= 0 && "NULL timeout indicates infinite waiting time");
-    int extra = time2turn(options::blocked_timeout_delay * 1000);
-    int deadline = block_turn + wt + extra;
-
-    assert((uint64_t) _S::getTurnCount() < (uint64_t) deadline && "virtual time must not elapse faster than the real time");
-    _S::wait(NULL, deadline);
-    _S::putTurn();
-  }
-
   return ret;
 }
 
@@ -2453,51 +2326,19 @@ int RecorderRT<RecordSerializer>::nanosleep(unsigned ins, int &error,
 template <typename _S>
 time_t RecorderRT<_S>::__time(unsigned ins, int &error, time_t *t)
 {
-  if (!options::epoch_mode || options::runtime_type != "RR")
-    return Runtime::__time(ins, error, t);
-  _S::getTurn();
-  errno = error;
-  time_t ret;
-  uint64_t c = clockManager.clock;
-  ClockManager::getClock(ret, c);
-  if (t) *t = ret;
-  error = errno;
-  _S::putTurn();
-  return ret;
+  return Runtime::__time(ins, error, t);
 }
 
 template <typename _S>
 int RecorderRT<_S>::__clock_getres(unsigned ins, int &error, clockid_t clk_id, struct timespec *res)
 {
-  if (!options::epoch_mode || options::runtime_type != "RR")
-    return Runtime::__clock_getres(ins, error, clk_id, res);
-  errno = error;
-  //int ret = ::clock_getres(clk_id, res);
-  if (res)
-  {
-    //  the worst precision (resolution) is as much as epoch length
-    uint64_t c = clockManager.epochLength;
-    ClockManager::getClock(*res, c);
-  }
-  error = errno;
-  return 0;
+  return Runtime::__clock_getres(ins, error, clk_id, res);
 }
 
 template <typename _S>
 int RecorderRT<_S>::__clock_gettime(unsigned ins, int &error, clockid_t clk_id, struct timespec *tp)
 {
-  if (!options::epoch_mode || options::runtime_type != "RR")
-    return Runtime::__clock_gettime(ins, error, clk_id, tp);
-  _S::getTurn();
-  errno = error;
-  if (tp)
-  {
-    uint64_t c = clockManager.clock;
-    ClockManager::getClock(*tp, c);
-  }
-  error = errno;
-  _S::putTurn();
-  return 0;
+  return Runtime::__clock_gettime(ins, error, clk_id, tp);
 }
 
 template <typename _S>
@@ -2515,19 +2356,7 @@ int RecorderRT<_S>::__clock_settime(unsigned ins, int &error, clockid_t clk_id, 
 template <typename _S>
 int RecorderRT<_S>::__gettimeofday(unsigned ins, int &error, struct timeval *tv, struct timezone *tz)
 {
-  if (!options::epoch_mode || options::runtime_type != "RR")
-    return Runtime::__gettimeofday(ins, error, tv, tz);
-  _S::getTurn();
-  errno = error;
-  gettimeofday(tv, tz); //  call native function to obtain tz
-  if (tv)
-  {
-    uint64_t c = clockManager.clock;
-    ClockManager::getClock(*tv, c);
-  }
-  error = errno;
-  _S::putTurn();
-  return 0;
+  return Runtime::__gettimeofday(ins, error, tv, tz);
 }
 
 template <typename _S>

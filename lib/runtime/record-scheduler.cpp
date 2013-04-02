@@ -38,7 +38,6 @@ using namespace tern;
 extern pthread_mutex_t idle_mutex;
 extern pthread_cond_t idle_cond;
 extern int idle_done;
-extern ClockManager clockManager;
 
 extern int nNonDetWait;
 extern pthread_cond_t nonDetCV;
@@ -357,7 +356,6 @@ unsigned RRScheduler::incTurnCount(void)
   unsigned ret = Serializer::incTurnCount();
   fireTimeouts();
   check_wakeup();
-  clockManager.tick();
   return ret;
 }
 
