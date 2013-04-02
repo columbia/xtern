@@ -2,7 +2,6 @@
 // Refactored from Heming's Memoizer code
 
 #include "tern/runtime/record-scheduler.h"
-#include "tern/runtime/clockmanager.h"
 #include <iostream>
 #include <fstream>
 #include <iterator>

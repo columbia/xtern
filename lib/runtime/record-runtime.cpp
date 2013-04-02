@@ -39,7 +39,6 @@
 #include <errno.h>
 #include <poll.h>
 #include <sched.h>
-#include "tern/runtime/clockmanager.h"
 #include "tern/runtime/record-log.h"
 #include "tern/runtime/record-runtime.h"
 #include "tern/runtime/record-scheduler.h"
@@ -155,10 +154,6 @@ void check_options()
   if (!options::DMT)
     fprintf(stderr, "WARNING: DMT mode is off. The system won't enter scheduler in "
     "LD_PRELOAD mode!!\n");
-  if (options::epoch_mode && options::nanosec_per_turn != options::epoch_length * 1000)
-    fprintf(stderr, "ERROR: epoch_length and nano_sec_per_turn are inconsistent");
-  if (options::RR_skip_zombie && options::schedule_network)
-    fprintf(stderr, "WARNING: skip_zombie and schedule_network are both on!\n");
   if (!options::RR_ignore_rw_regular_file)
     fprintf(stderr, "WARNING: RR_ignore_rw_regular_file is off, and so we can have "
       "non-determinism on regular file I/O!!\n");
@@ -273,22 +268,13 @@ void RecorderRT<RecordSerializer>::idle_sleep(void) {
 */
 
 #define BLOCK_TIMER_START(sync_op, ...) \
-  timespec app_time = {0, 0}, sched_block_time = {0, 0}, syscall_time = {0, 0}; \
-  int block_turn = -1; \
   if (options::record_runtime_stat) \
     stat.nInterProcSyncOp++; \
   if (options::enforce_non_det_annotations && inNonDet) { \
     return Runtime::__##sync_op(__VA_ARGS__); \
   } \
-  if (options::schedule_network) { \
-    app_time = update_time(); \
-    block_turn = _S::block(); \
-    assert(block_turn >= 0); \
-    sched_block_time = update_time(); \
-  } else { \
-    if (_S::interProStart()) { \
-      _S::block(); \
-    } \
+  if (_S::interProStart()) { \
+    _S::block(); \
   }
 // At this moment, since self-thread is ahead of the run queue, so this block() should be very fast.
 // TBD: do we need logging here? We can, but not sure whether we need to do this.
@@ -296,28 +282,8 @@ void RecorderRT<RecordSerializer>::idle_sleep(void) {
 
 #define BLOCK_TIMER_END(syncop, ...) \
   int backup_errno = errno; \
-  if (options::schedule_network) { \
-    syscall_time = update_time(); \
+  if (_S::interProEnd()) { \
     _S::wakeup(); \
-    timespec sched_wakeup_time = update_time(); \
-    timespec sched_time = { \
-      sched_wakeup_time.tv_sec + sched_block_time.tv_sec, \
-      sched_wakeup_time.tv_nsec + sched_block_time.tv_nsec \
-      }; \
-    if (options::log_sync) \
-      Logger::the->logSync(ins, (syncop), block_turn, app_time, syscall_time, sched_time, false, __VA_ARGS__); \
-    _S::getTurn(); \
-    int second_turn = _S::incTurnCount(); \
-    _S::putTurn(); \
-    memset(&app_time, 0, sizeof(app_time)); \
-    memset(&syscall_time, 0, sizeof(syscall_time)); \
-    sched_time = update_time();  \
-    if (options::log_sync) \
-      Logger::the->logSync(ins, (syncop), second_turn, app_time, syscall_time, sched_time, true, __VA_ARGS__); \
-  } else { \
-    if (_S::interProEnd()) { \
-      _S::wakeup(); \
-    } \
   } \
   errno = backup_errno;
 
@@ -1919,16 +1885,6 @@ int RecorderRT<_S>::__connect(unsigned ins, int &error, int sockfd, const struct
   return ret;
 }
 
-static uint64_t hash(const char *buffer, int len)
-{
-  uint64_t ret = 0; 
-  if (options::log_sync) {
-    for (int i = 0; i < len; ++i)
-      ret = ret * 103 + (int) buffer[i];
-  }
-  return ret;
-}
-
 template <typename _S>
 ssize_t RecorderRT<_S>::__send(unsigned ins, int &error, int sockfd, const void *buf, size_t len, int flags)
 {
@@ -1937,8 +1893,7 @@ ssize_t RecorderRT<_S>::__send(unsigned ins, int &error, int sockfd, const void 
     explore non-deterministic order. */
   BLOCK_TIMER_START(send, ins, error, sockfd, buf, len, flags);
   int ret = Runtime::__send(ins, error, sockfd, buf, len, flags);
-  uint64_t sig = hash((char*)buf, len); 
-  BLOCK_TIMER_END(syncfunc::send, (uint64_t) sig, (uint64_t) ret);
+  BLOCK_TIMER_END(syncfunc::send, (uint64_t) ret);
   return ret;
 }
 
@@ -1947,8 +1902,7 @@ ssize_t RecorderRT<_S>::__sendto(unsigned ins, int &error, int sockfd, const voi
 {
   BLOCK_TIMER_START(sendto, ins, error, sockfd, buf, len, flags, dest_addr, addrlen);
   int ret = Runtime::__sendto(ins, error, sockfd, buf, len, flags, dest_addr, addrlen);
-  uint64_t sig = hash((char*)buf, len); 
-  BLOCK_TIMER_END(syncfunc::sendto, (uint64_t) sig, (uint64_t) ret);
+  BLOCK_TIMER_END(syncfunc::sendto, (uint64_t) ret);
   return ret;
 }
 
@@ -1957,8 +1911,7 @@ ssize_t RecorderRT<_S>::__sendmsg(unsigned ins, int &error, int sockfd, const st
 {
   BLOCK_TIMER_START(sendmsg, ins, error, sockfd, msg, flags);
   int ret = Runtime::__sendmsg(ins, error, sockfd, msg, flags);
-  uint64_t sig = hash((char*)msg, sizeof(struct msghdr)); 
-  BLOCK_TIMER_END(syncfunc::sendmsg, (uint64_t) sig, (uint64_t) ret);
+  BLOCK_TIMER_END(syncfunc::sendmsg, (uint64_t) ret);
   return ret;
 }
 
@@ -1967,8 +1920,7 @@ ssize_t RecorderRT<_S>::__recv(unsigned ins, int &error, int sockfd, void *buf, 
 {
   BLOCK_TIMER_START(recv, ins, error, sockfd, buf, len, flags);
   ssize_t ret = Runtime::__recv(ins, error, sockfd, buf, len, flags);
-  uint64_t sig = hash((char*)buf, len); 
-  BLOCK_TIMER_END(syncfunc::recv, (uint64_t) sig, (uint64_t) ret);
+  BLOCK_TIMER_END(syncfunc::recv, (uint64_t) ret);
   return ret;
 }
 
@@ -1977,8 +1929,7 @@ ssize_t RecorderRT<_S>::__recvfrom(unsigned ins, int &error, int sockfd, void *b
 {
   BLOCK_TIMER_START(recvfrom, ins, error, sockfd, buf, len, flags, src_addr, addrlen);
   ssize_t ret = Runtime::__recvfrom(ins, error, sockfd, buf, len, flags, src_addr, addrlen);
-  uint64_t sig = hash((char*)buf, len); 
-  BLOCK_TIMER_END(syncfunc::recvfrom, (uint64_t) sig, (uint64_t) ret);
+  BLOCK_TIMER_END(syncfunc::recvfrom, (uint64_t) ret);
   return ret;
 }
 
@@ -1987,8 +1938,7 @@ ssize_t RecorderRT<_S>::__recvmsg(unsigned ins, int &error, int sockfd, struct m
 {
   BLOCK_TIMER_START(recvmsg, ins, error, sockfd, msg, flags);
   ssize_t ret = Runtime::__recvmsg(ins, error, sockfd, msg, flags);
-  uint64_t sig = hash((char*)msg, sizeof(struct msghdr)); 
-  BLOCK_TIMER_END(syncfunc::recvmsg, (uint64_t) sig, (uint64_t) ret);
+  BLOCK_TIMER_END(syncfunc::recvmsg, (uint64_t) ret);
   return ret;
 }
 
@@ -2002,8 +1952,7 @@ ssize_t RecorderRT<_S>::__read(unsigned ins, int &error, int fd, void *buf, size
   // Second, handle inter-process IO.
   BLOCK_TIMER_START(read, ins, error, fd, buf, count);
   ssize_t ret = Runtime::__read(ins, error, fd, buf, count);
-  uint64_t sig = hash((char*)buf, count); 
-  BLOCK_TIMER_END(syncfunc::read, (uint64_t) sig, (uint64_t) fd, (uint64_t) ret);
+  BLOCK_TIMER_END(syncfunc::read, (uint64_t) fd, (uint64_t) ret);
   return ret;
 }
 
@@ -2023,8 +1972,7 @@ ssize_t RecorderRT<_S>::__write(unsigned ins, int &error, int fd, const void *bu
   BLOCK_TIMER_START(write, ins, error, fd, buf, count);
   dprintf("RecorderRT<_S>::__write handles inter-process file %d\n", fd);
   ssize_t ret = Runtime::__write(ins, error, fd, buf, count);
-  uint64_t sig = hash((char*)buf, count); 
-  BLOCK_TIMER_END(syncfunc::write, (uint64_t) sig, (uint64_t) fd, (uint64_t) ret);
+  BLOCK_TIMER_END(syncfunc::write, (uint64_t) fd, (uint64_t) ret);
   return ret;
 }
 
@@ -2038,8 +1986,7 @@ ssize_t RecorderRT<_S>::__pread(unsigned ins, int &error, int fd, void *buf, siz
   // Second, handle inter-process IO.
   BLOCK_TIMER_START(pread, ins, error, fd, buf, count, offset);
   ssize_t ret = Runtime::__pread(ins, error, fd, buf, count, offset);
-  uint64_t sig = hash((char*)buf, count); 
-  BLOCK_TIMER_END(syncfunc::pread, (uint64_t) sig, (uint64_t) fd, (uint64_t) ret);
+  BLOCK_TIMER_END(syncfunc::pread, (uint64_t) fd, (uint64_t) ret);
   return ret;
 }
 
@@ -2053,8 +2000,7 @@ ssize_t RecorderRT<_S>::__pwrite(unsigned ins, int &error, int fd, const void *b
   // Second, handle inter-process IO.
   BLOCK_TIMER_START(pwrite, ins, error, fd, buf, count, offset);
   ssize_t ret = Runtime::__pwrite(ins, error, fd, buf, count, offset);
-  uint64_t sig = hash((char*)buf, count); 
-  BLOCK_TIMER_END(syncfunc::pwrite, (uint64_t) sig, (uint64_t) fd, (uint64_t) ret);
+  BLOCK_TIMER_END(syncfunc::pwrite, (uint64_t) fd, (uint64_t) ret);
   return ret;
 }
 
@@ -2344,13 +2290,7 @@ int RecorderRT<_S>::__clock_gettime(unsigned ins, int &error, clockid_t clk_id, 
 template <typename _S>
 int RecorderRT<_S>::__clock_settime(unsigned ins, int &error, clockid_t clk_id, const struct timespec *tp)
 {
-  if (!options::epoch_mode || options::runtime_type != "RR")
-    return Runtime::__clock_settime(ins, error, clk_id, tp);
-  assert(0 && "clock_settime is not allowd in epoch mode");
-  errno = error;
-  int ret = ::clock_settime(clk_id, tp);
-  error = errno;
-  return ret;
+  return Runtime::__clock_settime(ins, error, clk_id, tp);
 }
 
 template <typename _S>
@@ -2362,13 +2302,7 @@ int RecorderRT<_S>::__gettimeofday(unsigned ins, int &error, struct timeval *tv,
 template <typename _S>
 int RecorderRT<_S>::__settimeofday(unsigned ins, int &error, const struct timeval *tv, const struct timezone *tz)
 {
-  if (!options::epoch_mode || options::runtime_type != "RR")
-    return Runtime::__settimeofday(ins, error, tv, tz);
-  assert(0 && "settimeofday is not allowd in epoch mode");
-  errno = error;
-  int ret = ::settimeofday(tv, tz);
-  error = errno;
-  return ret;
+  return Runtime::__settimeofday(ins, error, tv, tz);
 }
 
 template <typename _S>
