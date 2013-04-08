@@ -116,7 +116,7 @@ void Runtime::__detach_barrier_end(int bar_id, int cnt) {
   orig_func(bar_id, cnt);
 }
 
-void Runtime::__detach_self_from_dbug() {
+void Runtime::__detach_self_from_dbug() { 
   dprintf("\nxtern::Runtime::__detach_self_from_mc pid %d thread self %u from dbug\n\n", getpid(), (unsigned)pthread_self());
   //errno = error;
   assert(attachedToDbug);

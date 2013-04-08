@@ -7,28 +7,17 @@ TERN_LIBS=-L$(XTERN_ROOT)/install/lib/ -lruntime -lcommon
 CFLAGS= -g $(INC_DIRS)
 CXXFLAGS= -g $(INC_DIRS)
 PREFIX=LD_PRELOAD=$(XTERN_ROOT)/dync_hook/interpose.so
-#PREFIX=
 
 usermonitor: usermonitor.cpp
 	g++ usermonitor.cpp -o usermonitor
 
-xternruntime:
-	cd $(XTERN_ROOT)/obj && \
-	make ENABLE_OPTIMIZED=$(ENABLE_OPTIMIZED) clean && \
-	make ENABLE_OPTIMIZED=$(ENABLE_OPTIMIZED) XTERN_PLUS_DBUG=0 && \
-	make ENABLE_OPTIMIZED=$(ENABLE_OPTIMIZED) XTERN_PLUS_DBUG=0 install
-
-xternruntime_mc:
-	cd $(XTERN_ROOT)/obj && \
-	make ENABLE_OPTIMIZED=$(ENABLE_OPTIMIZED) clean && \
-	make ENABLE_OPTIMIZED=$(ENABLE_OPTIMIZED) XTERN_PLUS_DBUG=1 && \
-	make ENABLE_OPTIMIZED=$(ENABLE_OPTIMIZED) XTERN_PLUS_DBUG=1 install
-
-interpose.so: template.cpp spec_hooks.cpp hook.cpp xternruntime
+interpose.so: template.cpp spec_hooks.cpp hook.cpp
+ifeq ($(XTERN_PLUS_DBUG),0)
 	gcc -fPIC -rdynamic hook.cpp $(CFLAGS) -c -o interpose.o
 	gcc $(CFLAGS) -shared -Wl,-soname,interpose.so interpose.o -o interpose.so -ldl $(TERN_LIBS) $(STD_LIBS)
+endif
 
-interpose_mc.so: template.cpp spec_hooks.cpp hook.cpp xternruntime_mc 
+interpose_mc.so: template.cpp spec_hooks.cpp hook.cpp
 ifeq ($(XTERN_PLUS_DBUG),1)
 	gcc -fPIC -rdynamic hook.cpp $(CFLAGS) -c -o interpose.o
 	gcc $(CFLAGS) -shared -Wl,-soname,interpose_mc.so interpose.o -o interpose_mc.so -ldl $(TERN_LIBS) $(STD_LIBS) \
