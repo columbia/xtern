@@ -195,12 +195,12 @@ cmds = '''
 // a deadlock
 
 // test RR scheduler
-// RUN: env TERN_OPTIONS=runtime_type=RR:set_mutex_errorcheck=1:dync_geteip=0:RR_skip_zombie=0:log_type=test:exec_sleep=0:output_dir=%t2.outdir:epoch_mode=0:sync_global_clock=0:enforce_turn_type=1 LD_PRELOAD=$XTERN_ROOT/dync_hook/interpose.so  ./%t4 | FileCheck %s
-// RUN: env TERN_OPTIONS=runtime_type=RR:set_mutex_errorcheck=1:dync_geteip=0:RR_skip_zombie=0:log_type=test:exec_sleep=0:output_dir=%t2.outdir:epoch_mode=0:sync_global_clock=0:enforce_turn_type=1  LD_PRELOAD=$XTERN_ROOT/dync_hook/interpose.so  ./%t4 ScheduleCheck
+// RUN: env TERN_OPTIONS=set_mutex_errorcheck=1:dync_geteip=0:log_type=test:exec_sleep=0:output_dir=%t2.outdir:enforce_turn_type=1:log_sync=1:dync_geteip=1  LD_PRELOAD=$XTERN_ROOT/dync_hook/interpose.so  ./%t4 | FileCheck %s
+// RUN: env TERN_OPTIONS=set_mutex_errorcheck=1:dync_geteip=0:log_type=test:exec_sleep=0:output_dir=%t2.outdir:enforce_turn_type=1:log_sync=1:dync_geteip=1  LD_PRELOAD=$XTERN_ROOT/dync_hook/interpose.so  ./%t4 ScheduleCheck
 
-// test RR scheduler in epoch_mode
-// RUN: env TERN_OPTIONS=runtime_type=RR:set_mutex_errorcheck=1:dync_geteip=0:RR_skip_zombie=0:log_type=test:exec_sleep=0:output_dir=%t2.outdir:nanosec_per_turn=100000:epoch_mode=0:epoch_length=100:enforce_turn_type=1  LD_PRELOAD=$XTERN_ROOT/dync_hook/interpose.so  ./%t4 | FileCheck %s
-// RUN: env TERN_OPTIONS=runtime_type=RR:set_mutex_errorcheck=1:dync_geteip=0:RR_skip_zombie=0:log_type=test:exec_sleep=0:output_dir=%t2.outdir:nanosec_per_turn=100000:epoch_mode=0:epoch_length=100:enforce_turn_type=1  LD_PRELOAD=$XTERN_ROOT/dync_hook/interpose.so  ./%t4 ScheduleCheck
+// test RR scheduler
+// RUN: env TERN_OPTIONS=set_mutex_errorcheck=1:dync_geteip=0:log_type=test:exec_sleep=0:output_dir=%t2.outdir:nanosec_per_turn=100000:enforce_turn_type=1:log_sync=1:dync_geteip=1  LD_PRELOAD=$XTERN_ROOT/dync_hook/interpose.so  ./%t4 | FileCheck %s
+// RUN: env TERN_OPTIONS=set_mutex_errorcheck=1:dync_geteip=0:log_type=test:exec_sleep=0:output_dir=%t2.outdir:nanosec_per_turn=100000:enforce_turn_type=1:log_sync=1:dync_geteip=1  LD_PRELOAD=$XTERN_ROOT/dync_hook/interpose.so  ./%t4 ScheduleCheck
 '''
 
 if os.getenv('test_dync_only') != None :
@@ -211,13 +211,13 @@ if os.getenv('test_dync_only') != None :
 // NOTE: do not use dync_geteip as the lock used by backtrace() may cause
 // a deadlock
 
-// test RR scheduler in epoch_mode
-// RUN: env TERN_OPTIONS=runtime_type=RR:set_mutex_errorcheck=1:dync_geteip=0:RR_skip_zombie=0:log_type=test:exec_sleep=0:output_dir=%t2.outdir:nanosec_per_turn=100000:epoch_mode=0:epoch_length=100:enforce_turn_type=1  LD_PRELOAD=$XTERN_ROOT/dync_hook/interpose.so  ./%t4 | FileCheck %s
-// RUN: env TERN_OPTIONS=runtime_type=RR:set_mutex_errorcheck=1:dync_geteip=0:RR_skip_zombie=0:log_type=test:exec_sleep=0:output_dir=%t2.outdir:nanosec_per_turn=100000:epoch_mode=0:epoch_length=100:enforce_turn_type=1  LD_PRELOAD=$XTERN_ROOT/dync_hook/interpose.so  ./%t4 ScheduleCheck
+// test RR scheduler
+// RUN: env TERN_OPTIONS=set_mutex_errorcheck=1:dync_geteip=0:log_type=test:exec_sleep=0:output_dir=%t2.outdir:nanosec_per_turn=100000:enforce_turn_type=1:log_sync=1:dync_geteip=1  LD_PRELOAD=$XTERN_ROOT/dync_hook/interpose.so  ./%t4 | FileCheck %s
+// RUN: env TERN_OPTIONS=set_mutex_errorcheck=1:dync_geteip=0:log_type=test:exec_sleep=0:output_dir=%t2.outdir:nanosec_per_turn=100000:enforce_turn_type=1:log_sync=1:dync_geteip=1  LD_PRELOAD=$XTERN_ROOT/dync_hook/interpose.so  ./%t4 ScheduleCheck
 
 // test RR scheduler
-// RUN: env TERN_OPTIONS=runtime_type=RR:set_mutex_errorcheck=1:dync_geteip=0:RR_skip_zombie=0:log_type=test:exec_sleep=0:output_dir=%t2.outdir:enforce_turn_type=1  LD_PRELOAD=$XTERN_ROOT/dync_hook/interpose.so  ./%t4 | FileCheck %s
-// RUN: env TERN_OPTIONS=runtime_type=RR:set_mutex_errorcheck=1:dync_geteip=0:RR_skip_zombie=0:log_type=test:exec_sleep=0:output_dir=%t2.outdir:enforce_turn_type=1  LD_PRELOAD=$XTERN_ROOT/dync_hook/interpose.so  ./%t4 ScheduleCheck
+// RUN: env TERN_OPTIONS=set_mutex_errorcheck=1:dync_geteip=0:log_type=test:exec_sleep=0:output_dir=%t2.outdir:enforce_turn_type=1:log_sync=1:dync_geteip=1  LD_PRELOAD=$XTERN_ROOT/dync_hook/interpose.so  ./%t4 | FileCheck %s
+// RUN: env TERN_OPTIONS=set_mutex_errorcheck=1:dync_geteip=0:log_type=test:exec_sleep=0:output_dir=%t2.outdir:enforce_turn_type=1:log_sync=1:dync_geteip=1  LD_PRELOAD=$XTERN_ROOT/dync_hook/interpose.so  ./%t4 ScheduleCheck
 '''
 
 for cmd in cmds.splitlines():

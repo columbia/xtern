@@ -157,9 +157,6 @@ void check_options()
   if (!options::RR_ignore_rw_regular_file)
     fprintf(stderr, "WARNING: RR_ignore_rw_regular_file is off, and so we can have "
       "non-determinism on regular file I/O!!\n");
-  if (options::blocked_timeout_delay < 1000)
-    fprintf(stderr, "WARNING: blocked_timeout_delay is less than one milisecond, so we "
-      "might have non-deterministic timing when blocking function returns timeout.\n"); 
 }
 
 void InstallRuntime() {
@@ -477,7 +474,8 @@ int RecorderRT<_S>::pthreadJoin(unsigned ins, int &error, pthread_t th, void **r
     wait((void*)th);
   errno = error;
 
-  if(options::pthread_tryjoin) {
+  ret = pthread_join(th, rv);
+  /*if(options::pthread_tryjoin) {
     // FIXME: sometimes a child process gets stuck in
     // pthread_join(idle_th, NULL) in __tern_prog_end(), perhaps because
     // idle_th has become zombie and since the program is exiting, the
@@ -495,7 +493,7 @@ int RecorderRT<_S>::pthreadJoin(unsigned ins, int &error, pthread_t th, void **r
     }
   } else {
     ret = pthread_join(th, rv);
-  }
+  }*/
 
   error = errno;
   assert(!ret && "failed sync calls are not yet supported!");
