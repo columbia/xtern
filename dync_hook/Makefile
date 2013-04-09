@@ -7,12 +7,15 @@ TERN_LIBS=-L$(XTERN_ROOT)/install/lib/ -lruntime -lcommon
 CFLAGS= -g $(INC_DIRS)
 CXXFLAGS= -g $(INC_DIRS)
 PREFIX=LD_PRELOAD=$(XTERN_ROOT)/dync_hook/interpose.so
+ifndef $(XTERN_PLUS_DBUG)
+	XTERN_PLUS_DBUG=0
+endif
 
 usermonitor: usermonitor.cpp
 	g++ usermonitor.cpp -o usermonitor
 
 interpose.so: template.cpp spec_hooks.cpp hook.cpp
-ifeq ($(XTERN_PLUS_DBUG),0)
+ifneq ($(XTERN_PLUS_DBUG),1)
 	gcc -fPIC -rdynamic hook.cpp $(CFLAGS) -c -o interpose.o
 	gcc $(CFLAGS) -shared -Wl,-soname,interpose.so interpose.o -o interpose.so -ldl $(TERN_LIBS) $(STD_LIBS)
 endif

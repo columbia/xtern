@@ -1,54 +1,56 @@
-Typical (and recommended) systems configuration for xtern
+Typical (and recommended) systems configuration for Parrot (a.k.a., xtern)
 ================
 Hardware: we have tried both 4-core and 24-core machines with 64 bits.
 OS: Ubuntu 11.10.
-Gcc: 4.5.4 (you may avoid lots of potential compilation troubles if you choose this version).
+Gcc: 4.5.4 (please use this gcc version if possible, because other modules
+such as llvm work with this version, but not gcc-4.6).
 
 
-Installing xtern
+Installing Parrot (xtern)
 ================
 
 0. Add $XTERN_ROOT (the absolute path of "xtern") into environment variables
-in your ~/.bashrc. Run "echo $XTERN_ROOT" to make sure it is correct.
+in your ~/.bashrc. Run "echo $XTERN_ROOT" and "echo $LD_LIBRARY_PATH"
+to make sure they are correct.
+export XTERN_ROOT=the absolute path of "smt+mc/xtern"
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$XTERN_ROOT/dync_hook
 
-1. Go to directory $XTERN_ROOT, and run:
+1. Build llvm. Go to directory $XTERN_ROOT, and run:
 > cd $XTERN_ROOT
 > sudo apt-get install dejagnu flex bison
 > ./llvm/build-llvm.sh --optimized
-You may need to install bison and flex on your machine because llvm needs them.
 The "--optimized" flag above is optional, if you are getting performance results,
 then you need this flag; if you are developing and need debug symbols,
 then you don't need this flag. If you have specified this "--optimized" flag,
 you need to specify "ENABLE_OPTIMIZED=1" in the following steps, otherwise 
 specify "ENABLE_OPTIMIZED=0". This LLVM compilation is only one way work,
 later if you check out a newer version of xtern, you do not need to rerun this,
-you only need to redo the Step 4 below.
+you only need to redo the Step 3 below.
 
-2. Create $XTERN_ROOT/obj, go to obj.
-
-3. Do config as following. that's because xtern uses LLVM makefile.common:
+2. Config. that's because xtern uses LLVM makefile.common:
+> cd $XTERN_ROOT
+> mkdir -p obj
+> cd obj
 > ./../configure --with-llvmsrc=$XTERN_ROOT/llvm/llvm-2.7/ \
   --with-llvmobj=$XTERN_ROOT/llvm/llvm-obj/ \
   --with-llvmgccdir=$XTERN_ROOT/llvm/install/bin/ \
   --prefix=$XTERN_ROOT/install
 
-4. Make. Every time after you 'git pull' xtern, you should go to this directory and make it.
-> cd $XTERN_ROOT/dync_hook
-> make clean
-> make ENABLE_OPTIMIZED=0/1
+3. Make. Every time after you 'git pull' xtern, you should go to this directory and make it.
+Please always run "make clean" first, and then "make install", and then
+"make dync_hook", as show below.
+> cd $XTERN_ROOT/obj
+> make ENABLE_OPTIMIZED=0 clean && make ENABLE_OPTIMIZED=0 install && make ENABLE_OPTIMIZED=0 dync_hook
 
-5. Append $XTERN_ROOT/dync_hook to your LD_LIBRARY_PATH in your ~/.bashrc.
-Run "echo $LD_LIBRARY_PATH" to make sure it is correct.
-> export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$XTERN_ROOT/dync_hook
-
-6. Go to $XTERN_ROOT/eva/rand-intercept and run 'make'.
-
-7. Test, if it all passes, then everything has been installed correctly.
+4. Test. It may take a few minutes. If it all passes, then everything has been installed correctly.
 This step may take a few minutes, depending on hardware speed.
 > cd $XTERN_ROOT/obj
 > make ENABLE_OPTIMIZED=0/1 -C test check
 
-8. Run an application with xtern.
+
+Running Parrot (xtern)
+================
+1. Run an application with xtern.
 Normally each app directory should contain a "mk" (build the x86 of the app),
 a "run" (run the app with both xtern and original non-deterministic execution),
 and a "chk-run" (run the app with the dbug tool only).
@@ -63,15 +65,29 @@ When you run an app with xtern, by default it will first find a
 this local file, if this file does not exist, xtern will be run with (default)
 options specified in the "$XTERN_ROOT/default.options" file.
 
-9. How to run the xtern evaluation framework. You can skip this step unless you 
+2. How to run the xtern evaluation framework. You can skip this step unless you 
 want to get a comprehensive performance overhead of xtern over all its benchmarks.
-> go to each $XTERN_ROOT/apps/* directory and run "./mk", like the Step 8 above.
+Let's use the phoenix benchmark suite as an example:
+> cd $XTERN_ROOT/apps/phoenix/
+> ./mk
 > cd $XTERN_ROOT/eval/
-> ./eval.py xtern.cfg
+> ./eval.py phoenix-standard.cfg
 > find . -name stats.txt
 Then you will see a bunch of these "stats.txt" files containing overhead of
 xtern over non-det execution and maybe other stats info.
+There are a number of *-standard.cfg files in $XTERN_ROOT/eval/, and they
+are the standard inputs which generate the performance overhead of xtern
+in our submitted paper. There are other *.cfg in that directory as well, and 
+they are for other purposes (different workloads, model checking, etc).
+The *.cfg files define all inputs for all the benchmarks, and the format
+of a cfg is pretty clean, explicit and easy to use.
 
+3. Performance hints.
+> cd $XTERN_ROOT/apps/
+> find . -name *annot*.patch
+For example, the $XTERN_ROOT/apps/openmp/patch/add-xtern-annot.patch
+file is the generic performance hints that benefit all OpenMP programs in 
+our benchmarks.
 
 
 Testsuite (xtern/test)
