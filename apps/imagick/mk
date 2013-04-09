@@ -7,11 +7,6 @@ if [ ! -d $XTERN_ROOT ]; then
     exit 1
 fi
 
-if [ ! -d $APPS_DIR ]; then
-	echo '$APPS_DIR not defined, do `export APPS_DIR=`'
-	exit 1
-fi
-
 VER=6.8.0-4
 
 echo -e "\nPlease make sure you have run the 'mk' in $XTERN_ROOT/apps/openmp before you build imagick.\n"
