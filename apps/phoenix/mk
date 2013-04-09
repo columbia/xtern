@@ -39,7 +39,7 @@ md5sum -c md5check.txt
 
 # clean up
 rm -rf phoenix-2.0.0
-tar zxf $APPS_DIR/sys/phoenix-2.0.0.tar.gz
+tar zxf phoenix-2.0.0.tar.gz
 
 # patch && make
 pushd phoenix-2.0.0

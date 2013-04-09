@@ -1,10 +1,5 @@
 #!/bin/bash
 
-if [ "$APPS_DIR" = "" ]; then
-	echo '$APPS_DIR not defined, do `export APPS_DIR=`'
-	exit 1
-fi
-
 VER=1.1
 cd $XTERN_ROOT/apps/mplayer
 rm -rf MPlayer-$VER install mencoder
