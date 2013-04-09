@@ -72,7 +72,7 @@ Let's use the phoenix benchmark suite as an example:
 > ./mk
 > cd $XTERN_ROOT/eval/
 > ./eval.py phoenix-standard.cfg
-> find . -name stats.txt
+> find ./current -name stats.txt
 Then you will see a bunch of these "stats.txt" files containing overhead of
 xtern over non-det execution and maybe other stats info.
 There are a number of *-standard.cfg files in $XTERN_ROOT/eval/, and they
