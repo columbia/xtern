@@ -2,11 +2,9 @@ all: interpose.so libxtern-annot.so usermonitor interpose_mc.so
 
 INC_DIRS=-I$(TERN_ROOT)/include/ -I$(XTERN_ROOT)/include/ -I$(XTERN_ROOT)/obj/include
 STD_LIBS=-lsupc++ -lpthread -lstdc++ -lrt
-FLAG=`date +%F\#%T`
 TERN_LIBS=-L$(XTERN_ROOT)/install/lib/ -lruntime -lcommon
 CFLAGS= -g $(INC_DIRS)
 CXXFLAGS= -g $(INC_DIRS)
-PREFIX=LD_PRELOAD=$(XTERN_ROOT)/dync_hook/interpose.so
 
 interpose.so: template.cpp spec_hooks.cpp hook.cpp
 ifeq ($(XTERN_PLUS_DBUG),0)
