@@ -10,14 +10,8 @@ if [ ! -d $XTERN_ROOT ]; then
 	exit 1
 fi
 
-if [ ! -d $APPS_DIR ]; then
-    echo "APPS_DIR is not defiend"
-    exit 1
-fi
-
-if [ ! -f $APPS_DIR/sys/NPB3.3.1.tar.gz ]; then
-    echo "please update \$APPS_DIR"
-    exit 1
+if [ ! -f NPB3.3.1.tar.gz ]; then
+    wget http://www.cs.columbia.edu/~heming/release/NPB3.3.1.tar.gz
 fi
 
 if [ ! -f $XTERN_ROOT/apps/openmp/install/bin/gfortran ]; then
@@ -29,7 +23,7 @@ pushd $XTERN_ROOT/apps/npb/
 
 # clean up
 rm -rf NPB3.3.1
-tar zxf $APPS_DIR/sys/NPB3.3.1.tar.gz
+tar zxvf NPB3.3.1.tar.gz
 
 pushd NPB3.3.1/NPB3.3-OMP
 if [ "$ARCH" == "x86_64" ]; then

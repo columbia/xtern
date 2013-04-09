@@ -9,7 +9,10 @@
 VER=0.4.1
 cd $XTERN_ROOT/apps/aget
 rm -rf aget-$VER 
-tar zxvf $APPS_DIR/sys/aget-$VER.tar.gz
+if [ ! -f aget-$VER.tar.gz ]; then
+    wget http://www.enderunix.org/aget/aget-$VER.tar.gz
+fi
+tar zxvf aget-$VER.tar.gz
 cd aget-$VER
 #patch -p1 < ../for-dbug-1.patch
 patch -p1 < ../fix-off-by-one.patch

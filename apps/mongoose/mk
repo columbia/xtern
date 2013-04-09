@@ -3,7 +3,10 @@
 VER=3.6
 cd $XTERN_ROOT/apps/mongoose
 rm -rf mongoose out
-tar zxvf $APPS_DIR/sys/mongoose-$VER.tgz
+if [ ! -f mongoose-$VER.tgz ]; then
+    wget http://mongoose.googlecode.com/files/mongoose-$VER.tgz
+fi
+tar zxvf mongoose-$VER.tgz
 cd mongoose
 make linux
 mv mongoose ../mg-server

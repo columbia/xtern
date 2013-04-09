@@ -4,7 +4,11 @@ VER=2.4.33
 APP_DIR=$XTERN_ROOT/apps/ldap/
 cd $APP_DIR
 rm -rf install openldap-$VER
-tar zxvf $APPS_DIR/sys/openldap-$VER.tgz
+
+if [ ! -f openldap-$VER.tgz ]; then
+    wget http://www.openldap.org/software/download/OpenLDAP/openldap-release/openldap-$VER.tgz
+fi
+tar zxvf openldap-$VER.tgz
 
 # Build.
 cd openldap-$VER

@@ -5,7 +5,11 @@ APP_DIR=$XTERN_ROOT/apps/bdb_rep/
 DB_SRC_DIR=$APP_DIR/db-$VER
 cd $APP_DIR
 rm -rf db-$VER perf install statis-benchmarks
-tar zxvf $APPS_DIR/sys/db-$VER.tar.gz
+
+if [ ! -f db-$VER.tar.gz ]; then
+    wget http://download.oracle.com/berkeley-db/db-$VER.tar.gz
+fi
+tar zxvf db-$VER.tar.gz
 
 # Build bdb.
 cd db-$VER/build_unix
