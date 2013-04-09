@@ -29,5 +29,5 @@ cscope.files:
           -name \*.h | sort > cscope.files && \
 	cscope -b
 
-dync_hook::
-        cd $(XTERN_ROOT)/dync_hook && make XTERN_PLUS_DBUG=$(XTERN_PLUS_DBUG)
+dync_hook:
+	cd $(XTERN_ROOT)/dync_hook && make XTERN_PLUS_DBUG=$(XTERN_PLUS_DBUG)
