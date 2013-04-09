@@ -3,7 +3,10 @@
 VER=1.0
 cd $XTERN_ROOT/apps/pfscan
 rm -rf pfscan-$VER 
-tar zxvf $APPS_DIR/sys/pfscan-$VER.tar.gz
+if [ ! -f pfscan-$VER.tar.gz ]; then
+    wget ftp://ftp.lysator.liu.se/pub/unix/pfscan/pfscan-$VER.tar.gz
+fi
+tar zxvf pfscan-$VER.tar.gz
 cd pfscan-$VER
 patch -p1 < ../fix_cvar_init.patch
 patch -p1 < ../annot-pfscan-non-det.patch

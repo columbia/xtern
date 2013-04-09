@@ -12,11 +12,6 @@ if [ ! -d $XTERN_ROOT ]; then
 	exit 1
 fi
 
-if [ ! -d $APPS_DIR ]; then
-    echo "APPS_DIR is not defined"
-    exit 1
-fi
-
 PARSEC_ROOT=$XTERN_ROOT/apps/parsec
 
 SOURCE=$PARSEC_ROOT/gcc-4.2-src/
@@ -26,7 +21,10 @@ rm -rf $SOURCE $INSTALL
 
 pushd $PARSEC_ROOT
 
-tar zxf $APPS_DIR/sys/gcc-4.2.4.tar.gz
+if [ ! -f gcc-4.2.4.tar.bz2 ]; then
+    wget http://ftp.gnu.org/gnu/gcc/gcc-4.2.4/gcc-4.2.4.tar.bz2
+fi
+tar jxvf gcc-4.2.4.tar.bz2
 mv gcc-4.2.4 $SOURCE
 
 pushd $SOURCE
