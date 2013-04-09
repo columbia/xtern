@@ -7,10 +7,8 @@ CFLAGS= -g $(INC_DIRS)
 CXXFLAGS= -g $(INC_DIRS)
 
 interpose.so: template.cpp spec_hooks.cpp hook.cpp
-ifeq ($(XTERN_PLUS_DBUG),0)
 	gcc -fPIC -rdynamic hook.cpp $(CFLAGS) -c -o interpose.o
 	gcc $(CFLAGS) -shared -Wl,-soname,interpose.so interpose.o -o interpose.so -ldl $(TERN_LIBS) $(STD_LIBS)
-endif
 
 interpose_mc.so: template.cpp spec_hooks.cpp hook.cpp
 ifeq ($(XTERN_PLUS_DBUG),1)
