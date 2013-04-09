@@ -69,9 +69,12 @@ def readFromLogFile(filename, pid, tid):
 
 HANDLED_OPNAMES = {
   'tern_thread_begin'             : 'BEGIN',
+  'tern_idle'                     : 'IDLE',
   'tern_thread_end'               : 'END',
+  'pthread_cond_signal'           : 'P_C_S',
   'pthread_create'                : 'P_C',
   'pthread_join'                  : 'P_J',
+  'pthread_mutex_init'            : 'M_I',
   'pthread_mutex_lock'            : 'M_L',
   'pthread_mutex_unlock'          : 'M_UL',
 #  'pthread_barrier_wait'          : 'B_W',
