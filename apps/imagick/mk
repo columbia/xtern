@@ -15,10 +15,16 @@ sleep 1
 # cleanup
 cd $XTERN_ROOT/apps/imagick
 rm -rf ImageMagick-$VER install
-tar zxf $APPS_DIR/sys/ImageMagick-$VER.tar.gz
+if [ ! -f ImageMagick-$VER.tar.gz ]; then
+    wget https://launchpad.net/imagemagick/main/$VER/+download/ImageMagick-$VER.tar.gz
+fi
+tar zxvf ImageMagick-$VER.tar.gz
 
 # extract images
-tar zxf $APPS_DIR/sys/openmp_img.gz
+if [ ! -f openmp_img.gz ]; then
+    wget http://www.cs.columbia.edu/~heming/release/openmp_img.gz
+fi
+tar xvf openmp_img.gz
 
 # patch ImageMagick
 cd ImageMagick-$VER
