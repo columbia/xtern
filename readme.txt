@@ -81,6 +81,9 @@ in our submitted paper. There are other *.cfg in that directory as well, and
 they are for other purposes (different workloads, model checking, etc).
 The *.cfg files define all inputs for all the benchmarks, and the format
 of a cfg is pretty clean, explicit and easy to use.
+If you only want to run one program, you can copy the config for
+this program from a cfg file, and paste it to a new cfg file (foo.cfg), and then you 
+could run this only one program using "./eval.py foo.cfg".
 
 3. Performance hints.
 > cd $XTERN_ROOT/apps/
