@@ -3,19 +3,26 @@ Typical (and recommended) systems configuration for Parrot (a.k.a., xtern)
 Hardware: we have tried both 4-core and 24-core machines with 64 bits.
 OS: Ubuntu 11.10.
 Gcc: 4.5.4 (please use this gcc version if possible, because other modules
-such as llvm work with this version, but not gcc-4.6).
+such as llvm can be compiled with this version, but not gcc-4.6).
 
 
 Installing Parrot (xtern)
 ================
 
-0. Add $XTERN_ROOT (the absolute path of "xtern") into environment variables
+1. Add $XTERN_ROOT (the absolute path of "xtern") into environment variables
 in your ~/.bashrc. Run "echo $XTERN_ROOT" and "echo $LD_LIBRARY_PATH"
 to make sure they are correct.
 export XTERN_ROOT=the absolute path of "smt+mc/xtern"
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$XTERN_ROOT/dync_hook
 
-1. Build llvm. Go to directory $XTERN_ROOT, and run:
+2. Performance hints.
+> cd $XTERN_ROOT/apps/
+> find . -name *annot*.patch
+For example, the $XTERN_ROOT/apps/openmp/patch/add-xtern-annot.patch
+file is the generic performance hints that benefit all OpenMP programs in 
+our benchmarks.
+
+3. Build llvm. Go to directory $XTERN_ROOT, and run:
 > cd $XTERN_ROOT
 > sudo apt-get install dejagnu flex bison
 > ./llvm/build-llvm.sh --optimized
@@ -25,9 +32,9 @@ then you don't need this flag. If you have specified this "--optimized" flag,
 you need to specify "ENABLE_OPTIMIZED=1" in the following steps, otherwise 
 specify "ENABLE_OPTIMIZED=0". This LLVM compilation is only one way work,
 later if you check out a newer version of xtern, you do not need to rerun this,
-you only need to redo the Step 3 below.
+you only need to redo the Step 5 below.
 
-2. Config. that's because xtern uses LLVM makefile.common:
+4. Config. that's because xtern uses LLVM makefile.common:
 > cd $XTERN_ROOT
 > mkdir -p obj
 > cd obj
@@ -36,13 +43,13 @@ you only need to redo the Step 3 below.
   --with-llvmgccdir=$XTERN_ROOT/llvm/install/bin/ \
   --prefix=$XTERN_ROOT/install
 
-3. Make. Every time after you 'git pull' xtern, you should go to this directory and make it.
-Please always run "make clean" first, and then "make install", and then
-"make dync_hook", as show below.
+5. Make. Every time after you 'git pull' xtern, you should go to this directory and make it.
+Always run "make clean" first, and then "make install", and then"make dync_hook",
+as show below.
 > cd $XTERN_ROOT/obj
-> make ENABLE_OPTIMIZED=0 clean && make ENABLE_OPTIMIZED=0 install && make ENABLE_OPTIMIZED=0 dync_hook
+> make ENABLE_OPTIMIZED=0/1 clean && make ENABLE_OPTIMIZED=0/1 install && make ENABLE_OPTIMIZED=0/1 dync_hook
 
-4. Test. It may take a few minutes. If it all passes, then everything has been installed correctly.
+6. Test. It may take a few minutes. If it all passes, then everything has been installed correctly.
 This step may take a few minutes, depending on hardware speed.
 > cd $XTERN_ROOT/obj
 > make ENABLE_OPTIMIZED=0/1 -C test check
@@ -84,13 +91,13 @@ of a cfg is pretty clean, explicit and easy to use.
 If you only want to run one program, you can copy the config for
 this program from a cfg file, and paste it to a new cfg file (foo.cfg), and then you 
 could run this only one program using "./eval.py foo.cfg".
-
-3. Performance hints.
-> cd $XTERN_ROOT/apps/
-> find . -name *annot*.patch
-For example, the $XTERN_ROOT/apps/openmp/patch/add-xtern-annot.patch
-file is the generic performance hints that benefit all OpenMP programs in 
-our benchmarks.
+For example, a config of the "histogram" program in phoenix looks like this:
+[phoenix histogram]
+REPEATS = 10
+INIT_ENV_CMD = sync
+INPUTS = histogram_datafiles/large.bmp
+EXPORT = MR_NUMPROCS=16 MR_NUMTHREADS=16 MR_L1CACHESIZE=524288
+GZIP = histogram.tar.gz
 
 
 Testsuite (xtern/test)
