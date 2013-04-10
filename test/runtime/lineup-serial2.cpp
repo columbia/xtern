@@ -21,7 +21,7 @@ void loop(const char *tag) {
     pthread_mutex_lock(&mu);
     pthread_mutex_unlock(&mu);
 
-    tern_lineup(0);   
+    soba_wait(0);   
 
     long sum = 0;
     for (long j = 0; j < workload; j++)
@@ -43,7 +43,7 @@ int main(int argc, char *argv[], char* env[]) {
   pthread_t th[nthreads];
   const char *tags[nthreads] = {"T0", "T1", "T2", "T3"};
 
-  tern_lineup_init(0, nthreads, 20);
+  soba_init(0, nthreads, 20);
 
   for (int i = 0; i < nthreads; i++) {
     ret  = pthread_create(&th[i], NULL, thread_func, (void *)tags[i]);
@@ -52,7 +52,7 @@ int main(int argc, char *argv[], char* env[]) {
   for (int i = 0; i < nthreads; i++)
     pthread_join(th[i], NULL);
 
-  tern_lineup_destroy(0);
+  soba_destroy(0);
   return 0;
 }
 

@@ -23,9 +23,9 @@ diff -ruN phoenix-2.0.0-orig/src/tpool.c phoenix-2.0.0-wordcount/src/tpool.c
      CHECK_ERROR (pthread_attr_setdetachstate (&attr, PTHREAD_CREATE_DETACHED));
  
      tpool->die = 0;
-+    tern_lineup_init(0, num_threads, num_threads*20);
-+    tern_lineup_init(1, num_threads, num_threads*20);
-+    tern_lineup_init(2, num_threads, num_threads*20);
++    soba_init(0, num_threads, num_threads*20);
++    soba_init(1, num_threads, num_threads*20);
++    soba_init(2, num_threads, num_threads*20);
      for (i = 0; i < num_threads; ++i) {
          /* Initialize thread argument. */
          CHECK_ERROR (sem_init (&(tpool->thread_args[i].sem_run), 0, 0));
@@ -56,7 +56,7 @@ diff -ruN phoenix-2.0.0-orig/tests/word_count/word_count.c phoenix-2.0.0-wordcou
   */
  void wordcount_map(map_args_t *args) 
  {
-+    tern_lineup(0);
++    soba_wait(0);
      char *curr_start, curr_ltr;
      int state = NOT_IN_WORD;
      int i;
@@ -64,7 +64,7 @@ diff -ruN phoenix-2.0.0-orig/tests/word_count/word_count.c phoenix-2.0.0-wordcou
   */
  void wordcount_reduce(void *key_in, iterator_t *itr)
  {
-+    tern_lineup(1);
++    soba_wait(1);
      char *key = (char *)key_in;
      void *val;
      intptr_t sum = 0;
@@ -93,7 +93,7 @@ diff -Naur src/map_reduce.c src_modified/map_reduce.c
 +void
 +identity_reduce_wordcount (void *key, iterator_t *itr)
 +{
-+    tern_lineup(2);
++    soba_wait(2);
 +    void        *val;
 +    mr_env_t    *env;
 +

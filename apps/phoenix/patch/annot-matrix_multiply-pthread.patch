@@ -13,7 +13,7 @@
      int req_rows = data->matrix_len / num_procs;
  
 -
-+    tern_lineup_init(0, num_procs, num_procs*20);
++    soba_init(0, num_procs, num_procs*20);
      for(i=0; i<num_procs; i++)
      {
  	    map_args_t* out = (map_args_t*)malloc(sizeof(map_args_t));
@@ -21,7 +21,7 @@
   */
  void *matrixmult_map(void *args_in)
  {
-+    tern_lineup(0);
++    soba_wait(0);
      map_args_t* args = (map_args_t*)args_in;
  
      int row_count = 0;

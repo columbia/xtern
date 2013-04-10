@@ -12,7 +12,7 @@
   *  Compute the mean for the rows allocated to a thread
   */
  void *calc_mean(void *arg) {
-+   tern_lineup(0);
++   soba_wait(0);
     int i, j;
     int sum = 0;
     mean_arg_t *mean_arg = (mean_arg_t *)arg;
@@ -20,7 +20,7 @@
     pthread_mutex_unlock(&row_lock);
     
     while (i < num_rows) {
-+      tern_lineup(0);
++      soba_wait(0);
        for (j = i; j < num_rows; j++) {
           sum = 0;
           for (k = 0; k < num_cols; k++) {
@@ -28,7 +28,7 @@
     int curr_row = 0;
     
     /* Assign rows to each thread. One thread per processor */
-+   tern_lineup_init(0, num_procs, num_procs*20);
++   soba_init(0, num_procs, num_procs*20);
     for(i=0; i<num_procs; i++){
        mean_args[i].first_row = curr_row;
        mean_args[i].last_row = curr_row + rows_per_thread;

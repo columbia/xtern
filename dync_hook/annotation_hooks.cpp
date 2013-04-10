@@ -1,5 +1,5 @@
 #ifndef __SPEC_HOOK_tern_lineup_init
-extern "C" void tern_lineup_init(long opaque_type, unsigned count, unsigned timeout_turns){
+extern "C" void soba_init(long opaque_type, unsigned count, unsigned timeout_turns){
 #ifdef __USE_TERN_RUNTIME
   if (Space::isApp() && options::DMT && options::enforce_annotations) {
     tern_lineup_init_real(opaque_type, count, timeout_turns);
@@ -10,7 +10,7 @@ extern "C" void tern_lineup_init(long opaque_type, unsigned count, unsigned time
 #endif
 
 #ifndef __SPEC_HOOK_tern_lineup_destroy
-extern "C" void tern_lineup_destroy(long opaque_type){
+extern "C" void soba_destroy(long opaque_type){
 #ifdef __USE_TERN_RUNTIME
   if (Space::isApp() && options::DMT && options::enforce_annotations) {
     tern_lineup_destroy_real(opaque_type);
@@ -43,7 +43,7 @@ extern "C" void tern_lineup_end(long opaque_type){
 #endif
 
 #ifndef __SPEC_HOOK_tern_lineup
-extern "C" void tern_lineup(long opaque_type){
+extern "C" void soba_wait(long opaque_type){
 #ifdef __USE_TERN_RUNTIME
   if (Space::isApp() && options::DMT && options::enforce_annotations) {
     tern_lineup_start_real(opaque_type);
@@ -55,7 +55,7 @@ extern "C" void tern_lineup(long opaque_type){
 #endif
 
 #ifndef __SPEC_HOOK_tern_non_det_start
-extern "C" void tern_non_det_start(){
+extern "C" void pcs_enter(){
 #ifdef __USE_TERN_RUNTIME
   if (Space::isApp() && options::DMT && options::enforce_annotations && options::enforce_non_det_annotations) {
     tern_non_det_start_real();
@@ -66,7 +66,7 @@ extern "C" void tern_non_det_start(){
 #endif
 
 #ifndef __SPEC_HOOK_tern_non_det_end
-extern "C" void tern_non_det_end(){
+extern "C" void pcs_exit(){
 #ifdef __USE_TERN_RUNTIME
   if (Space::isApp() && options::DMT && options::enforce_annotations && options::enforce_non_det_annotations) {
     tern_non_det_end_real();
@@ -113,7 +113,7 @@ extern "C" void tern_detach(){
 #endif
 
 #ifndef __SPEC_HOOK_tern_non_det_barrier_end
-extern "C" void tern_non_det_barrier_end(int bar_id, int cnt){
+extern "C" void pcs_barrier_exit(int bar_id, int cnt){
 #ifdef __USE_TERN_RUNTIME
   if (Space::isApp() && options::DMT && options::enforce_annotations && options::enforce_non_det_annotations) {
     tern_non_det_barrier_end_real(bar_id, cnt);

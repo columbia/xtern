@@ -12,7 +12,7 @@
   */
  void hist_map(map_args_t *args) 
  {
-+    tern_lineup(0);
++    soba_wait(0);
      int i;
      short *key;
      unsigned char *val;
@@ -20,7 +20,7 @@
   */
  void hist_reduce(void *key_in, iterator_t *itr)
  {
-+    //tern_lineup(1); lots of timeout (0:52), comment this out.
++    //soba_wait(1); lots of timeout (0:52), comment this out.
      short *key = (short *)key_in;
      void *val;
      intptr_t sum = 0;

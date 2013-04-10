@@ -25,11 +25,11 @@ diff -ruN parsec-3.0-orig/ext/splash2x/kernels/cholesky/src/fo.C parsec-3.0-chol
      FactorLLDomain(i, MyNum, lc);
    MyFree(lc->storage);
    lc->storage = NULL;
-+  tern_lineup(0);
-+  tern_non_det_start();
++  soba_wait(0);
++  pcs_enter();
      DriveParallelFO(MyNum, lc);
-+  tern_non_det_barrier_end(0, P);
-+  tern_lineup(0);
++  pcs_barrier_exit(0, P);
++  soba_wait(0);
  }
  
  
@@ -48,10 +48,10 @@ diff -ruN parsec-3.0-orig/ext/splash2x/kernels/cholesky/src/malloc.C parsec-3.0-
    mem_pool++;
    /****** access to mem_pool[-1] is valid ******/
  
-+  tern_non_det_start();
++  pcs_enter();
    for (p = -1; p<mallocP; p++)
      InitOneFreeList(p);
-+  tern_non_det_end();
++  pcs_exit();
  }
  
  
@@ -71,7 +71,7 @@ diff -ruN parsec-3.0-orig/ext/splash2x/kernels/cholesky/src/mf.C parsec-3.0-chol
  {
    long i;
 -
-+  tern_non_det_start();
++  pcs_enter();
    tasks = (struct taskQ *) MyMalloc(P*sizeof(struct taskQ), DISTRIBUTED);
    for (i=0; i<P; i++) {
      LOCKINIT(tasks[i].taskLock)
@@ -79,7 +79,7 @@ diff -ruN parsec-3.0-orig/ext/splash2x/kernels/cholesky/src/mf.C parsec-3.0-chol
      tasks[i].probeQ = (struct Task *) NULL;
      tasks[i].probeQlast = (struct Task *) NULL;
      }
-+  tern_non_det_end();
++  pcs_exit();
  }
  
  
@@ -98,10 +98,10 @@ diff -ruN parsec-3.0-orig/ext/splash2x/kernels/cholesky/src/solve.C parsec-3.0-c
    Global = (struct GlobalMemory *)
      G_MALLOC(sizeof(struct GlobalMemory), 0);
    BARINIT(Global->start, P)
-+  tern_non_det_start();
++  pcs_enter();
    LOCKINIT(Global->waitLock)
    LOCKINIT(Global->memLock)
-+  tern_non_det_end();
++  pcs_exit();
  
    MallocInit(P);  
  
@@ -109,7 +109,7 @@ diff -ruN parsec-3.0-orig/ext/splash2x/kernels/cholesky/src/solve.C parsec-3.0-c
  	__parsec_roi_begin();
  #endif
  
-+  tern_lineup_init(0, P, P*10000);
++  soba_init(0, P, P*10000);
    CREATE(Go, P);
    WAIT_FOR_END(P);
  

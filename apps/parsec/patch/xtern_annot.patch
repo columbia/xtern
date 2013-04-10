@@ -13,7 +13,7 @@ diff -Naur gcc-4.2-src-orig/libgomp/config/posix/bar.c gcc-4.2-src-modified/libg
    gomp_sem_init (&bar->sem2, 0);
    bar->total = count;
    bar->arrived = 0;
-+  tern_lineup_init((long)bar, count, 100);
++  soba_init((long)bar, count, 100);
  }
  
  void
@@ -21,7 +21,7 @@ diff -Naur gcc-4.2-src-orig/libgomp/config/posix/bar.c gcc-4.2-src-modified/libg
  #endif
    gomp_sem_destroy (&bar->sem1);
    gomp_sem_destroy (&bar->sem2);
-+  tern_lineup_destroy((long)bar);
++  soba_destroy((long)bar);
  }
  
  void
@@ -29,6 +29,6 @@ diff -Naur gcc-4.2-src-orig/libgomp/config/posix/bar.c gcc-4.2-src-modified/libg
  gomp_barrier_wait (gomp_barrier_t *barrier)
  {
    gomp_barrier_wait_end (barrier, gomp_barrier_wait_start (barrier));
-+  tern_lineup((long)barrier);
++  soba_wait((long)barrier);
 +  
  }

@@ -25,7 +25,7 @@ diff -ruN pbzip2-1.1.5/pbzip2.cpp pbzip2-1.1.5-modified/pbzip2.cpp
  			return (NULL);
  		}
  
-+		tern_lineup(0);
++		soba_wait(0);
 +		
  		// compress the memory buffer (blocksize=9*100k, verbose=0, worklevel=30)
  		ret = BZ2_bzBuffToBuffCompress(CompressedData, &outSize,
@@ -34,7 +34,7 @@ diff -ruN pbzip2-1.1.5/pbzip2.cpp pbzip2-1.1.5-modified/pbzip2.cpp
  	numCPUtotal = numCPU;
  	#endif
  
-+	tern_lineup_init(0, numCPU, 100);
++	soba_init(0, numCPU, 100);
 +
  	// parse command line switches
  	for (i=1; (int)i < argc; i++)

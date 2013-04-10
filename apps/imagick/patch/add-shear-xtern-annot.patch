@@ -6,7 +6,7 @@ diff -Naur ImageMagick-6.8.0-4/magick/decorate.c ImageMagick-6.8.0-4_modified/ma
      if ((image->compose != CopyCompositeOp) &&
          ((image->compose != OverCompositeOp) || (image->matte != MagickFalse)))
 +      {
-+      tern_lineup(0);
++      soba_wait(0);
        for (x=0; x < (ssize_t) image->columns; x++)
        {
          SetPixelPacket(frame_image,&interior,q,frame_indexes);
@@ -32,7 +32,7 @@ diff -Naur ImageMagick-6.8.0-4/magick/shear.c ImageMagick-6.8.0-4_modified/magic
            break;
          q=p-step;
          shear_indexes=indexes-step;
-+        tern_lineup(0);
++        soba_wait(0);
          for (i=0; i < (ssize_t) width; i++)
          {
            if ((x_offset+i) < step)
@@ -40,7 +40,7 @@ diff -Naur ImageMagick-6.8.0-4/magick/shear.c ImageMagick-6.8.0-4_modified/magic
          indexes+=width;
          q=p+step;
          shear_indexes=indexes+step;
-+        tern_lineup(0);
++        soba_wait(0);
          for (i=0; i < (ssize_t) width; i++)
          {
            p--;
@@ -48,7 +48,7 @@ diff -Naur ImageMagick-6.8.0-4/magick/shear.c ImageMagick-6.8.0-4_modified/magic
            break;
          q=p-step;
          shear_indexes=indexes-step;
-+        tern_lineup(0);
++        soba_wait(0);
          for (i=0; i < (ssize_t) height; i++)
          {
            if ((y_offset+i) < step)
@@ -56,7 +56,7 @@ diff -Naur ImageMagick-6.8.0-4/magick/shear.c ImageMagick-6.8.0-4_modified/magic
          indexes+=height;
          q=p+step;
          shear_indexes=indexes+step;
-+        tern_lineup(0);
++        soba_wait(0);
          for (i=0; i < (ssize_t) height; i++)
          {
            p--;

@@ -14,8 +14,7 @@ pthread_mutex_t mu = PTHREAD_MUTEX_INITIALIZER;
 void loop(const char *tag) {
   const int loopCount = 50;
   for (int i = 0; i < loopCount; i++) {
-    tern_lineup_start(0);
-    tern_lineup_end(0);    
+    soba_wait(0);
     pthread_mutex_lock(&mu);
     printf("%s\n", tag);
     pthread_mutex_unlock(&mu);
@@ -29,7 +28,7 @@ void* thread_func(void*) {
 int main(int argc, char *argv[], char* env[]) {
   int ret;
   pthread_t th;
-  tern_lineup_init(0, 2, 20);
+  soba_init(0, 2, 20);
   ret  = pthread_create(&th, NULL, thread_func, NULL);
   assert(!ret && "pthread_create() failed!");
   loop("FIRST");

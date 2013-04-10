@@ -29,9 +29,9 @@ diff -ruN pfscan-1.0/pfscan.c pfscan-1.0-dbug/pfscan.c
      
      while (pqueue_get(&pqb, (void **) &path) == 1)
      {
-+    tern_non_det_start();
++    pcs_enter();
  	scan_file(path);
-+    tern_non_det_end();
++    pcs_exit();
  	free(path);
      }
  
@@ -62,10 +62,10 @@ diff -ruN pfscan-1.0/pfscan.c pfscan-1.0-dbug/pfscan.c
 -    pthread_mutex_init(&print_lock, NULL);
      pthread_mutex_init(&aworker_lock, NULL);
 +
-+    tern_non_det_start();
++    pcs_enter();
      pthread_mutex_init(&matches_lock, NULL);
 +    pthread_mutex_init(&print_lock, NULL);
-+    tern_non_det_end();
++    pcs_exit();
 +    
      pthread_cond_init(&aworker_cv, NULL);
      

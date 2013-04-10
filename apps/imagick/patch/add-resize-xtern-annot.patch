@@ -12,7 +12,7 @@
        }
      indexes=GetCacheViewVirtualIndexQueue(image_view);
      resize_indexes=GetCacheViewAuthenticIndexQueue(resize_view);
-+    tern_lineup(0);
++    soba_wait(0);
      for (y=0; y < (ssize_t) resize_image->rows; y++)
      {
        MagickPixelPacket
@@ -20,7 +20,7 @@
        }
      indexes=GetCacheViewVirtualIndexQueue(image_view);
      resize_indexes=GetCacheViewAuthenticIndexQueue(resize_view);
-+    tern_lineup(0);
++    soba_wait(0);
      for (x=0; x < (ssize_t) resize_image->columns; x++)
      {
        MagickPixelPacket

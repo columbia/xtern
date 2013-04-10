@@ -14,7 +14,7 @@ diff -Naur ImageMagick-6.8.0-4/magick/compare.c ImageMagick-6.8.0-4_modified/mag
      pixel=zero;
      reconstruct_pixel=zero;
 +
-+    tern_lineup(0);
++    soba_wait(0);
      for (x=0; x < (ssize_t) image->columns; x++)
      {
        MagickStatusType
@@ -26,7 +26,7 @@ diff -Naur ImageMagick-6.8.0-4/magick/compare.c ImageMagick-6.8.0-4_modified/mag
      reconstruct_indexes=GetCacheViewVirtualIndexQueue(reconstruct_view);
      (void) ResetMagickMemory(channel_distortion,0,sizeof(channel_distortion));
 +
-+    tern_lineup(0);
++    soba_wait(0);
 +
      for (x=0; x < (ssize_t) image->columns; x++)
      {
@@ -47,7 +47,7 @@ diff -Naur ImageMagick-6.8.0-4_modified/magick/image.c ImageMagick-6.8.0-4/magic
          continue;
        }
 +
-+    tern_lineup(0);
++    soba_wait(0);
      for (x=0; x < (ssize_t) image->columns; x++)
      {
        SetPixelOpacity(q,opacity);
@@ -66,7 +66,7 @@ diff -Naur ImageMagick-6.8.0-4/magick/composite.c ImageMagick-6.8.0-4_modified/m
      hue=0.0;
      chroma=0.0;
      luma=0.0;
-+    tern_lineup(0);
++    soba_wait(0);
      for (x=0; x < (ssize_t) image->columns; x++)
      {
        if (clip_to_self != MagickFalse)

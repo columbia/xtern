@@ -14,13 +14,11 @@ long long sum;
 
 void loop(const char *tag, long loopCount, long workLoad) {
   for (long i = 0; i < loopCount; i++) {
-    tern_lineup_start(0);
-    //tern_lineup(0);
+    soba_wait(0);
 
     for (long j = 0; j < workLoad; j++)
       sum += j*j;
       
-    tern_lineup_end(0);
 
     //pthread_mutex_lock(&mu);
     printf("%s\n", tag);
@@ -35,7 +33,7 @@ void* thread_func(void*) {
 int main(int argc, char *argv[], char* env[]) {
   int ret;
   pthread_t th;
-  tern_lineup_init(0, 2, 1000);
+  soba_init(0, 2, 1000);
   ret  = pthread_create(&th, NULL, thread_func, NULL);
   assert(!ret && "pthread_create() failed!");
   loop("FIRST", 1, 1e9);

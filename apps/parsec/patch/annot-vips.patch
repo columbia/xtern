@@ -14,7 +14,7 @@ diff -ruN parsec-2.0-orig/pkgs/apps/vips/src/libsrc/iofuncs/threadgroup.c parsec
  
  	/* Prepare this area.
  	 */
-+	 	 tern_lineup(0);
++	 	 soba_wait(0);
 +
  	if( thr->tg->inplace ) {
  		if( im_prepare_to( thr->reg, thr->oreg, 
@@ -23,7 +23,7 @@ diff -ruN parsec-2.0-orig/pkgs/apps/vips/src/libsrc/iofuncs/threadgroup.c parsec
  
  	/* Attach threads.
  	 */
-+	 tern_lineup_init(0, tg->nthr, 1000);
++	 soba_init(0, tg->nthr, 1000);
  	for( i = 0; i < tg->nthr; i++ )
  		if( !(tg->thr[i] = threadgroup_thread_new( tg )) )
  			return( NULL );

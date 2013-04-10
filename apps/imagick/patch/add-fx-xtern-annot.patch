@@ -13,7 +13,7 @@ diff -Naur ImageMagick-6.8.0-4/magick/enhance.c ImageMagick-6.8.0-4_modified/mag
          continue;
        }
      indexes=GetCacheViewAuthenticIndexQueue(image_view);
-+    tern_lineup(0);
++    soba_wait(0);
      for (x=0; x < (ssize_t) image->columns; x++)
      {
        if ((channel & RedChannel) != 0)
@@ -21,7 +21,7 @@ diff -Naur ImageMagick-6.8.0-4/magick/enhance.c ImageMagick-6.8.0-4_modified/mag
              continue;
            }
          indexes=GetCacheViewAuthenticIndexQueue(image_view);
-+        tern_lineup(0);
++        soba_wait(0);
          for (x=0; x < (ssize_t) image->columns; x++)
          {
            if ((GetPixelRed(q) != GetPixelGreen(q)) ||
@@ -29,7 +29,7 @@ diff -Naur ImageMagick-6.8.0-4/magick/enhance.c ImageMagick-6.8.0-4_modified/mag
          continue;
        }
      indexes=GetCacheViewAuthenticIndexQueue(image_view);
-+    tern_lineup(0);
++    soba_wait(0);
      for (x=0; x < (ssize_t) image->columns; x++)
      {
        if ((channel & RedChannel) != 0)
@@ -48,7 +48,7 @@ diff -Naur ImageMagick-6.8.0-4/magick/threshold.c ImageMagick-6.8.0-4_modified/m
          continue;
        }
      indexes=GetCacheViewAuthenticIndexQueue(image_view);
-+    tern_lineup(0);
++    soba_wait(0);
      for (x=0; x < (ssize_t) image->columns; x++)
      {
        if ((channel & RedChannel) != 0)

@@ -12,7 +12,7 @@
  
  
  void * worker(void *arg){
-+  tern_lineup(0);
++  soba_wait(0);
    int tid = *((int *)arg);
    FTYPE pdSwaptionPrice[2];
  
@@ -21,7 +21,7 @@
  	tbb::parallel_for(tbb::blocked_range<int>(0,nSwaptions,TBB_GRAINSIZE),w);
  #else
 -	
-+    tern_lineup_init(0, nThreads, 100);
++    soba_init(0, nThreads, 100);
  	int threadIDs[nThreads];
          for (i = 0; i < nThreads; i++) {
            threadIDs[i] = i;

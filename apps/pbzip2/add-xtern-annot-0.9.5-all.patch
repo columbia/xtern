@@ -26,7 +26,7 @@ diff -ruN pbzip2-0.9.5/pbzip2.cpp pbzip2-0.9.5-modified/pbzip2.cpp
  			fprintf(stderr, " *ERROR: Could not allocate memory (DecompressedData)!  Skipping...\n");
  			return (NULL);
  		}
-+		tern_lineup(0);
++		soba_wait(0);
  
  		// decompress the memory buffer (verbose=0)
  		ret = BZ2_bzBuffToBuffDecompress(DecompressedData, &outSize, FileData, inSize, 0, Verbosity);
@@ -34,7 +34,7 @@ diff -ruN pbzip2-0.9.5/pbzip2.cpp pbzip2-0.9.5-modified/pbzip2.cpp
  				return (NULL);
  			}
  
-+			tern_lineup(0);
++			soba_wait(0);
  			// decompress the memory buffer (verbose=0)
  			ret = BZ2_bzBuffToBuffDecompress(DecompressedData, &outSize, FileData, inSize, 0, Verbosity);
  		} // while
@@ -42,7 +42,7 @@ diff -ruN pbzip2-0.9.5/pbzip2.cpp pbzip2-0.9.5-modified/pbzip2.cpp
  			return (NULL);
  		}
  
-+		tern_lineup(0);
++		soba_wait(0);
  		// compress the memory buffer (blocksize=9*100k, verbose=0, worklevel=30)
  		ret = BZ2_bzBuffToBuffCompress(CompressedData, &outSize, FileData, inSize, BWTblockSize, Verbosity, 30);
  		if (ret != BZ_OK)
@@ -50,7 +50,7 @@ diff -ruN pbzip2-0.9.5/pbzip2.cpp pbzip2-0.9.5-modified/pbzip2.cpp
  	}
  	pthread_mutex_init(MemMutex, NULL);
  
-+	tern_lineup_init(0, numCPU, 20*numCPU);
++	soba_init(0, numCPU, 20*numCPU);
 +
  	// create queue
  	fifo = queueInit(numCPU);

@@ -12,7 +12,7 @@
   */
  void matrixmult_map(map_args_t *args)
  {
-+    tern_lineup(0);
++    soba_wait(0);
      int row_count = 0;
      int i,j, x_loc, y_loc,value;
      int * a_ptr,* b_ptr;    

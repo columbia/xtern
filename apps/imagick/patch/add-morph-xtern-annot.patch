@@ -14,7 +14,7 @@ diff -Naur ImageMagick-6.8.0-4/magick/morphology.c ImageMagick-6.8.0-4_modified/
        /* offset to origin in 'p'. while 'q' points to it directly */
        r = offy;
 -
-+      tern_lineup(0);
++      soba_wait(0);
        for (y=0; y < (ssize_t) image->rows; y++)
        {
          register ssize_t
@@ -23,7 +23,7 @@ diff -Naur ImageMagick-6.8.0-4/magick/morphology.c ImageMagick-6.8.0-4_modified/
      /* offset to origin in 'p'. while 'q' points to it directly */
      r = virt_width*offy + offx;
 -
-+    tern_lineup(0);
++    soba_wait(0);
      for (x=0; x < (ssize_t) image->columns; x++)
      {
         ssize_t

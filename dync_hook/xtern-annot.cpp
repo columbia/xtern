@@ -6,11 +6,11 @@
 extern "C" {
 #endif
 
-void tern_lineup_init(long opaque_type, unsigned count, unsigned timeout_turns) {
+void soba_init(long opaque_type, unsigned count, unsigned timeout_turns) {
   //fprintf(stderr, "Non-deterministic tern_lineup_init\n");
 }
 
-void tern_lineup_destroy(long opaque_type) {
+void soba_destroy(long opaque_type) {
   //fprintf(stderr, "Non-deterministic tern_lineup_destroy\n");
 }
 
@@ -22,15 +22,15 @@ void tern_lineup_end(long opaque_type) {
   //fprintf(stderr, "Non-deterministic tern_lineup_end\n");
 }
 
-void tern_lineup(long opaque_type) {
+void soba_wait(long opaque_type) {
   //fprintf(stderr, "Non-deterministic tern_lineup\n");
 }
 
-void tern_non_det_start() {
+void pcs_enter() {
   //fprintf(stderr, "Non-deterministic tern_non_det_start\n");
 }
 
-void tern_non_det_end() {
+void pcs_exit() {
   //fprintf(stderr, "Non-deterministic tern_non_det_end\n");
 }
 
@@ -46,7 +46,7 @@ void tern_detach() {
   //fprintf(stderr, "Non-deterministic tern_detach\n");
 }
 
-void tern_non_det_barrier_end(int bar_id, int cnt) {
+void pcs_barrier_exit(int bar_id, int cnt) {
   //fprintf(stderr, "Non-deterministic tern_non_det_barrier_end\n");
 }
 

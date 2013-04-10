@@ -12,7 +12,7 @@
   */
  void pca_mean_map(map_args_t *args)
  {
-+    tern_lineup(0);
++    soba_wait(0);
      int sum;
      intptr_t mean;
      int i, j;
@@ -20,7 +20,7 @@
   */
  void pca_cov_map(map_args_t *args)
  {
-+    tern_lineup(1);
++    soba_wait(1);
      assert(args);
      assert(args->length == 1);
      int i, j;

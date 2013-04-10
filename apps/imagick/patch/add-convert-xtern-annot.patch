@@ -13,7 +13,7 @@ diff -ruN ImageMagick-6.8.0-4/magick/effect.c ImageMagick-6.8.0-4-modified/magic
        }
      indexes=GetCacheViewVirtualIndexQueue(image_view);
      convolve_indexes=GetCacheViewAuthenticIndexQueue(convolve_view);
-+    tern_lineup(0);
++    soba_wait(0);
 +    
      for (x=0; x < (ssize_t) image->columns; x++)
      {
@@ -33,7 +33,7 @@ diff -ruN ImageMagick-6.8.0-4/magick/magick.c ImageMagick-6.8.0-4-modified/magic
      *events,
      execution_path[MaxTextExtent],
      filename[MaxTextExtent];
-+  tern_lineup_init(0, omp_get_max_threads(), 100);
++  soba_init(0, omp_get_max_threads(), 100);
  
    /*
      Initialize the Magick environment.
@@ -44,7 +44,7 @@ diff -Naur ImageMagick-6.8.0-4/magick/effect.c ImageMagick-6.8.0-4_modified/magi
        }
      indexes=GetCacheViewVirtualIndexQueue(image_view);
      blur_indexes=GetCacheViewAuthenticIndexQueue(blur_view);
-+    tern_lineup(0);
++    soba_wait(0);
      for (x=0; x < (ssize_t) blur_image->columns; x++)
      {
        MagickPixelPacket
@@ -52,7 +52,7 @@ diff -Naur ImageMagick-6.8.0-4/magick/effect.c ImageMagick-6.8.0-4_modified/magi
        }
      indexes=GetCacheViewVirtualIndexQueue(image_view);
      blur_indexes=GetCacheViewAuthenticIndexQueue(blur_view);
-+    tern_lineup(0);
++    soba_wait(0);
      for (y=0; y < (ssize_t) blur_image->rows; y++)
      {
        MagickPixelPacket

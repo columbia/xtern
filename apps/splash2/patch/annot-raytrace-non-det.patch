@@ -13,9 +13,9 @@ diff -ruN parsec-3.0-orig/ext/splash2x/apps/raytrace/src/main.C parsec-3.0-raytr
  
  	BARINIT(gm->start)
  	LOCKINIT(gm->pidlock)
-+	tern_non_det_start();
++	pcs_enter();
  	LOCKINIT(gm->ridlock)
-+	tern_non_det_end();
++	pcs_exit();
  	LOCKINIT(gm->memlock)
  	ALOCKINIT(gm->wplock, nprocs)
  
@@ -35,7 +35,7 @@ diff -ruN parsec-3.0-orig/ext/splash2x/apps/raytrace/src/trace.C parsec-3.0-rayt
  			xx = (REAL)x;
  			yy = (REAL)y;
  
-+			tern_non_det_start();
++			pcs_enter();
  			if (AntiAlias)
  				for (j = 0; j < NumSubRays; j++)
  					{
@@ -43,7 +43,7 @@ diff -ruN parsec-3.0-orig/ext/splash2x/apps/raytrace/src/trace.C parsec-3.0-rayt
  					AddPixelColor(c, ray->x, ray->y);
  					}
  				}
-+			tern_non_det_end();
++			pcs_exit();
  			}
  		}
  	}

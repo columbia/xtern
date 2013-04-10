@@ -12,7 +12,7 @@
   */
  void string_match_map(map_args_t *args)
  {
-+    tern_lineup(0);
++    soba_wait(0);
      assert(args);
      
      str_map_data_t* data_in = (str_map_data_t*)(args->data);

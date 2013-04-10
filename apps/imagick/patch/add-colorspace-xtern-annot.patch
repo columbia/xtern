@@ -13,7 +13,7 @@ diff -Naur ImageMagick-6.8.0-4_modified/magick/colorspace.c ImageMagick-6.8.0-4/
              status=MagickFalse;
              continue;
            }
-+        tern_lineup(0);
++        soba_wait(0);
          for (x=0; x < (ssize_t) image->columns; x++)
          {
            double

@@ -75,7 +75,7 @@ void *consumer(void *arg) {
     }
     block = blockQueue.front(); blockQueue.pop_front();
     pthread_mutex_unlock(&mutex);
-    tern_lineup(0);
+    soba_wait(0);
     fprintf(stderr, "consumer pid %d computing task start time %ld\n", getpid(), (long)time(NULL));
     compress(block);
     fprintf(stderr, "consumer pid %d computing task end time %ld\n", getpid(), (long)time(NULL));
@@ -89,7 +89,7 @@ int main(int argc, char *argv[]) {
   nThreads = atoi(argv[1]);
   init();
   fprintf(stderr, "# threads: %d\n", atoi(argv[1]));
-  tern_lineup_init(0, nThreads, nThreads*20);
+  soba_init(0, nThreads, nThreads*20);
   pthread_t th[nThreads];
   for(long i=0; i<nThreads; ++i)
     pthread_create(&th[i], NULL, consumer, (void*)i);

@@ -9,8 +9,8 @@ diff -ruN parsec-2.0-orig/pkgs/apps/bodytrack/src/TrackingBenchmark/main.cpp par
  //Body tracking threaded with explicit Posix threads
  int mainPthreads(string path, int cameras, int frames, int particles, int layers, int threads, bool OutputBMP)
  {
-+    tern_lineup_init(0, threads, 20*threads);
-+    tern_lineup_init(1, threads, 20*threads);
++    soba_init(0, threads, 20*threads);
++    soba_init(1, threads, 20*threads);
  	cout << "Threading with Posix Threads" << endl;
  	if(threads < 1) {
  		cout << "Warning: Illegal or unspecified number of threads, using 1 thread" << endl;
@@ -30,7 +30,7 @@ diff -ruN parsec-2.0-orig/pkgs/apps/bodytrack/src/TrackingBenchmark/ParticleFilt
  		ticket = particleTickets.getTicket();
  		while(ticket < (int)(particles->size())) {
  			//process all elements in work unit
-+			tern_lineup(0);
++			soba_wait(0);
  			for(i = ticket; i < (int)(particles->size()) && i < ticket + WORKUNIT_SIZE_PARTICLEWEIGHTS; i++) {
  				(*valid)[i] = CalcWeight(*particles, i, rank);
  			}
@@ -43,7 +43,7 @@ diff -ruN parsec-2.0-orig/pkgs/apps/bodytrack/src/TrackingBenchmark/ParticleFilt
  		//distribute new particles randomly according to model stdDevs
  		while(ticket < mNParticles) {
  			//process all elements in work unit
-+			tern_lineup(1);
++			soba_wait(1);
  			for(i = ticket; i < mNParticles && i < ticket + WORKUNIT_SIZE_NEWPARTICLES; i++) {
  				//add new particle for each entry in each bin distributed randomly about duplicated particle
  				mNewParticles[i] = mParticles[mIndex[i]];

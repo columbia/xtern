@@ -7,7 +7,7 @@
 +#include "tern/user.h"
  int FP_tree::FP_growth_first(FSout* fout)
  {
-+        tern_lineup_init(0, omp_get_max_threads(), omp_get_max_threads()*20);
++        soba_init(0, omp_get_max_threads(), omp_get_max_threads()*20);
  	int sequence;
  	double tstart, tend, temp_time;
  	int function_type;
@@ -15,7 +15,7 @@
  				release_node_array_after_mining(sequence, thread, workingthread);
  				continue;
  			}
-+			tern_lineup(0);
++			soba_wait(0);
  
  			FP_tree *fptree;
  			fptree = (FP_tree*)local_fp_buf->newbuf(1, sizeof(FP_tree));

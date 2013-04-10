@@ -14,7 +14,7 @@ diff -ruN MPlayer-1.1/ffmpeg/libavcodec/pthread.c MPlayer-1.1-modified/ffmpeg/li
          }
          pthread_mutex_unlock(&c->current_job_lock);
  
-+        tern_lineup(0);
++        soba_wait(0);
 +        
          c->rets[our_job%c->rets_count] = c->func ? c->func(avctx, (char*)c->args + our_job*c->job_size):
                                                     c->func2(avctx, c->args, our_job, self_id);
@@ -23,7 +23,7 @@ diff -ruN MPlayer-1.1/ffmpeg/libavcodec/pthread.c MPlayer-1.1-modified/ffmpeg/li
      pthread_cond_init(&c->last_job_cond, NULL);
      pthread_mutex_init(&c->current_job_lock, NULL);
      pthread_mutex_lock(&c->current_job_lock);
-+    tern_lineup_init(0, thread_count, 100);
++    soba_init(0, thread_count, 100);
      for (i=0; i<thread_count; i++) {
          if(pthread_create(&c->workers[i], NULL, worker, avctx)) {
             avctx->thread_count = i;

@@ -12,7 +12,7 @@
   */
  void kmeans_map(map_args_t *args) 
  {
-+    tern_lineup(0);
++    soba_wait(0);
      assert(args);
      assert(args->length == 1);
      
@@ -20,7 +20,7 @@
   */
  void kmeans_reduce(void *key_in, iterator_t *itr)
  {
-+    tern_lineup(1);
++    soba_wait(1);
      assert (key_in);
      assert (itr);
      

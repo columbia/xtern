@@ -23,7 +23,7 @@ diff -ruN parsec-2.0-orig/pkgs/apps/facesim/src/TaskQ/lib/taskQDistCommon.c pars
  
      TRACE;
      while ( getATaskFromHead( &taskQs[myQ], task)) {
-+          tern_lineup(0);
++          soba_wait(0);
          ( ( TaskQTask3)task[0])( myThreadId, task[1], task[2], task[3]);
          executed = 1;
      }
@@ -31,7 +31,7 @@ diff -ruN parsec-2.0-orig/pkgs/apps/facesim/src/TaskQ/lib/taskQDistCommon.c pars
      pthread_cond_init(&sync.tasksDone,NULL);;
      sync.threadCount = 0;
  
-+    tern_lineup_init(0, numThreads, 100);
++    soba_init(0, numThreads, 100);
      for ( i = 1; i < numThreads; i++)
          
      {

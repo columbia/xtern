@@ -57,7 +57,7 @@
      CHECK_ERROR (pthread_attr_init (&attr));
      CHECK_ERROR (pthread_attr_setscope (&attr, PTHREAD_SCOPE_SYSTEM));
 @@ -99,7 +125,13 @@
-     tern_lineup_init(2, num_threads, num_threads*20);
+     soba_init(2, num_threads, num_threads*20);
      for (i = 0; i < num_threads; ++i) {
          /* Initialize thread argument. */
 +#ifndef REPLACE_SEM

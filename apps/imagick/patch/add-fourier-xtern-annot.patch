@@ -12,7 +12,7 @@
  #endif
    fftw_r2c_plan=fftw_plan_dft_r2c_2d(fourier_info->width,fourier_info->height,
      source,fourier,FFTW_ESTIMATE);
-+  tern_lineup(0);
++  soba_wait(0);
    fftw_execute(fftw_r2c_plan);
    fftw_destroy_plan(fftw_r2c_plan);
    source=(double *) RelinquishMagickMemory(source);

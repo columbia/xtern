@@ -12,7 +12,7 @@
          continue;
        }
      indexes=GetCacheViewAuthenticIndexQueue(image_view);
-+    tern_lineup(0);
++    soba_wait(0);
      for (x=0; x < (ssize_t) image->columns; x++)
      {
        SetPixelIndex(indexes+x,0);

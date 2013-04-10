@@ -12,9 +12,9 @@
        _DifferenceType __chunk_size = __s.partition_chunk_size;
  
        omp_lock_t __result_lock;
-+      tern_non_det_start();
++      pcs_enter();
        omp_init_lock(&__result_lock);
-+      tern_non_det_end();
++      pcs_exit();
  
        //at least two chunks per thread
        if (__right - __left + 1 >= 2 * __num_threads * __chunk_size)
@@ -22,8 +22,8 @@
  	    __num_threads = omp_get_num_threads();
  	    __reserved_left = new bool[__num_threads];
  	    __reserved_right = new bool[__num_threads];
-+		tern_lineup_init(0, __num_threads, __num_threads*20);
-+		tern_lineup_init(1, __num_threads, __num_threads*20);
++		soba_init(0, __num_threads, __num_threads*20);
++		soba_init(1, __num_threads, __num_threads*20);
  
  	    if (__s.partition_chunk_share > 0.0)
  	      __chunk_size = std::max<_DifferenceType>
@@ -31,8 +31,8 @@
  	      __thread_left_border = __thread_left - 1;
  	      __thread_right = __n - 1;
  	      __thread_right_border = __thread_right + 1;
-+	tern_lineup(0);
-+	tern_non_det_start();
++	soba_wait(0);
++	pcs_enter();
  
  	      bool __iam_finished = false;
  	      while (!__iam_finished)
@@ -40,8 +40,8 @@
  		      --__thread_right;
  		    }
  		}
-+		tern_non_det_barrier_end(0, __num_threads);
-+		tern_lineup(1);
++		pcs_barrier_exit(0, __num_threads);
++		soba_wait(1);
 +
  
  	      // Now swap the leftover chunks to the right places.
@@ -50,9 +50,9 @@
  	delete[] __reserved_left;
  	delete[] __reserved_right;
  
-+    tern_non_det_start();
++    pcs_enter();
  	omp_destroy_lock(&__result_lock);
-+    tern_non_det_end();
++    pcs_exit();
  
  	// Element "between" __final_left and __final_right might not have
  	// been regarded yet

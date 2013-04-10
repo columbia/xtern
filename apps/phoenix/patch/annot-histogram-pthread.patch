@@ -13,7 +13,7 @@
   */
  void *calc_hist(void *arg) {
 -   
-+   tern_lineup(0);
++   soba_wait(0);
     int *red;
     int *green;
     int *blue;
@@ -21,7 +21,7 @@
     
     /* Assign portions of the image to each thread */
     long curr_pos = (long)(*data_pos);
-+   tern_lineup_init(0, num_procs, num_procs*20);
++   soba_init(0, num_procs, num_procs*20);
     for (i = 0; i < num_procs; i++) {
        arg[i].data = (unsigned char *)fdata;
        arg[i].data_pos = curr_pos;

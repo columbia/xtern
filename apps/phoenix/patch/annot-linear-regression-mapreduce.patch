@@ -13,7 +13,7 @@
   */
  static void linear_regression_map(map_args_t *args) 
  {
-+    tern_lineup(0);
++    soba_wait(0);
      assert(args);
      
      POINT_T *data = (POINT_T *)args->data;

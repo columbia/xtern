@@ -12,7 +12,7 @@
                                                                                          * num_procs);
      map_args_t* out = (map_args_t*)malloc(sizeof(map_args_t) * num_procs);
  
-+    tern_lineup_init(0, num_procs, num_procs*20);
++    soba_init(0, num_procs, num_procs*20);
      for(i=0; i<num_procs; i++)
      {
  	    map_data[i].encrypt_file = data->encrypt_file;
@@ -20,7 +20,7 @@
   */
  void *string_match_map(void *args)
  {
-+    tern_lineup(0);
++    soba_wait(0);
      assert(args);
      
      str_map_data_t* data_in = (str_map_data_t*)( ((map_args_t*)args)->data);

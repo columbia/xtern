@@ -13,7 +13,7 @@ diff -ruN parsec-3.0-orig/ext/splash2x/kernels/radix/src/radix.C parsec-3.0-modi
  #ifdef ENABLE_PARSEC_HOOKS
  	__parsec_roi_begin();
  #endif
-+   tern_lineup_init(0, number_of_processors, number_of_processors*10);
++   soba_init(0, number_of_processors, number_of_processors*10);
     CREATE(slave_sort, number_of_processors);
     WAIT_FOR_END(number_of_processors);
  #ifdef ENABLE_PARSEC_HOOKS
@@ -21,7 +21,7 @@ diff -ruN parsec-3.0-orig/ext/splash2x/kernels/radix/src/radix.C parsec-3.0-modi
       global->Index++;
     UNLOCK(global->lock_Index)
  
-+   tern_lineup(0);
++   soba_wait(0);
 +
     BARINCLUDE(global->barrier_key);
     BARINCLUDE(global->barrier_rank);

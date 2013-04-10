@@ -12,7 +12,7 @@
   */
  void *linear_regression_pthread(void *args_in) 
  {
-+  tern_lineup(0);
++  soba_wait(0);
     lreg_args* args =(lreg_args*)args_in;
     int i;
  
@@ -20,7 +20,7 @@
     tid_args = (lreg_args *)CALLOC(sizeof(lreg_args), num_procs); 
  
  	 // Assign a portion of the points for each thread
-+   tern_lineup_init(0, num_threads, num_threads*20);
++   soba_init(0, num_threads, num_threads*20);
     for(i = 0; i < num_threads; i++)
     {
  	   tid_args[i].points = &points[i*req_units];

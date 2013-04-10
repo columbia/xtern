@@ -12,7 +12,7 @@
   */
  void *find_clusters(void *arg) 
  {
-+   tern_lineup(0);
++   soba_wait(0);
     thread_arg *t_arg = (thread_arg *)arg;
     int i, j;
     unsigned int min_dist, cur_dist;
@@ -20,7 +20,7 @@
   */
  void *calc_means(void *arg)
  {
-+   tern_lineup(0);
++   soba_wait(0);
     int i, j, grp_size;
     int *sum;
     thread_arg *t_arg = (thread_arg *)arg;
@@ -28,7 +28,7 @@
     /* Create the threads to process the distances between the various
     points and repeat until modified is no longer valid */
     int num_threads;   
-+   tern_lineup_init(0, num_procs, num_procs*20);
++   soba_init(0, num_procs, num_procs*20);
     while (modified) 
     {
        num_per_thread = num_points / num_procs;
