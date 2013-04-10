@@ -1,4 +1,4 @@
-all: interpose.so libxtern-annot.so usermonitor interpose_mc.so
+all: interpose.so libxtern-annot.so interpose_mc.so
 
 INC_DIRS=-I$(TERN_ROOT)/include/ -I$(XTERN_ROOT)/include/ -I$(XTERN_ROOT)/obj/include
 STD_LIBS=-lsupc++ -lpthread -lstdc++ -lrt
@@ -9,9 +9,6 @@ PREFIX=LD_PRELOAD=$(XTERN_ROOT)/dync_hook/interpose.so
 ifndef $(XTERN_PLUS_DBUG)
 	XTERN_PLUS_DBUG=0
 endif
-
-usermonitor: usermonitor.cpp
-	g++ usermonitor.cpp -o usermonitor
 
 interpose.so: template.cpp spec_hooks.cpp hook.cpp
 ifneq ($(XTERN_PLUS_DBUG),1)
