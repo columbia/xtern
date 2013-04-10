@@ -44,10 +44,9 @@ you only need to redo the Step 5 below.
   --prefix=$XTERN_ROOT/install
 
 5. Make. Every time after you 'git pull' xtern, you should go to this directory and make it.
-Always run "make clean" first, and then "make install", and then"make dync_hook",
-as show below.
+Always run "make clean" first, and then "make", and then "make install", as show below.
 > cd $XTERN_ROOT/obj
-> make ENABLE_OPTIMIZED=0/1 clean && make ENABLE_OPTIMIZED=0/1 install && make ENABLE_OPTIMIZED=0/1 dync_hook
+> make ENABLE_OPTIMIZED=0/1 clean && make ENABLE_OPTIMIZED=0/1 && make ENABLE_OPTIMIZED=0/1 install
 
 6. Test. It may take a few minutes. If it all passes, then everything has been installed correctly.
 This step may take a few minutes, depending on hardware speed.
