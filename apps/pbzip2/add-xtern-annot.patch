@@ -25,8 +25,8 @@ diff -ruN pbzip2-1.1.5/pbzip2.cpp pbzip2-1.1.5-modified/pbzip2.cpp
  			return (NULL);
  		}
  
-+		tern_lineup_start(0);
-+		tern_lineup_end(0);
++		tern_lineup(0);
++		
  		// compress the memory buffer (blocksize=9*100k, verbose=0, worklevel=30)
  		ret = BZ2_bzBuffToBuffCompress(CompressedData, &outSize,
  				fileData->buf, fileData->bufSize, BWTblockSize, Verbosity, 30);

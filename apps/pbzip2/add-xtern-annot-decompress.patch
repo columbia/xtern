@@ -5,8 +5,8 @@ diff -Naur pbzip2-1.1.5/pbzip2.cpp pbzip2-1.1.5_modify/pbzip2.cpp
  		safe_cond_signal(fifo->notFull);
  		safe_mutex_unlock(fifo->mut);
  
-+		tern_lineup_start(0);
-+		tern_lineup_end(0);
++		tern_lineup(0);
++		
 +
  		if (lastFileData != NULL)
  		{

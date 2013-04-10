@@ -13,8 +13,8 @@ diff -ruN ImageMagick-6.8.0-4/magick/effect.c ImageMagick-6.8.0-4-modified/magic
        }
      indexes=GetCacheViewVirtualIndexQueue(image_view);
      convolve_indexes=GetCacheViewAuthenticIndexQueue(convolve_view);
-+    tern_lineup_start(0);
-+    tern_lineup_end(0);
++    tern_lineup(0);
++    
      for (x=0; x < (ssize_t) image->columns; x++)
      {
        MagickPixelPacket

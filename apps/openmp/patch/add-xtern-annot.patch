@@ -29,8 +29,8 @@
  gomp_barrier_wait (gomp_barrier_t *barrier)
  {
    gomp_barrier_wait_end (barrier, gomp_barrier_wait_start (barrier));
-+  tern_lineup_start((long)barrier);
-+  tern_lineup_end((long)barrier);
++  tern_lineup((long)barrier);
++  
  }
  
  void
@@ -38,8 +38,8 @@
  gomp_team_barrier_wait (gomp_barrier_t *barrier)
  {
    gomp_team_barrier_wait_end (barrier, gomp_barrier_wait_start (barrier));
-+  tern_lineup_start((long)barrier);
-+  tern_lineup_end((long)barrier);
++  tern_lineup((long)barrier);
++  
  }
  
  void
