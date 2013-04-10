@@ -5,6 +5,7 @@
 #include <set>
 #include <dlfcn.h>
 #include <execinfo.h>
+#include <assert.h>
 
 using namespace std;
 
@@ -218,8 +219,10 @@ string read_file(const char *name)
 	return ret;
 }
 
-int main()
+int main(int argc, char *argv[])
 {
+  assert(argc == 3);
+
   // Get the libPathPrefix.
   Dl_info dli;
   void* tracePtrs[5];
@@ -231,8 +234,8 @@ int main()
 
   // Generate code.
   init_filter();
-  func_pattern = read_file("func_template.cpp");
-  void_func_pattern = read_file("void_func_template.cpp");
+  func_pattern = read_file(argv[1]);
+  void_func_pattern = read_file(argv[2]);
   convert(stdin);
   return 0;
 }

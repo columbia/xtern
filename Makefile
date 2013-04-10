@@ -3,7 +3,7 @@
 #
 LEVEL := .
 
-DIRS := lib
+DIRS := lib dync_hook
 EXTRA_DIST := 
 
 ifeq ($(MAKECMDGOALS),unittests)
@@ -28,6 +28,3 @@ cscope.files:
           -name \*.inc -or \
           -name \*.h | sort > cscope.files && \
 	cscope -b
-
-dync_hook:
-	cd $(XTERN_ROOT)/dync_hook && make XTERN_PLUS_DBUG=$(XTERN_PLUS_DBUG)
