@@ -6,7 +6,7 @@ include $(LEVEL)/Makefile.common
 
 INC_DIRS=-I$(TERN_ROOT)/include/ -I$(XTERN_ROOT)/include/ -I$(XTERN_ROOT)/obj/include -I.
 STD_LIBS=-lsupc++ -lpthread -lstdc++ -lrt
-TERN_LIBS=-L$(XTERN_ROOT)/install/lib/ -lruntime -lcommon
+TERN_LIBS=-L$(PROJ_OBJ_ROOT)/$(BuildMode)/lib/ -lruntime -lcommon
 CFLAGS= -g $(INC_DIRS)
 CXXFLAGS= -g $(INC_DIRS)
 SRC_DIR=$(XTERN_ROOT)/dync_hook
