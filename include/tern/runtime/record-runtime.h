@@ -1,4 +1,4 @@
-/* Author: Junfeng Yang (junfeng@cs.columbia.edu) -*- Mode: C++ -*- */
+/* Authors: Heming Cui (heming@cs.columbia.edu), Junfeng Yang (junfeng@cs.columbia.edu) -*- Mode: C++ -*- */
 // Refactored from Heming's Memoizer code
 
 #ifndef __TERN_RECORDER_RUNTIME_H

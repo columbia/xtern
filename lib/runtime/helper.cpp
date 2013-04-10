@@ -1,4 +1,4 @@
-/* Author: Junfeng Yang (junfeng@cs.columbia.edu) */
+/* Authors: Heming Cui (heming@cs.columbia.edu), Junfeng Yang (junfeng@cs.columbia.edu) */
 
 #include <stdint.h>
 #include <assert.h>

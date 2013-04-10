@@ -1,4 +1,4 @@
-/* Author: Junfeng Yang (junfeng@cs.columbia.edu) -*- Mode: C++ -*- */
+/* Authors: Heming Cui (heming@cs.columbia.edu), Junfeng Yang (junfeng@cs.columbia.edu) -*- Mode: C++ -*- */
 
 #include <assert.h>
 #include <stdlib.h>

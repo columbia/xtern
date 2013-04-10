@@ -1,4 +1,4 @@
-/* Author: Junfeng Yang (junfeng@cs.columbia.edu) -*- Mode: C++ -*- */
+/* Authors: Heming Cui (heming@cs.columbia.edu), Junfeng Yang (junfeng@cs.columbia.edu) -*- Mode: C++ -*- */
 
 /* This is the central table that lists the synchronization functions and
  * blocking system calls that tern hooks, as well as tern builtin synch
