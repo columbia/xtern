@@ -51,5 +51,5 @@ clean::
 	rm -rf $(SRC_DIR)/code_gen $(SRC_DIR)/template.cpp
 
 install::
-	mv *.so $(SRC_DIR)
+	cp *.so $(SRC_DIR)
 
