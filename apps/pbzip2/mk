@@ -13,9 +13,17 @@ if [ ! -f pbzip2-$VER.tar.gz ]; then
     wget http://pkgs.fedoraproject.org/repo/pkgs/pbzip2/pbzip2-$VER.tar.gz/94cbc6ff49a6f4df40f6b1552b613ce6/pbzip2-$VER.tar.gz
 fi
 tar zxvf pbzip2-$VER.tar.gz
-cd pbzip2-$VER
+
+pushd pbzip2-$VER
 patch -p1 < ../add-xtern-annot-0.9.5-all.patch
 patch -p1 < ../add-set-base-time-annot.patch
 make
 mv pbzip2 ../pbzip2
+popd
 
+if [ ! -f db-5.3.15.tar.gz ]; then
+    wget http://download.oracle.com/berkeley-db/db-5.3.15.tar.gz &> /dev/null
+fi
+gunzip -f db-5.3.15.tar.gz
+mv db-5.3.15.tar input.tar
+./pbzip2 -p4 -rkvf input.tar &> /dev/null
