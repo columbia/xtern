@@ -1,4 +1,4 @@
-// Authors: Junfeng Yang (junfeng@cs.columbia.edu).  Refactored from
+// Authors: Heming Cui (heming@cs.columbia.edu), Junfeng Yang (junfeng@cs.columbia.edu).  Refactored from
 // Heming's Memoizer code
 //
 // Some tricky issues addressed or discussed here are:

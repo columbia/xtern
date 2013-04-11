@@ -1,4 +1,4 @@
-/* Author: Junfeng Yang (junfeng@cs.columbia.edu) -*- Mode: C++ -*- */
+/* Authors: Heming Cui (heming@cs.columbia.edu), Junfeng Yang (junfeng@cs.columbia.edu) -*- Mode: C++ -*- */
 #ifndef __TERN_COMMON_RUNTIME_SCHED_H
 #define __TERN_COMMON_RUNTIME_SCHED_H
 
