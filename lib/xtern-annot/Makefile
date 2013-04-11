@@ -1,13 +1,7 @@
 LEVEL := ../..
 
-BUILT_SOURCES :=
-
-LIBRARYNAME := xtern-annot
-ARCHIVE_LIBRARY = 0
+LIBRARYNAME = xtern-annot
 SHARED_LIBRARY = 1
-
-# bc module
-# MODULE_NAME := $(LIBRARYNAME)
+ARCHIVE_LIBRARY = 0
 
 include $(LEVEL)/Makefile.common
-

@@ -3,7 +3,7 @@
 #
 LEVEL := .
 
-DIRS := lib dync_hook
+DIRS := lib
 EXTRA_DIST := 
 
 ifeq ($(MAKECMDGOALS),unittests)

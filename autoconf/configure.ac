@@ -156,7 +156,10 @@ AC_CONFIG_MAKEFILE(Makefile)
 AC_CONFIG_MAKEFILE(Makefile.common)
 AC_CONFIG_MAKEFILE(test/Makefile)
 AC_CONFIG_MAKEFILE(test/Makefile.tests)
-AC_CONFIG_MAKEFILE(unittests/Makefile)
+AC_CONFIG_MAKEFILE(lib/common/Makefile)
+AC_CONFIG_MAKEFILE(lib/runtime/Makefile)
+AC_CONFIG_MAKEFILE(lib/xtern-annot/Makefile)
+AC_CONFIG_MAKEFILE(lib/parrot/Makefile)
 
 dnl This must be last
 AC_OUTPUT
