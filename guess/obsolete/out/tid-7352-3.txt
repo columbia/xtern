@@ -1,0 +1,3 @@
+op insid turn app_time syscall_time sched_time tid args
+tern_thread_begin 0xffffffff 10 0:000000000 0:000063599 1:963591637 3 0x7f67bb7fe700
+tern_thread_end 0xffffffff 12 1:984025082 0:000000058 0:000000518 3 0x7f67bb7fe700
