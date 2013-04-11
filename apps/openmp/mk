@@ -11,7 +11,7 @@ rm -rf gcc-$VER install *.a ex//*.a
 if [ ! -f gcc-$VER.tar.gz ]; then
     wget http://ftp.gnu.org/gnu/gcc/gcc-$VER/gcc-$VER.tar.gz
 fi
-tar zxvf gcc-$VER.tar.gz
+tar zxf gcc-$VER.tar.gz
 
 # compile gcc
 cd gcc-$VER
