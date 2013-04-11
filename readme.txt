@@ -6,14 +6,17 @@ Gcc: 4.5.4 (please use this gcc version if possible, because other modules
 such as llvm can be compiled with this version, but not gcc-4.6).
 
 
+
+
 Installing Parrot (xtern)
 ================
 
 1. Add $XTERN_ROOT (the absolute path of "xtern") into environment variables
 in your ~/.bashrc. Run "echo $XTERN_ROOT" and "echo $LD_LIBRARY_PATH"
 to make sure they are correct.
-export XTERN_ROOT=the absolute path of "smt+mc/xtern"
-export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$XTERN_ROOT/dync_hook
+> export XTERN_ROOT=the absolute path of "smt+mc/xtern"
+> export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$XTERN_ROOT/dync_hook
+
 
 2. Performance hints.
 > cd $XTERN_ROOT/apps/
@@ -21,6 +24,7 @@ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$XTERN_ROOT/dync_hook
 For example, the $XTERN_ROOT/apps/openmp/patch/add-xtern-annot.patch
 file is the generic performance hints that benefit all OpenMP programs in 
 our benchmarks.
+
 
 3. Build llvm. Go to directory $XTERN_ROOT, and run:
 > cd $XTERN_ROOT
@@ -34,6 +38,7 @@ specify "ENABLE_OPTIMIZED=0". This LLVM compilation is only one way work,
 later if you check out a newer version of xtern, you do not need to rerun this,
 you only need to redo the Step 5 below.
 
+
 4. Config. that's because xtern uses LLVM makefile.common:
 > cd $XTERN_ROOT
 > mkdir -p obj
@@ -43,15 +48,19 @@ you only need to redo the Step 5 below.
   --with-llvmgccdir=$XTERN_ROOT/llvm/install/bin/ \
   --prefix=$XTERN_ROOT/install
 
+
 5. Make. Every time after you 'git pull' xtern, you should go to this directory and make it.
 Always run "make clean" first, and then "make", and then "make install", as show below.
 > cd $XTERN_ROOT/obj
 > make ENABLE_OPTIMIZED=0/1 clean && make ENABLE_OPTIMIZED=0/1 && make ENABLE_OPTIMIZED=0/1 install
 
+
 6. Test. It may take a few minutes. If it all passes, then everything has been installed correctly.
 This step may take a few minutes, depending on hardware speed.
 > cd $XTERN_ROOT/obj
 > make ENABLE_OPTIMIZED=0/1 -C test check
+
+
 
 
 Running Parrot (xtern)
@@ -70,6 +79,7 @@ When you run an app with xtern, by default it will first find a
 "local.options" file and then run xtern with the options specified within
 this local file, if this file does not exist, xtern will be run with (default)
 options specified in the "$XTERN_ROOT/default.options" file.
+
 
 2. How to run the xtern evaluation framework. You can skip this step unless you 
 want to get a comprehensive performance overhead of xtern over all its benchmarks.
@@ -97,6 +107,7 @@ INIT_ENV_CMD = sync
 INPUTS = histogram_datafiles/large.bmp
 EXPORT = MR_NUMPROCS=16 MR_NUMTHREADS=16 MR_L1CACHESIZE=524288
 GZIP = histogram.tar.gz
+
 
 3. Running stl performance results. For all the other *-standard.cfg
 files, we only need to directly feed them to the eval.py script. 
