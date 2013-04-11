@@ -79,7 +79,8 @@ def readConfigFile(config_file):
                                                 "GZIP": "",
                                                 "EXPORT": "",
                                                 "INIT_ENV_CMD": "",
-                                                "EVALUATION": ""} )
+                                                "EVALUATION": "",
+                                                "EVAL_ID": ""} )
         ret = newConfig.read(config_file)
     except ConfigParser.MissingSectionHeaderError as e:
         logging.error(str(e))
@@ -282,8 +283,12 @@ def processBench(config, bench):
         return
 
     segs = re.sub(r'(\")|(\.)|/|\'', '', bench).split()
-    dir_name = ""
-    dir_name =  '_'.join(segs)
+    eval_id = config.get(bench, 'EVAL_ID')
+    if eval_id:
+        dir_name = "%s_" % eval_id
+    else:
+        dir_name = ""
+    dir_name +=  '_'.join(segs)
     mkDirP(dir_name)
     os.chdir(dir_name)
 
