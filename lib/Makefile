@@ -6,6 +6,6 @@ LEVEL := ..
 #
 # List all of the subdirectories that we will compile.
 #
-DIRS := common runtime
+DIRS := common runtime parrot xtern-annot
 
 include $(LEVEL)/Makefile.common
