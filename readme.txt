@@ -98,6 +98,16 @@ INPUTS = histogram_datafiles/large.bmp
 EXPORT = MR_NUMPROCS=16 MR_NUMTHREADS=16 MR_L1CACHESIZE=524288
 GZIP = histogram.tar.gz
 
+3. Running stl performance results. For all the other *-standard.cfg
+files, we only need to directly feed them to the eval.py script. 
+For stl, we should run "./eval.py --stl-result stl-standard.cfg",
+so that we only measure the "parallel execution time" of these stl
+programs and avoid taking the "serial phase" (generating vector inputs)
+into account.
+
+
+
+
 
 Testsuite (xtern/test)
 ======================
