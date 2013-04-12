@@ -37,13 +37,13 @@ def genStats(values):
         sys.exit(1)
     avg = np.average(values)
     std_error = sem(values, axis=None)
-    ret = '{:.4f} {:.10f} {:.2%}'.format(avg, std_error, std_error/avg)
+    ret = '{:.4f}   {:.10f}   {:.2%}'.format(avg, std_error, std_error/avg)
     return ret
     
 def extract(dir):
     eval_id = dir.split('_')[0]
     name = dir.split('_')[2]
-    return eval_id, name
+    return eval_id, '{:<25}'.format(name)
 
 if __name__ == "__main__":
     # set log format
@@ -76,5 +76,8 @@ if __name__ == "__main__":
     
         output = "%s.stat" % os.path.abspath(d)
         with open(output, 'w') as f:
+            f.write("#ID {:<25} {:<8} {:<14} {:<4} {:<10}\n".format(
+                'Name', 'Mean', 'SEM', 'ERR(%)', 'STD'))
             for key in result:
-                f.write("%s %s\n" % (key,result[key]) )
+                f.write("%3s %s\n" % (key,result[key]) )
+

@@ -117,7 +117,7 @@ def getGitInfo():
 def genRunDir(config_file, git_info):
     from os.path import basename
     config_name = os.path.splitext( basename(config_file) )[0]
-    if args.no_parrot:
+    if args.no_preload:
         dir_name = "N"
     else:
         dir_name = ""
@@ -309,7 +309,7 @@ def processBench(config, bench):
         logging.info("presetting cmd in each round: %s" % init_env_cmd)
 
     # generate commands
-    if not args.no_parrot:
+    if not args.no_preload:
         xtern_command = ' '.join(['time', XTERN_PRELOAD, export, exec_file] + inputs.split())
         logging.info("executing '%s'" % xtern_command)
         execBench(xtern_command, repeats, 'xtern', init_env_cmd)
@@ -341,7 +341,7 @@ if __name__ == "__main__":
         type=str,
         default = ["parrot.cfg"],
         help = "list of configuration files (default: parrot.cfg)")
-    parser.add_argument("--no-parrot",
+    parser.add_argument("--no-preload",
                         action="store_true",
                         help="run benchmark without Parrot")
     parser.add_argument("--options",

@@ -353,6 +353,23 @@ public:
     return head;
   }
 
+  inline void push_to_second(int tid) {
+    PRINT(__FUNCTION__);
+    struct runq_elem *elem = tid_map[tid];
+    ASSERT(elem);
+    DBG_ASSERT_ELEM_NOT_IN(__FUNCTION__, elem);
+    if (head == NULL) {
+      head = tail = elem;
+    } else {
+      elem->next = head->next;
+      head->next = elem;
+      if ( head == tail )
+        tail = elem;
+    }
+    DBG_INSERT_ELEM(__FUNCTION__, elem);
+    num_elements++;
+  }
+
   inline void push_front(int tid) {
     PRINT(__FUNCTION__);
     struct runq_elem *elem = tid_map[tid];
