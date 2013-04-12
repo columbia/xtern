@@ -22,7 +22,7 @@ def forEachSubDir(dir):
     del cost[0]
     values = tuple(cost[key] for key in cost)
     os.chdir('..')
-    return cost
+    return values
 
 def genStats(values):
     try:
@@ -31,12 +31,19 @@ def genStats(values):
         logging.error("please install 'numpy' module. %s" % e)
         sys.exit(1)
     try:
-        import scipy
+        from scipy.stats import sem
     except ImportError as e:
         logging.error("please install 'scipy' module. %s" % e)
         sys.exit(1)
-    avg = np.average(np)
+    avg = np.average(values)
+    std_error = sem(values, axis=None)
+    ret = '{:.4f} {:.10f} {:.2%}'.format(avg, std_error, std_error/avg)
+    return ret
     
+def extract(dir):
+    eval_id = dir.split('_')[0]
+    name = dir.split('_')[2]
+    return eval_id, name
 
 if __name__ == "__main__":
     # set log format
@@ -57,9 +64,17 @@ if __name__ == "__main__":
         help = "list of directories")
     args = parser.parse_args()
 
+    result = {}
     for d in args.directory:
         os.chdir(d)
         for s_d in os.walk('.').next()[1]:
             values = forEachSubDir(s_d)
             stats_str = genStats(values)
+            eval_id, bench_name = extract(s_d)
+            result[int(eval_id)] = " ".join([bench_name, stats_str])
         os.chdir('..')
+    
+        output = "%s.stat" % os.path.abspath(d)
+        with open(output, 'w') as f:
+            for key in result:
+                f.write("%s %s\n" % (key,result[key]) )
