@@ -37,7 +37,7 @@ def genStats(values):
         sys.exit(1)
     avg = np.average(values)
     std_error = sem(values, axis=None)
-    ret = '{:.4f}   {:.10f}   {:.2%}'.format(avg, std_error, std_error/avg)
+    ret = '{:<8.4f} {:<13.10f} {:.2%}'.format(avg, std_error, std_error/avg)
     return ret
     
 def extract(dir):
@@ -76,7 +76,7 @@ if __name__ == "__main__":
     
         output = "%s.stat" % os.path.abspath(d)
         with open(output, 'w') as f:
-            f.write("#ID {:<25} {:<8} {:<14} {:<4} {:<10}\n".format(
+            f.write("#ID {:<25} {:<8} {:<13} {:<4} {:<10}\n".format(
                 'Name', 'Mean', 'SEM', 'ERR(%)', 'STD'))
             for key in result:
                 f.write("%3s %s\n" % (key,result[key]) )
