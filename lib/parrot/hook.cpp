@@ -44,6 +44,7 @@ static preload_static_block preload_initializer;
 
 #define __SPEC_HOOK___libc_start_main
 
+#ifdef PRINT_DEBUG
 static void print_stack()
 {
 #if 0
@@ -66,6 +67,7 @@ static void print_stack()
   free( funcNames );
 #endif
 }
+#endif
 
 void *get_eip()
 {
