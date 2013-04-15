@@ -1,4 +1,4 @@
-#!/bin/sh -e
+#!/bin/bash -e
 
 VER="2.7" # only works with llvm 2.7 for now
 GCCVER="4.2-$VER"
@@ -38,11 +38,13 @@ mkdir -p install
 (cd llvm-gcc$GCCVER-$MACHINE-linux; tar cf - .) |(cd install; tar xvf -)
 
 # install llvm
-tar xzvf llvm-$VER.tgz
+tar xzf llvm-$VER.tgz
 mkdir -p llvm-obj
 cd llvm-obj
-../llvm-$VER/configure --prefix="$ROOT/install"
-make $llvm_debug -j64
+CC=gcc-4.5 CXX=g++-4.5 ../llvm-$VER/configure --prefix="$ROOT/install"
+cores=$( grep "^processor" /proc/cpuinfo | wc -l )
+job=$[cores*2]
+make $llvm_debug -j$job
 make $llvm_debug install
 cd ..
 

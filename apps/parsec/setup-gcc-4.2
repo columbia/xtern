@@ -28,12 +28,13 @@ tar jxf gcc-4.2.4.tar.bz2
 mv gcc-4.2.4 $SOURCE
 
 pushd $SOURCE
-cores=$( grep "^physical id" /proc/cpuinfo | wc -l )
+cores=$( grep "^processor" /proc/cpuinfo | wc -l )
 job=$[cores*2]
 
 patch -p1 < ../patch/xtern_annot.patch
 XTERN_ANNOT_LIB="-I$XTERN_ROOT/include -L$XTERN_ROOT/dync_hook -Wl,--rpath,$XTERN_ROOT/dync_hook -lxtern-annot"
 CFLAGS+="$XTERN_ANNOT_LIB" ./configure --prefix=$INSTALL --disable-linux-futex --enable-languages=c,c++ --disable-multilib
+# if fails at strange location; remove -j$job
 make -j$job
 mkdir -p $INSTALL
 make -j$job install
