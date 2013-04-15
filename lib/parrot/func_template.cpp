@@ -10,7 +10,6 @@ extern "C" FUNC_RET_TYPE FUNC_NAME(ARGS_WITH_NAME){
   if (!orig_func) {
     if(!(handle=dlopen("LIB_PATH", RTLD_LAZY))) {
       perror("dlopen");
-      puts("here dlopen");
       abort();
     }
 
@@ -18,7 +17,6 @@ extern "C" FUNC_RET_TYPE FUNC_NAME(ARGS_WITH_NAME){
 
     if(dlerror()) {
       perror("dlsym");
-      puts("here dlsym");
       abort();
     }
 

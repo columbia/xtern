@@ -2,25 +2,25 @@
 extern "C" void FUNC_NAME(ARGS_WITH_NAME){
   typedef int (*orig_func_type)(ARGS_WITHOUT_NAME);
 
-  orig_func_type orig_func;
+  static orig_func_type orig_func;
 
   void * handle;
 
-  if(!(handle=dlopen("LIB_PATH", RTLD_LAZY))) {
-    perror("dlopen");
-    puts("here dlopen");
-    abort();
+  if (!orig_func) {
+    if(!(handle=dlopen("LIB_PATH", RTLD_LAZY))) {
+      perror("dlopen");
+      abort();
+    }
+
+    orig_func = (orig_func_type) dlsym(handle, "FUNC_NAME");
+
+    if(dlerror()) {
+      perror("dlsym");
+      abort();
+    }
+
+    dlclose(handle);
   }
-
-  orig_func = (orig_func_type) dlsym(handle, "FUNC_NAME");
-
-  if(dlerror()) {
-    perror("dlsym");
-    puts("here dlsym");
-    abort();
-  }
-
-  dlclose(handle);
 
 #ifdef __USE_TERN_RUNTIME
   if (Space::isApp() && options::DMT) {
@@ -40,7 +40,6 @@ extern "C" void FUNC_NAME(ARGS_WITH_NAME){
 #ifdef PRINT_DEBUG
     fprintf(stdout, "%04d: FUNC_NAME is hooked.\n", (int) pthread_self());
 #endif
-    return; 
   }
 #else
 #endif
