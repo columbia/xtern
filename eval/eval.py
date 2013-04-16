@@ -534,6 +534,19 @@ def processBench(config, bench):
                 nondet_cost += [float(line.split()[1])]
                 break
 
+    seg_count = 0
+    for i in range(int(repeats)):
+        log_file_name = 'xtern/output.%d' % i
+        for line in reversed(open(log_file_name, 'r').readlines()):
+            if re.search('Segmentation', line):
+                seg_count += 1
+                break
+
+    with open('div-result' , 'w') as div:
+        div.write("Segmantation Count: %d" % seg_count)
+        div.write("Total Count: %d" % int(repeats))
+        div.write("Percent: {.2%}" % seg_count/int(repeats))
+ 
     write_stats(xtern_cost, nondet_cost, int(repeats))
     if dthread:
         write_other_stats(nondet_cost, int(repeats), 'dthreads')
