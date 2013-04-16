@@ -76,8 +76,11 @@ if __name__ == "__main__":
             eval_id, bench_name = extract(s_d)
             result[int(eval_id)] = " ".join([bench_name, stats_str])
         os.chdir('..')
-    
-        output = "%s.stat" % os.path.abspath(d)
+        
+        if d.endswith('.dir'):
+            output = os.path.abspath(d).rstrip('.dir')
+        else:
+            output = "%s.stat" % os.path.abspath(d)
         with open(output, 'w') as f:
             f.write("#ID  {:<25} {:<8} {:<13} {:<4} {:<10}\n".format(
                 'Name', 'Mean', 'SEM', 'ERR(%)', 'STD'))

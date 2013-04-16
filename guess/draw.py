@@ -55,7 +55,9 @@ if __name__ == "__main__":
     if args.perfs:
         name_list = input_name
     else:
-        name_list = mergeDicts(nondet_name, parrot_name, parrot_hint_name)
+        #name_list = mergeDicts(nondet_name, parrot_name, parrot_hint_name)
+        name_list = dict([(item, nondet_name[item]) for item in nondet_name.keys() if parrot_name.has_key(item)])
+        name_list = dict([(item, name_list[item]) for item in name_list.keys() if parrot_hint_name.has_key(item)])
     
     n_t_parrot_dict = {}
     n_t_parrot_hint_dict = {}
@@ -75,6 +77,10 @@ if __name__ == "__main__":
     n_t_parrot_hint = tuple(n_t_parrot_hint_dict[key] for key in n_t_parrot_hint_dict)
     if args.perfs:
         n_t_input = tuple(n_t_input_dict[key] for key in n_t_parrot_dict)
+
+    print n_t_parrot
+    print n_t_parrot_hint
+    print name_list
 
     fig = plt.figure()
     ax = fig.add_subplot(1, 1, 1)
