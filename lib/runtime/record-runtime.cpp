@@ -161,7 +161,13 @@ void check_options()
 
 void InstallRuntime() {
   check_options();
-  Runtime::the = new RecorderRT<RRScheduler>;
+  if (options::runtime_type == "SeededRR") {
+    RecorderRT<SeededRRScheduler> *rt = new RecorderRT<SeededRRScheduler>;
+    static_cast<SeededRRScheduler*>(rt)->setSeed(options::scheduler_seed);
+    Runtime::the = rt;
+  } else {
+    Runtime::the = new RecorderRT<RRScheduler>;
+  }
 }
 
 template <typename _S>
