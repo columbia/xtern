@@ -43,6 +43,9 @@ def genStats(values):
 def extract(dir):
     eval_id = dir.split('_')[0]
     name = dir.split('_')[2]
+    # handle special names
+    if name == 'water' or name == 'lu' or name == 'ocean':
+        name = "_".join([name, dir.split('_')[3]])
     return eval_id, '{:<25}'.format(name)
 
 if __name__ == "__main__":
@@ -76,8 +79,8 @@ if __name__ == "__main__":
     
         output = "%s.stat" % os.path.abspath(d)
         with open(output, 'w') as f:
-            f.write("#ID {:<25} {:<8} {:<13} {:<4} {:<10}\n".format(
+            f.write("#ID  {:<25} {:<8} {:<13} {:<4} {:<10}\n".format(
                 'Name', 'Mean', 'SEM', 'ERR(%)', 'STD'))
             for key in result:
-                f.write("%3s %s\n" % (key,result[key]) )
+                f.write("%4s %s\n" % (key,result[key]) )
 
