@@ -11,11 +11,11 @@
 # The following example builds sample sizes of all benchmarks. 
 ft	B
 mg	B
-sp	A
-lu	A
-bt	A
+sp	C
+lu	C
+bt	C
 is	C
-ep	B
-cg	B
-ua	A
+ep	D
+cg	C
+ua	C
 dc  A
