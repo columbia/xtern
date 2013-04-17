@@ -78,10 +78,6 @@ if __name__ == "__main__":
     if args.perfs:
         n_t_input = tuple(n_t_input_dict[key] for key in n_t_parrot_dict)
 
-    print n_t_parrot
-    print n_t_parrot_hint
-    print name_list
-
     fig = plt.figure()
     ax = fig.add_subplot(1, 1, 1)
 
