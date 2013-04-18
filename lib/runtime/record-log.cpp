@@ -47,6 +47,17 @@ void TxtLogger::logSync(unsigned insid, unsigned short sync, unsigned turn,
                         timespec syscall_time,
                         timespec sched_time,
                         bool after, ...) {
+  va_list args;
+  va_start(args, after);
+  logSync(insid, sync, turn, app_time, syscall_time, sched_time, after, args);
+  va_end(args);
+}
+
+void TxtLogger::logSync(unsigned insid, unsigned short sync, unsigned turn,
+                        timespec app_time,
+                        timespec syscall_time,
+                        timespec sched_time,
+                        bool after, va_list args) {
   assert(sync >= syncfunc::first_sync && sync < syncfunc::num_syncs
          && "trying to log unknown synchronization operation!");
 
@@ -55,8 +66,6 @@ void TxtLogger::logSync(unsigned insid, unsigned short sync, unsigned turn,
   if (sync == syncfunc::tern_thread_begin
     || sync == syncfunc::tern_thread_end) //  for tests, i need to know the thread_mapping
   {
-    va_list args;
-    va_start(args, after);
     ouf << syncfunc::getName(sync)
       << " 0x" << hex << insid << dec
       << ' ' << turn
@@ -68,7 +77,6 @@ void TxtLogger::logSync(unsigned insid, unsigned short sync, unsigned turn,
       << setfill('0') << setw(9) << sched_time.tv_nsec
       << ' ' << tid
       << hex << " 0x" << va_arg(args, uint64_t) << dec;
-    va_end(args);
     ouf << "\n";
     ouf.flush();
     return;
@@ -90,9 +98,6 @@ void TxtLogger::logSync(unsigned insid, unsigned short sync, unsigned turn,
     << " " << dec << sched_time.tv_sec << ":"
     << setfill('0') << setw(9) << sched_time.tv_nsec
     << ' ' << tid;
-
-  va_list args;
-  va_start(args, after);
 
   switch (sync) {
     // log nothing, mostly for sched point. 
@@ -208,7 +213,6 @@ void TxtLogger::logSync(unsigned insid, unsigned short sync, unsigned turn,
     assert(0);
   }
 
-  va_end(args);
   ouf << "\n";
   ouf.flush();
 }
@@ -362,7 +366,7 @@ void BinLogger::logSync(unsigned insid, unsigned short sync,
                         unsigned turn,
                         timespec time1,
                         timespec time2, timespec sched_time,
-                        bool after, ...) {
+                        bool after, va_list args) {
   checkAndGrowLogSize();
   assert(sync >= syncfunc::first_sync && sync < syncfunc::num_syncs
          && "trying to log unknown synchronization operation!");
@@ -376,13 +380,21 @@ void BinLogger::logSync(unsigned insid, unsigned short sync,
 
   assert(NumSyncArgs(sync) <= (int)MAX_INLINE_ARGS);
 
-  va_list args;
-  va_start(args, after);
   for (int i = 0; i < NumSyncArgs(sync); ++i)
     rec->args[i] = va_arg(args, uint64_t);
-  va_end(args);
 
   off += RECORD_SIZE;
+}
+
+void BinLogger::logSync(unsigned insid, unsigned short sync,
+                        unsigned turn,
+                        timespec time1,
+                        timespec time2, timespec sched_time,
+                        bool after, ...) {
+  va_list args;
+  va_start(args, after);
+  logSync(insid, sync, turn, time1, time2, sched_time, after, args);
+  va_end(args);
 }
 
 BinLogger::BinLogger(int tid) {
@@ -435,6 +447,17 @@ void TestLogger::logSync(unsigned insid, unsigned short sync,
                          timespec time1,
                          timespec time2, timespec sched_time,
                          bool after, ...) {
+  va_list args;
+  va_start(args, after);
+  logSync(insid, sync, turn, time1, time2, sched_time, after, args);
+  va_end(args);
+}
+
+void TestLogger::logSync(unsigned insid, unsigned short sync,
+                         unsigned turn,
+                         timespec time1,
+                         timespec time2, timespec sched_time,
+                         bool after, va_list args) {
   assert(sync >= syncfunc::first_sync && sync < syncfunc::num_syncs
          && "trying to log unknown synchronization operation!");
 
@@ -445,8 +468,6 @@ void TestLogger::logSync(unsigned insid, unsigned short sync,
   if (sync == syncfunc::tern_thread_begin
     || sync == syncfunc::tern_thread_end) //  for tests, i need to know the thread_mapping
   {
-    va_list args;
-    va_start(args, after);
     ouf << syncfunc::getName(sync)
       << " 0x" << hex << insid << dec
       << ' ' << turn
@@ -458,7 +479,6 @@ void TestLogger::logSync(unsigned insid, unsigned short sync,
       << setfill('0') << setw(9) << 0
       << ' ' << tid
       << hex << " 0x" << va_arg(args, uint64_t) << dec;
-    va_end(args);
     ouf << "\n";
     ouf.flush();
     return;
@@ -480,9 +500,6 @@ void TestLogger::logSync(unsigned insid, unsigned short sync,
     << " " << dec << 0 << ":"
     << setfill('0') << setw(9) << 0
     << ' ' << tid;
-
-  va_list args;
-  va_start(args, after);
 
   switch (sync) {
     // log nothing, mostly for sched point. 
@@ -598,7 +615,6 @@ void TestLogger::logSync(unsigned insid, unsigned short sync,
     assert(0);
   }
 
-  va_end(args);
   ouf << "\n";
   ouf.flush();
 

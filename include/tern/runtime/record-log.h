@@ -24,7 +24,12 @@ struct Logger {
                        unsigned turn, 
                        timespec time1, 
                        timespec time2, timespec sched_time, 
-                       bool after = true, ...) {}
+                       bool after, ...) {}
+  virtual void logSync(unsigned insid, unsigned short sync,
+                       unsigned turn, 
+                       timespec time1, 
+                       timespec time2, timespec sched_time, 
+                       bool after, va_list args) {}
   virtual void flush() {}
   virtual ~Logger() {}
   static __thread Logger* the; /// pointer to per-thread logger
@@ -71,7 +76,12 @@ struct TxtLogger: public Logger {
                        unsigned turn,
                        timespec time1, 
                        timespec time2, timespec sched_time, 
-                       bool after = true, ...);
+                       bool after, ...);
+  virtual void logSync(unsigned insid, unsigned short sync,
+                       unsigned turn, 
+                       timespec time1, 
+                       timespec time2, timespec sched_time, 
+                       bool after, va_list args);
   TxtLogger(int tid);
   virtual ~TxtLogger();
 
@@ -94,7 +104,12 @@ struct BinLogger: public Logger {
                        unsigned turn, 
                        timespec time1, 
                        timespec time2, timespec sched_time, 
-                       bool after = true, ...);
+                       bool after, ...);
+  virtual void logSync(unsigned insid, unsigned short sync,
+                       unsigned turn, 
+                       timespec time1, 
+                       timespec time2, timespec sched_time, 
+                       bool after, va_list args);
   virtual ~BinLogger();
   BinLogger(int tid);
 
@@ -121,7 +136,12 @@ struct TestLogger: public Logger {
                        unsigned turn, 
                        timespec time1, 
                        timespec time2, timespec sched_time, 
-                       bool after = true, ...);
+                       bool after, ...);
+  virtual void logSync(unsigned insid, unsigned short sync,
+                       unsigned turn, 
+                       timespec time1, 
+                       timespec time2, timespec sched_time, 
+                       bool after, va_list args);
   virtual void flush();
   TestLogger(int tid);
   virtual ~TestLogger();

@@ -13,25 +13,42 @@
 namespace tern {
 
 struct barrier_t {
-  int count;    // barrier count
+  int count; // barrier count
   int narrived; // number of threads arrived at the barrier
 };
+
 struct ref_cnt_barrier_t {
-  unsigned count;    // barrier count
-  unsigned nactive;  // number of threads in the linup region (between lineup_starnt and lineup_end).
-  unsigned timeout;  // Number of turns that an operation (at most) has to block.
-  enum PHASE {ARRIVING, LEAVING}; // ARRIVING: we have to wait up to "count" threads arrive or timeout.
-                              // LEAVING: timeout has happened or all threads have arrived.
+  unsigned count; // barrier count
+  unsigned nactive; // number of threads in the linup region (between lineup_starnt and lineup_end).
+  unsigned timeout; // Number of turns that an operation (at most) has to block.
+
+  enum PHASE {
+    ARRIVING, LEAVING
+  }; // ARRIVING: we have to wait up to "count" threads arrive or timeout.
+  // LEAVING: timeout has happened or all threads have arrived.
   PHASE phase;
   long nSuccess;
   long nTimeout;
+
   ref_cnt_barrier_t() {
     nSuccess = nTimeout = 0;
   }
-  void setArriving() {phase = ARRIVING;}
-  void setLeaving() {phase = LEAVING;}
-  bool isArriving() {return phase == ARRIVING;}
-  bool isLeaving() {return phase == LEAVING;}
+
+  void setArriving() {
+    phase = ARRIVING;
+  }
+
+  void setLeaving() {
+    phase = LEAVING;
+  }
+
+  bool isArriving() {
+    return phase == ARRIVING;
+  }
+
+  bool isLeaving() {
+    return phase == LEAVING;
+  }
 };
 typedef std::tr1::unordered_map<pthread_barrier_t*, barrier_t> barrier_map;
 typedef std::tr1::unordered_map<unsigned, ref_cnt_barrier_t> refcnt_bar_map;
@@ -40,8 +57,7 @@ typedef std::tr1::unordered_map<pthread_t, int> tid_map_t;
 typedef std::tr1::unordered_map<void*, std::list<int> > waiting_tid_t;
 
 template <typename _Scheduler>
-struct RecorderRT: public Runtime, public _Scheduler {
-
+struct RecorderRT : public Runtime, public _Scheduler {
   void progBegin(void);
   void progEnd(void);
   void threadBegin(void);
@@ -50,12 +66,12 @@ struct RecorderRT: public Runtime, public _Scheduler {
   void idle_cond_wait();
 
   // thread
-  int pthreadCreate(unsigned insid, int &error, pthread_t *thread,  pthread_attr_t *attr,
+  int pthreadCreate(unsigned insid, int &error, pthread_t *thread, pthread_attr_t *attr,
                     void *(*thread_func)(void*), void *arg);
   int pthreadJoin(unsigned insid, int &error, pthread_t th, void **thread_return);
 
   // mutex
-  int pthreadMutexInit(unsigned insid, int &error, pthread_mutex_t *mutex, const  pthread_mutexattr_t *mutexattr);
+  int pthreadMutexInit(unsigned insid, int &error, pthread_mutex_t *mutex, const pthread_mutexattr_t *mutexattr);
   int pthreadMutexDestroy(unsigned insid, int &error, pthread_mutex_t *mutex);
   int pthreadMutexLock(unsigned insid, int &error, pthread_mutex_t *mutex);
   int pthreadMutexTimedLock(unsigned insid, int &error, pthread_mutex_t *mutex,
@@ -93,7 +109,7 @@ struct RecorderRT: public Runtime, public _Scheduler {
   void threadDetach();
   void nonDetBarrierEnd(int bar_id, int cnt);
   void setBaseTime(struct timespec *ts);
-  
+
   void symbolic(unsigned insid, int &error, void *addr, int nbytes, const char *name);
 
   // socket & file
@@ -103,8 +119,8 @@ struct RecorderRT: public Runtime, public _Scheduler {
   int __accept(unsigned insid, int &error, int sockfd, struct sockaddr *cliaddr, socklen_t *addrlen);
   int __accept4(unsigned insid, int &error, int sockfd, struct sockaddr *cliaddr, socklen_t *addrlen, int flags);
   int __connect(unsigned insid, int &error, int sockfd, const struct sockaddr *serv_addr, socklen_t addrlen);
-  struct hostent *__gethostbyname(unsigned insid, int &error, const char *name);
-  struct hostent *__gethostbyaddr(unsigned insid, int &error, const void *addr, int len, int type);
+  struct hostent * __gethostbyname(unsigned insid, int &error, const char *name);
+  struct hostent * __gethostbyaddr(unsigned insid, int &error, const void *addr, int len, int type);
   char *__inet_ntoa(unsigned ins, int &error, struct in_addr in);
   char *__strtok(unsigned ins, int &error, char * str, const char * delimiters);
   ssize_t __send(unsigned insid, int &error, int sockfd, const void *buf, size_t len, int flags);
@@ -114,7 +130,7 @@ struct RecorderRT: public Runtime, public _Scheduler {
   ssize_t __recvfrom(unsigned insid, int &error, int sockfd, void *buf, size_t len, int flags, struct sockaddr *src_addr, socklen_t *addrlen);
   ssize_t __recvmsg(unsigned insid, int &error, int sockfd, struct msghdr *msg, int flags);
   int __shutdown(unsigned insid, int &error, int sockfd, int how);
-  int __getpeername(unsigned insid, int &error, int sockfd, struct sockaddr *addr, socklen_t *addrlen);  
+  int __getpeername(unsigned insid, int &error, int sockfd, struct sockaddr *addr, socklen_t *addrlen);
   int __getsockopt(unsigned insid, int &error, int sockfd, int level, int optname, void *optval, socklen_t *optlen);
   int __setsockopt(unsigned insid, int &error, int sockfd, int level, int optname, const void *optval, socklen_t optlen);
   int __close(unsigned insid, int &error, int fd);
@@ -122,11 +138,11 @@ struct RecorderRT: public Runtime, public _Scheduler {
   ssize_t __write(unsigned insid, int &error, int fd, const void *buf, size_t count);
   ssize_t __pread(unsigned insid, int &error, int fd, void *buf, size_t count, off_t offset);
   ssize_t __pwrite(unsigned insid, int &error, int fd, const void *buf, size_t count, off_t offset);
-  int __select(unsigned insid, int &error, int nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds, struct timeval *timeout);  
+  int __select(unsigned insid, int &error, int nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds, struct timeval *timeout);
   int __poll(unsigned insid, int &error, struct pollfd *fds, nfds_t nfds, int timeout);
   int __bind(unsigned insid, int &error, int socket, const struct sockaddr *address, socklen_t address_len);
   int __epoll_wait(unsigned insid, int &error, int epfd, struct epoll_event *events, int maxevents, int timeout);
-  int __sigwait(unsigned insid, int &error, const sigset_t *set, int *sig); 
+  int __sigwait(unsigned insid, int &error, const sigset_t *set, int *sig);
   char *__fgets(unsigned insid, int &error, char *s, int size, FILE *stream);
   pid_t __fork(unsigned insid, int &error);
   pid_t __wait(unsigned insid, int &error, int *status);
@@ -154,7 +170,7 @@ struct RecorderRT: public Runtime, public _Scheduler {
   // print stat.
   void printStat();
 
-  RecorderRT(): _Scheduler() {
+  RecorderRT() : _Scheduler() {
     int ret;
     ret = sem_init(&thread_begin_sem, 0, 0);
     assert(!ret && "can't initialize semaphore!");
@@ -162,20 +178,23 @@ struct RecorderRT: public Runtime, public _Scheduler {
     assert(!ret && "can't initialize semaphore!");
   }
 
-  ~RecorderRT() {
-  }
+  ~RecorderRT() { }
 
 protected:
 
   int wait(void *chan, unsigned timeout = Scheduler::FOREVER);
-  void signal(void *chan, bool all=false);
+  void signal(void *chan, bool all = false);
   int absTimeToTurn(const struct timespec *abstime);
   int relTimeToTurn(const struct timespec *reltime);
 
   int pthreadMutexLockHelper(pthread_mutex_t *mutex, unsigned timeout = Scheduler::FOREVER);
   int pthreadRWLockWrLockHelper(pthread_rwlock_t *rwlock, unsigned timeout = Scheduler::FOREVER);
   int pthreadRWLockRdLockHelper(pthread_rwlock_t *rwlock, unsigned timeout = Scheduler::FOREVER);
-  
+
+  template <bool log_sync> void sched_timer_start();
+  template <bool log_sync> void sched_timer_end_fh(unsigned ins, unsigned short syncop, ...);
+  template <bool log_sync> void sched_timer_end(unsigned ins, unsigned short syncop, ...);
+  template <bool log_sync> void sched_thread_end(unsigned ins, unsigned short syncop, uint64_t th);
   /// for each pthread barrier, track the count of the number and number
   /// of threads arrived at the barrier
   barrier_map barriers;
