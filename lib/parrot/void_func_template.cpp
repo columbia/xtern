@@ -1,6 +1,6 @@
 #ifndef __SPEC_HOOK_FUNC_NAME
 extern "C" void FUNC_NAME(ARGS_WITH_NAME) {
-  typedef int (*orig_func_type)(ARGS_WITHOUT_NAME);
+  typedef int (*orig_func_type)(ARGS_WITHOUT_NAME) __attribute__ ((__noreturn__));
 
   static orig_func_type orig_func;
 

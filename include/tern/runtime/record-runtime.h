@@ -23,15 +23,13 @@ struct ref_cnt_barrier_t {
   unsigned timeout; // Number of turns that an operation (at most) has to block.
 
   enum PHASE {
-    ARRIVING, LEAVING
-  }; // ARRIVING: we have to wait up to "count" threads arrive or timeout.
-  // LEAVING: timeout has happened or all threads have arrived.
+    ARRIVING, // ARRIVING: wait up to "count" threads arrive or timeout.
+    LEAVING  // LEAVING: timeout has happened or all threads have arrived.
+  }; 
+  
   PHASE phase;
-  long nSuccess;
-  long nTimeout;
 
   ref_cnt_barrier_t() {
-    nSuccess = nTimeout = 0;
   }
 
   void setArriving() {
@@ -65,41 +63,40 @@ struct RecorderRT : public Runtime, public _Scheduler {
   void idle_sleep();
   void idle_cond_wait();
 
-  // thread
+  /// thread
   int pthreadCreate(unsigned insid, int &error, pthread_t *thread, pthread_attr_t *attr,
                     void *(*thread_func)(void*), void *arg);
   int pthreadJoin(unsigned insid, int &error, pthread_t th, void **thread_return);
 
-  // mutex
+  /// mutex
   int pthreadMutexInit(unsigned insid, int &error, pthread_mutex_t *mutex, const pthread_mutexattr_t *mutexattr);
   int pthreadMutexDestroy(unsigned insid, int &error, pthread_mutex_t *mutex);
   int pthreadMutexLock(unsigned insid, int &error, pthread_mutex_t *mutex);
   int pthreadMutexTimedLock(unsigned insid, int &error, pthread_mutex_t *mutex,
                             const struct timespec *abstime);
   int pthreadMutexTryLock(unsigned insid, int &error, pthread_mutex_t *mutex);
-
   int pthreadMutexUnlock(unsigned insid, int &error, pthread_mutex_t *mutex);
 
-  // cond var
+  /// cond var
   int pthreadCondWait(unsigned insid, int &error, pthread_cond_t *cv, pthread_mutex_t *mu);
   int pthreadCondTimedWait(unsigned insid, int &error, pthread_cond_t *cv,
                            pthread_mutex_t *mu, const struct timespec *abstime);
   int pthreadCondSignal(unsigned insid, int &error, pthread_cond_t *cv);
   int pthreadCondBroadcast(unsigned insid, int &error, pthread_cond_t *cv);
 
-  // barrier
+  /// barrier
   int pthreadBarrierInit(unsigned insid, int &error, pthread_barrier_t *barrier, unsigned count);
   int pthreadBarrierWait(unsigned insid, int &error, pthread_barrier_t *barrier);
   int pthreadBarrierDestroy(unsigned insid, int &error, pthread_barrier_t *barrier);
 
-  // semaphore
+  /// semaphore
   int semInit(unsigned insid, int &error, sem_t *sem, int pshared, unsigned int value);
   int semWait(unsigned insid, int &error, sem_t *sem);
   int semTryWait(unsigned insid, int &error, sem_t *sem);
   int semTimedWait(unsigned insid, int &error, sem_t *sem, const struct timespec *abstime);
   int semPost(unsigned insid, int &error, sem_t *sem);
 
-  // new programming primitives
+  /// new programming primitives
   void lineupInit(long opaque_type, unsigned count, unsigned timeout_turns);
   void lineupDestroy(long opaque_type);
   void lineupStart(long opaque_type);
@@ -112,8 +109,7 @@ struct RecorderRT : public Runtime, public _Scheduler {
 
   void symbolic(unsigned insid, int &error, void *addr, int nbytes, const char *name);
 
-  // socket & file
-  bool regularFile(int fd);
+  /// socket & file
   int __socket(unsigned insid, int &error, int domain, int type, int protocol);
   int __listen(unsigned insid, int &error, int sockfd, int backlog);
   int __accept(unsigned insid, int &error, int sockfd, struct sockaddr *cliaddr, socklen_t *addrlen);
@@ -154,7 +150,7 @@ struct RecorderRT : public Runtime, public _Scheduler {
   int __gettimeofday(unsigned ins, int &error, struct timeval *tv, struct timezone *tz);
   int __settimeofday(unsigned ins, int &error, const struct timeval *tv, const struct timezone *tz);
 
-  // sleep
+  /// sleep
   int schedYield(unsigned ins, int &error);
   unsigned int sleep(unsigned insid, int &error, unsigned int seconds);
   int usleep(unsigned insid, int &error, useconds_t usec);
@@ -167,7 +163,7 @@ struct RecorderRT : public Runtime, public _Scheduler {
   int __pthread_rwlock_destroy(unsigned ins, int &error, pthread_rwlock_t *rwlock);
   int __pthread_rwlock_init(unsigned ins, int &error, pthread_rwlock_t *rwlock, const pthread_rwlockattr_t * attr);
 
-  // print stat.
+  /// print stat.
   void printStat();
 
   RecorderRT() : _Scheduler() {
@@ -186,7 +182,9 @@ protected:
   void signal(void *chan, bool all = false);
   int absTimeToTurn(const struct timespec *abstime);
   int relTimeToTurn(const struct timespec *reltime);
-
+  
+  bool regularFile(int fd);
+  
   int pthreadMutexLockHelper(pthread_mutex_t *mutex, unsigned timeout = Scheduler::FOREVER);
   int pthreadRWLockWrLockHelper(pthread_rwlock_t *rwlock, unsigned timeout = Scheduler::FOREVER);
   int pthreadRWLockRdLockHelper(pthread_rwlock_t *rwlock, unsigned timeout = Scheduler::FOREVER);
@@ -195,6 +193,7 @@ protected:
   template <bool log_sync> void sched_timer_end_fh(unsigned ins, unsigned short syncop, ...);
   template <bool log_sync> void sched_timer_end(unsigned ins, unsigned short syncop, ...);
   template <bool log_sync> void sched_thread_end(unsigned ins, unsigned short syncop, uint64_t th);
+
   /// for each pthread barrier, track the count of the number and number
   /// of threads arrived at the barrier
   barrier_map barriers;
