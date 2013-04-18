@@ -647,6 +647,7 @@ int RecorderRT<_S>::pthreadMutexLock(unsigned ins, int &error, pthread_mutex_t *
 /// instead of looping to get lock as how we implement the regular lock(),
 /// here just trylock once and return.  this preserves the semantics of
 /// trylock().
+
 template <typename _S>
 int RecorderRT<_S>::pthreadMutexTryLock(unsigned ins, int &error, pthread_mutex_t *mu) {
   if (options::enforce_non_det_annotations && inNonDet) {
@@ -867,6 +868,7 @@ int RecorderRT<_S>::pthreadBarrierInit(unsigned ins, int &error,
 /// last thread arriving at the barrier can figure out that it is the last
 /// thread, and wakes up all other threads.
 ///
+
 template <typename _S>
 int RecorderRT<_S>::pthreadBarrierWait(unsigned ins, int &error,
                                        pthread_barrier_t *barrier) {
@@ -928,6 +930,7 @@ int RecorderRT<_S>::pthreadBarrierWait(unsigned ins, int &error,
 }
 
 /// FIXME: the handling of the EBUSY case seems gross
+
 template <typename _S>
 int RecorderRT<_S>::pthreadBarrierDestroy(unsigned ins, int &error,
                                           pthread_barrier_t *barrier) {
@@ -1342,7 +1345,7 @@ int RecorderRT<_S>::semTimedWait(unsigned ins, int &error, sem_t *sem,
   timespec cur_time, rel_time;
   if (my_base_time.tv_sec == 0) {
     fprintf(stderr, "WARN: sem_timedwait has a non-det timeout. "
-    "Please add tern_set_base_timespec().\n");
+            "Please add tern_set_base_timespec().\n");
     clock_gettime(CLOCK_REALTIME, &cur_time);
   } else {
     cur_time.tv_sec = my_base_time.tv_sec;
@@ -1351,7 +1354,7 @@ int RecorderRT<_S>::semTimedWait(unsigned ins, int &error, sem_t *sem,
   rel_time = time_diff(cur_time, *abstime);
 
   int ret;
-  
+
   SCHED_GET_TURN();
 
   int saved_err = 0;
@@ -1418,13 +1421,10 @@ void RecorderRT<_S>::lineupInit(long opaque_type, unsigned count, unsigned timeo
   SCHED_GET_TURN();
   //fprintf(stderr, "lineupInit opaque_type %p, count %u, timeout %u\n", (void *)opaque_type, count, timeout_turns);
   if (refcnt_bars.find(opaque_type) != refcnt_bars.end()) {
-    fprintf(stderr, "refcnt barrier %p already initialized!\n", (void *)opaque_type);
+    fprintf(stderr, "soba %p already initialized!\n", (void *)opaque_type);
     abort();
   }
-  refcnt_bars[opaque_type].count = count;
-  refcnt_bars[opaque_type].nactive = 0;
-  refcnt_bars[opaque_type].timeout = timeout_turns;
-  refcnt_bars[opaque_type].setArriving();
+  refcnt_bars[opaque_type] = ref_cnt_barrier_t(count, 0, timeout_turns);
   SCHED_PUT_TURN(syncfunc::tern_lineup_init, (uint64_t)opaque_type, (uint64_t)count, (uint64_t)timeout_turns);
 }
 
@@ -1439,11 +1439,7 @@ void RecorderRT<_S>::lineupDestroy(long opaque_type) {
   }
   SCHED_GET_TURN();
   //fprintf(stderr, "lineupDestroy opaque_type %p\n", (void *)opaque_type);
-  assert(refcnt_bars.find(opaque_type) != refcnt_bars.end() && "refcnt barrier is not initialized!");
-  refcnt_bars[opaque_type].count = 0;
-  refcnt_bars[opaque_type].nactive = 0;
-  refcnt_bars[opaque_type].timeout = 0;
-  refcnt_bars[opaque_type].setArriving();
+  assert(refcnt_bars.find(opaque_type) != refcnt_bars.end() && "soba is not initialized!");
   refcnt_bars.erase(opaque_type);
   SCHED_PUT_TURN(syncfunc::tern_lineup_destroy, (uint64_t)opaque_type);
 }
@@ -1460,44 +1456,20 @@ void RecorderRT<_S>::lineupStart(long opaque_type) {
   //fprintf(stderr, "lineupStart opaque_type %p, tid %d, waiting for turn...\n", (void *)opaque_type, _S::self());
   SCHED_GET_TURN();
   refcnt_bar_map::iterator bi = refcnt_bars.find(opaque_type);
-  assert(bi != refcnt_bars.end() && "refcnt barrier is not initialized!");
+  assert(bi != refcnt_bars.end() && "soba is not initialized!");
   ref_cnt_barrier_t &b = bi->second;
-  b.nactive++;
+  ++b.nactive;
   //fprintf(stderr, "lineupStart opaque_type %p, tid %d, count %d, nactive %u\n", (void *)opaque_type, _S::self(), b.count, b.nactive);
 
-  //  if (b.isArriving()) {
-  //    if (b.nactive == b.count) {
-  //      /// full, do not reset "nactive", since we are ref-counting barrier..
-  //      if (options::record_runtime_stat)
-  //        stat.nLineupSucc++;
-  //      b.setLeaving();
-  //      _S::signal(&b, true); // Signal all threads blocking on this barrier.      
-  //    } else {
-  //      _S::wait(&b, _S::getTurnCount() + b.timeout);
-  //      if (b.nactive < b.count && b.isArriving()) {
-  //        if (options::record_runtime_stat)
-  //          stat.nLineupTimeout++;
-  //        b.setLeaving();
-  //        /// Signal all threads blocking on this barrier.
-  //        _S::signal(&b, true);
-  //      }
-  //    }
-  //  }
-  if (b.nactive == b.count) {
-    if (b.isArriving()) {
+  if (b.isArriving()) {
+    if (b.nactive == b.count) {
       /// full, do not reset "nactive", since we are ref-counting barrier..
       if (options::record_runtime_stat)
         stat.nLineupSucc++;
       b.setLeaving();
-      _S::signal(&b, true); // Signal all threads blocking on this barrier.
-    }
-    /// NOP. There could be a case that after timeout happens,
-    /// all threads arrive, then we just let them do NOP, and deterministic.
-  } else {
-    if (b.isArriving()) {
+      _S::signal(&b, true); // Signal all threads blocking on this barrier.      
+    } else {
       _S::wait(&b, _S::getTurnCount() + b.timeout);
-
-      // Handle timeout here, since the wait() would call getTurn and still grab the turn.
       if (b.nactive < b.count && b.isArriving()) {
         if (options::record_runtime_stat)
           stat.nLineupTimeout++;
@@ -1506,7 +1478,6 @@ void RecorderRT<_S>::lineupStart(long opaque_type) {
         _S::signal(&b, true);
       }
     }
-    /// proceed. NOP.
   }
 
   SCHED_PUT_TURN(syncfunc::tern_lineup_start, (uint64_t)opaque_type);
@@ -1523,9 +1494,9 @@ void RecorderRT<_S>::lineupEnd(long opaque_type) {
   }
   SCHED_GET_TURN();
   refcnt_bar_map::iterator bi = refcnt_bars.find(opaque_type);
-  assert(bi != refcnt_bars.end() && "refcnt barrier is not initialized!");
+  assert(bi != refcnt_bars.end() && "soba barrier is not initialized!");
   ref_cnt_barrier_t &b = bi->second;
-  b.nactive--;
+  --b.nactive;
   //fprintf(stderr, "lineupEnd opaque_type %p, tid %d, nactive %u\n", (void *)opaque_type, _S::self(), b.nactive);
   if (b.nactive == 0 && b.isLeaving()) {
     b.setArriving();

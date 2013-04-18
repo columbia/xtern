@@ -18,19 +18,21 @@ struct barrier_t {
 };
 
 struct ref_cnt_barrier_t {
-  unsigned count; // barrier count
-  unsigned nactive; // number of threads in the linup region (between lineup_starnt and lineup_end).
+  unsigned count; // soft barrier counter
+  unsigned nactive; // Number of threads in the lineup region
   unsigned timeout; // Number of turns that an operation (at most) has to block.
 
   enum PHASE {
     ARRIVING, // ARRIVING: wait up to "count" threads arrive or timeout.
-    LEAVING  // LEAVING: timeout has happened or all threads have arrived.
-  }; 
-  
+    LEAVING // LEAVING: timeout has happened or all threads have arrived.
+  };
+
   PHASE phase;
 
-  ref_cnt_barrier_t() {
-  }
+  ref_cnt_barrier_t() : count(0), nactive(0), timeout(0), phase(ARRIVING) { }
+
+  ref_cnt_barrier_t(unsigned _count, unsigned _nactive, unsigned _timeout)
+  :count(_count), nactive(_nactive), timeout(_timeout), phase(ARRIVING) { }
 
   void setArriving() {
     phase = ARRIVING;
@@ -182,9 +184,9 @@ protected:
   void signal(void *chan, bool all = false);
   int absTimeToTurn(const struct timespec *abstime);
   int relTimeToTurn(const struct timespec *reltime);
-  
+
   bool regularFile(int fd);
-  
+
   int pthreadMutexLockHelper(pthread_mutex_t *mutex, unsigned timeout = Scheduler::FOREVER);
   int pthreadRWLockWrLockHelper(pthread_rwlock_t *rwlock, unsigned timeout = Scheduler::FOREVER);
   int pthreadRWLockRdLockHelper(pthread_rwlock_t *rwlock, unsigned timeout = Scheduler::FOREVER);
