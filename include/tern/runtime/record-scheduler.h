@@ -27,20 +27,24 @@
 namespace tern {
 
 /// whoever comes first run; nondeterministic
-struct RecordSerializer: public Serializer {
+
+struct RecordSerializer : public Serializer {
   typedef Serializer Parent;
 
-  virtual void getTurn() { pthread_mutex_lock(&lock); }
+  virtual void getTurn() {
+    pthread_mutex_lock(&lock);
+  }
+
   virtual void putTurn(bool at_thread_end = false) {
-    if(at_thread_end)
+    if (at_thread_end)
       zombify(pthread_self());
     pthread_mutex_unlock(&lock);
   }
 
-  int  wait(void *chan, unsigned timeout = Scheduler::FOREVER) {
+  int wait(void *chan, unsigned timeout = Scheduler::FOREVER) {
     incTurnCount();
     putTurn();
-    sched_yield();  //  give control to other threads
+    sched_yield(); //  give control to other threads
     getTurn();
     return 0;
   }
@@ -48,7 +52,8 @@ struct RecordSerializer: public Serializer {
   /// NOTE: This method breaks the Seralizer interface.  Need it to
   /// deterministically record pthread_cond_wait.  See the comments for
   /// pthread_cond_wait in the recorder runtime
-  pthread_mutex_t *getLock() {
+
+  pthread_mutex_t * getLock() {
     return &lock;
   }
 
@@ -58,7 +63,7 @@ struct RecordSerializer: public Serializer {
 
   std::ofstream ouf;
 
-  RecordSerializer(): ouf("fsfs_message.log") {
+  RecordSerializer() : ouf("fsfs_message.log") {
     pthread_mutex_init(&lock, NULL);
   }
 
@@ -70,19 +75,20 @@ protected:
 /// TODO: one optimization is to change the single wait queue to be
 /// multiple wait queues keyed by the address they wait on, therefore no
 /// need to scan the mixed wait queue.
-struct RRScheduler: public Scheduler {
+
+struct RRScheduler : public Scheduler {
   typedef Scheduler Parent;
-  
+
   struct wait_t {
     pthread_mutex_t mutex;
     pthread_cond_t cond;
-    sem_t    sem;
-    void*    chan;
+    sem_t sem;
+    void* chan;
     unsigned timeout;
-    int      status; // return value of wait()
+    int status; // return value of wait()
     volatile bool wakenUp;
 
-    void reset(int st=0) {
+    void reset(int st = 0) {
       chan = NULL;
       timeout = FOREVER;
       status = st;
@@ -94,17 +100,17 @@ struct RRScheduler: public Scheduler {
       pthread_cond_init(&cond, NULL);
       sem_init(&sem, 0, 0);
       reset(0);
-    }    
+    }
     void wait();
     void post();
-  }__attribute__((aligned(64)));  // Typical cache alignment.
+  } __attribute__((aligned(64))); // Typical cache alignment.
 
   virtual void getTurn();
   virtual void putTurn(bool at_thread_end = false);
-  virtual int  wait(void *chan, unsigned timeout = Scheduler::FOREVER);
-  virtual void signal(void *chan, bool all=false);
+  virtual int wait(void *chan, unsigned timeout = Scheduler::FOREVER);
+  virtual void signal(void *chan, bool all = false);
 
-  virtual int block(); 
+  virtual int block();
   virtual bool interProStart();
   virtual bool interProEnd();
   virtual void wakeup();
@@ -124,13 +130,14 @@ protected:
   /// return the next timeout turn number
   unsigned nextTimeout();
   /// pop the @runq and wakes up the thread at the front of @runq
-  virtual void next(bool at_thread_end=false, bool hasPoppedFront = false);
+  virtual void next(bool at_thread_end = false, bool hasPoppedFront = false);
   /// child classes can override this method to reorder threads in @runq
-  virtual void reorderRunq(void) {}
+
+  virtual void reorderRunq(void) { }
 
   /// for debugging
   void selfcheck(void);
-  std::ostream& dump(std::ostream& o);
+  std::ostream & dump(std::ostream& o);
   /// An associated function to assist the fast and safe runq removal mechanism for network operation.
   /// Return the  ext runnable thread id. If this function returns an invalid tid, it means it is already the end of 
   /// execution of the program.
@@ -161,15 +168,17 @@ protected:
 };
 
 /// adapted from an example in POSIX.1-2001
+
 struct Random {
-  Random(): next(1) {}
-  int rand(int randmax=32767)
-  {
+
+  Random() : next(1) { }
+
+  int rand(int randmax = 32767) {
     next = next * 1103515245 + 12345;
-    return (int)((unsigned)(next/65536) % (randmax + 1));
+    return (int)((unsigned)(next / 65536) % (randmax + 1));
   }
-  void srand(unsigned seed)
-  {
+
+  void srand(unsigned seed) {
     next = seed;
   }
   unsigned long next;

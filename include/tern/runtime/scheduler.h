@@ -22,16 +22,19 @@ namespace tern {
 /// synchronize its methods; instead, the callers of these methods must
 /// ensure that the methods are synchronized.
 struct TidMap {
-  enum {MainThreadTid = 0, IdleThreadTid = 1, InvalidTid = -1};
+
+  enum {
+    MainThreadTid = 0, IdleThreadTid = 1, InvalidTid = -1
+  };
 
   typedef std::tr1::unordered_map<pthread_t, int> pthread_to_tern_map;
   typedef std::tr1::unordered_map<int, pthread_t> tern_to_pthread_map;
-  typedef std::tr1::unordered_set<pthread_t>      pthread_tid_set;
+  typedef std::tr1::unordered_set<pthread_t> pthread_tid_set;
 
   /// create a new tern tid and map pthread_tid to this new id
   int create(pthread_t pthread_th) {
     pthread_to_tern_map::iterator it = p_t_map.find(pthread_th);
-    assert(it==p_t_map.end() && "pthread tid already in map!");
+    assert(it == p_t_map.end() && "pthread tid already in map!");
     p_t_map[pthread_th] = nthread;
     t_p_map[nthread] = pthread_th;
     return nthread++;
@@ -40,17 +43,17 @@ struct TidMap {
   /// sets thread-local tern tid to be the tid of @self_th
   void self(pthread_t self_th) {
     pthread_to_tern_map::iterator it = p_t_map.find(self_th);
-    if (it==p_t_map.end())
+    if (it == p_t_map.end())
       fprintf(stderr, "pthread tid not in map!\n");
-    assert(it!=p_t_map.end() && "pthread tid not in map!");
+    assert(it != p_t_map.end() && "pthread tid not in map!");
     self_tid = it->second;
   }
 
   /// remove thread @tern_tid from the maps and insert it into the zombie set
   void zombify(pthread_t self_th) {
     tern_to_pthread_map::iterator it = t_p_map.find(self());
-    assert(it!=t_p_map.end() && "tern tid not in map!");
-    assert(self_th==it->second && "mismatch between pthread tid and tern tid!");
+    assert(it != t_p_map.end() && "tern tid not in map!");
+    assert(self_th == it->second && "mismatch between pthread tid and tern tid!");
     zombies.insert(it->second);
     p_t_map.erase(it->second);
     t_p_map.erase(it);
@@ -64,7 +67,7 @@ struct TidMap {
   /// return tern tid of thread @pthread_th
   int getTid(pthread_t pthread_th) {
     pthread_to_tern_map::iterator it = p_t_map.find(pthread_th);
-    if(it!=p_t_map.end())
+    if (it != p_t_map.end())
       return it->second;
     return InvalidTid;
   }
@@ -72,14 +75,19 @@ struct TidMap {
   /// return if thread @pthread_th is in the zombie set
   bool zombie(pthread_t pthread_th) {
     pthread_tid_set::iterator it = zombies.find(pthread_th);
-    return it!=zombies.end();
+    return it != zombies.end();
   }
 
   /// tern tid for current thread
-  static int self() { return self_tid; }
+
+  static int self() {
+    return self_tid;
+  }
   static __thread int self_tid;
 
-  TidMap(pthread_t main_th) { init(main_th); }
+  TidMap(pthread_t main_th) {
+    init(main_th);
+  }
 
   /// initialize state
   void init(pthread_t main_th) {
@@ -106,7 +114,7 @@ protected:
 
   pthread_to_tern_map p_t_map;
   tern_to_pthread_map t_p_map;
-  pthread_tid_set     zombies;
+  pthread_tid_set zombies;
   int nthread;
 };
 
@@ -114,9 +122,11 @@ protected:
 /// all synchronizations are serialized.  A serializer doesn't attempt to
 /// schedule them.  The nondeterministic recorder runtime and the replay
 /// runtime use serializers, instead of schedulers.
-struct Serializer: public TidMap {
+struct Serializer : public TidMap {
 
-  enum {FOREVER = UINT_MAX}; // wait forever w/o timeout
+  enum {
+    FOREVER = UINT_MAX
+  }; // wait forever w/o timeout
 
   /// wait on @chan until another thread calls signal(@chan), or turnCount
   /// is greater than or equal to @timeout if @timeout is not 0.  give up
@@ -127,11 +137,11 @@ struct Serializer: public TidMap {
   /// until @timeout
   ///
   /// @return 0 if wait() is signaled or ETIMEOUT if wait() times out
-  virtual int wait(void *chan, unsigned timeout=FOREVER) { 
+  virtual int wait(void *chan, unsigned timeout = FOREVER) {
     incTurnCount();
     putTurn();
     getTurn();
-    return 0; 
+    return 0;
   }
 
   /// wake up one thread (@all = false) or all threads (@all = true)
@@ -144,16 +154,16 @@ struct Serializer: public TidMap {
 
   /// give up the turn so that other threads can get the turn.  this
   /// method should also increment turnCount
-  virtual void putTurn(bool at_thread_end=false) { }
+  virtual void putTurn(bool at_thread_end = false) { }
 
   /// inform the serializer that a thread is calling an external blocking
   /// function.
   ///
   /// NOTICE: different delay before @block() should not lead to different
   /// schedule.
-  virtual int block() { 
+  virtual int block() {
     getTurn();
-    int ret = incTurnCount(); 
+    int ret = incTurnCount();
     putTurn();
     return ret;
   }
@@ -171,22 +181,30 @@ struct Serializer: public TidMap {
   }
 
   /// inform the scheduler that a blocking thread has returned.
-  virtual void wakeup() {}
+  virtual void wakeup() { }
 
   /// inform the serializer that thread @new_th is just created; must call
   /// with turn held
-  void create(pthread_t new_th) { TidMap::create(new_th); }
+  void create(pthread_t new_th) {
+    TidMap::create(new_th);
+  }
 
   /// inform the serializer that thread @th just joined; must call with
   /// turn held
-  void join(pthread_t th) { TidMap::reap(th); }
+  void join(pthread_t th) {
+    TidMap::reap(th);
+  }
 
   /// child process begins
-  void childForkReturn() { TidMap::reset(pthread_self()); }
+  void childForkReturn() {
+    TidMap::reset(pthread_self());
+  }
 
   /// NOTE: RecordSerializer needs this method to implement
   /// pthread_cond_*wait
-  pthread_mutex_t *getLock() { return NULL; }
+  pthread_mutex_t * getLock() {
+    return NULL;
+  }
 
   /// must call within turn because turnCount is shared across all
   /// threads.  we provide this method instead of incrementing turn for
@@ -222,7 +240,7 @@ struct Serializer: public TidMap {
 ///  arguments to templated Runtime classes, and use method specialization
 ///  when necessary.  A nice side effect is we get static polymorphism
 ///  within the Runtime subclasses
-struct Scheduler: public Serializer {
+struct Scheduler : public Serializer {
 
   /// wake up one thread (@all = false) or all threads (@all = true)
   /// waiting on @chan; must call with turn held.  @chan has the same
@@ -240,14 +258,14 @@ struct Scheduler: public Serializer {
   void childForkReturn() {
     TidMap::reset(pthread_self());
     waitq.clear();
-    runq.deep_clear();    
+    runq.deep_clear();
     struct run_queue::runq_elem *elem = runq.create_thd_elem(MainThreadTid);
     elem->status = run_queue::RUNNING_REG; // Pass the first token to the main thread after fork.
     runq.push_back(MainThreadTid);
   }
 
   run_queue runq;
-  std::list<int>  waitq;
+  std::list<int> waitq;
 };
 
 
