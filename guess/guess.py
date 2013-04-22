@@ -82,5 +82,6 @@ def find_hints_position(config, bench):
     default_options = getXternDefaultOptions()
 
     getLogWithEip(config, bench, default_options, parrot_command)
+    findUniqueEip()
     
     os.chdir('..')
