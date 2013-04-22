@@ -13,11 +13,13 @@ import time
 import signal
 import threading
 from evalutils import mkDirP, copyFile, which, checkExist
+from guess import *
+from globals import G
 
 def getXternDefaultOptions():
     default = {}
     try:
-        with open(XTERN_ROOT+'/default.options') as f:
+        with open(G.XTERN_ROOT+'/default.options') as f:
             for line in f:
                 line = line.partition('#')[0].rstrip()
                 if not line:
@@ -62,8 +64,8 @@ def getConfigFullPath(config_file):
     except IOError as e:
         if config_file == 'xtern.cfg':
             logging.warning("'xtern.cfg' does not exist in current directory"
-                    + ", use default one in XTERN_ROOT/eval")
-            return os.path.abspath(XTERN_ROOT + "/eval/xtern.cfg")
+                    + ", use default one in G.XTERN_ROOT/eval")
+            return os.path.abspath(G.XTERN_ROOT + "/eval/xtern.cfg")
         else:
             logging.warning("'%s' does not exist" % config_file)
             return None
@@ -95,10 +97,10 @@ def readConfigFile(config_file):
 # TODO: will fail if there is no git information to get
 def getGitInfo():
     import commands
-    git_show = 'cd '+XTERN_ROOT+' && git show '
+    git_show = 'cd '+G.XTERN_ROOT+' && git show '
     githash = commands.getoutput(git_show+'| head -1 | sed -e "s/commit //"')
-    git_diff = 'cd '+XTERN_ROOT+' && git diff --quiet'
-    diff = commands.getoutput('cd ' +XTERN_ROOT+ ' && git diff')
+    git_diff = 'cd '+G.XTERN_ROOT+' && git diff --quiet'
+    diff = commands.getoutput('cd ' +G.XTERN_ROOT+ ' && git diff')
     if diff:
         gitstatus = '_dirty'
     else:
@@ -161,7 +163,7 @@ def copyRequiredFiles(app, files):
         if os.path.isabs(f):
             src = f
         else:
-            src = os.path.abspath('%s/apps/%s/%s' % (XTERN_ROOT, app, f))
+            src = os.path.abspath('%s/apps/%s/%s' % (G.XTERN_ROOT, app, f))
         try:
             copyFile(os.path.realpath(src), dst)
         except IOError as e:
@@ -187,7 +189,7 @@ def extractTarBall(app, files):
         if os.path.isabs(f):
             src = f
         else:
-            src = os.path.abspath('%s/apps/%s/%s' % (XTERN_ROOT, app, f))
+            src = os.path.abspath('%s/apps/%s/%s' % (G.XTERN_ROOT, app, f))
         
         import tarfile
         try:
@@ -208,7 +210,7 @@ def extractGZip(app, files):
         if os.path.isabs(f):
             src = f
         else:
-            src = os.path.abspath('%s/apps/%s/%s' % (XTERN_ROOT, app, f))
+            src = os.path.abspath('%s/apps/%s/%s' % (G.XTERN_ROOT, app, f))
         
         import tarfile
         try:
@@ -256,7 +258,7 @@ def execBench(cmd, repeats, out_dir, init_env_cmd=""):
                 os.system(init_env_cmd)
             #proc = subprocess.Popen(xtern_command, stdout=sys.stdout, stderr=sys.stdout,
             proc = subprocess.Popen(cmd, stdout=log_file, stderr=subprocess.STDOUT,
-                                    shell=True, executable=bash_path, bufsize = 102400, preexec_fn=os.setsid)
+                                    shell=True, executable=G.BASH_PATH, bufsize = 102400, preexec_fn=os.setsid)
             try: # TODO should handle whole block
                 proc.wait()
             except KeyboardInterrupt as k:
@@ -275,7 +277,7 @@ def execBench(cmd, repeats, out_dir, init_env_cmd=""):
 def processBench(config, bench):
     # for each bench, generate running directory
     logging.debug("processing: " + bench)
-    apps_name, exec_file = extractAppsExec(bench, XTERN_APPS)
+    apps_name, exec_file = extractAppsExec(bench, G.XTERN_APPS)
     logging.debug("app = %s" % apps_name)
     logging.debug("executible file = %s" % exec_file)
     if not checkExist(exec_file, os.X_OK):
@@ -303,14 +305,14 @@ def processBench(config, bench):
     # get required files
     preSetting(config, bench, apps_name)
 
-    # git environment presetting command
+    # get environment presetting command
     init_env_cmd = config.get(bench, 'INIT_ENV_CMD')
     if init_env_cmd:
         logging.info("presetting cmd in each round: %s" % init_env_cmd)
 
     # generate commands
     if not args.no_preload:
-        xtern_command = ' '.join(['time', XTERN_PRELOAD, export, exec_file] + inputs.split())
+        xtern_command = ' '.join(['time', G.XTERN_PRELOAD, export, exec_file] + inputs.split())
         logging.info("executing '%s'" % xtern_command)
         execBench(xtern_command, repeats, 'xtern', init_env_cmd)
     else:
@@ -344,6 +346,9 @@ if __name__ == "__main__":
     parser.add_argument("--no-preload",
                         action="store_true",
                         help="run benchmark without Parrot")
+    parser.add_argument("--guess",
+                        action="store_true",
+                        help="guess the proper place to put Parrot hints.")
     parser.add_argument("--options",
                         nargs='?',
                         default=None,
@@ -361,29 +366,29 @@ if __name__ == "__main__":
 
     # get/set environment variable
     try:
-        XTERN_ROOT = os.environ["XTERN_ROOT"]
-        logging.debug('XTERN_ROOT = ' + XTERN_ROOT)
+        G.XTERN_ROOT = os.environ["XTERN_ROOT"]
+        logging.debug('XTERN_ROOT = ' + G.XTERN_ROOT)
     except KeyError as e:
         logging.error("Please set the environment variable " + str(e))
         sys.exit(1)
-    XTERN_APPS = os.path.abspath(XTERN_ROOT + "/apps/")
+    G.XTERN_APPS = os.path.abspath(G.XTERN_ROOT + "/apps/")
     logging.debug("set timeformat to '\\nreal %E\\nuser %U\\nsys %S'")
     os.environ['TIMEFORMAT'] = "\nreal %E\nuser %U\nsys %S"
  
     # check xtern files
-    if not checkExist("%s/dync_hook/interpose.so" % XTERN_ROOT, os.R_OK):
-        logging.error('thre is no "$XTERN_ROOT/dync_hook/interpose.so"')
+    if not checkExist("%s/dync_hook/interpose.so" % G.XTERN_ROOT, os.R_OK):
+        logging.error('thre is no "$G.XTERN_ROOT/dync_hook/interpose.so"')
         sys.exit(1)
-    XTERN_PRELOAD = "LD_PRELOAD=%s/dync_hook/interpose.so" % XTERN_ROOT
+    G.XTERN_PRELOAD = "LD_PRELOAD=%s/dync_hook/interpose.so" % G.XTERN_ROOT
 
     # find 'bash'
-    bash_path = which('bash')
-    if not bash_path:
+    G.BASH_PATH = which('bash')
+    if not G.BASH_PATH:
         logging.critical("cannot find shell 'bash'")
         sys.exit(1)
     else:
-        bash_path = bash_path[0]
-        logging.debug("find 'bash' at %s" % bash_path)
+        G.BASH_PATH = G.BASH_PATH[0]
+        logging.debug("find 'bash' at %s" % G.BASH_PATH)
 
     # get default xtern options
     default_options = getXternDefaultOptions()
@@ -421,7 +426,10 @@ if __name__ == "__main__":
         for benchmark in local_config.sections():
             if benchmark == "default" or benchmark == "example":
                 continue
-            processBench(local_config, benchmark)
+            if args.guess:
+                find_hints_position(local_config, benchmark)
+            else:
+                processBench(local_config, benchmark)
 
         os.chdir(root_dir)
        
