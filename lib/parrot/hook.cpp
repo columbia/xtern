@@ -74,8 +74,8 @@ void *get_eip()
   // Change this "idx" to be 2 when pthread_*() functions are called by 
   // application code directly; and change it to be 3 when pthread_*()
   // functions are called by the app's wrapper functions.
-  const int idx = 4;
-  const int len = 5;
+  const int idx = 2;
+  const int len = 20;
   void *tracePtrs[len];
   int i;
   uint64_t ret = 0; 
