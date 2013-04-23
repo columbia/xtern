@@ -49,11 +49,11 @@ void tern_symbolic_real(unsigned ins, void *addr,
   errno = error;
 }
 
-void tern_thread_begin(void) {
+void tern_thread_begin(pthread_t * th) {
   assert(Space::isSys() && "tern_thread_begin must start in sys space");
   int error = errno;
   // thread begins in Sys space
-  Runtime::the->threadBegin();
+  Runtime::the->threadBegin(th);
   Space::exitSys();
   errno = error;
   assert(Space::isApp() && "tern_thread_begin must end in app space");

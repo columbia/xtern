@@ -13,6 +13,15 @@ from evalutils import mkDirP, copyFile, which, checkExist
 from eval import *
 from globals import G
 
+def getLogFiles(dirname):
+    files = os.listdir(dirname)
+    ret = []
+    for file in files:
+        file_name, file_extension = os.path.splitext(file)
+        if file_extension == '.txt':
+            ret.append(file)
+    return ret
+
 def generateLocalOptions(config, bench, default_options, overwrite_options = {}):
     config_options = config.options(bench)
     output = ""
@@ -53,6 +62,173 @@ def getLogWithEip(config, bench, default_options, command):
                 shell=True, executable=G.BASH_PATH, bufsize = 102400, preexec_fn=os.setsid)
         proc.wait()
 
+# can define a class for op
+def readLog(filename, pid, tid):
+    lines = open(filename, 'r').readlines()
+    keys = lines[0].split()
+    n = len(keys)
+    ret = []
+    for i in range(1, len(lines)):
+        line = lines[i]
+        tokens = line.split()
+        if (len(tokens) < n-1 ):
+            logging.warning('token number inconsistent, line %d of %s' % (i, filename))
+            continue
+
+        op = dict()
+        for j in range(0, n-1):
+            op[keys[j]] = tokens[j]
+        op[keys[n - 1]] = ' '.join(tokens[(n-1):])
+
+        assert(op['tid'] == str(tid))
+
+        op['pid'] = str(pid)
+        
+        ret.append(op)
+    return ret
+
+
+def filterOutIdle(ops):
+    ret = []
+    for op in ops:
+        if op['tid'] == '1':
+            continue
+        if op['insid'].startswith('0xdead'):
+            if op['insid'] == '0xdeadbeaf' or op['insid'] == '0xdead0000' or op['insid'] == '0xdeadffff':
+                continue
+        ret.append(op)
+    return ret
+
+def parseLogs(dirname, idleThread = False):
+    files = getLogFiles(dirname)
+    logging.info(str(files))
+    ops = []
+    for filename in files:
+        logname = os.path.splitext(filename)[0]
+        tokens = logname.split('-')
+        pid = int(tokens[1])
+        tid = int(tokens[2])
+
+        proc_ops = readLog(os.path.join(dirname, filename), pid, tid)
+        ops += proc_ops
+
+    if idleThread == False:
+        ops = filterOutIdle(ops)
+
+    ops.sort(key = lambda x:int(x['turn']))
+    return ops
+
+def removeKeys(ops, keys):
+    for op in ops:
+        for key in keys:
+            del op[key]
+    return ops
+
+def removeOps(ops, unwanted_ops):
+    ret = []
+    for op in ops:
+        if op['op'] in unwanted_ops:
+            continue
+        ret.append(op)
+    return ret
+
+def selectAttribute(ops, targetOp = '', sid = False, args = False, argsNum = []):
+    for op in ops:
+        if op['op'] != targetOp:
+            continue
+        if args:
+            op['args'] = ' '.join(list(op['args'].split()[i] for i in argsNum))
+        else:
+            del op['args']
+        if sid:
+            pass
+        else:
+            del op['insid']
+    return ops
+
+class opMarker:
+    def __init__(self):
+        self.op = ""
+        self.signature = ""
+    def __init__(self, _op, _signature):
+        self.op = _op
+        self.signature = _signature
+    def __repr__(self):
+        return 'syncop: %s signature: %s' % (self.op, self.signature)
+    def __cmp__(self, other):
+        if not isinstance(other, opMarker):
+            return NotImplemented
+        return  (self.op == other.op and self.signature == other.signature)
+    def __eq__(self, other):
+        return self.op == other.op and self.signature == other.signature
+    def __hash__(self):
+        return hash(self.op) ^ hash(self.signature)
+
+class opRecord:
+    def __init__(self):
+        self.tidList = []
+        self.tidAccu = {}
+    def __init__(self, tid):
+        self.tidList = [tid]
+        self.tidAccu= {tid: 1}
+    def __repr__(self):
+        return str(self.tidAccu)
+    def addTid(self, tid):
+        if tid in self.tidAccu:
+            self.tidAccu[tid] += 1
+        else:
+            self.tidList.append(tid)
+            self.tidAccu[tid] = 1
+
+def getOpSignature(op):
+    signature = ''
+    if 'insid' in op:
+        if 'args' in op:
+            signature = ' '.join([op['insid'], op['args']])
+        else:
+            signature = op['insid']
+    elif 'args' in op:
+        signature = op['args']
+    else:
+        logging.warning('%s cannot get signature' % op)
+    return opMarker(op['op'], signature)
+        
+
+def removeSignature(seen, op, signature):
+    x = opMarker(op, signature)
+    if x in seen:
+        del seen[x]
+
+def findUniqueEip(idfun = None):
+    ops = parseLogs('weip', idleThread = False)
+    ops = removeKeys(ops, ['app_time', 'syscall_time', 'sched_time', 'pid'])
+    ops = removeOps(ops, ['tern_thread_end'])
+
+    ops = selectAttribute(ops, 'tern_thread_begin', args = True, argsNum = [1])
+    ops = selectAttribute(ops, 'pthread_join', sid = True)
+    ops = selectAttribute(ops, 'pthread_create', sid = True)
+
+    ##
+    ops = removeKeys(ops, ['turn'])
+
+    if idfun is None:
+        def idfun(x): return x
+
+    seen = {}
+    #result = []
+    for op in ops:
+        marker = idfun(op)
+        if marker in seen:
+            seen[marker].addTid(op['tid'])
+        else:
+            seen[marker] = opRecord(op['tid'])
+            #result.append(marker)
+
+    removeSignature(seen, op = 'tern_thread_begin', signature = '0x0')
+
+    for k in seen:
+        print k, seen[k]
+    
 
 def find_hints_position(config, bench):
     """
@@ -75,13 +251,14 @@ def find_hints_position(config, bench):
     dir_name +=  '_'.join(segs)
     mkDirP(dir_name)
     os.chdir(dir_name)
+    os.chdir('/mnt/sdd/newhome/yihlin/xtern/guess/guess2013Apr23_102152_cb9948_dirty/10_parsec_swaptions')
 
     preSetting(config, bench, apps_name)
     parrot_command = ' '.join(['time', G.XTERN_PRELOAD, export, exec_file] + inputs.split())
 
     default_options = getXternDefaultOptions()
 
-    getLogWithEip(config, bench, default_options, parrot_command)
-    findUniqueEip()
+    #getLogWithEip(config, bench, default_options, parrot_command)
+    findUniqueEip(getOpSignature)
     
     os.chdir('..')

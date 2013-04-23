@@ -452,7 +452,7 @@ void RecorderRT<_S>::printStat() {
 ///
 
 template <typename _S>
-void RecorderRT<_S>::threadBegin(void) {
+void RecorderRT<_S>::threadBegin(pthread_t * start_func_ptr) {
   pthread_t th = pthread_self();
   unsigned ins = INVALID_INSID;
 
@@ -465,7 +465,7 @@ void RecorderRT<_S>::threadBegin(void) {
 
   SCHED_GET_TURN();
   Logger::threadBegin(_S::self());
-  SCHED_PUT_TURN(syncfunc::tern_thread_begin, (uint64_t)th);
+  SCHED_PUT_TURN(syncfunc::tern_thread_begin, (uint64_t)th, (uint64_t)start_func_ptr);
 }
 
 template <typename _S>
@@ -489,7 +489,7 @@ int RecorderRT<_S>::pthreadCreate(unsigned ins, int &error, pthread_t *thread,
   assert(!ret && "failed sync calls are not yet supported!");
   _S::create(*thread);
 
-  SCHED_PUT_TURN(syncfunc::pthread_create, (uint64_t) * thread, (uint64_t)ret);
+  SCHED_PUT_TURN(syncfunc::pthread_create, (uint64_t) * thread, (uint64_t)ret, (uint64_t)thread_func, (uint64_t)arg);
 
   // yi: are these two at correct place???
   sem_post(&thread_begin_sem);

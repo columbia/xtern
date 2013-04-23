@@ -60,7 +60,7 @@ template <typename _Scheduler>
 struct RecorderRT : public Runtime, public _Scheduler {
   void progBegin(void);
   void progEnd(void);
-  void threadBegin(void);
+  void threadBegin(pthread_t * th);
   void threadEnd(unsigned insid);
   void idle_sleep();
   void idle_cond_wait();

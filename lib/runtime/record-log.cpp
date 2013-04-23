@@ -63,6 +63,7 @@ void TxtLogger::logSync(unsigned insid, unsigned short sync, unsigned turn,
 
   //  if(!syncfunc::isSync(sync))
   //  {
+  /*
   if (sync == syncfunc::tern_thread_begin
     || sync == syncfunc::tern_thread_end) //  for tests, i need to know the thread_mapping
   {
@@ -80,7 +81,7 @@ void TxtLogger::logSync(unsigned insid, unsigned short sync, unsigned turn,
     ouf << "\n";
     ouf.flush();
     return;
-  }
+  }*/
   //    return;
   //  }
   // YJF: why ignore prog_begin/end and thread_begin/end?
@@ -145,6 +146,7 @@ void TxtLogger::logSync(unsigned insid, unsigned short sync, unsigned turn,
   case syncfunc::tern_lineup_start:
   case syncfunc::tern_lineup_end:
   case syncfunc::tern_lineup_destroy:
+  case syncfunc::tern_thread_end:
     ouf << hex << " 0x" << va_arg(args, uint64_t) << dec;
     break;
 
@@ -152,13 +154,13 @@ void TxtLogger::logSync(unsigned insid, unsigned short sync, unsigned turn,
   case syncfunc::pthread_mutex_timedlock:
   case syncfunc::pthread_cond_wait:
   case syncfunc::pthread_barrier_init:
-  case syncfunc::pthread_create:
   case syncfunc::pthread_mutex_trylock:
   case syncfunc::sem_trywait:
   case syncfunc::sem_timedwait:
   case syncfunc::pthread_rwlock_tryrdlock: //  rwlock, ret
   case syncfunc::pthread_rwlock_trywrlock:
   case syncfunc::pthread_rwlock_unlock: //  rwlock, ret
+  case syncfunc::tern_thread_begin:
   {
     //  notice "<<" operator is expanded from right to left.
     uint64_t a = va_arg(args, uint64_t);
@@ -191,6 +193,7 @@ void TxtLogger::logSync(unsigned insid, unsigned short sync, unsigned turn,
       << dec;
   }
     break;
+  case syncfunc::pthread_create: // tid, ret, thread_func_t, arg
   case syncfunc::connect: //  fd, from_port, to_port, ret
   {
     //  notice "<<" operator is explained from right to left.

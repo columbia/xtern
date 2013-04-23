@@ -17,7 +17,7 @@ struct Runtime {
   virtual void progEnd() {}
   virtual void symbolic(unsigned insid, int &error, void *addr,
                         int nbytes, const char *name) {}
-  virtual void threadBegin() {}
+  virtual void threadBegin(pthread_t *th) {}
   virtual void threadEnd(unsigned insid) {}
   virtual void idle_sleep() {}
   virtual void idle_cond_wait() {}

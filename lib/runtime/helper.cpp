@@ -52,11 +52,11 @@ static void *__tern_thread_func(void *arg) {
   args = (void**)arg;
   user_thread_func = (thread_func_t)((intptr_t)args[0]);
   user_thread_arg = args[1];
+
+  tern_thread_begin((pthread_t*)(intptr_t)args[0]);
   // free arg before calling user_thread_func as it may not return (i.e.,
   // it may call pthread_exit())
   delete[] (void**)arg;
-
-  tern_thread_begin();
   ret_val = user_thread_func(user_thread_arg);
   tern_pthread_exit(-1, ret_val); // calls tern_thread_end() and pthread_exit()
   assert(0 && "unreachable!");
@@ -123,7 +123,7 @@ void __tern_prog_begin(void) {
 
   tern_prog_begin();
   assert(Space::isSys());
-  tern_thread_begin(); // main thread begins
+  tern_thread_begin(NULL); // main thread begins
   assert(Space::isApp());
 
   //  use tern_pthread_create because we want to fake the eip
