@@ -9,6 +9,7 @@ import logging
 import coloroutput
 import re
 import time
+import numpy as np
 from evalutils import mkDirP, copyFile, which, checkExist
 from eval import *
 from globals import G
@@ -101,7 +102,7 @@ def filterOutIdle(ops):
 
 def parseLogs(dirname, idleThread = False):
     files = getLogFiles(dirname)
-    logging.info(str(files))
+    logging.debug(str(files))
     ops = []
     for filename in files:
         logname = os.path.splitext(filename)[0]
@@ -154,7 +155,8 @@ class opMarker:
         self.op = _op
         self.signature = _signature
     def __repr__(self):
-        return 'syncop: %s signature: %s' % (self.op, self.signature)
+        #return 'syncop: %s signature: %s' % (self.op, self.signature)
+        return '{:<25} {:>11}'.format(self.op, self.signature)
     def __cmp__(self, other):
         if not isinstance(other, opMarker):
             return NotImplemented
@@ -168,17 +170,25 @@ class opRecord:
     def __init__(self):
         self.tidList = []
         self.tidAccu = {}
-    def __init__(self, tid):
+        self.schedTime = []
+    def __init__(self, tid, sched_time = 0):
         self.tidList = [tid]
         self.tidAccu= {tid: 1}
+        self.schedTime = [int(sched_time)]
     def __repr__(self):
-        return str(self.tidAccu)
-    def addTid(self, tid):
+        return str(self.tidAccu) + str(self.getSchedTimeAvg())
+    def getSchedTimeAvg(self):
+        return np.average(self.schedTime)
+    def getSchedTimeStd(self):
+        return np.std(self.schedTime)
+    def addTid(self, tid, sched_time = 0):
         if tid in self.tidAccu:
             self.tidAccu[tid] += 1
+            self.schedTime.append(sched_time)
         else:
             self.tidList.append(tid)
             self.tidAccu[tid] = 1
+            self.schedTime.append(sched_time)
 
 def getOpSignature(op):
     signature = ''
@@ -194,22 +204,64 @@ def getOpSignature(op):
     return opMarker(op['op'], signature)
         
 
-def removeSignature(seen, op, signature):
+def removeBySignature(seen, op, signature):
     x = opMarker(op, signature)
     if x in seen:
         del seen[x]
 
+def mergeOps(ops):
+    ret = []
+    for op in ops:
+        if op['op'].endswith('_second'):
+            continue
+        if op['op'].endswith('_first'):
+            op['op'] = op['op'][:-6]
+        ret.append(op)
+    return ret
+
+def splitByNumOfRelatedThread(seen):
+    possible = {}
+    lonely = {}
+    for op in seen:
+        if len(seen[op].tidList) < 2:
+            lonely[op] = seen[op]
+        else:
+            possible[op] = seen[op]
+    return possible, lonely
+
+def convertTime(ops, time_tag):
+    for op in ops:
+        time = op[time_tag].split(':')
+        converted = int(time[0])*1000000000 + int(time[1])
+        op[time_tag] = converted
+    return ops
+
+
 def findUniqueEip(idfun = None):
     ops = parseLogs('weip', idleThread = False)
-    ops = removeKeys(ops, ['app_time', 'syscall_time', 'sched_time', 'pid'])
+    ops = removeKeys(ops, ['app_time', 'syscall_time', 'pid'])
     ops = removeOps(ops, ['tern_thread_end'])
+    ops = convertTime(ops, 'sched_time')
+    ops = mergeOps(ops) # merge _first, _second
 
+    # tern_thread_begin: args[1] is the function pointer
     ops = selectAttribute(ops, 'tern_thread_begin', args = True, argsNum = [1])
     ops = selectAttribute(ops, 'pthread_join', sid = True)
     ops = selectAttribute(ops, 'pthread_create', sid = True)
+    ops = selectAttribute(ops, 'pthread_barrier_wait', sid = True)
+    ops = selectAttribute(ops, 'pthread_mutex_init', sid = True)
+    ops = selectAttribute(ops, 'pthread_mutex_lock', sid = True)
+    ops = selectAttribute(ops, 'pthread_mutex_unlock', sid = True)
+    ops = selectAttribute(ops, 'pthread_cond_wait', sid = True)
+    ops = selectAttribute(ops, 'pthread_cond_broadcast', sid = True)
+    ops = selectAttribute(ops, 'pthread_cond_signal', sid = True)
+    ops = selectAttribute(ops, 'pthread_barrier_init', sid = True)
+    ops = selectAttribute(ops, 'pthread_barrier_destroy', sid = True)
 
     ##
     ops = removeKeys(ops, ['turn'])
+    #for op in ops:
+    #    print op
 
     if idfun is None:
         def idfun(x): return x
@@ -219,15 +271,24 @@ def findUniqueEip(idfun = None):
     for op in ops:
         marker = idfun(op)
         if marker in seen:
-            seen[marker].addTid(op['tid'])
+            seen[marker].addTid(op['tid'], op['sched_time'])
         else:
-            seen[marker] = opRecord(op['tid'])
+            seen[marker] = opRecord(op['tid'], op['sched_time'])
             #result.append(marker)
 
-    removeSignature(seen, op = 'tern_thread_begin', signature = '0x0')
+    removeBySignature(seen, op = 'tern_thread_begin', signature = '0x0')
+    possible_ops, lonely_ops = splitByNumOfRelatedThread(seen)
 
-    for k in seen:
-        print k, seen[k]
+    #for k in possible_ops:
+    #    print k, possible_ops[k]
+    logging.info('Ignore %d locations... since each sync-op used by only one thread.' % len(lonely_ops))
+    logging.info('Find %d possible locations.' % len(possible_ops))
+
+    sorted_key = sorted(possible_ops, key = lambda x:possible_ops[x].getSchedTimeAvg() , reverse = True)
+    #print sorted(possible_ops)
+    for k in sorted_key:
+        print '%s %d' % (k, possible_ops[k].getSchedTimeAvg())
+
     
 
 def find_hints_position(config, bench):
@@ -251,14 +312,17 @@ def find_hints_position(config, bench):
     dir_name +=  '_'.join(segs)
     mkDirP(dir_name)
     os.chdir(dir_name)
-    os.chdir('/mnt/sdd/newhome/yihlin/xtern/guess/guess2013Apr23_102152_cb9948_dirty/10_parsec_swaptions')
 
     preSetting(config, bench, apps_name)
+    #os.chdir('/mnt/sdd/newhome/yihlin/xtern/guess/guess2013Apr23_155756_01cc29_dirty/2_parsec_bodytrack')
     parrot_command = ' '.join(['time', G.XTERN_PRELOAD, export, exec_file] + inputs.split())
+
+    logging.info(parrot_command)
+    copyFile(os.path.realpath(exec_file), os.path.basename(exec_file))
 
     default_options = getXternDefaultOptions()
 
-    #getLogWithEip(config, bench, default_options, parrot_command)
+    getLogWithEip(config, bench, default_options, parrot_command)
     findUniqueEip(getOpSignature)
     
     os.chdir('..')
