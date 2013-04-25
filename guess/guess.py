@@ -10,6 +10,9 @@ import coloroutput
 import re
 import time
 import numpy as np
+import linecache
+import difflib
+from elftools.elf.elffile import ELFFile
 from evalutils import mkDirP, copyFile, which, checkExist
 from eval import *
 from globals import G
@@ -267,14 +270,12 @@ def findUniqueEip(idfun = None):
         def idfun(x): return x
 
     seen = {}
-    #result = []
     for op in ops:
         marker = idfun(op)
         if marker in seen:
             seen[marker].addTid(op['tid'], op['sched_time'])
         else:
             seen[marker] = opRecord(op['tid'], op['sched_time'])
-            #result.append(marker)
 
     removeBySignature(seen, op = 'tern_thread_begin', signature = '0x0')
     possible_ops, lonely_ops = splitByNumOfRelatedThread(seen)
@@ -284,12 +285,115 @@ def findUniqueEip(idfun = None):
     logging.info('Ignore %d locations... since each sync-op used by only one thread.' % len(lonely_ops))
     logging.info('Find %d possible locations.' % len(possible_ops))
 
-    sorted_key = sorted(possible_ops, key = lambda x:possible_ops[x].getSchedTimeAvg() , reverse = True)
+    #sorted_key = sorted(possible_ops, key = lambda x:possible_ops[x].getSchedTimeAvg() , reverse = True)
     #print sorted(possible_ops)
-    for k in sorted_key:
-        print '%s %d' % (k, possible_ops[k].getSchedTimeAvg())
+    #for k in sorted_key:
+    #    print '%s %d' % (k, possible_ops[k].getSchedTimeAvg())
+    return possible_ops
 
+def selectOpMarker(keys, ops):
+    ret = []
+    for k in keys:
+        if k.op in ops:
+            ret.append(k)
+    return ret
+
+def decodeFuncname(dwarf_info, address):
+    for CU in dwarf_info.iter_CUs():
+        for DIE in CU.iter_DIEs():
+            try:
+                if DIE.tag == 'DW_TAG_subprogram':
+                    lowpc = DIE.attributes['DW_AT_low_pc'].value
+                    highpc = DIE.attributes['DW_AT_high_pc'].value
+                    if lowpc <= address <= highpc:
+                        #file_id =  DIE.attributes['DW_AT_decl_file'].value
+                        #top_DIE = CU.get_top_DIE()
+                        #print top_DIE.tag
+                        #print top_DIE.attributes['DW_AT_comp_dir'].value
+                        return DIE.attributes['DW_AT_name'].value
+            except KeyError:
+                continue
+    return None
+
+def decodeFileLine(dwarf_info, address):
+    for CU in dwarf_info.iter_CUs():
+        line_prog = dwarf_info.line_program_for_CU(CU)
+        prev_state = None
+        for entry in line_prog.get_entries():
+            if entry.state is None or entry.state.end_sequence:
+                continue
+            if prev_state and prev_state.address <= address < entry.state.address:
+                file_name = line_prog['file_entry'][prev_state.file - 1].name
+                #print line_prog['file_entry'][prev_state.file - 1]
+                #print prev_state
+                line = prev_state.line
+                return file_name, line
+            prev_state = entry.state
+    return None, None
+
+def decodeFileLocation(dwarf_info, file_name, address):
+    candidate = []
+    for CU in dwarf_info.iter_CUs():
+        for DIE in CU.iter_DIEs():
+            try:
+                if DIE.tag == 'DW_TAG_compile_unit':
+                    name = DIE.attributes['DW_AT_name'].value
+                    if name == file_name:
+                        candidate.append(DIE)
+            except KeyError:
+                continue
+    if len(candidate) == 0:
+        return None
+    if len(candidate) == 1:
+        #for k in candidate[0].attributes:
+        #    print k
+        return candidate[0].attributes['DW_AT_comp_dir'].value
+    logging.warning('find %s at multiple locations..' % file_name)
+    return None
+
+#def getFileScope(file_path, line_number, line_range = 0):
+#    ret = ""
+#    for i in range(line_number - line_range, line_number + line_range + 1):
+#        ret += linecache.getline(file_path, i)
+#    sys.stdout.write(ret)
+#    return ret
+
+def generatePatch(exec_file, address):
+    address = int(address, 16)
+    with open(exec_file, 'rb') as f:
+        elf_file = ELFFile(f)
+
+        if not elf_file.has_dwarf_info():
+            logging.error('%s has no DWARF info.')
+            exit(1)
+
+        dwarf_info = elf_file.get_dwarf_info()
+        func_name = decodeFuncname(dwarf_info, address)
+        file_name, line_number = decodeFileLine(dwarf_info, address)
+        file_loc = decodeFileLocation(dwarf_info, file_name, address)
+
+    print func_name, file_name, line_number, file_loc
+    file_path = os.path.join(file_loc, file_name)
+
+    orig_file = open(file_path, 'r').readlines()
+    patched_file = list(orig_file)
+    patched_file.insert(line_number, 'soba_wait(0);\n')
+    patch = difflib.unified_diff(orig_file, patched_file, fromfile=file_name, tofile=file_name, n=3)
+
+    return patch
     
+
+def testLocations(loc_candidate, exec_file):
+    sorted_key = sorted(loc_candidate, key = lambda x:loc_candidate[x].getSchedTimeAvg() , reverse = True)
+    for k in sorted_key:
+        print '%s %d %d' % (k, loc_candidate[k].getSchedTimeAvg(), loc_candidate[k].getSchedTimeStd())
+
+    sorted_key = selectOpMarker(sorted_key, ['tern_thread_begin'])
+
+    for item in sorted_key[:10]: # use top ten
+        # for tern_thread_begin, the signature is the function start address
+        if item.op == 'tern_thread_begin':
+            generatePatch(exec_file, item.signature)
 
 def find_hints_position(config, bench):
     """
@@ -314,7 +418,7 @@ def find_hints_position(config, bench):
     os.chdir(dir_name)
 
     preSetting(config, bench, apps_name)
-    #os.chdir('/mnt/sdd/newhome/yihlin/xtern/guess/guess2013Apr23_155756_01cc29_dirty/2_parsec_bodytrack')
+    os.chdir('/mnt/sdd/newhome/yihlin/xtern/guess/guess2013Apr24_013936_01cc29_dirty/10_parsec_swaptions')
     parrot_command = ' '.join(['time', G.XTERN_PRELOAD, export, exec_file] + inputs.split())
 
     logging.info(parrot_command)
@@ -322,7 +426,8 @@ def find_hints_position(config, bench):
 
     default_options = getXternDefaultOptions()
 
-    getLogWithEip(config, bench, default_options, parrot_command)
-    findUniqueEip(getOpSignature)
+    #getLogWithEip(config, bench, default_options, parrot_command)
+    loc_candidate = findUniqueEip(getOpSignature)
+    testLocations(loc_candidate, exec_file)
     
     os.chdir('..')
