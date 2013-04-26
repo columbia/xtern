@@ -5,3 +5,4 @@ class G(object):
     XTERN_PRELOAD = ""
     XTERN_ROOT = ""
     BASH_PATH = ""
+    default_options = {}

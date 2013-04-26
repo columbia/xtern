@@ -13,7 +13,7 @@ import time
 import signal
 import threading
 from evalutils import mkDirP, copyFile, which, checkExist
-from guess import *
+#from guess import *
 from globals import G
 
 def getXternDefaultOptions():
@@ -116,10 +116,10 @@ def getGitInfo():
     logging.debug( "git commit date: " + gitcommitdate)
     return [githash[0:6], gitstatus, gitcommitdate, diff]
 
-def genRunDir(config_file, git_info):
+def genRunDir(config_file, git_info, no_preload = False):
     from os.path import basename
     config_name = os.path.splitext( basename(config_file) )[0]
-    if args.no_preload:
+    if no_preload:
         dir_name = "N"
     else:
         dir_name = ""
@@ -346,9 +346,9 @@ if __name__ == "__main__":
     parser.add_argument("--no-preload",
                         action="store_true",
                         help="run benchmark without Parrot")
-    parser.add_argument("--guess",
-                        action="store_true",
-                        help="guess the proper place to put Parrot hints.")
+    #parser.add_argument("--guess",
+    #                    action="store_true",
+    #                    help="guess the proper place to put Parrot hints.")
     parser.add_argument("--options",
                         nargs='?',
                         default=None,
@@ -408,7 +408,7 @@ if __name__ == "__main__":
             continue
 
         # generate running directory
-        run_dir = genRunDir(config_full_path, git_info)
+        run_dir = genRunDir(config_full_path, git_info, args.no_preload)
         if not run_dir:
             continue
         try:
@@ -426,8 +426,8 @@ if __name__ == "__main__":
         for benchmark in local_config.sections():
             if benchmark == "default" or benchmark == "example":
                 continue
-            if args.guess:
-                find_hints_position(local_config, benchmark)
+            #if args.guess:
+            #    find_hints_position(local_config, benchmark)
             else:
                 processBench(local_config, benchmark)
 

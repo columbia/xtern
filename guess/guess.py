@@ -12,9 +12,11 @@ import time
 import numpy as np
 import linecache
 import difflib
+import subprocess
+import tarfile
 from elftools.elf.elffile import ELFFile
-from evalutils import mkDirP, copyFile, which, checkExist
-from eval import *
+from evalutils import mkDirP, copyFile, which, checkExist, copyDir
+from eval import getGitInfo, genRunDir, getXternDefaultOptions
 from globals import G
 
 def getLogFiles(dirname):
@@ -26,8 +28,7 @@ def getLogFiles(dirname):
             ret.append(file)
     return ret
 
-def generateLocalOptions(config, bench, default_options, overwrite_options = {}):
-    config_options = config.options(bench)
+def generateLocalOptions(options, default_options, overwrite_options = {}):
     output = ""
     for option in default_options:
         if option in overwrite_options:
@@ -41,30 +42,6 @@ def generateLocalOptions(config, bench, default_options, overwrite_options = {})
         output += '%s\n' % entry
     with open("local.options", "w") as option_file:
         option_file.write(output)
-
-def getLogWithEip(config, bench, default_options, command):
-    init_env_cmd = config.get(bench, 'INIT_ENV_CMD')
-
-    overwrite_options = { 'log_sync':'1', 'output_dir':'./eip',
-                         'dync_geteip' : '1', 'enforce_annotations': '0',
-                        'whole_stack_eip_signature': '0'}
-    generateLocalOptions(config, bench, default_options, overwrite_options)
-    with open('eip.log', 'w', 102400) as log_file:
-        if init_env_cmd:
-            os.system(init_env_cmd)
-        proc = subprocess.Popen(command, stdout=log_file, stderr=subprocess.STDOUT,
-                shell=True, executable=G.BASH_PATH, bufsize = 102400, preexec_fn=os.setsid)
-        proc.wait()
-    
-    overwrite_options['whole_stack_eip_signature'] = '1'
-    overwrite_options['output_dir'] = './weip'
-    generateLocalOptions(config, bench, default_options, overwrite_options)
-    with open('weip.log', 'w', 102400) as log_file:
-        if init_env_cmd:
-            os.system(init_env_cmd)
-        proc = subprocess.Popen(command, stdout=log_file, stderr=subprocess.STDOUT,
-                shell=True, executable=G.BASH_PATH, bufsize = 102400, preexec_fn=os.setsid)
-        proc.wait()
 
 # can define a class for op
 def readLog(filename, pid, tid):
@@ -263,8 +240,6 @@ def findUniqueEip(idfun = None):
 
     ##
     ops = removeKeys(ops, ['turn'])
-    #for op in ops:
-    #    print op
 
     if idfun is None:
         def idfun(x): return x
@@ -282,8 +257,10 @@ def findUniqueEip(idfun = None):
 
     #for k in possible_ops:
     #    print k, possible_ops[k]
-    logging.info('Ignore %d locations... since each sync-op used by only one thread.' % len(lonely_ops))
-    logging.info('Find %d possible locations.' % len(possible_ops))
+    num_of_lonely_ops = len(lonely_ops)
+    num_of_possible_ops = len(possible_ops)
+    logging.info('Ignore %d location%s... since each sync-op used by only one thread.' % (num_of_lonely_ops, "s"[num_of_lonely_ops==1:]))
+    logging.info('Find %d possible location%s.' % (num_of_possible_ops, "s"[num_of_possible_ops==1:]) )
 
     #sorted_key = sorted(possible_ops, key = lambda x:possible_ops[x].getSchedTimeAvg() , reverse = True)
     #print sorted(possible_ops)
@@ -351,13 +328,6 @@ def decodeFileLocation(dwarf_info, file_name, address):
     logging.warning('find %s at multiple locations..' % file_name)
     return None
 
-#def getFileScope(file_path, line_number, line_range = 0):
-#    ret = ""
-#    for i in range(line_number - line_range, line_number + line_range + 1):
-#        ret += linecache.getline(file_path, i)
-#    sys.stdout.write(ret)
-#    return ret
-
 def generatePatch(exec_file, address):
     address = int(address, 16)
     with open(exec_file, 'rb') as f:
@@ -365,14 +335,14 @@ def generatePatch(exec_file, address):
 
         if not elf_file.has_dwarf_info():
             logging.error('%s has no DWARF info.')
-            exit(1)
+            sys.exit(1)
 
         dwarf_info = elf_file.get_dwarf_info()
         func_name = decodeFuncname(dwarf_info, address)
         file_name, line_number = decodeFileLine(dwarf_info, address)
         file_loc = decodeFileLocation(dwarf_info, file_name, address)
 
-    print func_name, file_name, line_number, file_loc
+    #print func_name, file_name, line_number, file_loc
     file_path = os.path.join(file_loc, file_name)
 
     orig_file = open(file_path, 'r').readlines()
@@ -395,39 +365,359 @@ def testLocations(loc_candidate, exec_file):
         if item.op == 'tern_thread_begin':
             generatePatch(exec_file, item.signature)
 
-def find_hints_position(config, bench):
-    """
-    Set the execution environment.
-    """
-    logging.debug("processing: " + bench)
-    apps_name, exec_file = extractAppsExec(bench, G.XTERN_APPS)
-    if not checkExist(exec_file, os.X_OK):
-        logging.warning('%s does not exist, skip [%s]' % (exec_file, bench))
-        return
-    segs = re.sub(r'(\")|(\.)|/|\'', '', bench).split()
-    inputs = config.get(bench, 'inputs')
-    repeats = config.get(bench, 'repeats')
-    export = config.get(bench, 'EXPORT')
-    eval_id = config.get(bench, 'EVAL_ID')
-    if eval_id:
-        dir_name = "%s_" % eval_id
+def readGuessConfigFile(config_file):
+    try:
+        newConfig = ConfigParser.ConfigParser( {"WORD_DIR": "", 
+                                                "BUILD_CMD": "",
+                                                "CLEAN_CMD": "",
+                                                "SOURCE_ROOT": "",
+                                                "SOURCE_FILES": "",
+                                                "SOURCE_FOLDERS": "",
+                                                "INPUTS": "",
+                                                "REQUIRED_FILES": "",
+                                                "DOWNLOAD_FILES": "",
+                                                "TARBALL": "",
+                                                "GZIP": "",
+                                                "EXPORT": "",
+                                                "INIT_ENV_CMD": "",
+                                                "PRE_EXEC_EVENT": "",
+                                                "EVAL_ID": ""} )
+        ret = newConfig.read(config_file)
+    except ConfigParser.MissingSectionHeaderError as e:
+        logging.error(str(e))
+    except ConfigParser.ParsingError as e:
+        logging.error(str(e))
+    except ConfigParser.Error as e:
+        logging.critical("strange error? " + str(e))
     else:
-        dir_name = ""
-    dir_name +=  '_'.join(segs)
-    mkDirP(dir_name)
-    os.chdir(dir_name)
+        if ret:
+            return newConfig
 
-    preSetting(config, bench, apps_name)
-    os.chdir('/mnt/sdd/newhome/yihlin/xtern/guess/guess2013Apr24_013936_01cc29_dirty/10_parsec_swaptions')
-    parrot_command = ' '.join(['time', G.XTERN_PRELOAD, export, exec_file] + inputs.split())
+def buildSource(options, suffix = ''):
+    build_root = os.path.join(os.getcwd(), 'build' + suffix)
+    mkDirP(build_root)
+    os.chdir(build_root)
+    
+    # copy source files
+    source_root = options['source_root']
+    source_folders = options['source_folders']
+    source_files = options['source_files']
+    for folder in source_folders.split():
+        dir_path = os.path.join(source_root, folder)
+        copyDir(dir_path, folder)
+    for source_file in source_files.split():
+        file_path = os.path.join(source_root, source_file)
+        file_dir = os.path.dirname(source_file)
+        if file_dir:
+            mkDirP(file_dir)
+        copyFile(file_path, source_file)
+    
+    # build
+    work_dir = options['work_dir']
+    clean_cmd = options['clean_cmd']
+    build_cmd = options['build_cmd']
+    exec_build_root = work_dir
+    os.chdir(exec_build_root)
 
-    logging.info(parrot_command)
-    copyFile(os.path.realpath(exec_file), os.path.basename(exec_file))
+    logging.debug('cleaning up before building...')
+    with open(os.path.join(build_root, 'clean.log'), 'w') as log_file:
+        subprocess.call(clean_cmd.split(), stdin=None, stdout=log_file, stderr=log_file)
+    logging.debug('building...')
+    with open(os.path.join(build_root, 'build.log'), 'w') as log_file:
+        build_return_code = subprocess.call(build_cmd.split(), stdin=None, stdout=log_file, stderr=log_file)
+        if build_return_code != 0:
+            logging.warning('build command has exit code %d' % build_return_code)
 
-    default_options = getXternDefaultOptions()
+    os.chdir(build_root)
+    os.chdir('..')
 
-    #getLogWithEip(config, bench, default_options, parrot_command)
+def setExec(options, suffix = ''):
+    exec_file = options['exec_file']
+    file_name = os.path.basename(os.getcwd())
+    file_path = os.path.join('build'+suffix, exec_file)
+    if not checkExist(file_path, os.X_OK):
+        logging.error('cannot find exec_file %s' % exec_file)
+        sys.exit(1)
+    try:
+        os.unlink(file_name)
+    except OSError:
+        pass
+    os.symlink(file_path, file_name)
+    return os.path.abspath(file_name)
+
+def setExecEnv(options):
+    source_root = options['source_root']
+
+    # copy files
+    required_files = options['required_files']
+    for f in required_files.split():
+        logging.debug("copy required file: %s" % f)
+        if not os.path.isabs(f):
+            f = os.path.join(source_root, f)
+        copyFile(f, os.path.basename(f))
+    
+    # extract files
+    tar_balls = options['tarball']
+    for f in tar_balls.split():
+        logging.debug("extract tarball: %s" % f)
+        if not os.path.isabs(f):
+            f = os.path.join(source_root, f)
+        try:
+            tarfile.is_tarfile(f)
+            with tarfile.open(f, 'r') as t:
+                t.extractall()
+        except IOError as e:
+            logging.error(str(e))
+            return False
+        except tarfile.TarError as e:
+            logging.error(str(e))
+            return False
+    gzips = options['gzip']
+    for f in gzips.split():
+        logging.debug("extract gzip: %s" % f)
+        if not os.path.isabs(f):
+            f = os.path.join(source_root, f)
+        try:
+            tarfile.is_tarfile(f)
+            with tarfile.open(f, 'r:gz') as t:
+                t.extractall()
+        except IOError as e:
+            logging.error(str(e))
+            return False
+        except tarfile.TarError as e:
+            logging.error(str(e))
+            return False
+    init_env_cmd = options['init_env_cmd']
+    if init_env_cmd:
+        logging.debug("run environment setting cmd: %s" % init_env_cmd)
+        os.system(init_env_cmd)
+    return True
+        
+def getCommand(options, exec_file, preload = True):
+    pre_exec_cmd = options['pre_exec_event']
+    export = options['export']
+    inputs = options['inputs']
+    if preload:
+        parrot_command = ' '.join(['time', G.XTERN_PRELOAD, export, exec_file] + inputs.split())
+    return parrot_command, pre_exec_cmd
+
+def getLogWithEip(options, exec_file):
+    parrot_cmd, pre_exec_cmd = getCommand(options, exec_file)
+    logging.info("get eip and turn number information")
+    if pre_exec_cmd:
+        logging.debug("pre-exec-event: %s" % pre_exec_cmd)
+    logging.debug("preload command...: %s" %parrot_cmd)
+
+    overwrite_options = { 'log_sync':'1',
+                        'output_dir':'./eip',
+                        'dync_geteip' : '1',
+                        'enforce_annotations': '0',
+                        'whole_stack_eip_signature': '0'}
+    generateLocalOptions(options, G.default_options, overwrite_options)
+    with open('eip.log', 'w', 102400) as log_file:
+        if pre_exec_cmd:
+            os.system(pre_exec_cmd)
+        proc = subprocess.Popen(parrot_cmd, stdout=log_file, stderr=subprocess.STDOUT,
+                shell=True, executable=G.BASH_PATH, bufsize = 102400, preexec_fn=os.setsid)
+        proc.wait()
+    
+    overwrite_options['whole_stack_eip_signature'] = '1'
+    overwrite_options['output_dir'] = './weip'
+    generateLocalOptions(options, G.default_options, overwrite_options)
+    with open('weip.log', 'w', 102400) as log_file:
+        if pre_exec_cmd:
+            os.system(init_env_cmd)
+        proc = subprocess.Popen(parrot_cmd, stdout=log_file, stderr=subprocess.STDOUT,
+                shell=True, executable=G.BASH_PATH, bufsize = 102400, preexec_fn=os.setsid)
+        proc.wait()
+
+class patchReport:
+    def __init__(self):
+        self.nondet = -1
+        self.parrot = -1
+    def __init__(self, _nondet, _parrot):
+        self.nondet = _nondet
+        self.parrot = _parrot
+    def __repr__(self):
+        ret = 'nondet: %f\nparrot: %f' % (self.nondet, self.parrot)
+        return ret
+
+def createBaseline(options):
+    eval_id = options['eval_id']
+    if not eval_id:
+        logging.error("TODO...")
+        return NotImplemented
+    nondet_perf = -1
+    parrot_perf = -1
+    for line in open(os.path.join(G.XTERN_ROOT, 'guess', 'base_nondet'), 'r').readlines():
+        entries = line.split()
+        if entries[0] == eval_id:
+            nondet_perf = float(entries[2])
+            break
+
+    for line in open(os.path.join(G.XTERN_ROOT, 'guess', 'base_parrot'), 'r').readlines():
+        entries = line.split()
+        if entries[0] == eval_id:
+            parrot_perf = float(entries[2])
+            break
+
+    return patchReport(nondet_perf, parrot_perf)
+
+def findHints(options):
+    buildSource(options, 'origin')
+    exec_file= setExec(options, 'origin')
+
+    if not setExecEnv(options):
+        logging.error("cannot set exec environment.... halt")
+        sys.exit(1)
+
+    base = createBaseline(options)
+    #print base
+
+    getLogWithEip(options, exec_file) 
     loc_candidate = findUniqueEip(getOpSignature)
     testLocations(loc_candidate, exec_file)
-    
-    os.chdir('..')
+
+if __name__ == "__main__":
+    logger = logging.getLogger()
+    formatter = logging.Formatter("%(asctime)s %(levelname)s %(message)s",
+                                  "%Y%b%d-%H:%M:%S")
+    ch = logging.StreamHandler()
+    ch.setFormatter(formatter)
+    ch.setLevel(logging.DEBUG)
+    logger.addHandler(ch)
+    logger.setLevel(logging.DEBUG)
+
+    parser = argparse.ArgumentParser(
+        description="Evaluate the perforamnce of Parrot")
+    parser.add_argument('filename', nargs='*',
+        type=str,
+        default = ["build.cfg"],
+        help = "list of configuration files (default: parrot.cfg)")
+    args = parser.parse_args()
+
+    if args.filename.__len__() == 0:
+        logging.critical('no configuration file specified??')
+        sys.exit(1)
+    elif args.filename.__len__() == 1:
+        logging.debug('config file: ' + ''.join(args.filename))
+    else:
+        logging.debug('config files: ' + ', '.join(args.filename))
+
+    try:
+        G.XTERN_ROOT = os.environ["XTERN_ROOT"]
+        logging.debug('XTERN_ROOT = ' + G.XTERN_ROOT)
+    except KeyError as e:
+        logging.error("Please set the environment variable " + str(e))
+        sys.exit(1)
+    G.XTERN_APPS = os.path.abspath(G.XTERN_ROOT + "/apps/")
+    logging.debug("set timeformat to '\\nreal %E\\nuser %U\\nsys %S'")
+    os.environ['TIMEFORMAT'] = "\nreal %E\nuser %U\nsys %S"
+    G.BASH_PATH = which('bash')
+    if not G.BASH_PATH:
+        logging.error("cannot find shell 'bash")
+        sys.exit(1)
+    else:
+        G.BASH_PATH = G.BASH_PATH[0]
+        logging.debug("find 'bash' at %s" % G.BASH_PATH)
+
+    # check xtern files
+    if not checkExist("%s/dync_hook/interpose.so" % G.XTERN_ROOT, os.R_OK):
+        logging.error('thre is no "$G.XTERN_ROOT/dync_hook/interpose.so"')
+        sys.exit(1)
+    G.XTERN_PRELOAD = "LD_PRELOAD=%s/dync_hook/interpose.so" % G.XTERN_ROOT
+
+    git_info = getGitInfo()
+    G.default_options = getXternDefaultOptions()
+    root_dir = os.getcwd()
+
+    for config_file in args.filename:
+        logging.info("processing '" + config_file + "'")
+        config_full_path = os.path.abspath(config_file)
+        if not checkExist(config_full_path, os.R_OK):
+            logging.warning("skip " + config_full_path)
+            continue
+        local_config = readGuessConfigFile(config_full_path)
+        if not local_config:
+            logging.warning("skip " + config_full_path)
+            continue
+   
+        # generate running directory
+        run_dir = genRunDir(config_full_path, git_info)
+        if not run_dir:
+            continue
+        try:
+            os.unlink('current')
+        except OSError:
+            pass
+        os.symlink(run_dir, 'current')
+        os.chdir(run_dir)
+
+        # write diff file if the repository is dirty
+        if git_info[3]:
+            with open("git_diff", "w") as diff:
+                diff.write(git_info[3])
+
+        for benchmark in local_config.sections():
+            if benchmark == "default" or benchmark == "example":
+                continue
+            config_options = dict((x , y) for x, y in local_config.items(benchmark))
+            eval_id = config_options['eval_id']
+            benchmark_root_dir = ''
+            if eval_id:
+                benchmakr_root_dir = '%s_' % eval_id
+            segs = re.sub(r'(\")|(\.)|/|\'', '', benchmark).split()
+            benchmark_root_dir += '_'.join(segs)
+            mkDirP(benchmark_root_dir)
+            os.chdir(benchmark_root_dir) 
+
+            findHints(config_options)
+
+            os.chdir('..')
+        os.chdir(root_dir) 
+
+#def find_hints_position(config, bench):
+#    """
+#    Set the execution environment.
+#    """
+#    logging.debug("processing: " + bench)
+#    apps_name, exec_file = extractAppsExec(bench, G.XTERN_APPS)
+#    if not checkExist(exec_file, os.X_OK):
+#        logging.warning('%s does not exist, skip [%s]' % (exec_file, bench))
+#        return
+#    segs = re.sub(r'(\")|(\.)|/|\'', '', bench).split()
+#    inputs = config.get(bench, 'inputs')
+#    repeats = config.get(bench, 'repeats')
+#    export = config.get(bench, 'EXPORT')
+#    eval_id = config.get(bench, 'EVAL_ID')
+#    if eval_id:
+#        dir_name = "%s_" % eval_id
+#    else:
+#        dir_name = ""
+#    dir_name +=  '_'.join(segs)
+#    mkDirP(dir_name)
+#    os.chdir(dir_name)
+#
+#    preSetting(config, bench, apps_name)
+#    os.chdir('/mnt/sdd/newhome/yihlin/xtern/guess/guess2013Apr24_013936_01cc29_dirty/10_parsec_swaptions')
+#    parrot_command = ' '.join(['time', G.XTERN_PRELOAD, export, exec_file] + inputs.split())
+#
+#    logging.info(parrot_command)
+#    copyFile(os.path.realpath(exec_file), os.path.basename(exec_file))
+#
+#    default_options = getXternDefaultOptions()
+#
+#    #getLogWithEip(config, bench, default_options, parrot_command)
+#    loc_candidate = findUniqueEip(getOpSignature)
+#    testLocations(loc_candidate, exec_file)
+#    
+#    os.chdir('..')
+#
+
+#def getFileScope(file_path, line_number, line_range = 0):
+#    ret = ""
+#    for i in range(line_number - line_range, line_number + line_range + 1):
+#        ret += linecache.getline(file_path, i)
+#    sys.stdout.write(ret)
+#    return ret
+
