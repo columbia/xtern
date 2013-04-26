@@ -80,9 +80,10 @@ def filterOutIdle(ops):
         ret.append(op)
     return ret
 
-def parseLogs(dirname, idleThread = False):
+def parseLogs(dirname, idleThread = False, quite = False):
     files = getLogFiles(dirname)
-    logging.debug(str(files))
+    if not quite:
+        logging.debug(str(files))
     ops = []
     for filename in files:
         logname = os.path.splitext(filename)[0]
@@ -151,12 +152,14 @@ class opRecord:
         self.tidList = []
         self.tidAccu = {}
         self.schedTime = []
-    def __init__(self, tid, sched_time = 0):
+        self.addr = -1
+    def __init__(self, tid, address, sched_time = 0):
         self.tidList = [tid]
         self.tidAccu= {tid: 1}
         self.schedTime = [int(sched_time)]
+        self.addr = address
     def __repr__(self):
-        return str(self.tidAccu) + str(self.getSchedTimeAvg())
+        return '{:<s} {:<s} {:<s}'.format(str(self.tidAccu), str(self.getSchedTimeAvg()), self.addr)
     def getSchedTimeAvg(self):
         return np.average(self.schedTime)
     def getSchedTimeStd(self):
@@ -169,6 +172,10 @@ class opRecord:
             self.tidList.append(tid)
             self.tidAccu[tid] = 1
             self.schedTime.append(sched_time)
+    def checkAddr(self, address):
+        if (self.addr != address):
+            logging.error("the signature matches to different addresses: %s %s" % (self.addr, address))
+            sys.exit(1)
 
 def getOpSignature(op):
     signature = ''
@@ -182,7 +189,6 @@ def getOpSignature(op):
     else:
         logging.warning('%s cannot get signature' % op)
     return opMarker(op['op'], signature)
-        
 
 def removeBySignature(seen, op, signature):
     x = opMarker(op, signature)
@@ -216,12 +222,27 @@ def convertTime(ops, time_tag):
         op[time_tag] = converted
     return ops
 
+def mergeListsOfDict(l1, l2, key):
+    merged = {}
+    for item in l1+l2:
+        if item[key] in merged:
+            merged[item[key]].update(item)
+        else:
+            merged[item[key]] = item
+    return [val for (_, val) in merged.items()]
 
 def findUniqueEip(idfun = None):
-    ops = parseLogs('weip', idleThread = False)
+    eip_ops = parseLogs('eip', idleThread = False)
+    eip_ops = removeKeys(eip_ops, ['app_time', 'syscall_time', 'sched_time', 'pid', 'op', 'args', 'tid'])
+    for op in eip_ops:
+        op['addr'] = op.pop('insid')
+    ops = parseLogs('weip', idleThread = False, quite = True)
     ops = removeKeys(ops, ['app_time', 'syscall_time', 'pid'])
+    assert(len(eip_ops) == len(ops))
+    ops = mergeListsOfDict(ops, eip_ops, 'turn')
     ops = removeOps(ops, ['tern_thread_end'])
     ops = convertTime(ops, 'sched_time')
+    # TODO: how to evaluate the turn waiting time for (first, second)...
     ops = mergeOps(ops) # merge _first, _second
 
     # tern_thread_begin: args[1] is the function pointer
@@ -238,8 +259,12 @@ def findUniqueEip(idfun = None):
     ops = selectAttribute(ops, 'pthread_barrier_init', sid = True)
     ops = selectAttribute(ops, 'pthread_barrier_destroy', sid = True)
 
-    ##
     ops = removeKeys(ops, ['turn'])
+
+    # handle tern_thread_begin address
+    for op in ops:
+        if op['op'] == 'tern_thread_begin':
+            op['addr'] = op['args']
 
     if idfun is None:
         def idfun(x): return x
@@ -249,23 +274,18 @@ def findUniqueEip(idfun = None):
         marker = idfun(op)
         if marker in seen:
             seen[marker].addTid(op['tid'], op['sched_time'])
+            seen[marker].checkAddr(op['addr'])
         else:
-            seen[marker] = opRecord(op['tid'], op['sched_time'])
+            seen[marker] = opRecord(op['tid'], op['addr'], op['sched_time'])
 
-    removeBySignature(seen, op = 'tern_thread_begin', signature = '0x0')
+    #removeBySignature(seen, op = 'tern_thread_begin', signature = '0x0')
     possible_ops, lonely_ops = splitByNumOfRelatedThread(seen)
 
-    #for k in possible_ops:
-    #    print k, possible_ops[k]
     num_of_lonely_ops = len(lonely_ops)
     num_of_possible_ops = len(possible_ops)
     logging.info('Ignore %d location%s... since each sync-op used by only one thread.' % (num_of_lonely_ops, "s"[num_of_lonely_ops==1:]))
     logging.info('Find %d possible location%s.' % (num_of_possible_ops, "s"[num_of_possible_ops==1:]) )
 
-    #sorted_key = sorted(possible_ops, key = lambda x:possible_ops[x].getSchedTimeAvg() , reverse = True)
-    #print sorted(possible_ops)
-    #for k in sorted_key:
-    #    print '%s %d' % (k, possible_ops[k].getSchedTimeAvg())
     return possible_ops
 
 def selectOpMarker(keys, ops):
@@ -349,6 +369,9 @@ def generatePatch(exec_file, address):
     patched_file = list(orig_file)
     patched_file.insert(line_number, 'soba_wait(0);\n')
     patch = difflib.unified_diff(orig_file, patched_file, fromfile=file_name, tofile=file_name, n=3)
+    
+    #for line in patch:
+    #    sys.stdout.write(line)
 
     return patch
     
@@ -356,14 +379,15 @@ def generatePatch(exec_file, address):
 def testLocations(loc_candidate, exec_file):
     sorted_key = sorted(loc_candidate, key = lambda x:loc_candidate[x].getSchedTimeAvg() , reverse = True)
     for k in sorted_key:
-        print '%s %d %d' % (k, loc_candidate[k].getSchedTimeAvg(), loc_candidate[k].getSchedTimeStd())
+        logging.info('%s %d %d' % (k, loc_candidate[k].getSchedTimeAvg(), loc_candidate[k].getSchedTimeStd()))
 
-    sorted_key = selectOpMarker(sorted_key, ['tern_thread_begin'])
+    # duplicated ops
+    #sorted_key = selectOpMarker(sorted_key, ['tern_thread_begin'])
 
-    for item in sorted_key[:10]: # use top ten
-        # for tern_thread_begin, the signature is the function start address
+    # top ten
+    for item in sorted_key[:10]:
         if item.op == 'tern_thread_begin':
-            generatePatch(exec_file, item.signature)
+            generatePatch(exec_file, loc_candidate[item].addr)
 
 def readGuessConfigFile(config_file):
     try:
@@ -542,6 +566,11 @@ class patchReport:
         ret = 'nondet: %f\nparrot: %f' % (self.nondet, self.parrot)
         return ret
 
+'''
+    Get baseline perfromance:
+        1. from records
+        2. (TODO) if cannot get the records, execute and store the result
+'''
 def createBaseline(options):
     eval_id = options['eval_id']
     if not eval_id:
@@ -564,17 +593,17 @@ def createBaseline(options):
     return patchReport(nondet_perf, parrot_perf)
 
 def findHints(options):
-    buildSource(options, 'origin')
+    #buildSource(options, 'origin')
+    os.chdir('/mnt/sdd/newhome/yihlin/xtern/guess/build2013Apr26_002540_8a7d11_dirty/swaptions')
     exec_file= setExec(options, 'origin')
 
     if not setExecEnv(options):
-        logging.error("cannot set exec environment.... halt")
+        logging.error("cannot set exec environment.... (halt)")
         sys.exit(1)
 
     base = createBaseline(options)
-    #print base
 
-    getLogWithEip(options, exec_file) 
+    #getLogWithEip(options, exec_file) 
     loc_candidate = findUniqueEip(getOpSignature)
     testLocations(loc_candidate, exec_file)
 
