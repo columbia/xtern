@@ -33,10 +33,10 @@ def generateLocalOptions(options, default_options, overwrite_options = {}):
     for option in default_options:
         if option in overwrite_options:
             entry = option + ' = ' + overwrite_options[option]
-            logging.debug(entry)
+            logging.debug('\t%s' % entry)
         elif option in config_options:
             entry = option + ' = ' + config.get(bench, option)
-            logging.debug(entry)
+            logging.debug('\t%s' % entry)
         else:
             entry = option + ' = ' + default_options[option]
         output += '%s\n' % entry
@@ -283,8 +283,8 @@ def findUniqueEip(idfun = None):
 
     num_of_lonely_ops = len(lonely_ops)
     num_of_possible_ops = len(possible_ops)
-    logging.info('Ignore %d location%s... since each sync-op used by only one thread.' % (num_of_lonely_ops, "s"[num_of_lonely_ops==1:]))
-    logging.info('Find %d possible location%s.' % (num_of_possible_ops, "s"[num_of_possible_ops==1:]) )
+    logging.info('ignore %d location%s... since each sync-op used by only one thread.' % (num_of_lonely_ops, "s"[num_of_lonely_ops==1:]))
+    logging.info('find %d possible location%s.' % (num_of_possible_ops, "s"[num_of_possible_ops==1:]) )
 
     return possible_ops
 
@@ -348,7 +348,17 @@ def decodeFileLocation(dwarf_info, file_name, address):
     logging.warning('find %s at multiple locations..' % file_name)
     return None
 
-def generatePatch(exec_file, address):
+def headerRequired(orig_file):
+    ''' Search for header file location
+        return true if find the pattern
+        (TODO) might fail if previous header is added behind the hints
+    '''
+    for line in orig_file:
+        if re.search('tern/user.h', line):
+            return False
+    return True
+
+def generatePatch(options, exec_file, address):
     address = int(address, 16)
     with open(exec_file, 'rb') as f:
         elf_file = ELFFile(f)
@@ -368,15 +378,34 @@ def generatePatch(exec_file, address):
     orig_file = open(file_path, 'r').readlines()
     patched_file = list(orig_file)
     patched_file.insert(line_number, 'soba_wait(0);\n')
-    patch = difflib.unified_diff(orig_file, patched_file, fromfile=file_name, tofile=file_name, n=3)
+    if headerRequired(orig_file):
+        logging.debug('insert... #include<tern/user.h>\n')
+        patched_file.insert(0, '#include<tern/user.h>\n')
+
+    # find file path
+    target_file = []
+    for root, dirs, files in os.walk('source'):
+        if file_name in files:
+            target_file.append(os.path.join(root, file_name))
+    if len(target_file) != 1:
+        if len(taget_file) == 0:
+            logging.error('cannot find mathed source file %s' % file_name)
+        else:
+            logging.error('found multiple source files... %s' % str(target_file))
+        sys.exit(1)
+    target_file = target_file.pop()
+
+    patch = difflib.unified_diff(orig_file, patched_file, fromfile=file_name, tofile=target_file, n=3)
     
+    #print ''.join(patch)
+
     #for line in patch:
     #    sys.stdout.write(line)
 
     return patch
     
 
-def testLocations(loc_candidate, exec_file):
+def buildWithPatches(loc_candidate, options, report, exec_file):
     sorted_key = sorted(loc_candidate, key = lambda x:loc_candidate[x].getSchedTimeAvg() , reverse = True)
     for k in sorted_key:
         logging.info('%s %d %d' % (k, loc_candidate[k].getSchedTimeAvg(), loc_candidate[k].getSchedTimeStd()))
@@ -385,9 +414,22 @@ def testLocations(loc_candidate, exec_file):
     #sorted_key = selectOpMarker(sorted_key, ['tern_thread_begin'])
 
     # top ten
+    patch_counter = 1
     for item in sorted_key[:10]:
         if item.op == 'tern_thread_begin':
-            generatePatch(exec_file, loc_candidate[item].addr)
+            patch = generatePatch(options, exec_file, loc_candidate[item].addr)
+            report.patches.append(patchRecord(''.join(patch), item, item.op, loc_candidate[item].addr, patch_counter))
+        else:
+            continue
+        patch_counter += 1
+
+    # apply patches and compile
+    for patch in report.patches:
+        patch_filename = os.path.join(os.getcwd(), '%d.patch' % patch.id)
+        with open(patch_filename, 'w') as f:
+            f.write(patch.patch)            
+        buildSource(options, os.path.join(os.getcwd(), 'source'), prefix = str(patch.id), patch = patch_filename)
+        
 
 def readGuessConfigFile(config_file):
     try:
@@ -405,6 +447,7 @@ def readGuessConfigFile(config_file):
                                                 "EXPORT": "",
                                                 "INIT_ENV_CMD": "",
                                                 "PRE_EXEC_EVENT": "",
+                                                "REPEATS": "",
                                                 "EVAL_ID": ""} )
         ret = newConfig.read(config_file)
     except ConfigParser.MissingSectionHeaderError as e:
@@ -417,16 +460,18 @@ def readGuessConfigFile(config_file):
         if ret:
             return newConfig
 
-def buildSource(options, suffix = ''):
-    build_root = os.path.join(os.getcwd(), 'build' + suffix)
-    mkDirP(build_root)
-    os.chdir(build_root)
-    
+def copySource(options):
+    copy_dst = os.path.join(os.getcwd(), 'source')
+    mkDirP(copy_dst)
+    os.chdir(copy_dst)
+
     # copy source files
     source_root = options['source_root']
     source_folders = options['source_folders']
     source_files = options['source_files']
     for folder in source_folders.split():
+        if os.path.exists(folder):
+            continue
         dir_path = os.path.join(source_root, folder)
         copyDir(dir_path, folder)
     for source_file in source_files.split():
@@ -435,6 +480,23 @@ def buildSource(options, suffix = ''):
         if file_dir:
             mkDirP(file_dir)
         copyFile(file_path, source_file)
+    os.chdir('..')
+    return copy_dst
+
+
+def buildSource(options, source_dir, suffix = '', prefix = '', patch = None):
+    build_root = os.path.join(os.getcwd(), prefix + 'build' + suffix)
+
+    if not os.path.exists(build_root):
+        copyDir(source_dir, build_root)
+        os.chdir(build_root)
+
+        # apply patch
+        if patch:
+            with open(patch, 'r') as p:
+                subprocess.call(['patch', '-p1'], stdin=p, stdout=sys.stdout, stderr=sys.stderr)
+    else:
+        os.chdir(build_root)
     
     # build
     work_dir = options['work_dir']
@@ -455,10 +517,10 @@ def buildSource(options, suffix = ''):
     os.chdir(build_root)
     os.chdir('..')
 
-def setExec(options, suffix = ''):
+def setExec(options, suffix = '', prefix = ''):
     exec_file = options['exec_file']
     file_name = os.path.basename(os.getcwd())
-    file_path = os.path.join('build'+suffix, exec_file)
+    file_path = os.path.join(prefix+'build'+suffix, exec_file)
     if not checkExist(file_path, os.X_OK):
         logging.error('cannot find exec_file %s' % exec_file)
         sys.exit(1)
@@ -522,16 +584,19 @@ def getCommand(options, exec_file, preload = True):
     export = options['export']
     inputs = options['inputs']
     if preload:
-        parrot_command = ' '.join(['time', G.XTERN_PRELOAD, export, exec_file] + inputs.split())
-    return parrot_command, pre_exec_cmd
+        command = ' '.join(['time', G.XTERN_PRELOAD, export, exec_file] + inputs.split())
+    else:
+        command = ' '.join(['time', export, exec_file] + inputs.split())
+    return command, pre_exec_cmd
 
 def getLogWithEip(options, exec_file):
     parrot_cmd, pre_exec_cmd = getCommand(options, exec_file)
     logging.info("get eip and turn number information")
     if pre_exec_cmd:
         logging.debug("pre-exec-event: %s" % pre_exec_cmd)
-    logging.debug("preload command...: %s" %parrot_cmd)
+    logging.debug("preload command...: %s" % parrot_cmd)
 
+    logging.debug('getting eip of all sync-ops...')
     overwrite_options = { 'log_sync':'1',
                         'output_dir':'./eip',
                         'dync_geteip' : '1',
@@ -545,6 +610,7 @@ def getLogWithEip(options, exec_file):
                 shell=True, executable=G.BASH_PATH, bufsize = 102400, preexec_fn=os.setsid)
         proc.wait()
     
+    logging.debug('getting whole-eip-signature of all sync-ops...')
     overwrite_options['whole_stack_eip_signature'] = '1'
     overwrite_options['output_dir'] = './weip'
     generateLocalOptions(options, G.default_options, overwrite_options)
@@ -555,23 +621,45 @@ def getLogWithEip(options, exec_file):
                 shell=True, executable=G.BASH_PATH, bufsize = 102400, preexec_fn=os.setsid)
         proc.wait()
 
+class patchRecord:
+    def __init_(self):
+        self.patch = ''
+        self.key = -1
+        self.op = ''
+        self.addr = ''
+        self.id = -1
+        self.run_time = []
+    def __init__(self, _patch, _key, _op, _addr, _id):
+        self.patch = _patch
+        self.key = _key
+        self.op = _op
+        self.addr = _addr
+        self.id = _id
+        self.run_time = []
+    def __repr__(self):
+        return 'signature: {:<s}\nop: {:<s}\naddr: {:<s}\nperf.: {:<s}\npatch:\n{:<s}\n'.format(self.key.signature, self.op, self.addr, self.run_time, self.patch)
+
 class patchReport:
     def __init__(self):
         self.nondet = -1
         self.parrot = -1
+        self.patches = [] 
     def __init__(self, _nondet, _parrot):
         self.nondet = _nondet
         self.parrot = _parrot
+        self.patches = []
     def __repr__(self):
-        ret = 'nondet: %f\nparrot: %f' % (self.nondet, self.parrot)
+        ret = 'nondet: %f\nparrot: %f\n' % (self.nondet, self.parrot)
+        ret += 'patches : %d\n' % len(self.patches)
+        for patch in self.patches:
+            ret += '\n%s' %  str(patch)
         return ret
 
-'''
-    Get baseline perfromance:
+def createBaseline(options):
+    '''Get baseline perfromance:
         1. from records
         2. (TODO) if cannot get the records, execute and store the result
-'''
-def createBaseline(options):
+    '''
     eval_id = options['eval_id']
     if not eval_id:
         logging.error("TODO...")
@@ -592,20 +680,68 @@ def createBaseline(options):
 
     return patchReport(nondet_perf, parrot_perf)
 
+def getEvalPatchPerf(options, dir_name = '.'):
+    cost = []
+    repeats = options['repeats']
+    for i in range(int(repeats)):
+        log_file_name = os.path.join(dir_name, '%d.log' % i)
+        for line in reversed(open(log_file_name, 'r').readlines()):
+            if re.search('^real [0-9]+\.[0-9][0-9][0-9]$', line):
+                cost += [float(line.split()[1])]
+                break
+    return cost
+
+def evalPatches(options, patch_report):
+    repeats = options['repeats']
+    for patch in patch_report.patches:
+        exec_file = setExec(options, prefix = str(patch.id))
+        os.system('ls -l swaptions')
+        parrot_cmd, pre_exec_cmd = getCommand(options, exec_file)
+
+        overwrite_options = {}
+        generateLocalOptions(options, G.default_options, overwrite_options)
+        os.unlink('local.options')
+
+        log_dir = str(patch.id) + 'run'
+        mkDirP(log_dir)
+        for i in range(int(repeats)):
+            with open('%s/%d.log' % (log_dir, i), 'w') as log_file:
+                if pre_exec_cmd:
+                    os.system(pre_exec_cmd)
+                proc = subprocess.Popen(parrot_cmd, stdout=log_file, stderr=subprocess.STDOUT,
+                        shell=True, executable='/bin/bash', preexec_fn=os.setsid, bufsize = 102400)
+                proc.wait()
+        patch.run_time += getEvalPatchPerf(options, log_dir)
+#        print patch
+
+    return None
+
+def genReport(report):
+    ret  = 'non-det runtime: {:f}\n'.format(report.nondet)
+    ret += 'no-hint runtime: {:f}\n'.format(report.parrot)
+    for patch in report.patches:
+        ret += '{:s}\n'.format(patch.run_time)
+    return ret
+
+
 def findHints(options):
-    #buildSource(options, 'origin')
-    os.chdir('/mnt/sdd/newhome/yihlin/xtern/guess/build2013Apr26_002540_8a7d11_dirty/swaptions')
-    exec_file= setExec(options, 'origin')
+    source_dir = copySource(options)
+    buildSource(options, source_dir, suffix = 'origin')
+    #os.chdir('/mnt/sdd/newhome/yihlin/xtern/guess/build2013Apr29_211848_9a772a_dirty/swaptions')
+    exec_file= setExec(options, suffix = 'origin')
 
     if not setExecEnv(options):
         logging.error("cannot set exec environment.... (halt)")
         sys.exit(1)
 
-    base = createBaseline(options)
+    patch_report = createBaseline(options)
 
-    #getLogWithEip(options, exec_file) 
+    getLogWithEip(options, exec_file) 
     loc_candidate = findUniqueEip(getOpSignature)
-    testLocations(loc_candidate, exec_file)
+    buildWithPatches(loc_candidate, options, patch_report, exec_file)
+    evalPatches(options, patch_report)
+
+    print genReport(patch_report)
 
 if __name__ == "__main__":
     logger = logging.getLogger()
@@ -704,49 +840,4 @@ if __name__ == "__main__":
 
             os.chdir('..')
         os.chdir(root_dir) 
-
-#def find_hints_position(config, bench):
-#    """
-#    Set the execution environment.
-#    """
-#    logging.debug("processing: " + bench)
-#    apps_name, exec_file = extractAppsExec(bench, G.XTERN_APPS)
-#    if not checkExist(exec_file, os.X_OK):
-#        logging.warning('%s does not exist, skip [%s]' % (exec_file, bench))
-#        return
-#    segs = re.sub(r'(\")|(\.)|/|\'', '', bench).split()
-#    inputs = config.get(bench, 'inputs')
-#    repeats = config.get(bench, 'repeats')
-#    export = config.get(bench, 'EXPORT')
-#    eval_id = config.get(bench, 'EVAL_ID')
-#    if eval_id:
-#        dir_name = "%s_" % eval_id
-#    else:
-#        dir_name = ""
-#    dir_name +=  '_'.join(segs)
-#    mkDirP(dir_name)
-#    os.chdir(dir_name)
-#
-#    preSetting(config, bench, apps_name)
-#    os.chdir('/mnt/sdd/newhome/yihlin/xtern/guess/guess2013Apr24_013936_01cc29_dirty/10_parsec_swaptions')
-#    parrot_command = ' '.join(['time', G.XTERN_PRELOAD, export, exec_file] + inputs.split())
-#
-#    logging.info(parrot_command)
-#    copyFile(os.path.realpath(exec_file), os.path.basename(exec_file))
-#
-#    default_options = getXternDefaultOptions()
-#
-#    #getLogWithEip(config, bench, default_options, parrot_command)
-#    loc_candidate = findUniqueEip(getOpSignature)
-#    testLocations(loc_candidate, exec_file)
-#    
-#    os.chdir('..')
-#
-
-#def getFileScope(file_path, line_number, line_range = 0):
-#    ret = ""
-#    for i in range(line_number - line_range, line_number + line_range + 1):
-#        ret += linecache.getline(file_path, i)
-#    sys.stdout.write(ret)
-#    return ret
 
