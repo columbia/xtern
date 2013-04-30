@@ -21,7 +21,7 @@ def checkExist(file, flags=os.X_OK):
     return True
 
 def copyFile(src, dst):
-    shutil.copy(src, dst)
+    shutil.copy2(src, dst)
 
 def copyDir(src, dst):
     shutil.copytree(src, dst, symlinks=False, ignore=None)
