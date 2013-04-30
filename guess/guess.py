@@ -9,8 +9,6 @@ import logging
 import coloroutput
 import re
 import time
-import numpy as np
-import linecache
 import difflib
 import subprocess
 import tarfile
@@ -161,9 +159,13 @@ class opRecord:
     def __repr__(self):
         return '{:<s} {:<s} {:<s}'.format(str(self.tidAccu), str(self.getSchedTimeAvg()), self.addr)
     def getSchedTimeAvg(self):
-        return np.average(self.schedTime)
+        return reduce(lambda x, y: x + y, self.schedTime) / len(self.schedTime)
     def getSchedTimeStd(self):
-        return np.std(self.schedTime)
+        from math import sqrt
+        n, mean, std = len(self.schedTime), self.getSchedTimeAvg(), 0
+        for a in self.schedTime:
+            std = std + (a - mean)**2
+        return sqrt(std / float(n-1))
     def addTid(self, tid, sched_time = 0):
         if tid in self.tidAccu:
             self.tidAccu[tid] += 1
@@ -683,7 +685,7 @@ def createBaseline(options):
 def getEvalPatchPerf(options, dir_name = '.'):
     cost = []
     repeats = options['repeats']
-    for i in range(int(repeats)):
+    for i in range(1, int(repeats)+1):
         log_file_name = os.path.join(dir_name, '%d.log' % i)
         for line in reversed(open(log_file_name, 'r').readlines()):
             if re.search('^real [0-9]+\.[0-9][0-9][0-9]$', line):
@@ -695,7 +697,6 @@ def evalPatches(options, patch_report):
     repeats = options['repeats']
     for patch in patch_report.patches:
         exec_file = setExec(options, prefix = str(patch.id))
-        os.system('ls -l swaptions')
         parrot_cmd, pre_exec_cmd = getCommand(options, exec_file)
 
         overwrite_options = {}
@@ -704,7 +705,7 @@ def evalPatches(options, patch_report):
 
         log_dir = str(patch.id) + 'run'
         mkDirP(log_dir)
-        for i in range(int(repeats)):
+        for i in range(int(repeats)+1):
             with open('%s/%d.log' % (log_dir, i), 'w') as log_file:
                 if pre_exec_cmd:
                     os.system(pre_exec_cmd)
@@ -712,22 +713,27 @@ def evalPatches(options, patch_report):
                         shell=True, executable='/bin/bash', preexec_fn=os.setsid, bufsize = 102400)
                 proc.wait()
         patch.run_time += getEvalPatchPerf(options, log_dir)
-#        print patch
 
     return None
 
 def genReport(report):
     ret  = 'non-det runtime: {:f}\n'.format(report.nondet)
     ret += 'no-hint runtime: {:f}\n'.format(report.parrot)
+    ret += 'no-hint overhead: {:.4%}\n'.format(report.parrot / report.nondet - 1.0)
     for patch in report.patches:
-        ret += '{:s}\n'.format(patch.run_time)
+        mean = reduce(lambda x, y: x + y, patch.run_time) / len(patch.run_time)
+        ret += '\t-----------------------------------\n'
+        ret += '\tPATCH ID: {:>25d}\n'.format(patch.id)
+        ret += '\tSYNC-OP:  {:>25s}\n'.format(patch.op)
+        ret += '\toverhead: {:25.4%}\t\t{:s}\n'.format(mean/report.nondet - 1.0, patch.run_time)
+        ret += '\t-----------------------------------\n'
     return ret
 
 
 def findHints(options):
     source_dir = copySource(options)
     buildSource(options, source_dir, suffix = 'origin')
-    #os.chdir('/mnt/sdd/newhome/yihlin/xtern/guess/build2013Apr29_211848_9a772a_dirty/swaptions')
+    #os.chdir('/mnt/sdd/newhome/yihlin/xtern/guess/build2013Apr30_042008_8a416b_dirty/swaptions')
     exec_file= setExec(options, suffix = 'origin')
 
     if not setExecEnv(options):
