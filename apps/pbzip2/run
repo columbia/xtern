@@ -37,5 +37,5 @@ LD_PRELOAD=$XTERN_ROOT/dync_hook/interpose.so $APP $INPUT
 sleep 2;
 
 # Run non-det and draw time chart.
-LD_PRELOAD=$XTERN_ROOT/eval/rand-intercept/rand-intercept.so $APP $INPUT
+LD_NOT_PRELOAD=$XTERN_ROOT/eval/rand-intercept/rand-intercept.so $APP $INPUT
 
