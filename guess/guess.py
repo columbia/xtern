@@ -315,6 +315,7 @@ def decodeFuncname(dwarf_info, address):
     return None
 
 def decodeFileLine(dwarf_info, address):
+    print address
     for CU in dwarf_info.iter_CUs():
         line_prog = dwarf_info.line_program_for_CU(CU)
         prev_state = None
@@ -360,7 +361,7 @@ def headerRequired(orig_file):
             return False
     return True
 
-def generatePatch(options, exec_file, address):
+def generatePatch(options, exec_file, address, thread_begin = False):
     address = int(address, 16)
     with open(exec_file, 'rb') as f:
         elf_file = ELFFile(f)
@@ -370,19 +371,13 @@ def generatePatch(options, exec_file, address):
             sys.exit(1)
 
         dwarf_info = elf_file.get_dwarf_info()
-        func_name = decodeFuncname(dwarf_info, address)
+        #func_name = decodeFuncname(dwarf_info, address)
         file_name, line_number = decodeFileLine(dwarf_info, address)
         file_loc = decodeFileLocation(dwarf_info, file_name, address)
 
-    #print func_name, file_name, line_number, file_loc
-    file_path = os.path.join(file_loc, file_name)
-
-    orig_file = open(file_path, 'r').readlines()
-    patched_file = list(orig_file)
-    patched_file.insert(line_number, 'soba_wait(0);\n')
-    if headerRequired(orig_file):
-        logging.debug('insert... #include<tern/user.h>\n')
-        patched_file.insert(0, '#include<tern/user.h>\n')
+    print file_name, line_number, file_loc
+    if file_loc:
+        file_path = os.path.join(file_loc, file_name)
 
     # find file path
     target_file = []
@@ -390,12 +385,27 @@ def generatePatch(options, exec_file, address):
         if file_name in files:
             target_file.append(os.path.join(root, file_name))
     if len(target_file) != 1:
-        if len(taget_file) == 0:
-            logging.error('cannot find mathed source file %s' % file_name)
+        if len(target_file) == 0:
+            logging.warning("cannot find mathed source file '%s'" % file_name)
         else:
-            logging.error('found multiple source files... %s' % str(target_file))
-        sys.exit(1)
+            logging.warning("found multiple source files... '%s'" % str(target_file))
+        return None
     target_file = target_file.pop()
+
+    # if CU cannot be found; search the sourrce directory
+    if file_loc:
+        orig_file = open(file_path, 'r').readlines()
+    else:
+        orig_file = open(target_file, 'r').readlines()
+    patched_file = list(orig_file)
+    if thread_begin:
+        patched_file.insert(line_number, 'soba_wait(0);\n')
+    else:
+        patched_file.insert(line_number-1, 'soba_wait(0);\n')
+    if headerRequired(orig_file):
+        logging.debug('insert... #include<tern/user.h>\n')
+        patched_file.insert(0, '#include<tern/user.h>\n')
+
 
     patch = difflib.unified_diff(orig_file, patched_file, fromfile=file_name, tofile=target_file, n=3)
     
@@ -403,6 +413,7 @@ def generatePatch(options, exec_file, address):
 
     #for line in patch:
     #    sys.stdout.write(line)
+    #sys.exit(1)
 
     return patch
     
@@ -419,7 +430,14 @@ def buildWithPatches(loc_candidate, options, report, exec_file):
     patch_counter = 1
     for item in sorted_key[:10]:
         if item.op == 'tern_thread_begin':
+            patch = generatePatch(options, exec_file, loc_candidate[item].addr, thread_begin = True)
+            if not patch:
+                continue
+            report.patches.append(patchRecord(''.join(patch), item, item.op, loc_candidate[item].addr, patch_counter))
+        elif item.op == 'pthread_mutex_unlock':
             patch = generatePatch(options, exec_file, loc_candidate[item].addr)
+            if not patch:
+                continue
             report.patches.append(patchRecord(''.join(patch), item, item.op, loc_candidate[item].addr, patch_counter))
         else:
             continue
@@ -450,6 +468,7 @@ def readGuessConfigFile(config_file):
                                                 "INIT_ENV_CMD": "",
                                                 "PRE_EXEC_EVENT": "",
                                                 "REPEATS": "",
+                                                "EVAL": "0",
                                                 "EVAL_ID": ""} )
         ret = newConfig.read(config_file)
     except ConfigParser.MissingSectionHeaderError as e:
@@ -660,26 +679,56 @@ class patchReport:
 def createBaseline(options):
     '''Get baseline perfromance:
         1. from records
-        2. (TODO) if cannot get the records, execute and store the result
+        2. (or) execute and store the result
     '''
+    run_eval = bool(int(options['eval']))
     eval_id = options['eval_id']
-    if not eval_id:
-        logging.error("TODO...")
-        return NotImplemented
     nondet_perf = -1
     parrot_perf = -1
-    for line in open(os.path.join(G.XTERN_ROOT, 'guess', 'base_nondet'), 'r').readlines():
-        entries = line.split()
-        if entries[0] == eval_id:
-            nondet_perf = float(entries[2])
-            break
 
-    for line in open(os.path.join(G.XTERN_ROOT, 'guess', 'base_parrot'), 'r').readlines():
-        entries = line.split()
-        if entries[0] == eval_id:
-            parrot_perf = float(entries[2])
-            break
+    if eval_id and not run_eval:
+        for line in open(os.path.join(G.XTERN_ROOT, 'guess', 'base_nondet'), 'r').readlines():
+            entries = line.split()
+            if entries[0] == eval_id:
+                nondet_perf = float(entries[2])
+                break
+        for line in open(os.path.join(G.XTERN_ROOT, 'guess', 'base_parrot'), 'r').readlines():
+            entries = line.split()
+            if entries[0] == eval_id:
+                parrot_perf = float(entries[2])
+                break
+    else:
+        repeats = options['repeats']
+        exec_file = setExec(options, suffix='origin')
+        parrot_cmd, pre_exec_cmd = getCommand(options, exec_file, preload = False)
 
+        log_dir = 'runorigin-nondet'
+        mkDirP(log_dir)
+        for i in range(int(repeats)+1):
+            with open('%s/%d.log' % (log_dir, i), 'w') as log_file:
+                if pre_exec_cmd:
+                    os.system(pre_exec_cmd)
+                proc = subprocess.Popen(parrot_cmd, stdout=log_file, stderr=subprocess.STDOUT,
+                        shell=True, executable=G.BASH_PATH, preexec_fn=os.setsid, bufsize = 102400)
+                proc.wait()
+        result = getEvalPatchPerf(options, log_dir)
+        nondet_perf = reduce(lambda x, y: x + y, result) / len(result)
+ 
+        generateLocalOptions(options, G.default_options)
+        parrot_cmd, pre_exec_cmd = getCommand(options, exec_file)
+
+        log_dir = 'runorigin-withhints'
+        mkDirP(log_dir)
+        for i in range(int(repeats)+1):
+            with open('%s/%d.log' % (log_dir, i), 'w') as log_file:
+                if pre_exec_cmd:
+                    os.system(pre_exec_cmd)
+                proc = subprocess.Popen(parrot_cmd, stdout=log_file, stderr=subprocess.STDOUT,
+                        shell=True, executable=G.BASH_PATH, preexec_fn=os.setsid, bufsize = 102400)
+                proc.wait()
+        result = getEvalPatchPerf(options, log_dir)
+        parrot_perf = reduce(lambda x, y: x + y, result) / len(result)
+ 
     return patchReport(nondet_perf, parrot_perf)
 
 def getEvalPatchPerf(options, dir_name = '.'):
@@ -699,9 +748,7 @@ def evalPatches(options, patch_report):
         exec_file = setExec(options, prefix = str(patch.id))
         parrot_cmd, pre_exec_cmd = getCommand(options, exec_file)
 
-        overwrite_options = {}
-        generateLocalOptions(options, G.default_options, overwrite_options)
-        os.unlink('local.options')
+        generateLocalOptions(options, G.default_options)
 
         log_dir = str(patch.id) + 'run'
         mkDirP(log_dir)
@@ -710,7 +757,7 @@ def evalPatches(options, patch_report):
                 if pre_exec_cmd:
                     os.system(pre_exec_cmd)
                 proc = subprocess.Popen(parrot_cmd, stdout=log_file, stderr=subprocess.STDOUT,
-                        shell=True, executable='/bin/bash', preexec_fn=os.setsid, bufsize = 102400)
+                        shell=True, executable=G.BASH_PATH, preexec_fn=os.setsid, bufsize = 102400)
                 proc.wait()
         patch.run_time += getEvalPatchPerf(options, log_dir)
 
@@ -733,7 +780,7 @@ def genReport(report):
 def findHints(options):
     source_dir = copySource(options)
     buildSource(options, source_dir, suffix = 'origin')
-    #os.chdir('/mnt/sdd/newhome/yihlin/xtern/guess/build2013Apr30_042008_8a416b_dirty/swaptions')
+    #os.chdir('/mnt/sdd/newhome/yihlin/xtern/guess/build2013May01_033106_712c3e_dirty/bodytrack')
     exec_file= setExec(options, suffix = 'origin')
 
     if not setExecEnv(options):
@@ -747,7 +794,9 @@ def findHints(options):
     buildWithPatches(loc_candidate, options, patch_report, exec_file)
     evalPatches(options, patch_report)
 
-    print genReport(patch_report)
+    result = genReport(patch_report)
+    with open('report', 'w') as f:
+        f.write(result)
 
 if __name__ == "__main__":
     logger = logging.getLogger()
