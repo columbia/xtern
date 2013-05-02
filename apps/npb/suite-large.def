@@ -26,7 +26,7 @@ is	C
 ep	D
 # cannot compile class D
 cg	C
-# Parrot turn number overflows when use class C for ua
-ua	B
+# Parrot turn number overflows when use class B
+ua	A
 # there is no class C
 dc  B
