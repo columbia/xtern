@@ -9,13 +9,24 @@
 # (except that no classes C,D,E for DC and no class E for IS and UA).
 # No blank lines. 
 # The following example builds sample sizes of all benchmarks. 
+
+# cannot compile class C
 ft	B
+# cannot compile class C
 mg	B
+# cannot compile class D
 sp	C
+# cannot compile class D
 lu	C
+# cannot compile class D
 bt	C
+# cannot compile class D
 is	C
+# class E takes too much time
 ep	D
+# cannot compile class D
 cg	C
-ua	C
-dc  A
+# Parrot turn number overflows when use class C for ua
+ua	B
+# there is no class C
+dc  B
