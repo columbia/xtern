@@ -12,6 +12,7 @@ import time
 import difflib
 import subprocess
 import tarfile
+import shutil
 from elftools.elf.elffile import ELFFile
 from evalutils import mkDirP, copyFile, which, checkExist, copyDir
 from eval import getGitInfo, genRunDir, getXternDefaultOptions
@@ -32,8 +33,8 @@ def generateLocalOptions(options, default_options, overwrite_options = {}):
         if option in overwrite_options:
             entry = option + ' = ' + overwrite_options[option]
             logging.debug('\t%s' % entry)
-        elif option in config_options:
-            entry = option + ' = ' + config.get(bench, option)
+        elif option in options:
+            entry = option + ' = ' + options[option]
             logging.debug('\t%s' % entry)
         else:
             entry = option + ' = ' + default_options[option]
@@ -315,7 +316,6 @@ def decodeFuncname(dwarf_info, address):
     return None
 
 def decodeFileLine(dwarf_info, address):
-    print address
     for CU in dwarf_info.iter_CUs():
         line_prog = dwarf_info.line_program_for_CU(CU)
         prev_state = None
@@ -375,8 +375,10 @@ def generatePatch(options, exec_file, address, thread_begin = False):
         file_name, line_number = decodeFileLine(dwarf_info, address)
         file_loc = decodeFileLocation(dwarf_info, file_name, address)
 
-    print file_name, line_number, file_loc
+    #print file_name, line_number, file_loc
+    logging.debug('eip %s located at %s Line %d' % (address, file_name, line_number))
     if file_loc:
+        logging.debug('found file location %s' % file_loc)
         file_path = os.path.join(file_loc, file_name)
 
     # find file path
@@ -398,6 +400,8 @@ def generatePatch(options, exec_file, address, thread_begin = False):
     else:
         orig_file = open(target_file, 'r').readlines()
     patched_file = list(orig_file)
+    
+    logging.debug('add... soba_wait(?)')
     if thread_begin:
         patched_file.insert(line_number, 'soba_wait(0);\n')
     else:
@@ -429,6 +433,7 @@ def buildWithPatches(loc_candidate, options, report, exec_file):
     # top ten
     patch_counter = 1
     for item in sorted_key[:10]:
+        logging.debug("generating patch...")
         if item.op == 'tern_thread_begin':
             patch = generatePatch(options, exec_file, loc_candidate[item].addr, thread_begin = True)
             if not patch:
@@ -543,8 +548,8 @@ def setExec(options, suffix = '', prefix = ''):
     file_name = os.path.basename(os.getcwd())
     file_path = os.path.join(prefix+'build'+suffix, exec_file)
     if not checkExist(file_path, os.X_OK):
-        logging.error('cannot find exec_file %s' % exec_file)
-        sys.exit(1)
+        logging.warning('cannot find exec_file %s' % exec_file)
+        return None
     try:
         os.unlink(file_name)
     except OSError:
@@ -611,6 +616,9 @@ def getCommand(options, exec_file, preload = True):
     return command, pre_exec_cmd
 
 def getLogWithEip(options, exec_file):
+    shutil.rmtree('eip', ignore_errors = True)
+    shutil.rmtree('weip', ignore_errors = True)
+
     parrot_cmd, pre_exec_cmd = getCommand(options, exec_file)
     logging.info("get eip and turn number information")
     if pre_exec_cmd:
@@ -637,7 +645,7 @@ def getLogWithEip(options, exec_file):
     generateLocalOptions(options, G.default_options, overwrite_options)
     with open('weip.log', 'w', 102400) as log_file:
         if pre_exec_cmd:
-            os.system(init_env_cmd)
+            os.system(pre_exec_cmd)
         proc = subprocess.Popen(parrot_cmd, stdout=log_file, stderr=subprocess.STDOUT,
                 shell=True, executable=G.BASH_PATH, bufsize = 102400, preexec_fn=os.setsid)
         proc.wait()
@@ -687,6 +695,7 @@ def createBaseline(options):
     parrot_perf = -1
 
     if eval_id and not run_eval:
+        logging.debug("get performance by 'eval_id'")
         for line in open(os.path.join(G.XTERN_ROOT, 'guess', 'base_nondet'), 'r').readlines():
             entries = line.split()
             if entries[0] == eval_id:
@@ -699,6 +708,7 @@ def createBaseline(options):
                 break
     else:
         repeats = options['repeats']
+        logging.debug("get performance by sample run with 'repeats := %s'" % repeats)
         exec_file = setExec(options, suffix='origin')
         parrot_cmd, pre_exec_cmd = getCommand(options, exec_file, preload = False)
 
@@ -745,7 +755,11 @@ def getEvalPatchPerf(options, dir_name = '.'):
 def evalPatches(options, patch_report):
     repeats = options['repeats']
     for patch in patch_report.patches:
+        logging.debug('sample run patch %s (%s[%s])' % (patch.id, patch.op, patch.key))
         exec_file = setExec(options, prefix = str(patch.id))
+        if not exec_file:
+            patch.runtime = []
+            continue
         parrot_cmd, pre_exec_cmd = getCommand(options, exec_file)
 
         generateLocalOptions(options, G.default_options)
@@ -768,11 +782,14 @@ def genReport(report):
     ret += 'no-hint runtime: {:f}\n'.format(report.parrot)
     ret += 'no-hint overhead: {:.4%}\n'.format(report.parrot / report.nondet - 1.0)
     for patch in report.patches:
-        mean = reduce(lambda x, y: x + y, patch.run_time) / len(patch.run_time)
+        if not patch.run_time:
+            mean = float('inf')
+        else:
+            mean = reduce(lambda x, y: x + y, patch.run_time) / len(patch.run_time)
         ret += '\t-----------------------------------\n'
         ret += '\tPATCH ID: {:>25d}\n'.format(patch.id)
         ret += '\tSYNC-OP:  {:>25s}\n'.format(patch.op)
-        ret += '\toverhead: {:25.4%}\t\t{:s}\n'.format(mean/report.nondet - 1.0, patch.run_time)
+        ret += '\toverhead: {:>25.4%}\t\t{:s}\n'.format(mean/report.nondet - 1.0, patch.run_time)
         ret += '\t-----------------------------------\n'
     return ret
 
@@ -780,7 +797,7 @@ def genReport(report):
 def findHints(options):
     source_dir = copySource(options)
     buildSource(options, source_dir, suffix = 'origin')
-    #os.chdir('/mnt/sdd/newhome/yihlin/xtern/guess/build2013May01_033106_712c3e_dirty/bodytrack')
+#    os.chdir('/mnt/sdd/newhome/yihlin/xtern/guess/build2013May01_214716_4900b4_dirty/facesim')
     exec_file= setExec(options, suffix = 'origin')
 
     if not setExecEnv(options):

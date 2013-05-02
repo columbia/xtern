@@ -71,10 +71,9 @@ static void print_stack()
 
 void *get_eip()
 {
-  // Change this "idx" to be 2 when pthread_*() functions are called by 
-  // application code directly; and change it to be 3 when pthread_*()
-  // functions are called by the app's wrapper functions.
-  const int idx = 3;
+  // Change this "dync_geteip" to be 2 when pthread_*() functions are
+  // called by application code directly; and change it to be 3 when
+  // pthread_*() functions are called by the app's wrapper functions.
   const int len = 20;
   void *tracePtrs[len];
   int i;
@@ -94,7 +93,7 @@ void *get_eip()
     //printf( "%s\n", funcNames[2] );
     //printf(stderr, "reteip: %p\n", tracePtrs[1]);
   } else
-    return tracePtrs[idx];  //  this is ret_eip of my caller
+    return tracePtrs[options::dync_geteip_idx];  //  this is ret_eip of my caller
 }
 
 #include "spec_hooks.cpp"

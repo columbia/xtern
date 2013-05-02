@@ -3,7 +3,7 @@
 set -e
 
 ARCH=`uname -m`
-XTERN_ANNOT_LIB="-I$XTERN_ROOT/include -L$XTERN_ROOT/dync_hook -Wl,--rpath,$XTERN_ROOT/dync_hook -lxtern-annot"
+XTERN_ANNOT_LIB="-I$XTERN_ROOT/install/include -L$XTERN_ROOT/dync_hook -Wl,--rpath,$XTERN_ROOT/dync_hook -lxtern-annot"
 VER=4.5.4
 echo -e "\nWe are compiling gcc-$VER by ourselves. We hope you have installed the same version of gcc on your machine, because we are going to use some libraries of it.\n";
 cd $XTERN_ROOT/apps/openmp
@@ -20,7 +20,7 @@ patch -p1 < ../patch/annot-partition-non-det.patch
 patch -p1 < ../patch/add-detach.patch
 mkdir obj
 cd obj
-CFLAGS+="$XTERN_ANNOT_LIB" ../configure \
+CFLAGS+="-O0 -g $XTERN_ANNOT_LIB" CXXFLAGS+="-O0 -g -I$XTERN_ROOT/install/include" LDFALGS+="-L$XTERN_ROOT/dync_hook -Wl,--rpath,$XTERN_ROOT/dync_hook -lxtern-annot" ../configure \
 --prefix=$XTERN_ROOT/apps/openmp/install --disable-linux-futex --enable-languages=c,c++,fortran --disable-multilib
 if [ "$ARCH" == "x86_64" ]; then
   LIBRARY_PATH=/usr/lib/x86_64-linux-gnu make -j64

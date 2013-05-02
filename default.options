@@ -22,6 +22,7 @@ output_dir = ./out
 
 # if turned on, dynamic library will obtain eip
 dync_geteip = 0
+dync_geteip_idx = 2
 
 # if turned on, dynamic library will use signature of the whole stack instead of eip, DEPTH_LIMIT=20
 whole_stack_eip_signature = 0
