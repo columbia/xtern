@@ -15,7 +15,6 @@ fi
 tar zxvf phoenix-2.0.0.tar.gz
 
 pushd $XTERN_ROOT/apps/phoenix/
-#rm linear_regression.tar.gz
 
 # download required files
 check=$(dpkg-query -W -f='${Status} ${Version}\n' axel 2>&1)
@@ -32,10 +31,6 @@ do
     fi
 done
 md5sum -c md5check.txt
-#for i in "${files[@]}"
-#do
-#    tar zxf $i.tar.gz
-#done
 
 # clean up
 rm -rf phoenix-2.0.0
@@ -43,37 +38,18 @@ tar zxf phoenix-2.0.0.tar.gz
 
 # patch && make
 pushd phoenix-2.0.0
-patch -p1 < ../patch/fix.patch
-patch -p1 < ../patch/replace_pthread_specific.patch  # maximum # of threads will be 64 (hard coded)
-patch -p1 < ../patch/defines.mk.patch
-patch -p1 < ../patch/fix-histogram-pthread.patch
-# mapreduce patches
-patch -p1 < ../patch/annot-phoenix-all-map-reduce.patch
-patch -p1 < ../patch/annot-histogram-mapreduce.patch
-patch -p1 < ../patch/annot-linear-regression-mapreduce.patch
-patch -p1 < ../patch/annot-pca-mapreduce.patch
-#patch -p1 < ../patch/annot-word_count-mapreduce.patch
-patch -p1 < ../patch/annot-kmeans-mapreduce.patch
-patch -p1 < ../patch/annot-matrix_multiply-mapreduce.patch
-patch -p1 < ../patch/annot-string_match-mapreduce.patch
 
-# pthreads patches
-patch -p1 < ../patch/annot-histogram-pthread.patch
-patch -p1 < ../patch/annot-linear-regression-pthread.patch
-patch -p1 < ../patch/annot-pca-pthread.patch
-patch -p1 < ../patch/annot-word_count-pthread.patch
-patch -p1 < ../patch/annot-kmeans-pthread.patch
-patch -p1 < ../patch/annot-matrix_multiply-pthread.patch
-patch -p1 < ../patch/annot-string_match-pthread.patch
+# soba_init; nop for correct return address;
+# use environment variable for choosing thrds #; fix seg. fault;
+# modify makefile
+patch -p1 < ../patch/new-phoenix-all-init.patch
+# 7 map_reduce share one hint; 7 pthread use one each
+patch -p1 < ../patch/new-phoenix-all-wait.patch
 
-# threads number
-patch -p1 < ../patch/thread_number.patch
-
-# repalce pthread_specific w/o global lock; replace semaphore with cond variable
-patch -p1 < ../patch/semaphore.patch
 make
 popd
 
+# create link
 find . -maxdepth 1 -type l -exec rm -rf {} \;
 bench=( histogram linear_regression matrix_multiply string_match kmeans pca word_count )
 for i in "${bench[@]}"

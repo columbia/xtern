@@ -289,6 +289,11 @@ def findUniqueEip(idfun = None):
     logging.info('ignore %d location%s... since each sync-op used by only one thread.' % (num_of_lonely_ops, "s"[num_of_lonely_ops==1:]))
     logging.info('find %d possible location%s.' % (num_of_possible_ops, "s"[num_of_possible_ops==1:]) )
 
+    sorted_key = sorted(possible_ops, key = lambda x:possible_ops[x].getSchedTimeAvg() , reverse = True)
+    for k in sorted_key:
+        logging.info('%s %d %d' % (k, possible_ops[k].getSchedTimeAvg(), possible_ops[k].getSchedTimeStd()))
+        logging.debug('%s' % str(possible_ops[k]))
+
     return possible_ops
 
 def selectOpMarker(keys, ops):
@@ -438,12 +443,12 @@ def buildWithPatches(loc_candidate, options, report, exec_file):
             patch = generatePatch(options, exec_file, loc_candidate[item].addr, thread_begin = True)
             if not patch:
                 continue
-            report.patches.append(patchRecord(''.join(patch), item, item.op, loc_candidate[item].addr, patch_counter))
+            report.patches.append(patchRecord(''.join(patch), item.signature, item.op, loc_candidate[item].addr, patch_counter))
         elif item.op == 'pthread_mutex_unlock':
             patch = generatePatch(options, exec_file, loc_candidate[item].addr)
             if not patch:
                 continue
-            report.patches.append(patchRecord(''.join(patch), item, item.op, loc_candidate[item].addr, patch_counter))
+            report.patches.append(patchRecord(''.join(patch), item.signature, item.op, loc_candidate[item].addr, patch_counter))
         else:
             continue
         patch_counter += 1
@@ -548,7 +553,7 @@ def setExec(options, suffix = '', prefix = ''):
     file_name = os.path.basename(os.getcwd())
     file_path = os.path.join(prefix+'build'+suffix, exec_file)
     if not checkExist(file_path, os.X_OK):
-        logging.warning('cannot find exec_file %s' % exec_file)
+        logging.warning('cannot find exec_file %s at %s' % (file_path, os.getcwd()))
         return None
     try:
         os.unlink(file_name)
@@ -755,7 +760,7 @@ def getEvalPatchPerf(options, dir_name = '.'):
 def evalPatches(options, patch_report):
     repeats = options['repeats']
     for patch in patch_report.patches:
-        logging.debug('sample run patch %s (%s[%s])' % (patch.id, patch.op, patch.key))
+        logging.debug('sample run patch %s (%s[%s])' % (patch.id, patch.op, patch.addr))
         exec_file = setExec(options, prefix = str(patch.id))
         if not exec_file:
             patch.runtime = []
@@ -797,7 +802,7 @@ def genReport(report):
 def findHints(options):
     source_dir = copySource(options)
     buildSource(options, source_dir, suffix = 'origin')
-#    os.chdir('/mnt/sdd/newhome/yihlin/xtern/guess/build2013May01_214716_4900b4_dirty/facesim')
+    #os.chdir('/mnt/sdd/newhome/yihlin/xtern/guess/vips32013May02_054230_a87776/vips')
     exec_file= setExec(options, suffix = 'origin')
 
     if not setExecEnv(options):

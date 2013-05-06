@@ -1,0 +1,106 @@
+diff -Naur phoenix-2.0.0/src/taskQ.c phoenix-2.0.0.1/src/taskQ.c
+--- phoenix-2.0.0/src/taskQ.c	2009-05-25 18:32:49.000000000 -0400
++++ phoenix-2.0.0.1/src/taskQ.c	2013-05-06 17:25:30.843676564 -0400
+@@ -36,6 +36,8 @@
+ #include "synch.h"
+ #include "locality.h"
+ 
++#include <tern/user.h>
++
+ static int num_strands_per_chip = 0;
+ 
+ typedef struct {
+@@ -387,6 +389,7 @@
+     lock_acquire (tq->locks[idx].per_thread[tid]);
+     ret = tq_elem_into_free_seq (tq, idx, tid, qe);
+     lock_release (tq->locks[idx].per_thread[tid]);
++    soba_wait(0);
+ 
+     return ret;
+ }
+diff -Naur phoenix-2.0.0/tests/histogram/histogram-pthread.c phoenix-2.0.0.1/tests/histogram/histogram-pthread.c
+--- phoenix-2.0.0/tests/histogram/histogram-pthread.c	2013-05-06 18:02:52.031598975 -0400
++++ phoenix-2.0.0.1/tests/histogram/histogram-pthread.c	2013-05-06 17:31:01.187665156 -0400
+@@ -94,7 +94,7 @@
+  * assigned to each thread
+  */
+ void *calc_hist(void *arg) {
+-   
++   soba_wait(0);
+    int *red;
+    int *green;
+    int *blue;
+diff -Naur phoenix-2.0.0/tests/kmeans/kmeans-pthread.c phoenix-2.0.0.1/tests/kmeans/kmeans-pthread.c
+--- phoenix-2.0.0/tests/kmeans/kmeans-pthread.c	2013-05-06 18:02:52.031598975 -0400
++++ phoenix-2.0.0.1/tests/kmeans/kmeans-pthread.c	2013-05-06 17:59:22.091606247 -0400
+@@ -176,6 +176,7 @@
+  */
+ void *find_clusters(void *arg) 
+ {
++   soba_wait(0);
+    thread_arg *t_arg = (thread_arg *)arg;
+    int i, j;
+    unsigned int min_dist, cur_dist;
+@@ -212,6 +213,7 @@
+  */
+ void *calc_means(void *arg)
+ {
++   soba_wait(0);
+    int i, j, grp_size;
+    int *sum;
+    thread_arg *t_arg = (thread_arg *)arg;
+diff -Naur phoenix-2.0.0/tests/linear_regression/linear_regression-pthread.c phoenix-2.0.0.1/tests/linear_regression/linear_regression-pthread.c
+--- phoenix-2.0.0/tests/linear_regression/linear_regression-pthread.c	2013-05-06 18:02:52.031598975 -0400
++++ phoenix-2.0.0.1/tests/linear_regression/linear_regression-pthread.c	2013-05-06 17:34:46.299657339 -0400
+@@ -63,6 +63,7 @@
+  */
+ void *linear_regression_pthread(void *args_in) 
+ {
++   soba_wait(0);
+    lreg_args* args =(lreg_args*)args_in;
+    int i;
+ 
+diff -Naur phoenix-2.0.0/tests/matrix_multiply/matrix_multiply-pthread.c phoenix-2.0.0.1/tests/matrix_multiply/matrix_multiply-pthread.c
+--- phoenix-2.0.0/tests/matrix_multiply/matrix_multiply-pthread.c	2013-05-06 18:02:52.035598974 -0400
++++ phoenix-2.0.0.1/tests/matrix_multiply/matrix_multiply-pthread.c	2013-05-06 17:35:26.259655826 -0400
+@@ -125,6 +125,7 @@
+  */
+ void *matrixmult_map(void *args_in)
+ {
++    soba_wait(0);
+     map_args_t* args = (map_args_t*)args_in;
+ 
+     int row_count = 0;
+diff -Naur phoenix-2.0.0/tests/pca/pca-pthread.c phoenix-2.0.0.1/tests/pca/pca-pthread.c
+--- phoenix-2.0.0/tests/pca/pca-pthread.c	2013-05-06 18:02:52.035598974 -0400
++++ phoenix-2.0.0.1/tests/pca/pca-pthread.c	2013-05-06 17:39:17.511647948 -0400
+@@ -165,6 +165,7 @@
+    pthread_mutex_unlock(&row_lock);
+    
+    while (i < num_rows) {
++      soba_wait(0);
+       for (j = i; j < num_rows; j++) {
+          sum = 0;
+          for (k = 0; k < num_cols; k++) {
+diff -Naur phoenix-2.0.0/tests/string_match/string_match-pthread.c phoenix-2.0.0.1/tests/string_match/string_match-pthread.c
+--- phoenix-2.0.0/tests/string_match/string_match-pthread.c	2013-05-06 18:02:52.035598974 -0400
++++ phoenix-2.0.0.1/tests/string_match/string_match-pthread.c	2013-05-06 17:39:59.915646484 -0400
+@@ -220,6 +220,7 @@
+  */
+ void *string_match_map(void *args)
+ {
++    soba_wait(0);
+     assert(args);
+     
+     str_map_data_t* data_in = (str_map_data_t*)( ((map_args_t*)args)->data);
+diff -Naur phoenix-2.0.0/tests/word_count/word_count-pthread.c phoenix-2.0.0.1/tests/word_count/word_count-pthread.c
+--- phoenix-2.0.0/tests/word_count/word_count-pthread.c	2013-05-06 18:02:52.035598974 -0400
++++ phoenix-2.0.0.1/tests/word_count/word_count-pthread.c	2013-05-06 17:40:27.027645543 -0400
+@@ -231,6 +231,7 @@
+  */
+ void *wordcount_map(void *args_in) 
+ {
++    soba_wait(0);
+ 	t_args_t* args = (t_args_t*)args_in;
+ 
+    char *curr_start, curr_ltr;

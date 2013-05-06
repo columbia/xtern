@@ -1,0 +1,337 @@
+diff -Naur phoenix-clean/Defines.mk phoenix-2.0.0/Defines.mk
+--- phoenix-clean/Defines.mk	2009-05-27 23:00:58.000000000 -0400
++++ phoenix-2.0.0/Defines.mk	2013-05-06 17:10:33.307707645 -0400
+@@ -37,9 +37,9 @@
+ ifeq ($(OSTYPE),Linux)
+ OS = -D_LINUX_
+ CC = gcc
+-#DEBUG = -g
+-CFLAGS = -Wall $(OS) $(DEBUG) -O3
+-LIBS = -lpthread
++DEBUG = -g
++CFLAGS = -Wall $(OS) $(DEBUG) -O3 -I$(XTERN_ROOT)/install/include
++LIBS = -lpthread  -L$(XTERN_ROOT)/dync_hook -Wl,--rpath,$(XTERN_ROOT)/dync_hook -lxtern-annot
+ endif
+ 
+ ifeq ($(OSTYPE),SunOS)
+diff -Naur phoenix-clean/src/tpool.c phoenix-2.0.0/src/tpool.c
+--- phoenix-clean/src/tpool.c	2009-05-06 04:02:09.000000000 -0400
++++ phoenix-2.0.0/src/tpool.c	2013-05-06 17:11:59.803704705 -0400
+@@ -28,6 +28,8 @@
+ #include <assert.h>
+ #include <semaphore.h>
+ 
++#include <tern/user.h>
++
+ #include "atomic.h"
+ #include "memory.h"
+ #include "tpool.h"
+@@ -93,6 +95,7 @@
+     CHECK_ERROR (pthread_attr_setdetachstate (&attr, PTHREAD_CREATE_DETACHED));
+ 
+     tpool->die = 0;
++    soba_init(0, num_threads, num_threads*20);
+     for (i = 0; i < num_threads; ++i) {
+         /* Initialize thread argument. */
+         CHECK_ERROR (sem_init (&(tpool->thread_args[i].sem_run), 0, 0));
+diff -Naur phoenix-clean/tests/histogram/histogram-pthread.c phoenix-2.0.0/tests/histogram/histogram-pthread.c
+--- phoenix-clean/tests/histogram/histogram-pthread.c	2009-05-06 01:12:23.000000000 -0400
++++ phoenix-2.0.0/tests/histogram/histogram-pthread.c	2013-05-06 17:03:26.055722440 -0400
+@@ -38,6 +38,7 @@
+ #include <pthread.h>
+ 
+ #include "stddefines.h"
++#include "tern/user.h"
+ 
+ #define IMG_DATA_OFFSET_POS 10
+ #define BITS_PER_PIXEL_POS 28
+@@ -205,7 +205,7 @@
+    pthread_attr_init(&attr);
+    pthread_attr_setscope(&attr, PTHREAD_SCOPE_SYSTEM);
+    
+-   CHECK_ERROR((num_procs = sysconf(_SC_NPROCESSORS_ONLN)) <= 0);
++   CHECK_ERROR((num_procs = atoi(GETENV("PHOENIX_THREADS"))) <= 0);
+    num_per_thread = num_pixels / num_procs;
+    excess = num_pixels % num_procs;
+    
+@@ -214,6 +214,7 @@
+    
+    /* Assign portions of the image to each thread */
+    long curr_pos = (long)(*data_pos);
++   soba_init(0, num_procs, num_procs*20);
+    for (i = 0; i < num_procs; i++) {
+       arg[i].data = (unsigned char *)fdata;
+       arg[i].data_pos = curr_pos;
+@@ -263,11 +264,6 @@
+    CHECK_ERROR(close(fd) < 0);
+    
+    free(pid);
+-   for(i = 0; i < num_procs; i++) {
+-      free(arg[i].red);
+-      free(arg[i].green);
+-      free(arg[i].blue);
+-   }
+    free(arg);
+    pthread_attr_destroy(&attr);
+    
+diff -Naur phoenix-clean/tests/histogram/Makefile phoenix-2.0.0/tests/histogram/Makefile
+--- phoenix-clean/tests/histogram/Makefile	2009-05-27 23:00:17.000000000 -0400
++++ phoenix-2.0.0/tests/histogram/Makefile	2013-05-06 17:02:29.775724389 -0400
+@@ -31,7 +31,7 @@
+ 
+ include $(HOME)/Defines.mk
+ 
+-LIBS += -L$(HOME)/$(LIB_DIR) -l$(PHOENIX)
++LIBS += -L$(HOME)/$(LIB_DIR) -l$(PHOENIX) -L$(XTERN_ROOT)/dync_hook -Wl,--rpath,$(XTERN_ROOT)/dync_hook -lxtern-annot
+ 
+ HIST_OBJS = histogram.o
+ HIST_SEQ_OBJS = histogram-seq.o
+diff -Naur phoenix-clean/tests/kmeans/kmeans-pthread.c phoenix-2.0.0/tests/kmeans/kmeans-pthread.c
+--- phoenix-clean/tests/kmeans/kmeans-pthread.c	2009-05-06 01:12:23.000000000 -0400
++++ phoenix-2.0.0/tests/kmeans/kmeans-pthread.c	2013-05-06 17:03:51.111721573 -0400
+@@ -37,6 +37,7 @@
+ 
+ #include "stddefines.h"
+ #include "map_reduce.h"
++#include "tern/user.h"
+ 
+ #define DEF_NUM_POINTS 100000
+ #define DEF_NUM_MEANS 100
+@@ -280,7 +281,7 @@
+    
+    pthread_attr_init(&attr);
+    pthread_attr_setscope(&attr, PTHREAD_SCOPE_SYSTEM);
+-   CHECK_ERROR((num_procs = sysconf(_SC_NPROCESSORS_ONLN)) <= 0);
++   CHECK_ERROR((num_procs = atoi(GETENV("PHOENIX_THREADS"))) <= 0);
+       
+    CHECK_ERROR( (pid = (pthread_t *)malloc(sizeof(pthread_t) * num_procs)) == NULL);
+    
+@@ -291,6 +292,7 @@
+    /* Create the threads to process the distances between the various
+    points and repeat until modified is no longer valid */
+    int num_threads;   
++   soba_init(0, num_procs, num_procs*20);
+    while (modified) 
+    {
+       num_per_thread = num_points / num_procs;
+diff -Naur phoenix-clean/tests/kmeans/Makefile phoenix-2.0.0/tests/kmeans/Makefile
+--- phoenix-clean/tests/kmeans/Makefile	2009-05-27 22:59:59.000000000 -0400
++++ phoenix-2.0.0/tests/kmeans/Makefile	2013-05-06 17:02:29.775724389 -0400
+@@ -31,7 +31,7 @@
+ 
+ include $(HOME)/Defines.mk
+ 
+-LIBS += -L$(HOME)/$(LIB_DIR) -l$(PHOENIX)
++LIBS += -L$(HOME)/$(LIB_DIR) -l$(PHOENIX) -lpthread -L$(XTERN_ROOT)/dync_hook -Wl,--rpath,$(XTERN_ROOT)/dync_hook -lxtern-annot
+ 
+ KMEANS_OBJS = kmeans.o
+ KMEANS_SEQ_OBJS = kmeans-seq.o
+diff -Naur phoenix-clean/tests/linear_regression/linear_regression-pthread.c phoenix-2.0.0/tests/linear_regression/linear_regression-pthread.c
+--- phoenix-clean/tests/linear_regression/linear_regression-pthread.c	2009-05-06 01:12:23.000000000 -0400
++++ phoenix-2.0.0/tests/linear_regression/linear_regression-pthread.c	2013-05-06 17:04:59.919719189 -0400
+@@ -39,6 +39,7 @@
+ #include <ctype.h>
+ 
+ #include "stddefines.h"
++#include "tern/user.h"
+ 
+ typedef struct {
+    char x;
+@@ -115,7 +116,7 @@
+    CHECK_ERROR((fdata = mmap(0, finfo.st_size + 1, 
+       PROT_READ | PROT_WRITE, MAP_PRIVATE, fd, 0)) == NULL);
+ 
+-   CHECK_ERROR((num_procs = sysconf(_SC_NPROCESSORS_ONLN)) <= 0);
++   CHECK_ERROR((num_procs = atoi(GETENV("PHOENIX_THREADS"))) <= 0);
+    printf("The number of processors is %d\n\n", num_procs);
+ 
+    pthread_attr_init(&attr);
+@@ -133,6 +134,7 @@
+    tid_args = (lreg_args *)CALLOC(sizeof(lreg_args), num_procs); 
+ 
+ 	 // Assign a portion of the points for each thread
++   soba_init(0, num_threads, num_threads*20);
+    for(i = 0; i < num_threads; i++)
+    {
+ 	   tid_args[i].points = &points[i*req_units];
+diff -Naur phoenix-clean/tests/linear_regression/Makefile phoenix-2.0.0/tests/linear_regression/Makefile
+--- phoenix-clean/tests/linear_regression/Makefile	2009-05-27 23:00:29.000000000 -0400
++++ phoenix-2.0.0/tests/linear_regression/Makefile	2013-05-06 17:02:29.775724389 -0400
+@@ -31,7 +31,7 @@
+ 
+ include $(HOME)/Defines.mk
+ 
+-LIBS += -L$(HOME)/$(LIB_DIR) -l$(PHOENIX)
++LIBS += -L$(HOME)/$(LIB_DIR) -l$(PHOENIX) -L$(XTERN_ROOT)/dync_hook -Wl,--rpath,$(XTERN_ROOT)/dync_hook -lxtern-annot
+ 
+ L_REG_OBJS = linear_regression.o
+ L_REG_SEQ_OBJS = linear_regression-seq.o
+diff -Naur phoenix-clean/tests/matrix_multiply/Makefile phoenix-2.0.0/tests/matrix_multiply/Makefile
+--- phoenix-clean/tests/matrix_multiply/Makefile	2009-05-27 23:00:35.000000000 -0400
++++ phoenix-2.0.0/tests/matrix_multiply/Makefile	2013-05-06 17:02:29.775724389 -0400
+@@ -31,7 +31,7 @@
+ 
+ include $(HOME)/Defines.mk
+ 
+-LIBS += -L$(HOME)/$(LIB_DIR) -l$(PHOENIX)
++LIBS += -L$(HOME)/$(LIB_DIR) -l$(PHOENIX) -L$(XTERN_ROOT)/dync_hook -Wl,--rpath,$(XTERN_ROOT)/dync_hook -lxtern-annot
+ 
+ MM_OBJS = matrix_multiply.o
+ MM_SEQ_OBJS = matrix_multiply-seq.o
+diff -Naur phoenix-clean/tests/matrix_multiply/matrix_multiply-pthread.c phoenix-2.0.0/tests/matrix_multiply/matrix_multiply-pthread.c
+--- phoenix-clean/tests/matrix_multiply/matrix_multiply-pthread.c	2009-05-25 19:41:29.000000000 -0400
++++ phoenix-2.0.0/tests/matrix_multiply/matrix_multiply-pthread.c	2013-05-06 17:04:12.823720821 -0400
+@@ -42,6 +42,7 @@
+ 
+ #include "map_reduce.h"
+ #include "stddefines.h"
++#include "tern/user.h"
+ 
+ typedef struct {
+     int row_num;
+@@ -78,7 +79,7 @@
+     assert(data->matrix_B);
+     assert(data->output);
+ 
+-    CHECK_ERROR((num_procs = sysconf(_SC_NPROCESSORS_ONLN)) <= 0);
++    CHECK_ERROR((num_procs = atoi(GETENV("PHOENIX_THREADS"))) <= 0);
+     dprintf("THe number of processors is %d\n", num_procs);
+ 
+     tid = (pthread_t *)MALLOC(num_procs * sizeof(pthread_t));
+@@ -88,7 +89,7 @@
+ 
+     int req_rows = data->matrix_len / num_procs;
+ 
+-
++    soba_init(0, num_procs, num_procs*20);
+     for(i=0; i<num_procs; i++)
+     {
+ 	    map_args_t* out = (map_args_t*)malloc(sizeof(map_args_t));
+diff -Naur phoenix-clean/tests/pca/Makefile phoenix-2.0.0/tests/pca/Makefile
+--- phoenix-clean/tests/pca/Makefile	2009-05-27 23:00:08.000000000 -0400
++++ phoenix-2.0.0/tests/pca/Makefile	2013-05-06 17:02:29.775724389 -0400
+@@ -31,7 +31,7 @@
+ 
+ include $(HOME)/Defines.mk
+ 
+-LIBS += -L$(HOME)/$(LIB_DIR) -l$(PHOENIX)
++LIBS += -L$(HOME)/$(LIB_DIR) -l$(PHOENIX) -lpthread -L$(XTERN_ROOT)/dync_hook -Wl,--rpath,$(XTERN_ROOT)/dync_hook -lxtern-annot
+ 
+ PCA_OBJS = pca.o
+ PCA_SEQ_OBJS = pca-seq.o
+diff -Naur phoenix-clean/tests/pca/pca-pthread.c phoenix-2.0.0/tests/pca/pca-pthread.c
+--- phoenix-clean/tests/pca/pca-pthread.c	2009-05-06 01:12:23.000000000 -0400
++++ phoenix-2.0.0/tests/pca/pca-pthread.c	2013-05-06 17:08:18.015712335 -0400
+@@ -35,6 +35,7 @@
+ #include <math.h>
+ #include <pthread.h>
+ #include "stddefines.h"
++#include "tern/user.h"
+ 
+ #define DEF_GRID_SIZE 100  // all values in the matrix are from 0 to this value 
+ #define DEF_NUM_ROWS 10
+@@ -175,6 +176,7 @@
+       i = next_row;
+       next_row++;
+       pthread_mutex_unlock(&row_lock);
++      asm("nop");
+    }
+    
+    return (void *)0;   
+@@ -190,7 +192,7 @@
+    int i;
+    mean_arg_t *mean_args;
+ 
+-   CHECK_ERROR((num_procs = sysconf(_SC_NPROCESSORS_ONLN)) <= 0);
++   CHECK_ERROR((num_procs = atoi(GETENV("PHOENIX_THREADS"))) <= 0);
+    printf("The number of processors is %d\n", num_procs);
+ 
+    tid = (pthread_t *)MALLOC(num_procs * sizeof(pthread_t));
+@@ -205,6 +207,7 @@
+    int curr_row = 0;
+    
+    /* Assign rows to each thread. One thread per processor */
++   soba_init(0, num_procs, num_procs*20);
+    for(i=0; i<num_procs; i++){
+       mean_args[i].first_row = curr_row;
+       mean_args[i].last_row = curr_row + rows_per_thread;
+diff -Naur phoenix-clean/tests/string_match/Makefile phoenix-2.0.0/tests/string_match/Makefile
+--- phoenix-clean/tests/string_match/Makefile	2009-05-27 22:59:43.000000000 -0400
++++ phoenix-2.0.0/tests/string_match/Makefile	2013-05-06 17:02:29.775724389 -0400
+@@ -31,7 +31,7 @@
+ 
+ include $(HOME)/Defines.mk
+ 
+-LIBS += -L$(HOME)/$(LIB_DIR) -l$(PHOENIX)
++LIBS += -L$(HOME)/$(LIB_DIR) -l$(PHOENIX) -L$(XTERN_ROOT)/dync_hook -Wl,--rpath,$(XTERN_ROOT)/dync_hook -lxtern-annot
+ 
+ STR_MATCH_OBJS = string_match.o
+ STR_MATCH_SEQ_OBJS = string_match-seq.o
+diff -Naur phoenix-clean/tests/string_match/string_match-pthread.c phoenix-2.0.0/tests/string_match/string_match-pthread.c
+--- phoenix-clean/tests/string_match/string_match-pthread.c	2009-05-25 19:47:31.000000000 -0400
++++ phoenix-2.0.0/tests/string_match/string_match-pthread.c	2013-05-06 17:05:11.843718804 -0400
+@@ -43,6 +43,7 @@
+ 
+ #include "map_reduce.h"
+ #include "stddefines.h"
++#include "tern/user.h"
+ 
+ #define DEFAULT_UNIT_SIZE 5
+ #define SALT_SIZE 2
+@@ -140,7 +141,7 @@
+     pthread_t * tid;
+     int i, num_procs;
+ 
+-    CHECK_ERROR((num_procs = sysconf(_SC_NPROCESSORS_ONLN)) <= 0);
++    CHECK_ERROR((num_procs = atoi(GETENV("PHOENIX_THREADS"))) <= 0);
+     printf("THe number of processors is %d\n", num_procs);
+ 
+     str_data_t * data = (str_data_t *)data_in; 
+@@ -160,6 +161,7 @@
+                                                                                         * num_procs);
+     map_args_t* out = (map_args_t*)malloc(sizeof(map_args_t) * num_procs);
+ 
++    soba_init(0, num_procs, num_procs*20);
+     for(i=0; i<num_procs; i++)
+     {
+ 	    map_data[i].encrypt_file = data->encrypt_file;
+diff -Naur phoenix-clean/tests/word_count/Makefile phoenix-2.0.0/tests/word_count/Makefile
+--- phoenix-clean/tests/word_count/Makefile	2009-05-27 23:00:22.000000000 -0400
++++ phoenix-2.0.0/tests/word_count/Makefile	2013-05-06 17:02:29.779724389 -0400
+@@ -31,7 +31,7 @@
+ 
+ include $(HOME)/Defines.mk
+ 
+-LIBS += -L$(HOME)/$(LIB_DIR) -l$(PHOENIX)
++LIBS += -L$(HOME)/$(LIB_DIR) -l$(PHOENIX) -L$(XTERN_ROOT)/dync_hook -Wl,--rpath,$(XTERN_ROOT)/dync_hook -lxtern-annot
+ 
+ WC_OBJS := word_count.o sort.o
+ WC_OBJS_PTHREAD := word_count-pthread.o sort-pthread.o
+diff -Naur phoenix-clean/tests/word_count/word_count-pthread.c phoenix-2.0.0/tests/word_count/word_count-pthread.c
+--- phoenix-clean/tests/word_count/word_count-pthread.c	2009-05-06 01:12:23.000000000 -0400
++++ phoenix-2.0.0/tests/word_count/word_count-pthread.c	2013-05-06 17:03:39.267721942 -0400
+@@ -40,6 +40,7 @@
+ 
+ #include "stddefines.h"
+ #include "sort-pthread.h"
++#include "tern/user.h"
+ 
+ #define DEFAULT_DISP_NUM 10
+ #define START_ARRAY_SIZE 2000
+@@ -121,7 +122,7 @@
+    pthread_t * tid;
+    int i,num_procs;
+ 
+-   CHECK_ERROR((num_procs = sysconf(_SC_NPROCESSORS_ONLN)) <= 0);
++   CHECK_ERROR((num_procs = atoi(GETENV("PHOENIX_THREADS"))) <= 0);
+    dprintf("THe number of processors is %d\n\n", num_procs);
+ 
+    wc_data_t * data = (wc_data_t *)data_in; 
+@@ -137,6 +138,7 @@
+ 
+    int req_bytes = data->flen / num_procs;
+ 
++   soba_init(0, num_procs, num_procs*20);
+    for(i=0; i<num_procs; i++)
+    {
+       words[i] = (wc_count_t*)malloc(START_ARRAY_SIZE*sizeof(wc_count_t));
