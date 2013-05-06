@@ -44,7 +44,7 @@ def extract(dir):
     eval_id = dir.split('_')[0]
     name = dir.split('_')[2]
     # handle special names
-    if name == 'water' or name == 'lu' or name == 'ocean':
+    if name in ['water', 'lu', 'ocean', 'matrix', 'word', 'string'] :
         name = "_".join([name, dir.split('_')[3]])
     return eval_id, '{:<25}'.format(name)
 
@@ -77,13 +77,14 @@ if __name__ == "__main__":
             result[int(eval_id)] = " ".join([bench_name, stats_str])
         os.chdir('..')
         
-        if d.endswith('.dir'):
+        if os.path.abspath(d).endswith('.dir'):
             output = os.path.abspath(d).rstrip('.dir')
         else:
             output = "%s.stat" % os.path.abspath(d)
         with open(output, 'w') as f:
             f.write("#ID  {:<25} {:<8} {:<13} {:<4} {:<10}\n".format(
                 'Name', 'Mean', 'SEM', 'ERR(%)', 'STD'))
-            for key in result:
+            sorted_key = sorted(result, key = lambda x:x, reverse = False)
+            for key in sorted_key:
                 f.write("%4s %s\n" % (key,result[key]) )
 
