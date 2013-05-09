@@ -29,7 +29,7 @@ tar xvf openmp_img.gz
 # patch ImageMagick
 cd ImageMagick-$VER
 patch -p1 < ../patch/add-init.patch
-patch -p1 < ../patch/add-wait.patch
+patch -p0 < ../patch/add-wait.patch
 
 # compile ImageMagick
 mkdir obj

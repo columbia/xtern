@@ -1,5 +1,5 @@
-diff -Naur /home/yihlin/xtern/apps/imagick/ImageMagick-guess/magick/cache.c magick/cache.c
---- /home/yihlin/xtern/apps/imagick/ImageMagick-guess/magick/cache.c	2013-05-08 02:43:39.615525631 -0400
+diff -Naur magick/cache.c magick/cache.c
+--- magick/cache.c	2013-05-08 02:43:39.615525631 -0400
 +++ magick/cache.c	2013-05-09 01:29:53.964687412 -0400
 @@ -40,6 +40,7 @@
  /*
@@ -17,8 +17,8 @@ diff -Naur /home/yihlin/xtern/apps/imagick/ImageMagick-guess/magick/cache.c magi
    if (pixels == (PixelPacket *) NULL)
      return((PixelPacket *) NULL);
    cache_info=(CacheInfo *) image->cache;
-diff -Naur /home/yihlin/xtern/apps/imagick/ImageMagick-guess/magick/colorspace.c magick/colorspace.c
---- /home/yihlin/xtern/apps/imagick/ImageMagick-guess/magick/colorspace.c	2013-05-08 02:43:39.611525631 -0400
+diff -Naur magick/colorspace.c magick/colorspace.c
+--- magick/colorspace.c	2013-05-08 02:43:39.611525631 -0400
 +++ magick/colorspace.c	2013-05-09 01:15:36.944717122 -0400
 @@ -39,6 +39,7 @@
  /*
@@ -36,8 +36,8 @@ diff -Naur /home/yihlin/xtern/apps/imagick/ImageMagick-guess/magick/colorspace.c
          if (q == (PixelPacket *) NULL)
            {
              status=MagickFalse;
-diff -Naur /home/yihlin/xtern/apps/imagick/ImageMagick-guess/magick/compare.c magick/compare.c
---- /home/yihlin/xtern/apps/imagick/ImageMagick-guess/magick/compare.c	2013-05-08 02:43:39.611525631 -0400
+diff -Naur magick/compare.c magick/compare.c
+--- magick/compare.c	2013-05-08 02:43:39.611525631 -0400
 +++ magick/compare.c	2013-05-09 01:21:29.748704874 -0400
 @@ -40,6 +40,7 @@
  /*
@@ -55,8 +55,8 @@ diff -Naur /home/yihlin/xtern/apps/imagick/ImageMagick-guess/magick/compare.c ma
      if ((p == (const PixelPacket *) NULL) ||
          (q == (const PixelPacket *) NULL) || (r == (PixelPacket *) NULL))
        {
-diff -Naur /home/yihlin/xtern/apps/imagick/ImageMagick-guess/magick/composite.c magick/composite.c
---- /home/yihlin/xtern/apps/imagick/ImageMagick-guess/magick/composite.c	2013-05-08 02:43:39.615525631 -0400
+diff -Naur magick/composite.c magick/composite.c
+--- magick/composite.c	2013-05-08 02:43:39.615525631 -0400
 +++ magick/composite.c	2013-05-09 01:16:27.572715331 -0400
 @@ -40,6 +40,7 @@
  /*
@@ -74,8 +74,8 @@ diff -Naur /home/yihlin/xtern/apps/imagick/ImageMagick-guess/magick/composite.c 
      if (q == (PixelPacket *) NULL)
        {
          status=MagickFalse;
-diff -Naur /home/yihlin/xtern/apps/imagick/ImageMagick-guess/magick/effect.c magick/effect.c
---- /home/yihlin/xtern/apps/imagick/ImageMagick-guess/magick/effect.c	2013-05-08 02:43:39.603525631 -0400
+diff -Naur magick/effect.c magick/effect.c
+--- magick/effect.c	2013-05-08 02:43:39.603525631 -0400
 +++ magick/effect.c	2013-05-09 01:13:30.436721477 -0400
 @@ -40,6 +40,7 @@
  /*
@@ -109,8 +109,8 @@ diff -Naur /home/yihlin/xtern/apps/imagick/ImageMagick-guess/magick/effect.c mag
      if ((p == (const PixelPacket *) NULL) || (q == (PixelPacket *) NULL))
        {
          status=MagickFalse;
-diff -Naur /home/yihlin/xtern/apps/imagick/ImageMagick-guess/magick/enhance.c magick/enhance.c
---- /home/yihlin/xtern/apps/imagick/ImageMagick-guess/magick/enhance.c	2013-05-08 02:43:39.611525631 -0400
+diff -Naur magick/enhance.c magick/enhance.c
+--- magick/enhance.c	2013-05-08 02:43:39.611525631 -0400
 +++ magick/enhance.c	2013-05-09 02:36:19.600549416 -0400
 @@ -40,6 +40,7 @@
  /*
@@ -136,8 +136,8 @@ diff -Naur /home/yihlin/xtern/apps/imagick/ImageMagick-guess/magick/enhance.c ma
      if (q == (PixelPacket *) NULL)
        {
          status=MagickFalse;
-diff -Naur /home/yihlin/xtern/apps/imagick/ImageMagick-guess/magick/image.c magick/image.c
---- /home/yihlin/xtern/apps/imagick/ImageMagick-guess/magick/image.c	2013-05-08 02:43:39.603525631 -0400
+diff -Naur magick/image.c magick/image.c
+--- magick/image.c	2013-05-08 02:43:39.603525631 -0400
 +++ magick/image.c	2013-05-09 17:18:01.238717782 -0400
 @@ -40,6 +40,7 @@
  /*
@@ -163,8 +163,8 @@ diff -Naur /home/yihlin/xtern/apps/imagick/ImageMagick-guess/magick/image.c magi
      if (q == (PixelPacket *) NULL)
        {
          status=MagickFalse;
-diff -Naur /home/yihlin/xtern/apps/imagick/ImageMagick-guess/magick/magick.c magick/magick.c
---- /home/yihlin/xtern/apps/imagick/ImageMagick-guess/magick/magick.c	2013-05-08 02:43:39.611525631 -0400
+diff -Naur magick/magick.c magick/magick.c
+--- magick/magick.c	2013-05-08 02:43:39.611525631 -0400
 +++ magick/magick.c	2013-05-09 01:16:51.112714513 -0400
 @@ -1217,7 +1217,8 @@
      *events,
@@ -176,8 +176,8 @@ diff -Naur /home/yihlin/xtern/apps/imagick/ImageMagick-guess/magick/magick.c mag
  
    /*
      Initialize the Magick environment.
-diff -Naur /home/yihlin/xtern/apps/imagick/ImageMagick-guess/magick/morphology.c magick/morphology.c
---- /home/yihlin/xtern/apps/imagick/ImageMagick-guess/magick/morphology.c	2013-05-08 02:43:39.607525631 -0400
+diff -Naur magick/morphology.c magick/morphology.c
+--- magick/morphology.c	2013-05-08 02:43:39.607525631 -0400
 +++ magick/morphology.c	2013-05-09 16:56:30.938762462 -0400
 @@ -2859,6 +2859,7 @@
           kernel->height,  exception);
@@ -187,8 +187,8 @@ diff -Naur /home/yihlin/xtern/apps/imagick/ImageMagick-guess/magick/morphology.c
      if ((p == (const PixelPacket *) NULL) || (q == (PixelPacket *) NULL))
        {
          status=MagickFalse;
-diff -Naur /home/yihlin/xtern/apps/imagick/ImageMagick-guess/magick/resize.c magick/resize.c
---- /home/yihlin/xtern/apps/imagick/ImageMagick-guess/magick/resize.c	2013-05-08 02:43:39.607525631 -0400
+diff -Naur magick/resize.c magick/resize.c
+--- magick/resize.c	2013-05-08 02:43:39.607525631 -0400
 +++ magick/resize.c	2013-05-09 17:28:05.350696872 -0400
 @@ -39,6 +39,7 @@
  /*
@@ -222,8 +222,8 @@ diff -Naur /home/yihlin/xtern/apps/imagick/ImageMagick-guess/magick/resize.c mag
      if ((p == (const PixelPacket *) NULL) || (q == (PixelPacket *) NULL))
        {
          status=MagickFalse;
-diff -Naur /home/yihlin/xtern/apps/imagick/ImageMagick-guess/magick/segment.c magick/segment.c
---- /home/yihlin/xtern/apps/imagick/ImageMagick-guess/magick/segment.c	2013-05-08 02:43:39.599525632 -0400
+diff -Naur magick/segment.c magick/segment.c
+--- magick/segment.c	2013-05-08 02:43:39.599525632 -0400
 +++ magick/segment.c	2013-05-09 17:14:19.022725482 -0400
 @@ -82,6 +82,7 @@
  %
@@ -241,8 +241,8 @@ diff -Naur /home/yihlin/xtern/apps/imagick/ImageMagick-guess/magick/segment.c ma
      if (q == (PixelPacket *) NULL)
        {
          status=MagickFalse;
-diff -Naur /home/yihlin/xtern/apps/imagick/ImageMagick-guess/magick/shear.c magick/shear.c
---- /home/yihlin/xtern/apps/imagick/ImageMagick-guess/magick/shear.c	2013-05-08 02:43:39.599525632 -0400
+diff -Naur magick/shear.c magick/shear.c
+--- magick/shear.c	2013-05-08 02:43:39.599525632 -0400
 +++ magick/shear.c	2013-05-09 16:56:18.098762907 -0400
 @@ -44,6 +44,7 @@
  /*
@@ -268,8 +268,8 @@ diff -Naur /home/yihlin/xtern/apps/imagick/ImageMagick-guess/magick/shear.c magi
      if (p == (PixelPacket *) NULL)
        {
          status=MagickFalse;
-diff -Naur /home/yihlin/xtern/apps/imagick/ImageMagick-guess/magick/threshold.c magick/threshold.c
---- /home/yihlin/xtern/apps/imagick/ImageMagick-guess/magick/threshold.c	2013-05-08 02:43:39.599525632 -0400
+diff -Naur magick/threshold.c magick/threshold.c
+--- magick/threshold.c	2013-05-08 02:43:39.599525632 -0400
 +++ magick/threshold.c	2013-05-09 01:15:17.792718236 -0400
 @@ -40,6 +40,7 @@
  /*
