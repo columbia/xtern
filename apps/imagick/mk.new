@@ -1,0 +1,57 @@
+#!/bin/bash
+
+set -e
+
+if [ ! -d $XTERN_ROOT ]; then
+    echo "XTERN_ROOT is not defined"
+    exit 1
+fi
+
+VER=6.8.0-4
+
+echo -e "\nPlease make sure you have run the 'mk' in $XTERN_ROOT/apps/openmp before you build imagick.\n"
+sleep 1
+
+# cleanup
+cd $XTERN_ROOT/apps/imagick
+rm -rf ImageMagick-$VER install
+if [ ! -f ImageMagick-$VER.tar.gz ]; then
+    wget https://launchpad.net/imagemagick/main/$VER/+download/ImageMagick-$VER.tar.gz
+fi
+tar zxvf ImageMagick-$VER.tar.gz
+
+# extract images
+if [ ! -f openmp_img.gz ]; then
+    wget http://www.cs.columbia.edu/~heming/release/openmp_img.gz
+fi
+tar xvf openmp_img.gz
+
+# patch ImageMagick
+cd ImageMagick-$VER
+patch -p1 < ../patch/add-init.patch
+patch -p1 < ../patch/add-wait.patch
+
+# compile ImageMagick
+mkdir obj
+cd obj
+CC_HOME=$XTERN_ROOT/apps/openmp/install
+
+CC="$CC_HOME/bin/gcc" \
+  CXX="$CC_HOME/bin/g++" \
+  CFLAGS+="-g -O2 -I/usr/include/x86_64-linux-gnu -I$XTERN_ROOT/install/include -fopenmp" \
+  CXXFLAGS+="-g -O2 -I$XTERN_ROOT/install/include -fopenmp" \
+  LDFLAGS+="-L$CC_HOME/lib -Wl,--rpath,$CC_HOME/lib -L$CC_HOME/lib64 -Wl,--rpath,$CC_HOME/lib64 -L$XTERN_ROOT/dync_hook -Wl,--rpath,$XTERN_ROOT/dync_hook " \
+  LIBS+="-lgomp -lxtern-annot" \
+  ../configure --prefix=$XTERN_ROOT/apps/imagick/install --disable-shared --enable-static --enable-openmp 2>&1 | tee config.results
+
+make V=1 -j64
+make install
+
+# create link
+cd ../..
+find . -maxdepth 1 -type l -exec rm -rf {} \;
+bench=( animate composite convert identify mogrify stream compare conjure display import montage )
+for i in "${bench[@]}"
+do
+    ln -s install/bin/$i
+done

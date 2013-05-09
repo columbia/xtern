@@ -85,7 +85,7 @@ void *get_eip()
   if (options::whole_stack_eip_signature)
   {
     ret = 0;
-    for (i = 0; i < count; ++i)
+    for (i = 2; i < count; ++i)
       ret = ret * 97 + (uint64_t) tracePtrs[i];
     return (void*) ret;
     //std::cout << std::hex << tracePtrs[2] << std::dec << std::endl;

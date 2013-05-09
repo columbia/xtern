@@ -1,0 +1,289 @@
+diff -Naur /home/yihlin/xtern/apps/imagick/ImageMagick-guess/magick/cache.c magick/cache.c
+--- /home/yihlin/xtern/apps/imagick/ImageMagick-guess/magick/cache.c	2013-05-08 02:43:39.615525631 -0400
++++ magick/cache.c	2013-05-09 01:29:53.964687412 -0400
+@@ -40,6 +40,7 @@
+ /*
+   Include declarations.
+ */
++#include <tern/user.h>
+ #include "magick/studio.h"
+ #include "magick/blob.h"
+ #include "magick/blob-private.h"
+@@ -1678,6 +1679,7 @@
+   assert(image->signature == MagickSignature);
+   pixels=QueueAuthenticPixelCacheNexus(image,x,y,columns,rows,MagickTrue,
+     nexus_info,exception);
++  soba_wait(0);
+   if (pixels == (PixelPacket *) NULL)
+     return((PixelPacket *) NULL);
+   cache_info=(CacheInfo *) image->cache;
+diff -Naur /home/yihlin/xtern/apps/imagick/ImageMagick-guess/magick/colorspace.c magick/colorspace.c
+--- /home/yihlin/xtern/apps/imagick/ImageMagick-guess/magick/colorspace.c	2013-05-08 02:43:39.611525631 -0400
++++ magick/colorspace.c	2013-05-09 01:15:36.944717122 -0400
+@@ -39,6 +39,7 @@
+ /*
+   Include declarations.
+ */
++#include <tern/user.h>
+ #include "magick/studio.h"
+ #include "magick/property.h"
+ #include "magick/cache.h"
+@@ -414,6 +415,7 @@
+           continue;
+         q=GetCacheViewAuthenticPixels(image_view,0,y,image->columns,1,
+           exception);
++        //soba_wait(0);
+         if (q == (PixelPacket *) NULL)
+           {
+             status=MagickFalse;
+diff -Naur /home/yihlin/xtern/apps/imagick/ImageMagick-guess/magick/compare.c magick/compare.c
+--- /home/yihlin/xtern/apps/imagick/ImageMagick-guess/magick/compare.c	2013-05-08 02:43:39.611525631 -0400
++++ magick/compare.c	2013-05-09 01:21:29.748704874 -0400
+@@ -40,6 +40,7 @@
+ /*
+   Include declarations.
+ */
++#include <tern/user.h>
+ #include "magick/studio.h"
+ #include "magick/artifact.h"
+ #include "magick/cache-view.h"
+@@ -238,6 +239,7 @@
+       1,exception);
+     r=QueueCacheViewAuthenticPixels(highlight_view,0,y,highlight_image->columns,
+       1,exception);
++    soba_wait(0);
+     if ((p == (const PixelPacket *) NULL) ||
+         (q == (const PixelPacket *) NULL) || (r == (PixelPacket *) NULL))
+       {
+diff -Naur /home/yihlin/xtern/apps/imagick/ImageMagick-guess/magick/composite.c magick/composite.c
+--- /home/yihlin/xtern/apps/imagick/ImageMagick-guess/magick/composite.c	2013-05-08 02:43:39.615525631 -0400
++++ magick/composite.c	2013-05-09 01:16:27.572715331 -0400
+@@ -40,6 +40,7 @@
+ /*
+   Include declarations.
+ */
++#include <tern/user.h>
+ #include "magick/studio.h"
+ #include "magick/artifact.h"
+ #include "magick/cache-view.h"
+@@ -2320,6 +2321,7 @@
+           p-=x_offset;
+       }
+     q=GetCacheViewAuthenticPixels(image_view,0,y,image->columns,1,exception);
++    //soba_wait(0);
+     if (q == (PixelPacket *) NULL)
+       {
+         status=MagickFalse;
+diff -Naur /home/yihlin/xtern/apps/imagick/ImageMagick-guess/magick/effect.c magick/effect.c
+--- /home/yihlin/xtern/apps/imagick/ImageMagick-guess/magick/effect.c	2013-05-08 02:43:39.603525631 -0400
++++ magick/effect.c	2013-05-09 01:13:30.436721477 -0400
+@@ -40,6 +40,7 @@
+ /*
+   Include declarations.
+ */
++#include <tern/user.h>
+ #include "magick/studio.h"
+ #include "magick/accelerate.h"
+ #include "magick/blob.h"
+@@ -938,6 +939,7 @@
+       image->columns+width,1,exception);
+     q=GetCacheViewAuthenticPixels(blur_view,0,y,blur_image->columns,1,
+       exception);
++    //soba_wait(0);
+     if ((p == (const PixelPacket *) NULL) || (q == (PixelPacket *) NULL))
+       {
+         status=MagickFalse;
+@@ -1117,6 +1119,7 @@
+     p=GetCacheViewVirtualPixels(image_view,x,-((ssize_t) width/2L),1,
+       image->rows+width,exception);
+     q=GetCacheViewAuthenticPixels(blur_view,x,0,1,blur_image->rows,exception);
++    //soba_wait(0);
+     if ((p == (const PixelPacket *) NULL) || (q == (PixelPacket *) NULL))
+       {
+         status=MagickFalse;
+@@ -1460,6 +1463,7 @@
+       (width/2L),image->columns+width,width,exception);
+     q=GetCacheViewAuthenticPixels(convolve_view,0,y,convolve_image->columns,1,
+       exception);
++    //soba_wait(0);
+     if ((p == (const PixelPacket *) NULL) || (q == (PixelPacket *) NULL))
+       {
+         status=MagickFalse;
+diff -Naur /home/yihlin/xtern/apps/imagick/ImageMagick-guess/magick/enhance.c magick/enhance.c
+--- /home/yihlin/xtern/apps/imagick/ImageMagick-guess/magick/enhance.c	2013-05-08 02:43:39.611525631 -0400
++++ magick/enhance.c	2013-05-09 02:36:19.600549416 -0400
+@@ -40,6 +40,7 @@
+ /*
+   Include declarations.
+ */
++#include <tern/user.h>
+ #include "magick/studio.h"
+ #include "magick/artifact.h"
+ #include "magick/cache.h"
+@@ -1459,6 +1460,7 @@
+     if (status == MagickFalse)
+       continue;
+     q=GetCacheViewAuthenticPixels(image_view,0,y,image->columns,1,exception);
++    //soba_wait(0);
+     if (q == (PixelPacket *) NULL)
+       {
+         status=MagickFalse;
+@@ -3655,6 +3657,7 @@
+     if (status == MagickFalse)
+       continue;
+     q=GetCacheViewAuthenticPixels(image_view,0,y,image->columns,1,exception);
++    //soba_wait(0);
+     if (q == (PixelPacket *) NULL)
+       {
+         status=MagickFalse;
+diff -Naur /home/yihlin/xtern/apps/imagick/ImageMagick-guess/magick/image.c magick/image.c
+--- /home/yihlin/xtern/apps/imagick/ImageMagick-guess/magick/image.c	2013-05-08 02:43:39.603525631 -0400
++++ magick/image.c	2013-05-09 17:18:01.238717782 -0400
+@@ -40,6 +40,7 @@
+ /*
+   Include declarations.
+ */
++#include <tern/user.h>
+ #include "magick/studio.h"
+ #include "magick/animate.h"
+ #include "magick/artifact.h"
+@@ -2964,6 +2965,7 @@
+     if (status == MagickFalse)
+       continue;
+     q=GetCacheViewAuthenticPixels(image_view,0,y,image->columns,1,exception);
++    //soba_wait(0);
+     if (q == (PixelPacket *) NULL)
+       {
+         status=MagickFalse;
+@@ -3437,6 +3439,7 @@
+     if (status == MagickFalse)
+       continue;
+     q=GetCacheViewAuthenticPixels(image_view,0,y,image->columns,1,exception);
++    soba_wait(0);
+     if (q == (PixelPacket *) NULL)
+       {
+         status=MagickFalse;
+diff -Naur /home/yihlin/xtern/apps/imagick/ImageMagick-guess/magick/magick.c magick/magick.c
+--- /home/yihlin/xtern/apps/imagick/ImageMagick-guess/magick/magick.c	2013-05-08 02:43:39.611525631 -0400
++++ magick/magick.c	2013-05-09 01:16:51.112714513 -0400
+@@ -1217,7 +1217,8 @@
+     *events,
+     execution_path[MaxTextExtent],
+     filename[MaxTextExtent];
+-  soba_init(0, omp_get_max_threads(), omp_get_max_threads()*20);
++  //soba_init(0, omp_get_max_threads(), omp_get_max_threads()*20);
++  soba_init(0, omp_get_max_threads(), 100);
+ 
+   /*
+     Initialize the Magick environment.
+diff -Naur /home/yihlin/xtern/apps/imagick/ImageMagick-guess/magick/morphology.c magick/morphology.c
+--- /home/yihlin/xtern/apps/imagick/ImageMagick-guess/magick/morphology.c	2013-05-08 02:43:39.607525631 -0400
++++ magick/morphology.c	2013-05-09 16:56:30.938762462 -0400
+@@ -2859,6 +2859,7 @@
+          kernel->height,  exception);
+     q=GetCacheViewAuthenticPixels(q_view,0,y,result_image->columns,1,
+          exception);
++    //soba_wait(0);
+     if ((p == (const PixelPacket *) NULL) || (q == (PixelPacket *) NULL))
+       {
+         status=MagickFalse;
+diff -Naur /home/yihlin/xtern/apps/imagick/ImageMagick-guess/magick/resize.c magick/resize.c
+--- /home/yihlin/xtern/apps/imagick/ImageMagick-guess/magick/resize.c	2013-05-08 02:43:39.607525631 -0400
++++ magick/resize.c	2013-05-09 17:28:05.350696872 -0400
+@@ -39,6 +39,7 @@
+ /*
+   Include declarations.
+ */
++#include <tern/user.h>
+ #include "magick/studio.h"
+ #include "magick/artifact.h"
+ #include "magick/blob.h"
+@@ -2286,6 +2287,7 @@
+       (contribution[n-1].pixel-contribution[0].pixel+1),image->rows,exception);
+     q=QueueCacheViewAuthenticPixels(resize_view,x,0,1,resize_image->rows,
+       exception);
++    soba_wait(0);
+     if ((p == (const PixelPacket *) NULL) || (q == (PixelPacket *) NULL))
+       {
+         status=MagickFalse;
+@@ -2527,6 +2529,7 @@
+       exception);
+     q=QueueCacheViewAuthenticPixels(resize_view,0,y,resize_image->columns,1,
+       exception);
++    soba_wait(0);
+     if ((p == (const PixelPacket *) NULL) || (q == (PixelPacket *) NULL))
+       {
+         status=MagickFalse;
+@@ -2872,6 +2875,7 @@
+       exception);
+     q=QueueCacheViewAuthenticPixels(sample_view,0,y,sample_image->columns,1,
+       exception);
++    soba_wait(0);
+     if ((p == (const PixelPacket *) NULL) || (q == (PixelPacket *) NULL))
+       {
+         status=MagickFalse;
+diff -Naur /home/yihlin/xtern/apps/imagick/ImageMagick-guess/magick/segment.c magick/segment.c
+--- /home/yihlin/xtern/apps/imagick/ImageMagick-guess/magick/segment.c	2013-05-08 02:43:39.599525632 -0400
++++ magick/segment.c	2013-05-09 17:14:19.022725482 -0400
+@@ -82,6 +82,7 @@
+ %
+ */
+ 
++#include <tern/user.h>
+ #include "magick/studio.h"
+ #include "magick/cache.h"
+ #include "magick/color.h"
+@@ -554,6 +555,7 @@
+     if (status == MagickFalse)
+       continue;
+     q=GetCacheViewAuthenticPixels(image_view,0,y,image->columns,1,exception);
++    soba_wait(0);
+     if (q == (PixelPacket *) NULL)
+       {
+         status=MagickFalse;
+diff -Naur /home/yihlin/xtern/apps/imagick/ImageMagick-guess/magick/shear.c magick/shear.c
+--- /home/yihlin/xtern/apps/imagick/ImageMagick-guess/magick/shear.c	2013-05-08 02:43:39.599525632 -0400
++++ magick/shear.c	2013-05-09 16:56:18.098762907 -0400
+@@ -44,6 +44,7 @@
+ /*
+   Include declarations.
+ */
++#include <tern/user.h>
+ #include "magick/studio.h"
+ #include "magick/artifact.h"
+ #include "magick/attribute.h"
+@@ -1458,6 +1459,7 @@
+       continue;
+     p=GetCacheViewAuthenticPixels(image_view,0,y_offset+y,image->columns,1,
+       exception);
++    //soba_wait(0);
+     if (p == (PixelPacket *) NULL)
+       {
+         status=MagickFalse;
+@@ -1679,6 +1681,7 @@
+       continue;
+     p=GetCacheViewAuthenticPixels(image_view,x_offset+x,0,1,image->rows,
+       exception);
++    //soba_wait(0);
+     if (p == (PixelPacket *) NULL)
+       {
+         status=MagickFalse;
+diff -Naur /home/yihlin/xtern/apps/imagick/ImageMagick-guess/magick/threshold.c magick/threshold.c
+--- /home/yihlin/xtern/apps/imagick/ImageMagick-guess/magick/threshold.c	2013-05-08 02:43:39.599525632 -0400
++++ magick/threshold.c	2013-05-09 01:15:17.792718236 -0400
+@@ -40,6 +40,7 @@
+ /*
+   Include declarations.
+ */
++#include <tern/user.h>
+ #include "magick/studio.h"
+ #include "magick/property.h"
+ #include "magick/blob.h"
+@@ -818,6 +819,7 @@
+     if (status == MagickFalse)
+       continue;
+     q=GetCacheViewAuthenticPixels(image_view,0,y,image->columns,1,exception);
++    //soba_wait(0);
+     if (q == (PixelPacket *) NULL)
+       {
+         status=MagickFalse;

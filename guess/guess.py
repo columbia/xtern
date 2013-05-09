@@ -177,8 +177,7 @@ class opRecord:
             self.schedTime.append(sched_time)
     def checkAddr(self, address):
         if (self.addr != address):
-            logging.error("the signature matches to different addresses: %s %s" % (self.addr, address))
-            sys.exit(1)
+            logging.warning("the signature matches to different addresses: %s %s" % (self.addr, address))
 
 def getOpSignature(op):
     signature = ''
@@ -243,7 +242,7 @@ def findUniqueEip(idfun = None):
     ops = removeKeys(ops, ['app_time', 'syscall_time', 'pid'])
     assert(len(eip_ops) == len(ops))
     ops = mergeListsOfDict(ops, eip_ops, 'turn')
-    ops = removeOps(ops, ['tern_thread_end'])
+    ops = removeOps(ops, ['tern_thread_end', 'tern_lineup_end', 'tern_lineup_start'])
     ops = convertTime(ops, 'sched_time')
     # TODO: how to evaluate the turn waiting time for (first, second)...
     ops = mergeOps(ops) # merge _first, _second
@@ -289,10 +288,10 @@ def findUniqueEip(idfun = None):
     logging.info('ignore %d location%s... since each sync-op used by only one thread.' % (num_of_lonely_ops, "s"[num_of_lonely_ops==1:]))
     logging.info('find %d possible location%s.' % (num_of_possible_ops, "s"[num_of_possible_ops==1:]) )
 
-    sorted_key = sorted(possible_ops, key = lambda x:possible_ops[x].getSchedTimeAvg() , reverse = True)
-    for k in sorted_key:
-        logging.info('%s %d %d' % (k, possible_ops[k].getSchedTimeAvg(), possible_ops[k].getSchedTimeStd()))
-        logging.debug('%s' % str(possible_ops[k]))
+    #sorted_key = sorted(possible_ops, key = lambda x:possible_ops[x].getSchedTimeAvg() , reverse = True)
+    #for k in sorted_key:
+    #    logging.info('%s %d %d' % (k, possible_ops[k].getSchedTimeAvg(), possible_ops[k].getSchedTimeStd()))
+    #    logging.debug('%s' % str(possible_ops[k]))
 
     return possible_ops
 
@@ -379,6 +378,8 @@ def generatePatch(options, exec_file, address, thread_begin = False):
         #func_name = decodeFuncname(dwarf_info, address)
         file_name, line_number = decodeFileLine(dwarf_info, address)
         file_loc = decodeFileLocation(dwarf_info, file_name, address)
+    if not file_name or not line_number:
+        return None
 
     #print file_name, line_number, file_loc
     logging.debug('eip %s located at %s Line %d' % (address, file_name, line_number))
@@ -388,7 +389,12 @@ def generatePatch(options, exec_file, address, thread_begin = False):
 
     # find file path
     target_file = []
-    for root, dirs, files in os.walk('source'):
+    file_search_path = options['file_search_path']
+    if file_search_path:
+        search_path = os.path.join('source', file_search_path)
+    else:
+        search_path = 'source'
+    for root, dirs, files in os.walk(search_path):
         if file_name in files:
             target_file.append(os.path.join(root, file_name))
     if len(target_file) != 1:
@@ -429,15 +435,18 @@ def generatePatch(options, exec_file, address, thread_begin = False):
 
 def buildWithPatches(loc_candidate, options, report, exec_file):
     sorted_key = sorted(loc_candidate, key = lambda x:loc_candidate[x].getSchedTimeAvg() , reverse = True)
+
+    #sorted_key = selectOpMarker(sorted_key, ['tern_thread_begin', 'pthread_mutex_unlock'])
+
     for k in sorted_key:
         logging.info('%s %d %d' % (k, loc_candidate[k].getSchedTimeAvg(), loc_candidate[k].getSchedTimeStd()))
+        logging.debug('%s' % str(loc_candidate[k]))
 
-    # duplicated ops
-    #sorted_key = selectOpMarker(sorted_key, ['tern_thread_begin'])
 
     # top ten
     patch_counter = 1
-    for item in sorted_key[:10]:
+    #for item in sorted_key[:10]:
+    for item in sorted_key:
         logging.debug("generating patch...")
         if item.op == 'tern_thread_begin':
             patch = generatePatch(options, exec_file, loc_candidate[item].addr, thread_begin = True)
@@ -469,6 +478,7 @@ def readGuessConfigFile(config_file):
                                                 "SOURCE_ROOT": "",
                                                 "SOURCE_FILES": "",
                                                 "SOURCE_FOLDERS": "",
+                                                "FILE_SEARCH_PATH": "",
                                                 "INPUTS": "",
                                                 "REQUIRED_FILES": "",
                                                 "DOWNLOAD_FILES": "",
@@ -634,7 +644,7 @@ def getLogWithEip(options, exec_file):
     overwrite_options = { 'log_sync':'1',
                         'output_dir':'./eip',
                         'dync_geteip' : '1',
-                        'enforce_annotations': '0',
+                        'enforce_annotations': '1',
                         'whole_stack_eip_signature': '0'}
     generateLocalOptions(options, G.default_options, overwrite_options)
     with open('eip.log', 'w', 102400) as log_file:
@@ -802,7 +812,7 @@ def genReport(report):
 def findHints(options):
     source_dir = copySource(options)
     buildSource(options, source_dir, suffix = 'origin')
-    #os.chdir('/mnt/sdd/newhome/yihlin/xtern/guess/vips32013May02_054230_a87776/vips')
+    #os.chdir('/mnt/sdd/newhome/yihlin/xtern/guess/build2013May08_001620_d710f1_dirty/freqmine')
     exec_file= setExec(options, suffix = 'origin')
 
     if not setExecEnv(options):
