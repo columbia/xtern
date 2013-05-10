@@ -44,6 +44,9 @@ if __name__ == "__main__":
     parser.add_argument('perfs', nargs='*',
         type=str,
         help = "list of performance reports")
+    parser.add_argument("--no-hint",
+                        action="store_true",
+                        help="show no-hint result")
     args = parser.parse_args()
     
     # read base
@@ -81,8 +84,9 @@ if __name__ == "__main__":
     fig = plt.figure()
     ax = fig.add_subplot(1, 1, 1)
 
-    rects = ax.bar(ind, n_t_parrot, width, color='r')
-    rects = ax.bar(ind+width, n_t_parrot_hint, width, color='y')
+    if args.no_hint:
+        rects = ax.bar(ind, n_t_parrot, width, color='y')
+    rects = ax.bar(ind+width, n_t_parrot_hint, width, color='r')
     if args.perfs:
         rects = ax.bar(ind+width*2, n_t_input, width, color='w')
 
