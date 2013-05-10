@@ -159,7 +159,7 @@ diff -Naur magick/image.c magick/image.c
      if (status == MagickFalse)
        continue;
      q=GetCacheViewAuthenticPixels(image_view,0,y,image->columns,1,exception);
-+    soba_wait(0);
++    //soba_wait(0);
      if (q == (PixelPacket *) NULL)
        {
          status=MagickFalse;
@@ -237,7 +237,7 @@ diff -Naur magick/segment.c magick/segment.c
      if (status == MagickFalse)
        continue;
      q=GetCacheViewAuthenticPixels(image_view,0,y,image->columns,1,exception);
-+    soba_wait(0);
++    //soba_wait(0);
      if (q == (PixelPacket *) NULL)
        {
          status=MagickFalse;
