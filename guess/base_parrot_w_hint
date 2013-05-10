@@ -67,3 +67,17 @@
 1312 word_count-pthread        1.3495   0.0236447081  1.75%
 1313 matrix_multiply           8.6247   0.0458420113  0.53%
 1314 matrix_multiply-pthread   15.2962  0.0963355017  0.63%
+1401 compare                   23.0041  0.0708945148  0.31%
+1402 compare_channel_red       8.3284   0.1181993796  1.42%
+1403 compare_compose           22.3315  0.0365188688  0.16%
+1404 convert_blur              20.4930  0.0925319164  0.45%
+1405 convert_charcoal_effect   23.6471  0.0624388501  0.26%
+1406 convert_draw              12.0523  0.0711761586  0.59%
+1407 convert_edge_detect       10.2470  0.0724863205  0.71%
+1408 convert_fft               4.0224   0.0032734623  0.08%
+1409 convert_paint_effect      10.8069  0.2037543428  1.89%
+1410 convert_sharpen           10.6621  0.0623348396  0.58%
+1411 convert_shear             21.2087  0.2110454427  1.00%
+1412 mogrify_resize            4.4946   0.0067399308  0.15%
+1413 mogrify_segment           7.9427   0.0426333333  0.54%
+1414 montage                   3.5171   0.0219678806  0.62%
