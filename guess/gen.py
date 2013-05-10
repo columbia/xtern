@@ -44,8 +44,8 @@ def extract(dir):
     eval_id = dir.split('_')[0]
     name = dir.split('_')[2]
     # handle special names
-    if name in ['water', 'lu', 'ocean', 'matrix', 'word', 'string'] :
-        name = "_".join([name, dir.split('_')[3]])
+    if name in ['water', 'lu', 'ocean', 'matrix', 'word', 'string', 'convert', 'compare', 'mogrify'] :
+        name = "_".join([name]+dir.split('_')[3:])
     return eval_id, '{:<25}'.format(name)
 
 if __name__ == "__main__":
