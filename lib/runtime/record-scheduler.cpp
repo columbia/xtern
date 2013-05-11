@@ -543,7 +543,7 @@ bool RRScheduler::tryPutTurn() {
   assert(!runq.empty());
   assert(self() == runq.front());
   run_queue::iterator itr = runq.begin();
-  itr++; // Ignore myself.
+  ++itr; // Ignore myself.
   for (; itr != runq.end(); ++itr) {
     struct run_queue::runq_elem *cur = &itr;
     pthread_spin_lock(&cur->spin_lock);

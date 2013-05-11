@@ -116,7 +116,6 @@ private:
   struct runq_elem *tid_map[MAX_THREAD_NUM];
 
 #ifdef DEBUG_RUN_QUEUE
-  /** This one is useful only when DEBUG_RUN_QUEUE is defined. **/
   std::tr1::unordered_set<void *> elements;  
 #endif
   

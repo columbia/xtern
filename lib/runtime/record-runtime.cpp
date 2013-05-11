@@ -368,12 +368,12 @@ void RecorderRT<_S>::sched_thread_end(unsigned ins, unsigned short syncop, uint6
       sched_timer_end_fh<false>(ins, syncop, ##__VA_ARGS__); \
   } while(0)
 
-#define SCHED_PUT_TURN(syncop, end_of_thread, ... ) \
+#define SCHED_PUT_TURN(syncop, ... ) \
   do { \
     if (options::log_sync) \
-      sched_timer_end<true>(ins, syncop, end_of_thread, ##__VA_ARGS__); \
+      sched_timer_end<true>(ins, syncop, ##__VA_ARGS__); \
     else \
-      sched_timer_end<false>(ins, syncop, end_of_thread, ##__VA_ARGS__); \
+      sched_timer_end<false>(ins, syncop, ##__VA_ARGS__); \
   } while(0)
 
 template <typename _S>
