@@ -99,21 +99,29 @@ struct RRScheduler : public Scheduler {
       pthread_mutex_init(&mutex, NULL);
       pthread_cond_init(&cond, NULL);
       sem_init(&sem, 0, 0);
-      reset(0);
+      reset();
     }
+    
+    ~wait_t() {
+        pthread_mutex_destroy(&mutex);
+        pthread_cond_destroy(&cond);
+        sem_destroy(&sem);
+    }
+    
     void wait();
     void post();
   } __attribute__((aligned(64))); // Typical cache alignment.
 
+  /// 8 virtual functions inherited from Serializer
   virtual void getTurn();
   virtual void putTurn(bool at_thread_end = false);
   virtual int wait(void *chan, unsigned timeout = Scheduler::FOREVER);
   virtual void signal(void *chan, bool all = false);
 
   virtual int block();
+  virtual void wakeup();
   virtual bool interProStart();
   virtual bool interProEnd();
-  virtual void wakeup();
 
   unsigned incTurnCount(void);
   unsigned getTurnCount(void);
@@ -128,12 +136,10 @@ protected:
   /// timeout threads on @waitq
   int fireTimeouts();
   /// return the next timeout turn number
-  unsigned nextTimeout();
+  //unsigned nextTimeout();
   /// pop the @runq and wakes up the thread at the front of @runq
   virtual void next(bool at_thread_end = false, bool hasPoppedFront = false);
   /// child classes can override this method to reorder threads in @runq
-
-  virtual void reorderRunq(void) { }
 
   /// for debugging
   void selfcheck(void);
@@ -149,7 +155,7 @@ protected:
   /// the runq "picture" seen by an idle thread could be racy (some threads may be runnable when the
   /// idle thread looks at the runq, but after the idle thread decides to cond wait, all threads in the runq
   /// can be calling blocking network operations). So we need this tryPutTurn().
-  bool tryPutTurn();
+  bool idleThreadTryPutTurn();
 
   // MAYBE: can use a thread-local wait struct for each thread if it
   // improves performance
@@ -160,7 +166,7 @@ protected:
   tid_set inter_pro_wakeup_tids;
   bool inter_pro_wakeup_flag;
   pthread_mutex_t inter_pro_wakeup_mutex;
-  void check_wakeup();
+  void checkWakeup();
 
   // For idle thread.
   void wakeUpIdleThread();
