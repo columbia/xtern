@@ -101,6 +101,13 @@ struct RRScheduler : public Scheduler {
       sem_init(&sem, 0, 0);
       reset(0);
     }
+    
+    ~wait_t() {
+      pthread_mutex_destroy(&mutex);
+      pthread_cond_destroy(&cond);
+      sem_destroy(&sem);
+    }
+    
     void wait();
     void post();
   } __attribute__((aligned(64))); // Typical cache alignment.

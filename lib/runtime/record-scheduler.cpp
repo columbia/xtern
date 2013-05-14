@@ -243,6 +243,7 @@ void RRScheduler::childForkReturn() {
 }
 
 RRScheduler::~RRScheduler() {
+  pthread_mutex_destroy(&inter_pro_wakeup_mutex);
 }
 
 RRScheduler::RRScheduler() {
@@ -253,7 +254,6 @@ RRScheduler::RRScheduler() {
   waits[MainThreadTid].post(); // Assign an initial turn to main thread.
   main_elem->status = run_queue::RUNNING_REG; // Assign an initial running state (i.e., turn) to main thread.
 
-  inter_pro_wakeup_tids.clear();
   inter_pro_wakeup_flag = 0;
   pthread_mutex_init(&inter_pro_wakeup_mutex, NULL);
 }
@@ -412,9 +412,9 @@ int RRScheduler::nextRunnable(bool at_thread_end) {
         return InvalidTid;
       } else {
         if (!options::launch_idle_thread) {
-          fprintf(stderr, "WARN: the program may contain some blocking network \
-            operations which requires 'options::launch_idle_thread = 1', please \
-            check your local.options file and rerun.\n");
+          fprintf(stderr, "WARN: the program may contain some blocking network "
+            "operations which requires 'options::launch_idle_thread = 1', please "
+            "check your local.options file and rerun.\n");
           exit(1);
         }
         assert(self() != IdleThreadTid);
