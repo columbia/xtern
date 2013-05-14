@@ -105,6 +105,7 @@ struct RRScheduler : public Scheduler {
     void post();
   } __attribute__((aligned(64))); // Typical cache alignment.
 
+  /// 8 inherited virtual functions
   virtual void getTurn();
   virtual void putTurn(bool at_thread_end = false);
   virtual int wait(void *chan, unsigned timeout = Scheduler::FOREVER);
@@ -128,12 +129,10 @@ protected:
   /// timeout threads on @waitq
   int fireTimeouts();
   /// return the next timeout turn number
-  unsigned nextTimeout();
+  //unsigned nextTimeout();
   /// pop the @runq and wakes up the thread at the front of @runq
   virtual void next(bool at_thread_end = false, bool hasPoppedFront = false);
   /// child classes can override this method to reorder threads in @runq
-
-  virtual void reorderRunq(void) { }
 
   /// for debugging
   void selfcheck(void);
@@ -142,14 +141,6 @@ protected:
   /// Return the  ext runnable thread id. If this function returns an invalid tid, it means it is already the end of 
   /// execution of the program.
   int nextRunnable(bool at_thread_end = false);
-
-  /// Called by the idle thread to decide whether the try put turn could be successful.
-  /// If so, this function will modify the first runnable thread's status from RUNNABLE to RUNNING_REG,
-  /// and the function return true. This is necessary because of the network handling mechanism,
-  /// the runq "picture" seen by an idle thread could be racy (some threads may be runnable when the
-  /// idle thread looks at the runq, but after the idle thread decides to cond wait, all threads in the runq
-  /// can be calling blocking network operations). So we need this tryPutTurn().
-  bool tryPutTurn();
 
   // MAYBE: can use a thread-local wait struct for each thread if it
   // improves performance
@@ -160,11 +151,18 @@ protected:
   tid_set inter_pro_wakeup_tids;
   bool inter_pro_wakeup_flag;
   pthread_mutex_t inter_pro_wakeup_mutex;
-  void check_wakeup();
+  void checkWakeUp();
 
-  // For idle thread.
+  /// For idle thread.
   void wakeUpIdleThread();
   void idleThreadCondWait();
+  /// Called by the idle thread to decide whether the try put turn could be successful.
+  /// If so, this function will modify the first runnable thread's status from RUNNABLE to RUNNING_REG,
+  /// and the function return true. This is necessary because of the network handling mechanism,
+  /// the runq "picture" seen by an idle thread could be racy (some threads may be runnable when the
+  /// idle thread looks at the runq, but after the idle thread decides to cond wait, all threads in the runq
+  /// can be calling blocking network operations). So we need this tryPutTurn().
+  bool idleThreadTryPutTurn();
 };
 
 /// adapted from an example in POSIX.1-2001
