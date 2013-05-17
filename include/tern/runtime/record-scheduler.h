@@ -108,7 +108,7 @@ struct RRScheduler : public Scheduler {
       sem_destroy(&sem);
     }
     
-    void wait();
+    void pend();
     void post();
   } __attribute__((aligned(64))); // Typical cache alignment.
 

@@ -40,7 +40,7 @@ extern int idle_done;
 
 extern int nNonDetWait;
 extern pthread_cond_t nonDetCV;
-void RRScheduler::wait_t::wait() {
+void RRScheduler::wait_t::pend() {
   if (options::enforce_turn_type == 1) { // Semaphore relay.
     sem_wait(&sem);
   } else if (options::enforce_turn_type == 2) { // Hybrid relay.
@@ -92,13 +92,13 @@ void RRScheduler::wait_t::post() {
     //pthread_mutex_unlock(&mutex);
   }
 }
+
 //@before without turn
 //@after with turn
-
 void RRScheduler::getTurn() {
   int tid = self();
   assert(tid >= 0 && tid < Scheduler::nthread);
-  waits[tid].wait();
+  waits[tid].pend();
   dprintf("RRScheduler: %d gets turn\n", self());
   SELFCHECK;
 }

@@ -488,12 +488,9 @@ int RecorderRT<_S>::pthreadCreate(unsigned ins, int &error, pthread_t *thread,
   int ret = __tern_pthread_create(thread, attr, thread_func, arg);
   assert(!ret && "failed sync calls are not yet supported!");
   _S::create(*thread);
-
-  SCHED_PUT_TURN(syncfunc::pthread_create, (uint64_t) * thread, (uint64_t)ret, (uint64_t)thread_func, (uint64_t)arg);
-
-  // yi: are these two at correct place???
   sem_post(&thread_begin_sem);
   sem_wait(&thread_begin_done_sem);
+  SCHED_PUT_TURN(syncfunc::pthread_create, (uint64_t) * thread, (uint64_t)ret, (uint64_t)thread_func, (uint64_t)arg);
 
   return ret;
 }
