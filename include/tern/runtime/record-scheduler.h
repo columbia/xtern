@@ -35,9 +35,12 @@ struct RecordSerializer : public Serializer {
     pthread_mutex_lock(&lock);
   }
 
-  virtual void putTurn(bool at_thread_end = false) {
-    if (at_thread_end)
-      zombify(pthread_self());
+  virtual void putTurn() {
+    pthread_mutex_unlock(&lock);
+  }
+  
+  virtual void putTurnAtThreadEnd() {
+    zombify(pthread_self());
     pthread_mutex_unlock(&lock);
   }
 
@@ -114,7 +117,8 @@ struct RRScheduler : public Scheduler {
 
   /// 8 inherited virtual functions
   virtual void getTurn();
-  virtual void putTurn(bool at_thread_end = false);
+  virtual void putTurn();
+  virtual void putTurnAtThreadEnd();
   virtual int wait(void *chan, unsigned timeout = Scheduler::FOREVER);
   virtual void signal(void *chan, bool all = false);
 

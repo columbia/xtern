@@ -105,32 +105,38 @@ void RRScheduler::getTurn() {
 
 //@before with turn
 //@after without turn
-void RRScheduler::putTurn(bool at_thread_end) {
+void RRScheduler::putTurn() {
   int tid = self();
   assert(tid >= 0 && tid < Scheduler::nthread);
   assert(tid == runq.front());
-  bool hasPoppedFront = false;
 
-  if (at_thread_end) {
-    signal((void*) pthread_self());
-    Parent::zombify(pthread_self());
-    dprintf("RRScheduler: %d ends\n", self());
-  } else {
-    // Check and modify "my" run queue element. No need to grab element spinlock since I am the head.
-    struct run_queue::runq_elem *my = runq.get_my_elem(tid);
-    // Current if branch can not be taken (hasPoppedFront is false) if a thread
-    // is doing network operation, so current status must be RUNNING_REG.
-    assert(my->status == run_queue::RUNNING_REG);
-    my->status = run_queue::RUNNABLE;
+  // Check and modify "my" run queue element. No need to grab element spinlock since I am the head.
+  struct run_queue::runq_elem *my = runq.get_my_elem(tid);
+  // Current if branch can not be taken (hasPoppedFront is false) if a thread
+  // is doing network operation, so current status must be RUNNING_REG.
+  assert(my->status == run_queue::RUNNING_REG);
+  my->status = run_queue::RUNNABLE;
 
-    // Process run queue structure.
-    runq.pop_front();
-    hasPoppedFront = true;
-    runq.push_back(tid);
-    dprintf("RRScheduler: %d puts turn\n", self());
-  }
+  // Process run queue structure.
+  runq.pop_front();
+  runq.push_back(tid);
+  dprintf("RRScheduler: %d puts turn\n", tid);
 
-  next(at_thread_end, hasPoppedFront);
+  next(/*at_thread_end*/false, /*hasPoppedFront*/true);
+}
+
+//@before with turn
+//@after without turn
+void RRScheduler::putTurnAtThreadEnd() {
+  int tid = self();
+  assert(tid >= 0 && tid < Scheduler::nthread);
+  assert(tid == runq.front());
+  
+  signal((void*) pthread_self());
+  Parent::zombify(pthread_self());
+  dprintf("RRScheduler: %d ends\n", tid);
+
+  next(/*at_thread_end*/true, /*hasPoppedFront*/false);
 }
 
 //@before with turn

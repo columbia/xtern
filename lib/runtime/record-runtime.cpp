@@ -348,7 +348,7 @@ void RecorderRT<_S>::sched_thread_end(unsigned ins, unsigned short syncop, uint6
   } else {
     _S::incTurnCount();
   }
-  _S::putTurn(/*end of thread*/true);
+  _S::putTurnAtThreadEnd();
   errno = backup_errno;
 }
 

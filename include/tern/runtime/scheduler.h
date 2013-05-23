@@ -154,7 +154,8 @@ struct Serializer : public TidMap {
 
   /// give up the turn so that other threads can get the turn.  this
   /// method should also increment turnCount
-  virtual void putTurn(bool at_thread_end = false) { }
+  virtual void putTurn() { }
+  virtual void putTurnAtThreadEnd() { }
 
   /// inform the serializer that a thread is calling an external blocking
   /// function.
