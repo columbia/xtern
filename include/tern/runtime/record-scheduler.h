@@ -175,6 +175,18 @@ struct Random {
   unsigned long next;
 };
 
+/// Instead of round-robin, can schedule threads based on a deterministic
+///// (pseudo) random number generator.  That is, at each scheduling
+///// decision point, we query the deterministic random number generator for
+///// the next thread to run.  Such a scheduler is deterministic, yet it can
+///// generate different deterministic sequences based on the seed.
+struct SeededRRScheduler: public RRScheduler {
+  virtual void reorderRunq(void);
+  void setSeed(unsigned seed);
+  Random rand;
+};
+
+
 } // namespace tern
 
 #endif

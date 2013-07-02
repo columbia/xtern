@@ -12,6 +12,11 @@ DMT = 1
 # seed for seeded round-robin scheduler
 scheduler_seed = 0x12345 
 
+# the runtime scheduler algorithm, options are: 
+# 1.  FCFS    first come first serve  
+# 2.  RR      round-robin 
+runtime_type = SeededRR 
+
 # determine the output log format, options are:
 # 1.  bin     binary log of instructions
 # 2.  txt     text log of synchronizations

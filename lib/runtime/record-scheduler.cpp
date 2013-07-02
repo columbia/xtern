@@ -42,6 +42,30 @@ extern int nNonDetWait;
 extern pthread_cond_t nonDetCV;
 
 
+void SeededRRScheduler::setSeed(unsigned seed)
+{
+  rand.srand(seed);
+}
+
+void SeededRRScheduler::reorderRunq(void)
+{
+  // find next thread using @rand.  complexity is O(runq.size()), but
+  // shouldn't matter much anyway as the number of threads is small
+  assert(!runq.empty());
+  int i = rand.rand(runq.size()-1);
+  assert(i >=0 && i < (int)runq.size() && "rand.rand() off bound");
+  dprintf("SeededRRScheduler: reorder runq so %d is the front (size %d)\n",
+          i, (int)runq.size());
+  run_queue::iterator it = runq.begin();
+  while(i--) ++it;
+  assert(it != runq.end());
+  int tid = *it;
+  assert(tid >=0 && tid < Scheduler::nthread);
+  runq.erase(it); // NOTE: this invalidates iterator @it!
+  runq.push_front(tid);
+}
+
+
 void RRScheduler::wait_t::wait() {
   if (options::enforce_turn_type == 1) {  // Semaphore relay.
     sem_wait(&sem);
