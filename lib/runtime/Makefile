@@ -10,6 +10,10 @@ BUILD_ARCHIVE := 1
 # bc module
 # MODULE_NAME := $(LIBRARYNAME)
 
+CFLAGS += -g -fPIC -rdynamic
+CXXFLAGS += -g -fPIC -rdynamic
+LDFLAGS += -g -fPIC -rdynamic
+
 include $(LEVEL)/Makefile.common
 
 ifeq ($(XTERN_PLUS_DBUG),1)

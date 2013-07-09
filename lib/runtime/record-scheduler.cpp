@@ -19,7 +19,7 @@ using namespace tern;
 //#undef run_queue
 //#define run_queue list<int>
 
-//#define _DEBUG_RECORDER
+#define _DEBUG_RECORDER
 
 #ifdef _DEBUG_RECORDER
 #  define SELFCHECK  dump(cerr); selfcheck()
@@ -198,15 +198,21 @@ void RRScheduler::next(bool at_thread_end, bool hasPoppedFront)
   
   check_wakeup();
 
+#if 0
   next_tid = nextRunnable(at_thread_end);
   // There are two special cases that: (1) at the thread end, waitq is empty, or 
   // (2) main thread exits (and waitq can be non-empty, e.g., openmp),
   // then we do not need to pass turn any more and just return.
   if (next_tid == InvalidTid)
     return;
+#endif
 
-  // reorderRunq(); Heming: do not call this function, even it is implemented in seeded 
+  reorderRunq(); // Heming: do not call this function, even it is implemented in seeded 
   // RR. This reordering is conflicting with RR scheduling (with network).
+  next_tid = runq.front();
+
+  if (next_tid == InvalidTid)
+    return;
 
   assert(next_tid>=0 && next_tid < Scheduler::nthread);
   dprintf("RRScheduler: next is %d\n", next_tid);
@@ -311,7 +317,8 @@ void RRScheduler::putTurn(bool at_thread_end)
     struct run_queue::runq_elem *my = runq.get_my_elem(tid);
     // Current if branch can not be taken (hasPoppedFront is false) if a thread
     // is doing network operation, so current status must be RUNNING_REG.
-    assert (my->status == run_queue::RUNNING_REG);
+    // If we use seededRR scheduler, then my->status might be RUNNABLE since it is in the same runq.
+    assert (my->status == run_queue::RUNNING_REG || my->status == run_queue::RUNNABLE);
     my->status = run_queue::RUNNABLE;
 
     // Process run queue structure.
