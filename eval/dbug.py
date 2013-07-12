@@ -74,6 +74,7 @@ def model_checking(configs, benchmark, args):
     explorer.set("log_dir", ".")
     explorer.set("port", explorer_port)
     explorer.set("timeout", dbug_timeout)
+    explorer.set("dpor", "true")
     interposition.set("path", "%s/mc-tools/dbug/install/lib/libdbug.so" % SMT_MC_ROOT)
     command = ' '.join([exec_file] + inputs.split())
     program.set("command", command)
