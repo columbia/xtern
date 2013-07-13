@@ -57,6 +57,8 @@ void SeededRRScheduler::reorderRunq(void)
   dprintf("SeededRRScheduler: reorder runq so %d is the front (size %d)\n",
           i, (int)runq.size());
   run_queue::iterator it = runq.begin();
+  if (i == 0)
+    return;
   while(i--) ++it;
   assert(it != runq.end());
   int tid = *it;
@@ -185,7 +187,7 @@ void RRScheduler::next(bool at_thread_end, bool hasPoppedFront)
     struct run_queue::runq_elem *my = runq.get_my_elem(tid);
     dprintf("RRScheduler::nextRunnable at_thread_end %d, self tid %d, head status %d\n",
       at_thread_end, tid, my->status);
-    if (my->status == run_queue::RUNNING_REG)
+    if (my->status == run_queue::RUNNING_REG || my->status == run_queue::RUNNABLE)
       my->status = run_queue::RUNNABLE;
     else {
       assert(my->status == run_queue::RUNNING_INTER_PRO);
