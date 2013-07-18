@@ -212,6 +212,7 @@ def perf_write_stats(xtern, nondet, repeats):
         stats.write('overhead: {1:.3f}%\n\tavg {0}\n'.format(overhead_avg, overhead_avg*100))
         stats.write('xtern:\n\tavg {0}\n\tsem {1}\n'.format(xtern_avg, xtern_std/math.sqrt(repeats)))
         stats.write('non-det:\n\tavg {0}\n\tsem {1}\n'.format(nondet_avg, nondet_std/math.sqrt(repeats)))
+        stats.write('\n{0:.0f}\t{1:.0f}\n'.format(xtern_avg, nondet_avg))
 
 def write_other_stats(nondet, repeats, name):
     cost=[]
@@ -345,7 +346,6 @@ def execBench(cmd, repeats, out_dir,
             #proc = subprocess.Popen(xtern_command, stdout=sys.stdout, stderr=sys.stdout,
             # output perf result to output.n log file
             cmd = cmd[:cmd.find('output.n') + 7] + str(i) + cmd[cmd.find('output.n') + 8 :]
-            print cmd
             proc = subprocess.Popen(cmd, stdout=log_file, stderr=subprocess.STDOUT,
                                     shell=True, executable=bash_path, bufsize = 102400, preexec_fn=os.setsid)
             if client_cmd:
@@ -456,7 +456,7 @@ def processBench(config, bench):
             fd.write("#!/bin/sh\n")
             fd.write(xtern_command[5:] + "\n")
         os.chmod("xtern.sh", 0744)
-    xtern_command = 'perf stat -e cs -o xtern/output.n ./xtern.sh' 
+    xtern_command = 'perf stat -x " " -e cs -o xtern/output.n ./xtern.sh' 
     logging.info("executing '%s'" % xtern_command)
     if not args.compare_only:
         execBench(xtern_command, repeats, 'xtern', client_cmd, client_terminate_server, init_env_cmd)
@@ -480,7 +480,7 @@ def processBench(config, bench):
             fd.write("#!/bin/sh\n")
             fd.write(nondet_command[nondet_command.find('rand-intercept.so')+18:] + "\n")
         os.chmod("nondet.sh", 0744)
-    nondet_command = 'perf stat -e cs -o non-det/output.n ./nondet.sh' 
+    nondet_command = 'perf stat -x " " -e cs -o non-det/output.n ./nondet.sh' 
     logging.info("executing '%s'" % nondet_command)
     if not args.compare_only:
         execBench(nondet_command, repeats, 'non-det', client_cmd, client_terminate_server, init_env_cmd)
@@ -551,7 +551,6 @@ def processBench(config, bench):
         for line in (open(log_file_name, 'r').readlines()):
             if ' cs' in line:
                 xtern_perf_cost += [float(line.split()[0])]
-                print xtern_perf_cost
                 break
         
     nondet_perf_cost = []
@@ -560,7 +559,6 @@ def processBench(config, bench):
         for line in (open(log_file_name, 'r').readlines()):
             if ' cs' in line:
                 nondet_perf_cost += [float(line.split()[0])]
-                print nondet_perf_cost
                 break
     perf_write_stats(xtern_perf_cost, nondet_perf_cost, int(repeats))
     #xtern_cost = []
