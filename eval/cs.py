@@ -355,7 +355,10 @@ def execBench(cmd, repeats, out_dir,
                                                    shell=True, executable=bash_path, bufsize = 102400)
                     client_proc.wait()
                 if client_terminate_server:
-                    os.killpg(proc.pid, signal.SIGTERM)
+                    #os.killpg(proc.pid, signal.SIGTERM)
+                    # if perf is killed due to a SIGTERM
+                    # it does not run the on_exit hooks 
+                    os.system('kill -9 ' + str(proc.pid))
                 proc.wait()
                 time.sleep(2)
             else:

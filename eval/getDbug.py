@@ -32,8 +32,10 @@ if __name__ == "__main__":
     else:
         directory = os.path.abspath(args.dirname)
         if not checkExist(directory):
-            print 'Invalid directory name'
+            print 'Invalid directory name: ' + directory
         else:
             for name in os.listdir(directory):
+                if name == "git_diff":
+                    continue
                 temp_name = 'dbug.log'
                 getResult(os.path.abspath(directory+'/'+name), temp_name) 
