@@ -1,0 +1,28 @@
+#!/bin/bash
+cd $XTERN_ROOT/apps/XSBench
+rm -rf XSBench-5 XSBench out results.txt
+if [ ! -f XSBench-5_0.tar ]; then
+	echo "Source file missing, please register and download XSBench-5.0 at https://cesar.mcs.anl.gov/"
+	exit 1
+fi
+tar -xvf XSBench-5_0.tar
+
+pushd XSBench-5/src
+
+ARCH=`uname -m`
+GCCLIB=""
+if [ "$ARCH" == "x86_64" ]; then
+  GCCLIB="$XTERN_ROOT/apps/openmp/install/lib64"
+else
+  GCCLIB="$XTERN_ROOT/apps/openmp/install/lib"
+fi
+
+ln -s $GCCLIB/libgomp.a  &> /dev/null
+ln -s $GCCLIB/libstdc++.a  &> /dev/null
+popd
+patch -p0 < makefile.patch
+
+pushd XSBench-5/src
+make
+popd
+ln -s XSBench-5/src/XSBench .

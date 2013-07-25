@@ -1,0 +1,11 @@
+#!/bin/bash
+
+cd $XTERN_ROOT/apps/XSBench
+rm -rf out* serializer.log
+
+#Run with xtern
+time LD_PRELOAD=$XTERN_ROOT/dync_hook/interpose.so ./XSBench 4 small
+
+#Run non-det
+time LD_PRELOAD=$XTERN_ROOT/eval/rand-intercept/rand-intercept.so ./XSBench 4 small
+
