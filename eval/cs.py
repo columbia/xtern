@@ -345,7 +345,7 @@ def execBench(cmd, repeats, out_dir,
                 os.system(init_env_cmd)
             #proc = subprocess.Popen(xtern_command, stdout=sys.stdout, stderr=sys.stdout,
             # output perf result to output.n log file
-            cmd = cmd[:cmd.find('output.n') + 7] + str(i) + cmd[cmd.find('output.n') + 8 :]
+            cmd = cmd[:cmd.find('output.') + 7] + str(i) + cmd[cmd.find('output.') + 8 :]
             proc = subprocess.Popen(cmd, stdout=log_file, stderr=subprocess.STDOUT,
                                     shell=True, executable=bash_path, bufsize = 102400, preexec_fn=os.setsid)
             if client_cmd:
