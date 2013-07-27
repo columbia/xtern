@@ -6,13 +6,14 @@
 # "make clean" to remove executables
 #
 
+XTERN_ANNOT_LIB = -lgomp -I$(XTERN_ROOT)/include -L$(XTERN_ROOT)/dync_hook -Wl,--rpath,$(XTERN_ROOT)/dync_hook -lxtern-annot
 OMPC        = gcc
 CFLAGS      = -O3 -g -D_GLIBCXX_PARALLEL -static-libgcc -L. -fopenmp   ### -Wall -pedantic
 
 OMPCC       = g++
 CCFLAGS     = -O3 -g -D_GLIBCXX_PARALLEL -static-libgcc -L. -fopenmp   ### -Wall -pedantic 
 
-LFLAGS      = -lm 
+LFLAGS      = -lm $(XTERN_ANNOT_LIB)
 
 ALL =   omp_hello \
 	omp_num_threads \
