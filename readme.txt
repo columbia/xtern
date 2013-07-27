@@ -16,7 +16,7 @@ Installing Parrot (xtern)
 0. Install some libraries/tools.
 > sudo apt-get install gcc-4.5 g++-4.5 gcc-multilib g++-multilib
 > sudo apt-get install dejagnu flex bison axel
-> sudo apt-get install zlib1g-dev libxml-libxml-perl python-pip python-setuptools
+> sudo apt-get install zlib1g-dev libbz2-dev libxml-libxml-perl python-pip python-setuptools
 > sudo pip install numpy
 > sudo apt-get install libxslt1-dev libxml2-dev
 > sudo easy_install-2.7 lxml
