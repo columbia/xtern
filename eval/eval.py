@@ -76,6 +76,7 @@ def readConfigFile(config_file):
                                                 "DBUG_CLIENT_INPUTS": "",
                                                 "DBUG_ARBITER_PORT": "12345",
                                                 "DBUG_EXPLORER_PORT": "12346",
+                                                "DBUG_DPOR": "true",
                                                 "DBUG_TIMEOUT": "60"} )
         ret = newConfig.read(config_file)
     except ConfigParser.MissingSectionHeaderError as e:

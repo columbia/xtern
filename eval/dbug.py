@@ -48,6 +48,7 @@ def model_checking(configs, benchmark, args):
     program_input = configs.get(benchmark, 'DBUG_INPUT')
     program_output = configs.get(benchmark, 'DBUG_OUTPUT')
     prefix = configs.get(benchmark, "DBUG_PREFIX")
+    dpor = configs.get(benchmark, "DBUG_DPOR")
     inputs = configs.get(benchmark, "INPUTS")
     export = configs.get(benchmark, "EXPORT")
 
@@ -72,7 +73,7 @@ def model_checking(configs, benchmark, args):
     #else:
     #    arbiter.set("command", "%s -l" % ARBITER)
     explorer.set("strategy", "random")
-    explorer.set("dpor", "false")
+    explorer.set("dpor", dpor)
     explorer.set("port", explorer_port)
     explorer.set("log_dir", ".")
     explorer.set("timeout", dbug_timeout)
