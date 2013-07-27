@@ -30,5 +30,5 @@ do
   CMD="$GCC -g -O2 -fno-stack-protector -static-libgcc -static-libstdc++ -D_GLIBCXX_PARALLEL -L. \
     -fopenmp src/$SRC -o $PROG -lgomp $XTERN_ANNOT_LIB"
   echo "Compiling src/$SRC..."   #" with command $CMD..."
-  `$CMD`
+  `LIBRARY_PATH=/usr/lib/x86_64-linux-gnu $CMD`
 done
