@@ -7,6 +7,11 @@ if [ ! -d $XTERN_ROOT ]; then
     exit 1
 fi
 
+if [ ! -f $XTERN_ROOT/apps/openmp/install/bin/g++ ]; then
+    echo "please recompile \$XTERN_ROOT/apps/openmp/mk with openmp (g++-4.5) available"
+    exit 1
+fi
+
 VER=6.8.0-4
 
 echo -e "\nPlease make sure you have run the 'mk' in $XTERN_ROOT/apps/openmp before you build imagick.\n"
