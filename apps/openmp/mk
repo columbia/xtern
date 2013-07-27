@@ -60,3 +60,6 @@ make
 cd ..
 
 # TBD.
+if [-f $XTERN_ROOT/apps/openmp/libgomp.a ]; then
+  echo "Openmp has been correctly installed. Some omp_hello compilation failures do not matter."
+fi
