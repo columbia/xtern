@@ -67,12 +67,14 @@ def model_checking(configs, benchmark, args):
         program2 = etree.SubElement(dbug_config, "program")
 
     arbiter.set("port", arbiter_port)
-    if client:
-        arbiter.set("command", "%s -l -b 2 -e 3" % ARBITER)
-    else:
-        arbiter.set("command", "%s -l" % ARBITER)
-    explorer.set("log_dir", ".")
+    #if client:
+    #    arbiter.set("command", "%s -l -b 2 -e 3" % ARBITER)
+    #else:
+    #    arbiter.set("command", "%s -l" % ARBITER)
+    explorer.set("strategy", "random")
+    explorer.set("dpor", "false")
     explorer.set("port", explorer_port)
+    explorer.set("log_dir", ".")
     explorer.set("timeout", dbug_timeout)
     interposition.set("path", "%s/mc-tools/dbug/install/lib/libdbug.so" % SMT_MC_ROOT)
     command = ' '.join([exec_file] + inputs.split())
