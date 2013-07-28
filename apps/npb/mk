@@ -26,12 +26,15 @@ rm -rf NPB3.3.1
 tar zxvf NPB3.3.1.tar.gz
 
 pushd NPB3.3.1/NPB3.3-OMP
+SYS_LIB_PATH=""
 if [ "$ARCH" == "x86_64" ]; then
   ln -s $XTERN_ROOT/apps/openmp/install/lib64/libgomp.a
   ln -s $XTERN_ROOT/apps/openmp/install/lib64/libstdc++.a
+  SYS_LIB_PATH="/usr/lib/x86_64-linux-gnu"
 else
   ln -s $XTERN_ROOT/apps/openmp/install/lib/libgomp.a
   ln -s $XTERN_ROOT/apps/openmp/install/lib/libstdc++.a
+  SYS_LIB_PATH="/usr/lib/i386-linux-gnu"
 fi
 popd
 
@@ -46,7 +49,7 @@ mkdir -p NPB3.3.1/NPB3.3-OMP/bin-s
 ln -s $XTERN_ROOT/apps/npb/make-small.def NPB3.3.1/NPB3.3-OMP/config/make.def
 ln -s $XTERN_ROOT/apps/npb/suite-small.def NPB3.3.1/NPB3.3-OMP/config/suite.def
 pushd NPB3.3.1/NPB3.3-OMP
-make suite
+LIBRARY_PATH=$SYS_LIB_PATH make suite
 popd
 
 mkdir -p NPB3.3.1/NPB3.3-OMP/bin-m
@@ -55,7 +58,7 @@ rm -rf NPB3.3.1/NPB3.3-OMP/config/suite.def
 ln -s $XTERN_ROOT/apps/npb/make-medium.def NPB3.3.1/NPB3.3-OMP/config/make.def
 ln -s $XTERN_ROOT/apps/npb/suite-medium.def NPB3.3.1/NPB3.3-OMP/config/suite.def
 pushd NPB3.3.1/NPB3.3-OMP
-make suite
+LIBRARY_PATH=$SYS_LIB_PATH make suite
 popd
 
 mkdir -p NPB3.3.1/NPB3.3-OMP/bin-l
@@ -64,7 +67,7 @@ rm -rf NPB3.3.1/NPB3.3-OMP/config/suite.def
 ln -s $XTERN_ROOT/apps/npb/make-large.def NPB3.3.1/NPB3.3-OMP/config/make.def
 ln -s $XTERN_ROOT/apps/npb/suite-large.def NPB3.3.1/NPB3.3-OMP/config/suite.def
 pushd NPB3.3.1/NPB3.3-OMP
-make suite
+LIBRARY_PATH=$SYS_LIB_PATH make suite
 popd
 
 rm -rf NPB3.3.1/NPB3.3-OMP/config/make.def
@@ -72,7 +75,7 @@ ln -s $XTERN_ROOT/apps/npb/make.def NPB3.3.1/NPB3.3-OMP/config/
 rm -rf NPB3.3.1/NPB3.3-OMP/config/suite.def
 ln -s $XTERN_ROOT/apps/npb/suite.def NPB3.3.1/NPB3.3-OMP/config/
 pushd NPB3.3.1/NPB3.3-OMP
-make suite
+LIBRARY_PATH=$SYS_LIB_PATH make suite
 popd
 
 rm -rf ft-s mg-s sp-s lu-s bt-s is-s ep-s cg-s ua-s dc-s

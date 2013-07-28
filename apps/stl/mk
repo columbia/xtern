@@ -12,10 +12,13 @@ ARCH=`uname -m`
 GCCLIB=""
 cd $XTERN_ROOT/apps/stl/
 XTERN_ANNOT_LIB="-I$XTERN_ROOT/include -L$XTERN_ROOT/dync_hook -Wl,--rpath,$XTERN_ROOT/dync_hook -lxtern-annot"
+SYS_LIB_PATH=""
 if [ "$ARCH" == "x86_64" ]; then
   GCCLIB="$XTERN_ROOT/apps/openmp/install/lib64"
+  SYS_LIB_PATH="/usr/lib/x86_64-linux-gnu"
 else
   GCCLIB="$XTERN_ROOT/apps/openmp/install/lib"
+  SYS_LIB_PATH="/usr/lib/i386-linux-gnu"
 fi
 
 ln -s $GCCLIB/libgomp.a . &> /dev/null
@@ -30,5 +33,5 @@ do
   CMD="$GCC -g -O2 -fno-stack-protector -static-libgcc -static-libstdc++ -D_GLIBCXX_PARALLEL -L. \
     -fopenmp src/$SRC -o $PROG -lgomp $XTERN_ANNOT_LIB"
   echo "Compiling src/$SRC..."   #" with command $CMD..."
-  `LIBRARY_PATH=/usr/lib/x86_64-linux-gnu $CMD`
+  `LIBRARY_PATH=$SYS_LIB_PATH $CMD`
 done
