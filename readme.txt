@@ -2,14 +2,26 @@ Typical (and recommended) systems configuration for Parrot (a.k.a., xtern)
 ================
 Hardware: we have tried both 4-core and 24-core machines with 64 bits.
 OS: Ubuntu 11.10.
-Gcc: 4.5.4 (please use this gcc version if possible, because other modules
-such as llvm can be compiled with this version, but not gcc-4.6).
+gcc/g++: 4.5 (please use this gcc version if possible, because other modules
+such as llvm can be compiled with this version, but not gcc-4.6). One suggestion
+is you could install 4.5 and setup a local link for it in your own PATH environment 
+variable, so that your "gcc -v" command would return 4.5.X.
 
 
 
 
 Installing Parrot (xtern)
 ================
+
+0. Install some libraries/tools.
+> sudo apt-get install gcc-4.5 g++-4.5 gcc-multilib g++-multilib
+> sudo apt-get install dejagnu flex bison axel libboost-dev libtiff4-dev
+> sudo apt-get install zlib1g-dev libbz2-dev libxml-libxml-perl python-pip python-setuptools
+> sudo pip install numpy
+> sudo apt-get install libxslt1-dev libxml2-dev
+> sudo easy_install-2.7 lxml
+> sudo apt-get install libgomp1 libgmp-dev libmpfr-dev libmpc-dev
+
 
 1. Add $XTERN_ROOT (the absolute path of "xtern") into environment variables
 in your ~/.bashrc. Run "echo $XTERN_ROOT" and "echo $LD_LIBRARY_PATH"
@@ -28,7 +40,6 @@ our benchmarks.
 
 3. Build llvm. Go to directory $XTERN_ROOT, and run:
 > cd $XTERN_ROOT
-> sudo apt-get install dejagnu flex bison
 > ./llvm/build-llvm.sh --optimized
 The "--optimized" flag above is optional, if you are getting performance results,
 then you need this flag; if you are developing and need debug symbols,

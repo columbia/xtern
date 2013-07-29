@@ -7,6 +7,11 @@ if [ ! -d $XTERN_ROOT ]; then
     exit 1
 fi
 
+if [ ! -f $XTERN_ROOT/apps/openmp/install/bin/g++ ]; then
+    echo "please recompile \$XTERN_ROOT/apps/openmp/mk with openmp (g++-4.5) available"
+    exit 1
+fi
+
 VER=6.8.0-4
 
 echo -e "\nPlease make sure you have run the 'mk' in $XTERN_ROOT/apps/openmp before you build imagick.\n"
@@ -49,10 +54,11 @@ CC="$CC_HOME/bin/gcc" \
   CXXFLAGS+="-g -O2 -I$XTERN_ROOT/include -fopenmp" \
   LDFLAGS+="-L$CC_HOME/lib -Wl,--rpath,$CC_HOME/lib -L$CC_HOME/lib64 -Wl,--rpath,$CC_HOME/lib64 -L$XTERN_ROOT/dync_hook -Wl,--rpath,$XTERN_ROOT/dync_hook " \
   LIBS+="-lgomp -lxtern-annot" \
+  LIBRARY_PATH="/usr/lib/x86_64-linux-gnu" \
   ../configure --prefix=$XTERN_ROOT/apps/imagick/install --disable-shared --enable-static --enable-openmp 2>&1 | tee config.results
 
 make V=1 -j64
-make install
+#make install
 
 # create link
 cd ../..

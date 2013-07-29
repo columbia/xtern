@@ -48,6 +48,7 @@ def model_checking(configs, benchmark, args):
     program_input = configs.get(benchmark, 'DBUG_INPUT')
     program_output = configs.get(benchmark, 'DBUG_OUTPUT')
     prefix = configs.get(benchmark, "DBUG_PREFIX")
+    dpor = configs.get(benchmark, "DBUG_DPOR")
     inputs = configs.get(benchmark, "INPUTS")
     export = configs.get(benchmark, "EXPORT")
 
@@ -61,20 +62,22 @@ def model_checking(configs, benchmark, args):
         dbug_prefix.set("path", prefix_filename)
     arbiter = etree.SubElement(dbug_config, "arbiter")
     explorer = etree.SubElement(dbug_config, "explorer")
-    interposition = etree.SubElement(dbug_config, "interposition")
+#    interposition = etree.SubElement(dbug_config, "interposition")
     program = etree.SubElement(dbug_config, "program")
     if client:
         program2 = etree.SubElement(dbug_config, "program")
 
     arbiter.set("port", arbiter_port)
-    if client:
-        arbiter.set("command", "%s -l -b 2 -e 3" % ARBITER)
-    else:
-        arbiter.set("command", "%s -l" % ARBITER)
-    explorer.set("log_dir", ".")
+    #if client:
+    #    arbiter.set("command", "%s -l -b 2 -e 3" % ARBITER)
+    #else:
+    #    arbiter.set("command", "%s -l" % ARBITER)
+    explorer.set("strategy", "random")
+    explorer.set("dpor", dpor)
     explorer.set("port", explorer_port)
+    explorer.set("log_dir", ".")
     explorer.set("timeout", dbug_timeout)
-    interposition.set("path", "%s/mc-tools/dbug/install/lib/libdbug.so" % SMT_MC_ROOT)
+#    interposition.set("command", "%s/mc-tools/dbug/install/lib/libdbug.so" % SMT_MC_ROOT)
     command = ' '.join([exec_file] + inputs.split())
     program.set("command", command)
     if program_input:
@@ -90,7 +93,7 @@ def model_checking(configs, benchmark, args):
         run_xml.write(etree.tostring(dbug_config, pretty_print=True))
 
     # generate run_xtern.xml
-    interposition.set("path", "%s/xtern/dync_hook/interpose_mc.so" % SMT_MC_ROOT)
+#    interposition.set("command", "%s/xtern/dync_hook/interpose_mc.so" % SMT_MC_ROOT)
 
     with open("run_xtern.xml", "w") as run_xtern_xml:
         run_xtern_xml.write(etree.tostring(dbug_config, pretty_print=True))
