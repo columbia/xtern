@@ -1,6 +1,6 @@
 diff -urN src_backup/eti/tracing.h src/eti/tracing.h
 --- src_backup/eti/tracing.h	1969-12-31 19:00:00.000000000 -0500
-+++ src/eti/tracing.h	2013-07-16 16:43:58.519831653 -0400
++++ src/eti/tracing.h	2013-07-28 20:31:35.792370411 -0400
 @@ -0,0 +1,6 @@
 +#ifndef _TRACING_H
 +#define _TRACING_H
@@ -9,12 +9,12 @@ diff -urN src_backup/eti/tracing.h src/eti/tracing.h
 +static inline int tracing_emit_log(char* filename){return 0;}
 +#endif
 diff -urN src_backup/Makefile src/Makefile
---- src_backup/Makefile	2013-07-16 16:43:29.807832647 -0400
-+++ src/Makefile	2013-07-16 16:43:40.767832268 -0400
-@@ -1,9 +1,10 @@
+--- src_backup/Makefile	2013-07-28 20:30:40.076372253 -0400
++++ src/Makefile	2013-07-28 20:32:20.128368787 -0400
+@@ -1,9 +1,11 @@
  ## Makefile for SCF-C
  
--
+ 
 -CC = gcc
 -CFLAGS += -g -O3 -mtune=native -Wall -fopenmp
 -LDFLAGS += -lm 
@@ -27,75 +27,41 @@ diff -urN src_backup/Makefile src/Makefile
  OBJFILES = input.o integ.o output.o timer.o scf.o diagonalize.o twoel.o
  
 diff -urN src_backup/scf.c src/scf.c
---- src_backup/scf.c	2013-07-16 16:43:29.807832647 -0400
-+++ src/scf.c	2013-07-16 16:43:40.827832265 -0400
-@@ -17,7 +17,8 @@
+--- src_backup/scf.c	2013-07-28 20:30:40.076372253 -0400
++++ src/scf.c	2013-07-28 20:33:53.840365627 -0400
+@@ -17,6 +17,8 @@
  #include "output.h"
  #include "timer.h"
  #include "g.h"
--
 +#include "omp.h"
 +#include "tern/user.h"
+ 
  double * g_dens, * g_fock, * g_tfock, * g_schwarz, * g_work, * g_ident, * g_orbs, * offsets;
  double * g_schwarz_max_j, * g_fock_const;
- double * g_partial_fock;
-@@ -142,6 +143,7 @@
+@@ -141,6 +143,7 @@
+   tinit = timer();
  
   EXIT_LOG(timer);
++soba_init(0,omp_get_num_threads(),omp_get_num_threads()*20);//xtern annot
  
-+  soba_init(0,omp_get_num_threads(),omp_get_num_threads()*20);
  // *** ITERATE ****
    for (iter = 0; iter <  mxiter; iter++) {
-     double i_timer = timer2();
 diff -urN src_backup/twoel.c src/twoel.c
---- src_backup/twoel.c	2013-07-16 16:43:29.807832647 -0400
-+++ src/twoel.c	2013-07-16 16:43:40.887832263 -0400
+--- src_backup/twoel.c	2013-07-28 20:30:40.076372253 -0400
++++ src/twoel.c	2013-07-28 20:34:46.012363744 -0400
 @@ -10,6 +10,7 @@
  #include <omp.h>
  #include <string.h>
  #include <eti/tracing.h>
-+#include <tern/user.h>
++#include "tern/user.h"
  double twoel_reducer(void);
  double contract_matrices(double *, double *);
  
-@@ -85,7 +86,7 @@
- #endif
- 
- #ifndef OMP_SCHEDULE
--#define OMP_SCHEDULE schedule(runtime)
-+#define OMP_SCHEDULE schedule(dynamic)
- #endif
- 
- 
-@@ -97,7 +98,6 @@
-   int i, j, k, l;
-   int i_off, j_off, k_off, l_off;
- 
--
- #pragma omp parallel shared(g_fock, g_thread_fock, fm, g_dens,ICUTVARS) private( j, k, l, i_off, j_off, k_off, l_off)
- {
- 
-@@ -118,7 +118,6 @@
- 
- #endif
- 
--
+@@ -122,6 +123,7 @@
    // 8-way symmetry
    #pragma omp for OMP_SCHEDULE REDUCE_CLAUSE
    for (i = 0; i < nbfn; i++) {
-@@ -126,6 +125,7 @@
++soba_wait(0);
+     i_off = i * nbfn;
      j_off = i_off;
  
-     for (j = i + 1; j < nbfn; j++) {
-+  soba_wait(0);
-       j_off += nbfn;
-       DENS_DECL_SYMM(j,i);
-       TOL_DECL(i,j);
-@@ -773,7 +773,6 @@
- 
-   // do the N^4 loop which will write to the g_partial_fock matrix, then
-   // correctly accumulate the values back to g_fock at the end
-- 
-   twoel_i_j_k_l_all_different(tol2e_over_schwmax);
-   
- #ifdef USE_CACHE
