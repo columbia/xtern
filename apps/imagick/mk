@@ -58,7 +58,7 @@ CC="$CC_HOME/bin/gcc" \
   ../configure --prefix=$XTERN_ROOT/apps/imagick/install --disable-shared --enable-static --enable-openmp 2>&1 | tee config.results
 
 make V=1 -j64
-#make install
+make install
 
 # create link
 cd ../..
