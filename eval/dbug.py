@@ -39,6 +39,11 @@ def model_checking(configs, benchmark, args):
     if not eval.checkExist(EXPLORER):
         logging.error("%s does not exist" % EXPLORER)
 
+    # check wrapper
+    WRAPPER = "%s/xtern/eval/model-chk-wrapper/wrapper" % SMT_MC_ROOT
+    if not eval.checkExist(WRAPPER):
+        logging.error("%s does not exist, please go there and make" % WRAPPER)
+
     # generate run.xml
     client = configs.get(benchmark, 'DBUG_CLIENT')
     client_inputs = configs.get(benchmark, 'DBUG_CLIENT_INPUTS')
@@ -62,7 +67,6 @@ def model_checking(configs, benchmark, args):
         dbug_prefix.set("path", prefix_filename)
     arbiter = etree.SubElement(dbug_config, "arbiter")
     explorer = etree.SubElement(dbug_config, "explorer")
-#    interposition = etree.SubElement(dbug_config, "interposition")
     program = etree.SubElement(dbug_config, "program")
     if client:
         program2 = etree.SubElement(dbug_config, "program")
@@ -77,7 +81,6 @@ def model_checking(configs, benchmark, args):
     explorer.set("port", explorer_port)
     explorer.set("log_dir", ".")
     explorer.set("timeout", dbug_timeout)
-#    interposition.set("command", "%s/mc-tools/dbug/install/lib/libdbug.so" % SMT_MC_ROOT)
     command = ' '.join([exec_file] + inputs.split())
     program.set("command", command)
     if program_input:
@@ -93,7 +96,8 @@ def model_checking(configs, benchmark, args):
         run_xml.write(etree.tostring(dbug_config, pretty_print=True))
 
     # generate run_xtern.xml
-#    interposition.set("command", "%s/xtern/dync_hook/interpose_mc.so" % SMT_MC_ROOT)
+    interposition = etree.SubElement(dbug_config, "interposition")
+    interposition.set("command", WRAPPER)
 
     with open("run_xtern.xml", "w") as run_xtern_xml:
         run_xtern_xml.write(etree.tostring(dbug_config, pretty_print=True))
