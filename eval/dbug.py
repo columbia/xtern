@@ -67,6 +67,7 @@ def model_checking(configs, benchmark, args):
         dbug_prefix.set("path", prefix_filename)
     arbiter = etree.SubElement(dbug_config, "arbiter")
     explorer = etree.SubElement(dbug_config, "explorer")
+    interposition = etree.SubElement(dbug_config, "interposition")
     program = etree.SubElement(dbug_config, "program")
     if client:
         program2 = etree.SubElement(dbug_config, "program")
@@ -81,6 +82,7 @@ def model_checking(configs, benchmark, args):
     explorer.set("port", explorer_port)
     explorer.set("log_dir", ".")
     explorer.set("timeout", dbug_timeout)
+    interposition.set("command", WRAPPER)
     command = ' '.join([exec_file] + inputs.split())
     program.set("command", command)
     if program_input:
@@ -92,15 +94,14 @@ def model_checking(configs, benchmark, args):
         command2= ' '.join([exec_file2] + client_inputs.split())
         program2.set("command", command2)
 
-    with open("run.xml", "w") as run_xml:
-        run_xml.write(etree.tostring(dbug_config, pretty_print=True))
-
-    # generate run_xtern.xml
-    interposition = etree.SubElement(dbug_config, "interposition")
-    interposition.set("command", WRAPPER)
-
     with open("run_xtern.xml", "w") as run_xtern_xml:
         run_xtern_xml.write(etree.tostring(dbug_config, pretty_print=True))
+
+    # strip the interposition element since the dbug-only mode does not need it.
+    etree.strip_elements(dbug_config, "interposition")
+
+    with open("run.xml", "w") as run_xml:
+        run_xml.write(etree.tostring(dbug_config, pretty_print=True))
 
     init_env_cmd = configs.get(benchmark, "INIT_ENV_CMD")
     if init_env_cmd:
