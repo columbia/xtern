@@ -9,6 +9,7 @@
 #include <tr1/unordered_map>
 #include <tr1/unordered_set>
 #include "run-queue.h"
+#include "non-det-thread-set.h"
 
 extern "C" {
 extern int idle_done;
@@ -244,10 +245,12 @@ struct Scheduler: public Serializer {
     struct run_queue::runq_elem *elem = runq.create_thd_elem(MainThreadTid);
     elem->status = run_queue::RUNNING_REG; // Pass the first token to the main thread after fork.
     runq.push_back(MainThreadTid);
+    // Note: no need to clean up non_det_thds here, because they are only thread integer ids, not pointers in runq.
   }
 
   run_queue runq;
   std::list<int>  waitq;
+  non_det_thread_set non_det_thds;
 };
 
 

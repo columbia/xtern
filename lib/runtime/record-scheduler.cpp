@@ -141,8 +141,12 @@ void RRScheduler::check_wakeup()
     for (tid_set::iterator itr = inter_pro_wakeup_tids.begin(); itr != inter_pro_wakeup_tids.end(); ++itr) {
       // This runq.in() call is safe, because check_wakeup() can only be called by 
       // the thread holding the turn.
-      if (!runq.in(*itr))
+      if (!runq.in(*itr)) {
         runq.push_back(*itr);   
+        dprintf("check_wakeup: current logical clock %u, first non det tid %d, my tid %d, non det logical clock %u, \
+          the system is within bounded non-determinism.\n", turnCount, *itr, self(), non_det_thds.get_clock(*itr));
+        non_det_thds.erase(*itr); // This operation is required by the bounded non-determinism mechanism.
+      }
     }
     inter_pro_wakeup_tids.clear();
     inter_pro_wakeup_flag = false;
@@ -253,6 +257,7 @@ int RRScheduler::block()
 {
   getTurn();
   int tid = self();
+  non_det_thds.insert(tid, turnCount); // This operation is required by the bounded non-determinism mechanism.
   assert(tid>=0 && tid < Scheduler::nthread);
   assert(tid == runq.front());
   dprintf("RRScheduler: %d blocks\n", self());
@@ -296,6 +301,9 @@ void RRScheduler::putTurn(bool at_thread_end)
     runq.push_back(tid);
     dprintf("RRScheduler: %d puts turn\n", self());
   }
+
+  // Enforce bounded non-determinism.
+  checkNonDetBound();
 
   next(at_thread_end, hasPoppedFront);
 }
@@ -519,6 +527,7 @@ int RRScheduler::nextRunnable(bool at_thread_end) {
       and find the next one. The head thread is the only thread
       that could modify the linked list of run queue, so it is safe. **/
       runq.pop_front();  
+      non_det_thds.insert(headElem->tid, turnCount); // This operation is required by the bounded non-determinism mechanism.
     } else {
       dprintf("RRScheduler::nextRunnable at_thread_end %d, self %d, headElem tid %d, head status %d, self status %d\n",
         at_thread_end, self(), headElem->tid, headElem->status, runq.get_my_elem(self())->status);
@@ -555,5 +564,19 @@ bool RRScheduler::tryPutTurn() {
     pthread_spin_unlock(&cur->spin_lock);
   }
   return false;
+}
+
+void RRScheduler::checkNonDetBound() { 
+  if (non_det_thds.size() > 0) {
+    int tid = non_det_thds.first_thread();
+    unsigned clock = non_det_thds.get_clock(tid);
+    if (turnCount > clock + options::non_det_clock_bound) {
+      //assert(!runq.in(tid));
+      runq.push_back(tid);
+      non_det_thds.erase(tid);
+      dprintf("checkNonDetBound: current logical clock %u, first non det tid %d, my tid %d, non det logical clock %u, \
+        try to block the deterministict part of the system.\n", turnCount, tid, self(), clock);
+    }
+  }
 }
 

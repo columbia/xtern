@@ -293,7 +293,7 @@ void RecorderRT<RecordSerializer>::idle_sleep(void) {
   if (options::record_runtime_stat && pthread_self() != idle_th) \
      stat.nDetPthreadSyncOp++; \
   timespec sched_time = update_time();
-  //fprintf(stderr, "\n\nSCHED_TIMER_START ins %p, pid %d, self %u, tid %d, function %s\n", (void *)ins, getpid(), (unsigned)pthread_self(), _S::self(), __FUNCTION__);
+  //fprintf(stderr, "\n\nSCHED_TIMER_START ins %p, pid %d, self %u, tid %d, turnCount %u, function %s\n", (void *)ins, getpid(), (unsigned)pthread_self(), _S::self(), _S::turnCount, __FUNCTION__);
 
 #define SCHED_TIMER_END_COMMON(syncop, ...) \
   int backup_errno = errno; \
@@ -1535,6 +1535,7 @@ void RecorderRT<_S>::nonDetStart() {
   /** Reuse existing xtern API. Get turn, remove myself from runq, and then pass turn. This 
   operation is determinisitc since we get turn. **/
   _S::block();
+  dprintf("nonDetStart is done, tid %d, self %u, turnCount %u\n", _S::self(), (unsigned)pthread_self(), _S::turnCount);
   assert(!inNonDet);
   inNonDet = true;
 }
