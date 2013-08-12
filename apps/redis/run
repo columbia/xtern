@@ -22,12 +22,12 @@ runRedis(){
 	killall -9 redis-server &> /dev/null
 }
 
-#SCHED="rr"
-#PRELOAD_LIB=$XTERN_ROOT/dync_hook/interpose.so
-#echo "Running redis with $PRELOAD_LIB..."
-#runRep;
-
-SCHED="random"
-PRELOAD_LIB=$XTERN_ROOT/eval/rand-intercept/rand-intercept.so
+SCHED="rr"
+PRELOAD_LIB=$XTERN_ROOT/dync_hook/interpose.so
 echo "Running redis with $PRELOAD_LIB..."
 runRedis;
+
+#SCHED="random"
+#PRELOAD_LIB=$XTERN_ROOT/eval/rand-intercept/rand-intercept.so
+#echo "Running redis with $PRELOAD_LIB..."
+#runRedis;
