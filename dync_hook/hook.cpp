@@ -96,6 +96,7 @@ void *get_eip()
 }
 
 #include "spec_hooks.cpp"
+#include "template.h"
 #include "template.cpp"
 #include "annotation_hooks.cpp"
 

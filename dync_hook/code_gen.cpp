@@ -105,28 +105,10 @@ bool read_line(FILE *fin, string &ret)
 	}
 }
 
-void add_rdtsc_decl(FILE *hook_file) {
-  assert(hook_file);
-  fprintf(hook_file, "__thread FILE *rdtsc_log = NULL;\n\n");
-  fprintf(hook_file, "void get_rdtsc_op(const char *op_name, const char *op_suffix, int print_depth) {\n");
-  fprintf(hook_file, "  if (rdtsc_log == NULL) {\n");
-  fprintf(hook_file, "    char log_path[1024];\n");
-  fprintf(hook_file, "    memset(log_path, 0, 1024);\n");
-  fprintf(hook_file, "    snprintf(log_path, 1024, \"%cs/pself-tid-%cu.txt\", options::rdtsc_output_dir.c_str(), (unsigned)pthread_self());\n", 37, 37);
-  fprintf(hook_file, "    rdtsc_log = fopen(log_path, \"w\");\n");
-  fprintf(hook_file, "    assert(rdtsc_log);\n");
-  fprintf(hook_file, "  }\n");
-  fprintf(hook_file, "  for (int i = 0; i < print_depth; i++)\n");
-  fprintf(hook_file, "    fprintf(rdtsc_log, \"	\");\n");
-  fprintf(hook_file, "  fprintf(rdtsc_log, \"%cs %cs %cld\", op_name, op_suffix, (long)0);\n", 37, 37, 37);
-  fprintf(hook_file, "}\n\n");
-}
-
 void convert(FILE *fin)
 {
   FILE *hook_cpp = fopen("template.cpp", "w");
   FILE *types = fopen("hook_type_def.h", "w");
-  add_rdtsc_decl(hook_cpp);
 /*
   fprintf(hook_cpp, "#include <pthread.h>\n");
 	fprintf(hook_cpp, "#include <stdio.h>\n");
