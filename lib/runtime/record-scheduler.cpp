@@ -142,10 +142,12 @@ void RRScheduler::check_wakeup()
       // This runq.in() call is safe, because check_wakeup() can only be called by 
       // the thread holding the turn.
       if (!runq.in(*itr)) {
-        runq.push_back(*itr);   
-        dprintf("check_wakeup: current logical clock %u, first non det tid %d, my tid %d, non det logical clock %u, \
-          the system is within bounded non-determinism.\n", turnCount, *itr, self(), non_det_thds.get_clock(*itr));
-        non_det_thds.erase(*itr); // This operation is required by the bounded non-determinism mechanism.
+        runq.push_back(*itr);
+        if (options::enforce_non_det_clock_bound) {
+          dprintf("check_wakeup: current logical clock %u, first non det tid %d, my tid %d, non det logical clock %u, \
+            the system is within bounded non-determinism.\n", turnCount, *itr, self(), non_det_thds.get_clock(*itr));
+          non_det_thds.erase(*itr); // This operation is required by the bounded non-determinism mechanism.
+        }
       }
     }
     inter_pro_wakeup_tids.clear();
@@ -257,7 +259,8 @@ int RRScheduler::block()
 {
   getTurn();
   int tid = self();
-  non_det_thds.insert(tid, turnCount); // This operation is required by the bounded non-determinism mechanism.
+  if (options::enforce_non_det_clock_bound)
+    non_det_thds.insert(tid, turnCount); // This operation is required by the bounded non-determinism mechanism.
   assert(tid>=0 && tid < Scheduler::nthread);
   assert(tid == runq.front());
   dprintf("RRScheduler: %d blocks\n", self());
@@ -527,7 +530,8 @@ int RRScheduler::nextRunnable(bool at_thread_end) {
       and find the next one. The head thread is the only thread
       that could modify the linked list of run queue, so it is safe. **/
       runq.pop_front();  
-      non_det_thds.insert(headElem->tid, turnCount); // This operation is required by the bounded non-determinism mechanism.
+      if (options::enforce_non_det_clock_bound)
+        non_det_thds.insert(headElem->tid, turnCount); // This operation is required by the bounded non-determinism mechanism.
     } else {
       dprintf("RRScheduler::nextRunnable at_thread_end %d, self %d, headElem tid %d, head status %d, self status %d\n",
         at_thread_end, self(), headElem->tid, headElem->status, runq.get_my_elem(self())->status);
@@ -567,7 +571,7 @@ bool RRScheduler::tryPutTurn() {
 }
 
 void RRScheduler::checkNonDetBound() { 
-  if (non_det_thds.size() > 0) {
+  if (options::enforce_non_det_clock_bound && non_det_thds.size() > 0) {
     int tid = non_det_thds.first_thread();
     unsigned clock = non_det_thds.get_clock(tid);
     if (turnCount > clock + options::non_det_clock_bound) {
