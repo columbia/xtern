@@ -18,6 +18,7 @@ static __inline__ unsigned long long rdtsc(void)
 //__thread
 // per process.
 FILE *rdtsc_log = NULL;
+pthread_spinlock_t rdtsc_lock;
 
 void record_rdtsc_op(const char *op_name, const char *op_suffix, int print_depth) {
   if (options::record_rdtsc) {
@@ -28,10 +29,14 @@ void record_rdtsc_op(const char *op_name, const char *op_suffix, int print_depth
       mkdir(options::rdtsc_output_dir.c_str(), 0777);
       rdtsc_log = fopen(log_path, "w");
       assert(rdtsc_log);
+      pthread_spin_init(&rdtsc_lock, 0);
     }
+    // FIXME: should add a spin lock to protect here, maybe.
+    pthread_spin_lock(&rdtsc_lock);
     for (int i = 0; i < print_depth; i++)
       fprintf(rdtsc_log, "	");
     fprintf(rdtsc_log, "%u %s %s %llu\n", (unsigned)pthread_self(), op_name, op_suffix, rdtsc());
+    pthread_spin_unlock(&rdtsc_lock);
   }
   //fprintf(stderr, "%u : %s %s %llu\n", (unsigned)pthread_self(), op_name, op_suffix, rdtsc());
 }

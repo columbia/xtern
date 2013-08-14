@@ -22,6 +22,9 @@ Installing Parrot (xtern)
 > sudo easy_install-2.7 lxml
 > sudo apt-get install libgomp1 libgmp-dev libmpfr-dev libmpc-dev
 
+And also install some libraries for some applications.
+> sudo apt-get install libmp3lame-dev
+
 
 1. Add $XTERN_ROOT (the absolute path of "xtern") into environment variables
 in your ~/.bashrc. Run "echo $XTERN_ROOT" and "echo $LD_LIBRARY_PATH"
