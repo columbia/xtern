@@ -30,12 +30,15 @@ sub processSortedFile {
 	my $delta;
 
 	# global states.
+	my $numTid = 0;
+	my %tidMap;								# map from pthread self id to the showing up tid order.
+	my %startClocks; 								# key is tid+op
+	my %endClocks; 								# key is tid+op
+	my $globalSyncTime = 0;
+	my %tidClocks;								# key is tid
+	my %syncClocks;								# key is op
 	my $startClock = 0;
-	my $endClock;
-	my $syncWaitTime = 0.0; # global wait time in sync operations.
-	my $globalState = "CLOSE";	# can be OPEN, or CLOSE.
-	my $globalSyncDepth = 0;
-	my $globalStartClock = 0;
+	my $endClock = 0;
 
 
 	# Open the file and process it.
@@ -49,31 +52,47 @@ sub processSortedFile {
 		chomp($clock);
 		#print "PRINT $tid $op $opSuffix $clock\n";
 
-		# Calculate global wait time. I use a conservative way, the "projecting" method.
+		# update start and end clock.
 		if ($startClock == 0) {
 			$startClock = $clock;
 		}
-		$endClock = $clock;	
-		
+		$endClock = $clock;
+
 		if ($opSuffix eq "START") {
-			if ($globalState eq "CLOSE" && $globalSyncDepth == 0) {
-				$globalStartClock = $clock;
-				$globalState = "OPEN";
-				dbg "DEBUG: sync wait time OPEN by $tid $op $opSuffix $clock\n";
+			$startClocks{$tid.$key} = $clock;
+			if ($tidMap{$tid} eq "") {
+				$tidMap{$tid} = $numTid;
+				$numTid++;
 			}
-			$globalSyncDepth = $globalSyncDepth + 1;
 		} else {
-			$globalSyncDepth = $globalSyncDepth - 1;
-			if ($globalSyncDepth == 0 && $globalState eq "OPEN") {
-				$globalState = "CLOSE";
-				$delta = $clock - $globalStartClock;
-				$syncWaitTime = $syncWaitTime + $delta;
-				$globalStartClock = 0;
-				dbg "DEBUG: sync wait time CLOSE by $tid $op $opSuffix $clock, delta $delta, sync wait time $syncWaitTime\n\n";
+			$endClocks{$tid.$key} = $clock;
+			# And update stats here.
+			$delta = $endClocks{$tid.$key} - $startClocks{$tid.$key};
+			if ($delta > 1e6) {
+				dbg "$tid $op delta: (end: $endClocks{$tid.$key}, start: $startClocks{$tid.$key}) $delta.\n";
 			}
+
+			# Update global stat.
+			$globalSyncTime += $delta;
+
+			# Update per thread stat.
+			if ($tidClocks{$tid} eq "") {
+				#dbg "New thread $tid.\n";
+				$tidClocks{$tid} = $delta;
+			} else {
+				#dbg "Old thread $tid.\n";
+				$tidClocks{$tid} += $delta;
+			}
+
+			# Update per sync op stat.
+			if ($syncClocks{$op} eq "") {
+				$syncClocks{$op} = $delta;
+			} else {
+				$syncClocks{$op} += $delta;
+			}
+
 		}
 
-		# Calculate per-sync operation wait time.
 		
 	}
 	close(LOG);
@@ -81,8 +100,23 @@ sub processSortedFile {
 	# Print stat.
 	print "\n\n\n";
 	print "CPU frequency $CPUFREQ MHz.\n";
-	print "Global execution clock $totalClock (".($endClock - $startClock)/$CPUFREQ*0.000001." s).\n";
-	print "Global sync wait clock $syncWaitTime (".$syncWaitTime/$CPUFREQ*0.000001." s).\n";
+	print "Global execution clock ".($endClock - $startClock)." (".($endClock - $startClock)/$CPUFREQ*0.000001." s).\n";
+
+	# Per tid.
+	print "\nSorted by sync wait time, ascending:\n";
+	print "Global sync wait clock $globalSyncTime of all threads (".$globalSyncTime/$CPUFREQ*0.000001." s).\n";
+	for $key ( sort {$tidClocks{$a} <=> $tidClocks{$b}} keys %tidClocks) {
+		print "Thread $tidMap{$key} (pthread self $key) sync wait time $tidClocks{$key} (".$tidClocks{$key}/$CPUFREQ*0.000001." s).\n";
+	}
+	print "\n";
+
+	# Per sync.
+	print "\nSorted by sync wait time, ascending:\n";
+	for $key ( sort {$syncClocks{$a} <=> $syncClocks{$b}} keys %syncClocks) {
+		print "Sync $key sync wait time $syncClocks{$key} (".$syncClocks{$key}/$CPUFREQ*0.000001." s).\n";
+	}
+	print "\n";
+
 	print "\n\n\n";
 }
 
@@ -96,7 +130,7 @@ sub parseLog {
 		next if ($file =~ m/^sorted/);
 		print "Processing $dirPath/$file...\n";
 
-		system("sort -t \" \" -k4 $file > sorted-$file");
+		#system("sort -t \" \" -k4 $file > sorted-$file");
 		processSortedFile("$file");
 	}
 }
