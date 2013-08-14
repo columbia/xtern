@@ -23,30 +23,32 @@ extern "C" void FUNC_NAME(ARGS_WITH_NAME){
   dlclose(handle);
 
 #ifdef __USE_TERN_RUNTIME
-  if (Space::isApp() && options::DMT) {
-
+  if (Space::isApp()) {
+    if (options::DMT) {
+      record_rdtsc_op("FUNC_NAME", "START", 0);
 #ifdef __NEED_INPUT_INSID
-    void *eip = 0;
-    if (options::dync_geteip) {
-      Space::enterSys();
-      eip = get_eip();
-      Space::exitSys();
-    }
-    tern_FUNC_NAME((unsigned)(uint64_t) eip, ARGS_ONLY_NAME);
+      void *eip = 0;
+      if (options::dync_geteip) {
+        Space::enterSys();
+        eip = get_eip();
+        Space::exitSys();
+      }
+      tern_FUNC_NAME((unsigned)(uint64_t) eip, ARGS_ONLY_NAME);
 #else
-    tern_FUNC_NAME(ARGS_ONLY_NAME);
+      tern_FUNC_NAME(ARGS_ONLY_NAME);
 #endif
-
-#ifdef PRINT_DEBUG
-    fprintf(stdout, "%04d: FUNC_NAME is hooked.\n", (int) pthread_self());
-#endif
-    return; 
+      record_rdtsc_op("FUNC_NAME", "END", 0);
+      return; 
+    } else {// For performance debugging, by doing this, we are still able to get the sync wait time for non-det mode.
+      record_rdtsc_op("FUNC_NAME", "START", 0);
+      Space::enterSys();
+      orig_func(ARGS_ONLY_NAME);
+      Space::exitSys();
+      record_rdtsc_op("FUNC_NAME", "END", 0);
+      return;
+    }
   }
 #else
-#endif
-
-#ifdef PRINT_DEBUG
-  fprintf(stdout, "%04d: FUNC_NAME is hooked.\n", (int) pthread_self());
 #endif
 
   orig_func(ARGS_ONLY_NAME);
