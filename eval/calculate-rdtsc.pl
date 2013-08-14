@@ -96,7 +96,7 @@ sub parseLog {
 		next if ($file =~ m/^sorted/);
 		print "Processing $dirPath/$file...\n";
 
-		#system("sort -t \" \" -k4 $file > sorted-$file");
+		system("sort -t \" \" -k4 $file > sorted-$file");
 		processSortedFile("$file");
 	}
 }

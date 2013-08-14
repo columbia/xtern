@@ -35,7 +35,7 @@ struct sync_op_entry {
 pthread_spinlock_t rdtsc_lock;
 const size_t max_v_size = 100000000;
 std::vector<sync_op_entry *> rdtsc_log;
-size_t rdtsc_index = 0;
+size_t rdtsc_index = -1;
 
 void process_rdtsc_log(void) {
   printf("Storing rdtsc log...\n");
@@ -58,8 +58,9 @@ void process_rdtsc_log(void) {
 
 void record_rdtsc_op(const char *op_name, const char *op_suffix, int print_depth) {
   if (options::record_rdtsc) {
-    if (rdtsc_log.size() == 0) {
+    if (rdtsc_index == -1) {
       pthread_spin_init(&rdtsc_lock, 0);
+        printf("At exit...\n");
       atexit(process_rdtsc_log);
       rdtsc_log.reserve (max_v_size);
       rdtsc_index = 0;
@@ -67,15 +68,14 @@ void record_rdtsc_op(const char *op_name, const char *op_suffix, int print_depth
 
     struct sync_op_entry *entry = new struct sync_op_entry;    
     entry->tid = (unsigned)pthread_self();
-    //for (int i = 0; i < print_depth; i++)
-    //  entry.op += "	";
+    for (int i = 0; i < print_depth; i++)
+      entry->op += "	";
     entry->op += op_name;
     entry->op_suffix = op_suffix;
-    entry->clock = rdtsc();
 
     pthread_spin_lock(&rdtsc_lock);
+    entry->clock = rdtsc();
     assert(rdtsc_index < max_v_size && "Please pre-allocated a bigger vector size for rdtsc log.");
-    //fprintf(rdtsc_log, "%u %s %s %llu\n", (unsigned)pthread_self(), op_name, op_suffix, rdtsc());
     rdtsc_log[rdtsc_index] = entry;
     rdtsc_index++;
     pthread_spin_unlock(&rdtsc_lock);
