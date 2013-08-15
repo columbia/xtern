@@ -6,6 +6,7 @@ extern "C" FUNC_RET_TYPE FUNC_NAME(ARGS_WITH_NAME){
 
   void * handle;
   FUNC_RET_TYPE ret;
+  void *eip = 0;
 
   if (!orig_func) {
     if(!(handle=dlopen("LIB_PATH", RTLD_LAZY))) {
@@ -28,26 +29,30 @@ extern "C" FUNC_RET_TYPE FUNC_NAME(ARGS_WITH_NAME){
 #ifdef __USE_TERN_RUNTIME
   if (Space::isApp()) {
     if (options::DMT) {
-      record_rdtsc_op("FUNC_NAME", "START", 0);
 #ifdef __NEED_INPUT_INSID
-      void *eip = 0;
       if (options::dync_geteip) {
         Space::enterSys();
         eip = get_eip();
         Space::exitSys();
       }
+      record_rdtsc_op("FUNC_NAME", "START", 0, eip);
       ret = tern_FUNC_NAME((unsigned)(uint64_t) eip, ARGS_ONLY_NAME);
 #else
       ret = tern_FUNC_NAME(ARGS_ONLY_NAME);
 #endif
-      record_rdtsc_op("FUNC_NAME", "END", 0);
+      record_rdtsc_op("FUNC_NAME", "END", 0, eip);
       return ret;
     } else {// For performance debugging, by doing this, we are still able to get the sync wait time for non-det mode.
-      record_rdtsc_op("FUNC_NAME", "START", 0);
+      if (options::dync_geteip) {
+        Space::enterSys();
+        eip = get_eip();
+        Space::exitSys();
+      }
+      record_rdtsc_op("FUNC_NAME", "START", 0, eip);
       Space::enterSys();
       ret = orig_func(ARGS_ONLY_NAME);
       Space::exitSys();
-      record_rdtsc_op("FUNC_NAME", "END", 0);
+      record_rdtsc_op("FUNC_NAME", "END", 0, eip);
       return ret;
     }
   } 

@@ -24,11 +24,14 @@ struct sync_op_entry {
   std::string op;
   std::string op_suffix;
   unsigned long long clock;
+  void *eip;
+  
   sync_op_entry() {
     tid = 0;
     op = "";
     op_suffix = "";
     clock = 0;
+    eip = NULL;
   }
 };
 
@@ -48,7 +51,7 @@ void process_rdtsc_log(void) {
 
   for (size_t i = 0; i < rdtsc_index; i++) {
     struct sync_op_entry *entry = rdtsc_log[i];
-    fprintf(f, "%u %s %s %llu\n", entry->tid, entry->op.c_str(), entry->op_suffix.c_str(), entry->clock);
+    fprintf(f, "%u %s %s %llu %p\n", entry->tid, entry->op.c_str(), entry->op_suffix.c_str(), entry->clock, entry->eip);
     delete entry;
   }
   rdtsc_log.clear();
@@ -56,7 +59,7 @@ void process_rdtsc_log(void) {
   fclose(f);
 }
 
-void record_rdtsc_op(const char *op_name, const char *op_suffix, int print_depth) {
+void record_rdtsc_op(const char *op_name, const char *op_suffix, int print_depth, void *eip) {
   if (options::record_rdtsc) {
     if (rdtsc_index == -1) {
       pthread_spin_init(&rdtsc_lock, 0);
@@ -72,6 +75,7 @@ void record_rdtsc_op(const char *op_name, const char *op_suffix, int print_depth
       entry->op += "	";
     entry->op += op_name;
     entry->op_suffix = op_suffix;
+    entry->eip = eip;
 
     pthread_spin_lock(&rdtsc_lock);
     entry->clock = rdtsc();

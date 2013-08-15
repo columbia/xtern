@@ -28,15 +28,16 @@ sub processSortedFile {
 	my $opSuffix;
 	my $clock;
 	my $delta;
+	my $eip;
 
 	# global states.
 	my $numTid = 0;
 	my %tidMap;								# map from pthread self id to the showing up tid order.
-	my %startClocks; 								# key is tid+op
-	my %endClocks; 								# key is tid+op
+	my %startClocks; 								# key is tid+op+eip
+	my %endClocks; 								# key is tid+op+eip
 	my $globalSyncTime = 0;
 	my %tidClocks;								# key is tid
-	my %syncClocks;								# key is op
+	my %syncClocks;								# key is op+eip
 	my $startClock = 0;
 	my $endClock = 0;
 
@@ -49,7 +50,8 @@ sub processSortedFile {
 		$op = $fields[1];
 		$opSuffix = $fields[2];
 		$clock = $fields[3];
-		chomp($clock);
+		$eip = $fields[4];
+		chomp($eip);
 		#print "PRINT $tid $op $opSuffix $clock\n";
 
 		# update start and end clock.
@@ -59,17 +61,17 @@ sub processSortedFile {
 		$endClock = $clock;
 
 		if ($opSuffix eq "START") {
-			$startClocks{$tid.$key} = $clock;
+			$startClocks{$tid.$key.$eip} = $clock;
 			if ($tidMap{$tid} eq "") {
 				$tidMap{$tid} = $numTid;
 				$numTid++;
 			}
 		} else {
-			$endClocks{$tid.$key} = $clock;
+			$endClocks{$tid.$key.$eip} = $clock;
 			# And update stats here.
-			$delta = $endClocks{$tid.$key} - $startClocks{$tid.$key};
+			$delta = $endClocks{$tid.$key.$eip} - $startClocks{$tid.$key.$eip};
 			if ($delta > 1e6) {
-				dbg "$tid $op delta: (end: $endClocks{$tid.$key}, start: $startClocks{$tid.$key}) $delta.\n";
+				dbg "$tid $op eip $eip delta: (end: $endClocks{$tid.$key.$eip}, start: $startClocks{$tid.$key.$eip}) $delta.\n";
 			}
 
 			# Update global stat.
@@ -85,10 +87,10 @@ sub processSortedFile {
 			}
 
 			# Update per sync op stat.
-			if ($syncClocks{$op} eq "") {
-				$syncClocks{$op} = $delta;
+			if ($syncClocks{$op.".".$eip} eq "") {
+				$syncClocks{$op.".".$eip} = $delta;
 			} else {
-				$syncClocks{$op} += $delta;
+				$syncClocks{$op.".".$eip} += $delta;
 			}
 
 		}
@@ -127,7 +129,7 @@ sub parseLog {
 	while (my $file = readdir(DIR)) {
 		next if ($file =~ m/^\./);
 		next if ($file =~ m/\.log/);
-		next if ($file =~ m/^sorted/);
+		next if (!($file =~ m/^pself/));
 		print "Processing $dirPath/$file...\n";
 
 		#system("sort -t \" \" -k4 $file > sorted-$file");
