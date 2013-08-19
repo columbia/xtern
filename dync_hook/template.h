@@ -1,3 +1,5 @@
+#include <sys/stat.h>
+#include <sys/types.h>
 #include <vector>
 
 // Only support i386 and x86_64.
@@ -38,7 +40,7 @@ struct sync_op_entry {
 pthread_spinlock_t rdtsc_lock;
 const size_t max_v_size = 100000000;
 std::vector<sync_op_entry *> rdtsc_log;
-size_t rdtsc_index = -1;
+size_t rdtsc_index = (size_t)-1;
 
 void process_rdtsc_log(void) {
   printf("Storing rdtsc log...\n");
@@ -61,7 +63,7 @@ void process_rdtsc_log(void) {
 
 void record_rdtsc_op(const char *op_name, const char *op_suffix, int print_depth, void *eip) {
   if (options::record_rdtsc) {
-    if (rdtsc_index == -1) {
+    if (rdtsc_index == (size_t)-1) {
       pthread_spin_init(&rdtsc_lock, 0);
         printf("At exit...\n");
       atexit(process_rdtsc_log);
