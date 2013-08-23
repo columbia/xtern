@@ -1,41 +1,6 @@
-#include <sys/stat.h>
-#include <sys/types.h>
-#include <vector>
+#include "tern/runtime/rdtsc.h"
 
-// Only support i386 and x86_64.
-#if defined(__i386__)
-static __inline__ unsigned long long rdtsc(void)
-{
-  unsigned long long int x;
-     __asm__ volatile (".byte 0x0f, 0x31" : "=A" (x));
-     return x;
-}
-#elif defined(__x86_64__)
-static __inline__ unsigned long long rdtsc(void)
-{
-  unsigned hi, lo;
-  __asm__ __volatile__ ("rdtsc" : "=a"(lo), "=d"(hi));
-  return ( (unsigned long long)lo)|( ((unsigned long long)hi)<<32 );
-}
-#endif
-
-//__thread
-// per process.
-struct sync_op_entry {
-  unsigned tid;
-  std::string op;
-  std::string op_suffix;
-  unsigned long long clock;
-  void *eip;
-  
-  sync_op_entry() {
-    tid = 0;
-    op = "";
-    op_suffix = "";
-    clock = 0;
-    eip = NULL;
-  }
-};
+using namespace std;
 
 pthread_spinlock_t rdtsc_lock;
 const size_t max_v_size = 100000000;
@@ -74,7 +39,7 @@ void record_rdtsc_op(const char *op_name, const char *op_suffix, int print_depth
     struct sync_op_entry *entry = new struct sync_op_entry;    
     entry->tid = (unsigned)pthread_self();
     for (int i = 0; i < print_depth; i++)
-      entry->op += "	";
+      entry->op += "----"; // add print depth, just for easy looking.
     entry->op += op_name;
     entry->op_suffix = op_suffix;
     entry->eip = eip;
@@ -88,4 +53,3 @@ void record_rdtsc_op(const char *op_name, const char *op_suffix, int print_depth
   }
   //fprintf(stderr, "%u : %s %s %llu\n", (unsigned)pthread_self(), op_name, op_suffix, rdtsc());
 }
-

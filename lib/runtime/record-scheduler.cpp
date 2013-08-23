@@ -12,7 +12,7 @@
 #include <algorithm>
 #include <sched.h>
 #include "tern/options.h"
-//#include "../dync_hook/template.h"  TBD
+#include "tern/runtime/rdtsc.h"
 
 using namespace std;
 using namespace tern;
@@ -316,6 +316,7 @@ void RRScheduler::putTurn(bool at_thread_end)
 //@after with turn
 int RRScheduler::wait(void *chan, unsigned nturn)
 {
+  record_rdtsc_op("RRScheduler::wait", "START", 2, NULL); // record rdtsc, disabled by default, no performance impact.
   incTurnCount();
   int tid = self();
   assert(tid>=0 && tid < Scheduler::nthread);
@@ -328,6 +329,7 @@ int RRScheduler::wait(void *chan, unsigned nturn)
   next();
 
   getTurn();
+  record_rdtsc_op("RRScheduler::wait", "END", 2, NULL); // record rdtsc, disabled by default, no performance impact.
   return waits[tid].status;
 }
 

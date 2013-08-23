@@ -47,6 +47,7 @@
 #include "tern/space.h"
 #include "tern/options.h"
 #include "tern/hooks.h"
+#include "tern/runtime/rdtsc.h"
 
 #include <fstream>
 #include <map>
@@ -289,7 +290,9 @@ void RecorderRT<RecordSerializer>::idle_sleep(void) {
   if (options::enforce_non_det_annotations) \
      assert(!inNonDet); \
   timespec app_time = update_time(); \
+  record_rdtsc_op("GET_TURN", "START", 2, NULL); \
   _S::getTurn(); \
+  record_rdtsc_op("GET_TURN", "END", 2, NULL); \
   if (options::record_runtime_stat && pthread_self() != idle_th) \
      stat.nDetPthreadSyncOp++; \
   timespec sched_time = update_time();
@@ -1441,6 +1444,9 @@ void RecorderRT<_S>::lineupStart(long opaque_type) {
     return;
   }
   //fprintf(stderr, "lineupStart opaque_type %p, tid %d, waiting for turn...\n", (void *)opaque_type, _S::self());
+
+  record_rdtsc_op(__FUNCTION__, "START", 1, NULL); // Record rdtsc start, disabled by default.
+
   SCHED_TIMER_START;
   refcnt_bar_map::iterator bi = refcnt_bars.find(opaque_type);
   assert(bi != refcnt_bars.end() && "refcnt barrier is not initialized!");
@@ -1483,6 +1489,8 @@ void RecorderRT<_S>::lineupStart(long opaque_type) {
   }
    
   SCHED_TIMER_END(syncfunc::tern_lineup_start, (uint64_t)opaque_type);
+
+  record_rdtsc_op(__FUNCTION__, "END", 1, NULL); // Record rdtsc start, disabled by default.
 }
 
 template <typename _S>
