@@ -47,6 +47,7 @@ sub processSortedFile {
 	my %syncClocks;								# key is op+eip
 	my $startClock = 0;
 	my $endClock = 0;
+	my $allThreadsSyncWaitTime = 0;
 
 
 	# Open the file and process it.
@@ -69,19 +70,19 @@ sub processSortedFile {
 		$tidLastClocks{$tid} = $clock;
 
 		if ($opSuffix eq "START") {
-			$startClocks{$tid.$key.$eip} = $clock;
+			$startClocks{$tid.$op.$eip} = $clock;
 			if ($tidMap{$tid} eq "") {
 				$tidMap{$tid} = $numTid;
 				$numTid++;
 				$tidStartClocks{$tid} = $clock;
 			}
 		} else {
-			if (!($skipTid1 == 1 && $tidMap{$key} == 1)) { # check whether to skip tid 1, the idle thread of parrot.
-				$endClocks{$tid.$key.$eip} = $clock;
+			if (!($skipTid1 == 1 && $tidMap{$tid} == 1)) { # check whether to skip tid 1, the idle thread of parrot.
+				$endClocks{$tid.$op.$eip} = $clock;
 				# And update stats here.
-				$delta = $endClocks{$tid.$key.$eip} - $startClocks{$tid.$key.$eip};
-				if ($delta > 1e6) {
-					dbg "$tid $op eip $eip delta: (end: $endClocks{$tid.$key.$eip}, start: $startClocks{$tid.$key.$eip}) $delta.\n";
+				$delta = $endClocks{$tid.$op.$eip} - $startClocks{$tid.$op.$eip};
+				if ($delta > 1e7) {
+					dbg "Self $tid (tid $tidMap{$tid}) $op eip $eip delta: (end: $endClocks{$tid.$op.$eip}, start: $startClocks{$tid.$op.$eip}) $delta (".$delta/$CPUFREQ*0.000001." s).\n";
 				}
 
 				# Update global stat.
@@ -138,7 +139,11 @@ sub processSortedFile {
 	print "\nSorted by sync wait time, ascending:\n";
 	for $key ( sort {$syncClocks{$a} <=> $syncClocks{$b}} keys %syncClocks) {
 		print "Sync $key sync wait time $syncClocks{$key} (".$syncClocks{$key}/$CPUFREQ*0.000001." s, or ".100*$syncClocks{$key}/$allThreadsClocks."%).\n";
+		if (!($key =~ m/----/)) {	# Ignore the events with "----", only calculate the pthread sync events.
+			$allThreadsSyncWaitTime += $syncClocks{$key};
+		}
 	}
+	print "All threads $allThreadsClocks sync wait time $allThreadsSyncWaitTime (".$allThreadsSyncWaitTime/$CPUFREQ*0.000001." s, or ".100*$allThreadsSyncWaitTime/$allThreadsClocks."%).\n";
 	print "All threads $allThreadsClocks execution time $allThreadsClocks (".$allThreadsClocks/$CPUFREQ*0.000001." s).\n";
 	print "\n";
 
