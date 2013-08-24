@@ -3,7 +3,7 @@
 using namespace std;
 
 pthread_spinlock_t rdtsc_lock;
-const size_t max_v_size = 100000000;
+const size_t max_v_size = 300000000;
 std::vector<sync_op_entry *> rdtsc_log;
 size_t rdtsc_index = (size_t)-1;
 
