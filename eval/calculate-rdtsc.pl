@@ -45,6 +45,8 @@ sub processSortedFile {
 	my %tidLastClocks;							# key is tid, last can be start or end.
 	my $allThreadsClocks = 0;
 	my %syncClocks;								# key is op+eip
+	my %numSyncs;								# key is op+eip
+	my $numPthreadSync = 0;
 	my $startClock = 0;
 	my $endClock = 0;
 	my $allThreadsSyncWaitTime = 0;
@@ -81,27 +83,31 @@ sub processSortedFile {
 				$endClocks{$tid.$op.$eip} = $clock;
 				# And update stats here.
 				$delta = $endClocks{$tid.$op.$eip} - $startClocks{$tid.$op.$eip};
-				if ($delta > 1e7) {
+				if ($delta > 1e8) {
 					dbg "Self $tid (tid $tidMap{$tid}) $op eip $eip delta: (end: $endClocks{$tid.$op.$eip}, start: $startClocks{$tid.$op.$eip}) $delta (".$delta/$CPUFREQ*0.000001." s).\n";
 				}
 
-				# Update global stat.
-				$globalSyncTime += $delta;
+				if (!($op =~ m/----/)) { # Ignore parrot internal sync events for global sync wait time and per thread sync wait time.
+					# Update global stat.
+					$globalSyncTime += $delta;
 
-				# Update per thread stat.
-				if ($tidClocks{$tid} eq "") {
-					#dbg "New thread $tid.\n";
-					$tidClocks{$tid} = $delta;
-				} else {
-					#dbg "Old thread $tid.\n";
-					$tidClocks{$tid} += $delta;
+					# Update per thread stat.
+					if ($tidClocks{$tid} eq "") {
+						#dbg "New thread $tid.\n";
+						$tidClocks{$tid} = $delta;
+					} else {
+						#dbg "Old thread $tid.\n";
+						$tidClocks{$tid} += $delta;
+					}
 				}
 
 				# Update per sync op stat.
 				if ($syncClocks{$op.".".$eip} eq "") {
 					$syncClocks{$op.".".$eip} = $delta;
+					$numSyncs{$op.".".$eip} = 1;
 				} else {
 					$syncClocks{$op.".".$eip} += $delta;
+					$numSyncs{$op.".".$eip} += 1;
 				}
 			}
 
@@ -138,12 +144,13 @@ sub processSortedFile {
 	# Per sync.
 	print "\nSorted by sync wait time, ascending:\n";
 	for $key ( sort {$syncClocks{$a} <=> $syncClocks{$b}} keys %syncClocks) {
-		print "Sync $key sync wait time $syncClocks{$key} (".$syncClocks{$key}/$CPUFREQ*0.000001." s, or ".100*$syncClocks{$key}/$allThreadsClocks."%).\n";
+		print "Sync $key sync wait time (# $numSyncs{$key}) $syncClocks{$key} (".$syncClocks{$key}/$CPUFREQ*0.000001." s, or ".100*$syncClocks{$key}/$allThreadsClocks."%).\n";
 		if (!($key =~ m/----/)) {	# Ignore the events with "----", only calculate the pthread sync events.
 			$allThreadsSyncWaitTime += $syncClocks{$key};
+			$numPthreadSync += $numSyncs{$key};
 		}
 	}
-	print "All threads $allThreadsClocks sync wait time $allThreadsSyncWaitTime (".$allThreadsSyncWaitTime/$CPUFREQ*0.000001." s, or ".100*$allThreadsSyncWaitTime/$allThreadsClocks."%).\n";
+	print "All threads $allThreadsClocks Libc sync (# $numPthreadSync) wait time $allThreadsSyncWaitTime (".$allThreadsSyncWaitTime/$CPUFREQ*0.000001." s, or ".100*$allThreadsSyncWaitTime/$allThreadsClocks."%).\n";
 	print "All threads $allThreadsClocks execution time $allThreadsClocks (".$allThreadsClocks/$CPUFREQ*0.000001." s).\n";
 	print "\n";
 

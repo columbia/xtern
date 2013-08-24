@@ -32,18 +32,11 @@ static __inline__ unsigned long long rdtsc(void)
 // per process.
 struct sync_op_entry {
   unsigned tid;
-  std::string op;
-  std::string op_suffix;
+  const char *op;
+  const char *op_suffix;
+  unsigned op_print_depth;
   unsigned long long clock;
   void *eip;
-  
-  sync_op_entry() {
-    tid = 0;
-    op = "";
-    op_suffix = "";
-    clock = 0;
-    eip = NULL;
-  }
 };
 
 extern void process_rdtsc_log(void);

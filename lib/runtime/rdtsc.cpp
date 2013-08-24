@@ -16,9 +16,12 @@ void process_rdtsc_log(void) {
   FILE *f = fopen(log_path, "w");
   assert(f);
 
+  const char *opdeps[3] = {"", "----", "--------"};
+
   for (size_t i = 0; i < rdtsc_index; i++) {
     struct sync_op_entry *entry = rdtsc_log[i];
-    fprintf(f, "%u %s %s %llu %p\n", entry->tid, entry->op.c_str(), entry->op_suffix.c_str(), entry->clock, entry->eip);
+    assert(entry->op_print_depth < 3);
+    fprintf(f, "%u %s%s %s %llu %p\n", entry->tid, opdeps[entry->op_print_depth], entry->op, entry->op_suffix, entry->clock, entry->eip);
     delete entry;
   }
   rdtsc_log.clear();
@@ -30,7 +33,7 @@ void record_rdtsc_op(const char *op_name, const char *op_suffix, int print_depth
   if (options::record_rdtsc) {
     if (rdtsc_index == (size_t)-1) {
       pthread_spin_init(&rdtsc_lock, 0);
-        printf("At exit...\n");
+      //printf("At exit...\n");
       atexit(process_rdtsc_log);
       rdtsc_log.reserve (max_v_size);
       rdtsc_index = 0;
@@ -38,14 +41,14 @@ void record_rdtsc_op(const char *op_name, const char *op_suffix, int print_depth
 
     struct sync_op_entry *entry = new struct sync_op_entry;    
     entry->tid = (unsigned)pthread_self();
-    for (int i = 0; i < print_depth; i++)
-      entry->op += "----"; // add print depth, just for easy looking.
-    entry->op += op_name;
+    
+    entry->op = op_name;
     entry->op_suffix = op_suffix;
+    entry->op_print_depth = (unsigned)print_depth;
     entry->eip = eip;
 
     pthread_spin_lock(&rdtsc_lock);
-    entry->clock = rdtsc();
+    entry->clock = rdtsc(); // Put this into critical section, so the log is sorted.
     assert(rdtsc_index < max_v_size && "Please pre-allocated a bigger vector size for rdtsc log.");
     rdtsc_log[rdtsc_index] = entry;
     rdtsc_index++;
