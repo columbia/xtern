@@ -73,6 +73,9 @@ patch -p0 < patch/fmm.patch
 patch -p0 < patch/radiosity.patch
 patch -p0 < patch/volrend.patch
 patch -p0 < patch/barnes.patch
+# Uncomment below lu.patch for experiment with dbug.
+# Comment it out for experiment with xtern only.
+#patch -p0 < patch/fmm-dbug.patch
 
 # annotations
 cd parsec-3.0
