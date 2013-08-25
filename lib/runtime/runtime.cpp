@@ -879,6 +879,10 @@ int Runtime::__sem_init(unsigned insid, int &error, sem_t *sem, int pshared, uns
   dprintf("Runtime::%s pid %d, self %u start %p\n", __FUNCTION__, getpid(), (unsigned)pthread_self(), (void *)sem);
   ret = orig_func(sem, pshared, value);
   dprintf("Runtime::%s pid %d, self %u end\n", __FUNCTION__, getpid(), (unsigned)pthread_self());
+  ret = sem_init(sem, pshared, value); // Heming: do the "real" action here, since the latest dbug does not do 
+  // this. And this may cause problem for some programs (use pthread barriers 
+  // to enforce strong isolation safely, so some sync vars may be used in the 
+  // deterministic regions).
 #else
   ret = sem_init(sem, pshared, value);
 #endif
@@ -933,6 +937,10 @@ int Runtime::__pthread_mutex_init(unsigned insid, int &error, pthread_mutex_t *m
   dprintf("Runtime::%s pid %d, self %u start %p\n", __FUNCTION__, getpid(), (unsigned)pthread_self(), (void *)mutex);
   ret = orig_func(mutex, mutexattr);
   dprintf("Runtime::%s pid %d, self %u end\n", __FUNCTION__, getpid(), (unsigned)pthread_self());
+  ret = pthread_mutex_init(mutex, mutexattr); // Heming: init the "real" mutex here, since the latest dbug does not do 
+  // this. And this may cause problem for some programs (use pthread barriers 
+  // to enforce strong isolation safely, so some sync vars may be used in the 
+  // deterministic regions).
 #else
   ret = pthread_mutex_init(mutex, mutexattr);
 #endif
@@ -951,6 +959,10 @@ int Runtime::__pthread_mutex_destroy(unsigned insid, int &error, pthread_mutex_t
   dprintf("Runtime::%s pid %d, self %u start\n", __FUNCTION__, getpid(), (unsigned)pthread_self());
   ret = orig_func(mutex);
   dprintf("Runtime::%s pid %d, self %u end\n", __FUNCTION__, getpid(), (unsigned)pthread_self());
+  ret = pthread_mutex_destroy(mutex); // Heming: do the "real" action here, since the latest dbug does not do 
+  // this. And this may cause problem for some programs (use pthread barriers 
+  // to enforce strong isolation safely, so some sync vars may be used in the 
+  // deterministic regions).
 #else
   ret = pthread_mutex_destroy(mutex);
 #endif
