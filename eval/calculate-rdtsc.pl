@@ -154,6 +154,10 @@ sub processSortedFile {
 	print "All threads $allThreadsClocks execution time $allThreadsClocks (".$allThreadsClocks/$CPUFREQ*0.000001." s).\n";
 	print "\n";
 
+        print "$ARGV[0] FORMAT:	".($endClock - $startClock)/$CPUFREQ*0.000001."	".$allThreadsClocks/$CPUFREQ*0.000001."	".$syncClocks{"----lineupStart.(nil)"}/$CPUFREQ*0.000001.
+        	"	".$syncClocks{"--------GET_TURN.(nil)"}/$CPUFREQ*0.000001."	".$syncClocks{"--------RRScheduler::wait.(nil)"}/$CPUFREQ*0.000001.
+        	"	".$allThreadsSyncWaitTime/$CPUFREQ*0.000001."\n";
+
 	print "\n\n\n";
 }
 
@@ -176,8 +180,8 @@ chdir($ARGV[0]);
 parseLog($ARGV[0]);
 
 # clean up.
-system("tar zcvf $ARGV[0].tar.gz $ARGV[0]");
-system("rm -rf $ARGV[0]");
+#system("tar zcvf $ARGV[0].tar.gz $ARGV[0]");
+#system("rm -rf $ARGV[0]");
 
 chdir($curDir);
 
