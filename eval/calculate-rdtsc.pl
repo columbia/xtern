@@ -174,5 +174,10 @@ sub parseLog {
 
 chdir($ARGV[0]);
 parseLog($ARGV[0]);
+
+# clean up.
+system("tar zcvf $ARGV[0].tar.gz $ARGV[0]");
+system("rm -rf $ARGV[0]");
+
 chdir($curDir);
 
