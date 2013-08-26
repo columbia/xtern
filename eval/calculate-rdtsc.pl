@@ -154,7 +154,8 @@ sub processSortedFile {
 	print "All threads $allThreadsClocks execution time $allThreadsClocks (".$allThreadsClocks/$CPUFREQ*0.000001." s).\n";
 	print "\n";
 
-        print "$ARGV[0] FORMAT:	".($endClock - $startClock)/$CPUFREQ*0.000001."	".$allThreadsClocks/$CPUFREQ*0.000001."	".$syncClocks{"----lineupStart.(nil)"}/$CPUFREQ*0.000001.
+	@fields = split(/\//, @ARGV[0]);
+        print "$fields[scalar(@fields)-2] FORMAT:	".($endClock - $startClock)/$CPUFREQ*0.000001."	".$allThreadsClocks/$CPUFREQ*0.000001."	".$syncClocks{"----lineupStart.(nil)"}/$CPUFREQ*0.000001.
         	"	".$syncClocks{"--------GET_TURN.(nil)"}/$CPUFREQ*0.000001."	".$syncClocks{"--------RRScheduler::wait.(nil)"}/$CPUFREQ*0.000001.
         	"	".$allThreadsSyncWaitTime/$CPUFREQ*0.000001."\n";
 
