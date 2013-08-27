@@ -8,7 +8,7 @@ std::vector<sync_op_entry *> rdtsc_log;
 size_t rdtsc_index = (size_t)-1;
 
 void process_rdtsc_log(void) {
-  printf("Storing rdtsc log...\n");
+  fprintf(stderr, "Storing rdtsc log...\n");fflush(stderr);
   char log_path[1024];
   memset(log_path, 0, 1024);
   snprintf(log_path, 1024, "%s/pself-pid-%u.txt", options::rdtsc_output_dir.c_str(), (unsigned)getpid());
@@ -50,6 +50,8 @@ void record_rdtsc_op(const char *op_name, const char *op_suffix, int print_depth
 
     pthread_spin_lock(&rdtsc_lock);
     //assert(rdtsc_index < max_v_size && "Please pre-allocated a bigger vector size for rdtsc log.");
+    if (rdtsc_index%1000000 == 0)
+      fprintf(stderr, "rdtsc_index %u\n", (unsigned)rdtsc_index);
     if (rdtsc_index >= max_v_size) {
       process_rdtsc_log();
     }
