@@ -13,7 +13,7 @@ void process_rdtsc_log(void) {
   memset(log_path, 0, 1024);
   snprintf(log_path, 1024, "%s/pself-pid-%u.txt", options::rdtsc_output_dir.c_str(), (unsigned)getpid());
   mkdir(options::rdtsc_output_dir.c_str(), 0777);
-  FILE *f = fopen(log_path, "w");
+  FILE *f = fopen(log_path, "a+");
   assert(f);
 
   const char *opdeps[3] = {"", "----", "--------"};
@@ -27,6 +27,7 @@ void process_rdtsc_log(void) {
   rdtsc_log.clear();
   fflush(f);
   fclose(f);
+  rdtsc_index = 0;
 }
 
 void record_rdtsc_op(const char *op_name, const char *op_suffix, int print_depth, void *eip) {
@@ -48,8 +49,11 @@ void record_rdtsc_op(const char *op_name, const char *op_suffix, int print_depth
     entry->eip = eip;
 
     pthread_spin_lock(&rdtsc_lock);
+    //assert(rdtsc_index < max_v_size && "Please pre-allocated a bigger vector size for rdtsc log.");
+    if (rdtsc_index >= max_v_size) {
+      process_rdtsc_log();
+    }
     entry->clock = rdtsc(); // Put this into critical section, so the log is sorted.
-    assert(rdtsc_index < max_v_size && "Please pre-allocated a bigger vector size for rdtsc log.");
     rdtsc_log[rdtsc_index] = entry;
     rdtsc_index++;
     pthread_spin_unlock(&rdtsc_lock);
