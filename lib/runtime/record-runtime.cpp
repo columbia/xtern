@@ -167,7 +167,14 @@ void InstallRuntime() {
 
 template <typename _S>
 int RecorderRT<_S>::wait(void *chan, unsigned timeout) {
-  return _S::wait(chan, timeout);
+#ifdef XTERN_PLUS_DBUG
+  Runtime::__thread_waiting();
+#endif
+  int ret = _S::wait(chan, timeout);
+#ifdef XTERN_PLUS_DBUG
+  Runtime::__thread_active();
+#endif
+  return ret;
 }
 
 template <typename _S>
@@ -897,7 +904,7 @@ int RecorderRT<_S>::pthreadBarrierWait(unsigned ins, int &error,
   } else {
     ret = 0;
     //--_S::turnCount;  //  in _S::wait will increase it again. Heming 2012-Dec-17: do not decrement turnCount, dangerous and not necessary.
-    _S::wait(barrier);
+    wait(barrier);
   }
   sched_time = update_time();
 #ifdef xxx
@@ -1176,7 +1183,7 @@ int RecorderRT<_S>::pthreadCondWait(unsigned ins, int &error,
   _S::signal(mu);
 
   SCHED_TIMER_FAKE_END(syncfunc::pthread_cond_wait, (uint64_t)cv, (uint64_t)mu);
-  _S::wait(cv);
+  wait(cv);
   sched_time = update_time();
   errno = error;
   pthreadMutexLockHelper(mu);
@@ -1224,7 +1231,7 @@ int RecorderRT<_S>::pthreadCondTimedWait(unsigned ins, int &error,
   dprintf("Tid %d pthreadCondTimedWait physical time interval %ld.%ld, logical turns %u\n",
     _S::self(), (long)rel_time.tv_sec, (long)rel_time.tv_nsec, nTurns);
   unsigned timeout = _S::getTurnCount() + nTurns;
-  saved_ret = ret = _S::wait(cv, timeout);
+  saved_ret = ret = wait(cv, timeout);
   dprintf("timedwait return = %d, after %d turns\n", ret, _S::getTurnCount() - nturn);
 
   sched_time = update_time();
@@ -1341,7 +1348,7 @@ int RecorderRT<_S>::semTimedWait(unsigned ins, int &error, sem_t *sem,
   unsigned timeout = _S::getTurnCount() + relTimeToTurn(&rel_time);
   while((ret=sem_trywait(sem))) {
     assert(errno==EAGAIN && "failed sync calls are not yet supported!");
-    ret = _S::wait(sem, timeout);
+    ret = wait(sem, timeout);
     if(ret == ETIMEDOUT) {
       ret = -1;
       saved_err = ETIMEDOUT;
@@ -1471,7 +1478,7 @@ void RecorderRT<_S>::lineupStart(long opaque_type) {
     } 
   } else {
     if (b.isArriving()) {
-      _S::wait(&b, _S::getTurnCount() + b.timeout);
+      wait(&b, _S::getTurnCount() + b.timeout);
      
       // Handle timeout here, since the wait() would call getTurn and still grab the turn.
       if (b.nactive < b.count && b.isArriving()) {
@@ -1535,7 +1542,7 @@ void RecorderRT<_S>::nonDetStart() {
   i.e., all valid (except idle thread) xtern threads are paused.
   This wait works like a lineup with unlimited timeout, which is for 
   maximizing the non-det regions. **/
-  _S::wait(&nonDetCV);
+  wait(&nonDetCV);
 
   nNonDetWait--;
 
@@ -2157,7 +2164,7 @@ unsigned int RecorderRT<_S>::sleep(unsigned ins, int &error, unsigned int second
   SCHED_TIMER_START;
   // must call _S::getTurnCount with turn held
   unsigned timeout = _S::getTurnCount() + relTimeToTurn(&ts);
-  _S::wait(NULL, timeout);
+  wait(NULL, timeout);
   SCHED_TIMER_END(syncfunc::sleep, (uint64_t) seconds * 1000000000);
   if (options::exec_sleep)
     ::sleep(seconds);
@@ -2171,7 +2178,7 @@ int RecorderRT<_S>::usleep(unsigned ins, int &error, useconds_t usec)
   SCHED_TIMER_START;
   // must call _S::getTurnCount with turn held
   unsigned timeout = _S::getTurnCount() + relTimeToTurn(&ts);
-  _S::wait(NULL, timeout);
+  wait(NULL, timeout);
   SCHED_TIMER_END(syncfunc::usleep, (uint64_t) usec * 1000);
   if (options::exec_sleep)
     ::usleep(usec);
@@ -2186,7 +2193,7 @@ int RecorderRT<_S>::nanosleep(unsigned ins, int &error,
  SCHED_TIMER_START;
    // must call _S::getTurnCount with turn held
   unsigned timeout = _S::getTurnCount() + relTimeToTurn(req);
-  _S::wait(NULL, timeout);
+  wait(NULL, timeout);
   uint64_t nsec = !req ? 0 : (req->tv_sec * 1000000000 + req->tv_nsec); 
   SCHED_TIMER_END(syncfunc::nanosleep, (uint64_t) nsec);
   if (options::exec_sleep)

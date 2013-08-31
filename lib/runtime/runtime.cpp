@@ -128,6 +128,27 @@ void Runtime::__detach_self_from_dbug() {
     orig_func = (orig_func_type)resolveDbugFunc("dbug_off");
   orig_func();
 }
+
+void Runtime::__thread_waiting() {
+  typedef void (*orig_func_type)();
+  static orig_func_type orig_func;
+  if (!orig_func)
+    orig_func = (orig_func_type)resolveDbugFunc("dbug_thread_waiting");
+  fprintf(stderr, "\n\ndbug_thread_waiting start.\n\n");
+  orig_func();
+  fprintf(stderr, "\n\ndbug_thread_waiting end.\n\n");
+}
+
+void Runtime::__thread_active() {
+  typedef void (*orig_func_type)();
+  static orig_func_type orig_func;
+  if (!orig_func)
+    orig_func = (orig_func_type)resolveDbugFunc("dbug_thread_active");
+  fprintf(stderr, "\n\ndbug_thread_active start.\n\n");
+  orig_func();
+  fprintf(stderr, "\n\ndbug_thread_active end.\n\n");
+}
+
 #else
 static bool sock_nonblock (int fd)
 {
