@@ -134,9 +134,9 @@ void Runtime::__thread_waiting() {
   static orig_func_type orig_func;
   if (!orig_func)
     orig_func = (orig_func_type)resolveDbugFunc("dbug_thread_waiting");
-  fprintf(stderr, "\n\ndbug_thread_waiting start.\n\n");
+  fprintf(stderr, "\n\nPid %d self %u dbug_thread_waiting start.\n\n", getpid(), (unsigned)pthread_self());
   orig_func();
-  fprintf(stderr, "\n\ndbug_thread_waiting end.\n\n");
+  fprintf(stderr, "\n\nPid %d self %u dbug_thread_waiting end.\n\n", getpid(), (unsigned)pthread_self());
 }
 
 void Runtime::__thread_active() {

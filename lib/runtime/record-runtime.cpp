@@ -281,6 +281,7 @@ void RecorderRT<RecordSerializer>::idle_sleep(void) {
   if (_S::interProStart()) { \
     _S::block(); \
   }
+  //fprintf(stderr, "\n\nBLOCK_TIMER_START ins %p, pid %d, self %u, tid %d, turnCount %u, function %s\n", (void *)ins, getpid(), (unsigned)pthread_self(), _S::self(), _S::turnCount, __FUNCTION__);
 // At this moment, since self-thread is ahead of the run queue, so this block() should be very fast.
 // TBD: do we need logging here? We can, but not sure whether we need to do this.
 
@@ -291,6 +292,7 @@ void RecorderRT<RecordSerializer>::idle_sleep(void) {
     _S::wakeup(); \
   } \
   errno = backup_errno;
+  //fprintf(stderr, "\n\nBLOCK_TIMER_END ins %p, pid %d, self %u, tid %d, turnCount %u, function %s\n", (void *)ins, getpid(), (unsigned)pthread_self(), _S::self(), _S::turnCount, __FUNCTION__);
 
 #define SCHED_TIMER_START \
   unsigned nturn; \
@@ -316,7 +318,7 @@ void RecorderRT<RecordSerializer>::idle_sleep(void) {
   SCHED_TIMER_END_COMMON(syncop, __VA_ARGS__); \
   _S::putTurn();\
   errno = backup_errno;
-  //fprintf(stderr, "\n\nSCHED_TIMER_END pid %d, tid %d, function %s\n", getpid(), _S::self(), __FUNCTION__);
+  //fprintf(stderr, "\n\nSCHED_TIMER_END ins %p, pid %d, self %u, tid %d, turnCount %u, function %s\n", (void *)ins, getpid(), (unsigned)pthread_self(), _S::self(), _S::turnCount, __FUNCTION__);
 
 #define SCHED_TIMER_THREAD_END(syncop, ...) \
   SCHED_TIMER_END_COMMON(syncop, __VA_ARGS__); \
@@ -1542,7 +1544,9 @@ void RecorderRT<_S>::nonDetStart() {
   i.e., all valid (except idle thread) xtern threads are paused.
   This wait works like a lineup with unlimited timeout, which is for 
   maximizing the non-det regions. **/
-  wait(&nonDetCV);
+  /* Do not call the wait() here, but _S::wait(), because we do not want to 
+  involved dbug_thread_waiting/active here. */
+  _S::wait(&nonDetCV);
 
   nNonDetWait--;
 
