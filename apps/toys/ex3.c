@@ -23,8 +23,9 @@ thread(void *args)
   //assert(pthread_mutex_unlock(&mutex) == 0);
   pthread_barrier_wait(&bar);
   if ((long)args == 2) {
-    fprintf(stderr, "sleep for 5 seconds...\n");
-    usleep(5000000);
+    fprintf(stderr, "start sleep for 5 seconds...\n");
+    sleep(500);
+    fprintf(stderr, "finish sleep for 5 seconds...\n");
     return NULL;
   }
 
@@ -42,11 +43,11 @@ thread(void *args)
   fprintf(stderr, "\n\n============== end non-det self %u , sum %ld =====================\n\n\n\n\n\n\n\n\n\n", (unsigned)pthread_self(), sum);
   pcs_exit();
 
-	for (int i = 0; i < 1e1; i++) {
+	/*for (int i = 0; i < 1e1; i++) {
       assert(pthread_mutex_lock(&mutex) == 0);
       //fprintf(stderr, "Critical section slave3 %d.\n", i);
       assert(pthread_mutex_unlock(&mutex) == 0);
-  }
+  }*/
 
   //pthread_exit(0);
   return NULL;
@@ -71,12 +72,12 @@ main(int argc, char *argv[])
   pthread_barrier_wait(&bar);
 
 
-  usleep(1);
-	for (i = 0; i < 1e3; i++) {
+  //usleep(1);
+	/*for (i = 0; i < 1e3; i++) {
       assert(pthread_mutex_lock(&mutex) == 0);
       //fprintf(stderr, "Critical section master %d.\n", i);
       assert(pthread_mutex_unlock(&mutex) == 0);
-  }
+  }*/
 
   for (i = 0; i < nt; i++)
     assert(pthread_join(tid[i], NULL) == 0);

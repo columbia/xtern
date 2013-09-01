@@ -82,15 +82,15 @@ struct Runtime {
   static void initDbug();
 
   /* Special functions to attach/detach a thread from dbug. */
-  static void __attach_self_to_dbug(); // dbug_on
-  static void __detach_self_from_dbug(); // dbug_off
   static void __thread_detach(); // dbug_detach
   static void __detach_barrier_end(int bar_id, int cnt); // dbug_barrier_off
 
   static void __thread_waiting();
   static void __thread_active();
 #endif
-
+  /* Thes two functions must be constantly declared because BLOCK_TIMER_START/END in record-runtime.cpp need them. */
+  static void __attach_self_to_dbug(); // dbug_on
+  static void __detach_self_from_dbug(); // dbug_off
 
   virtual int __pthread_mutex_init(unsigned insid, int &error, pthread_mutex_t *mutex, const  pthread_mutexattr_t *mutexattr);
   virtual int __pthread_mutex_destroy(unsigned insid, int &error, pthread_mutex_t *mutex);

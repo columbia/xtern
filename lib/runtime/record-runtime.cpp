@@ -280,13 +280,15 @@ void RecorderRT<RecordSerializer>::idle_sleep(void) {
   } \
   if (_S::interProStart()) { \
     _S::block(); \
-  }
+  } \
+  Runtime::__attach_self_to_dbug();
   //fprintf(stderr, "\n\nBLOCK_TIMER_START ins %p, pid %d, self %u, tid %d, turnCount %u, function %s\n", (void *)ins, getpid(), (unsigned)pthread_self(), _S::self(), _S::turnCount, __FUNCTION__);
 // At this moment, since self-thread is ahead of the run queue, so this block() should be very fast.
 // TBD: do we need logging here? We can, but not sure whether we need to do this.
 
 
 #define BLOCK_TIMER_END(syncop, ...) \
+  Runtime::__detach_self_from_dbug(); \
   int backup_errno = errno; \
   if (_S::interProEnd()) { \
     _S::wakeup(); \
@@ -305,7 +307,8 @@ void RecorderRT<RecordSerializer>::idle_sleep(void) {
   if (options::record_runtime_stat && pthread_self() != idle_th) \
      stat.nDetPthreadSyncOp++; \
   timespec sched_time = update_time();
-  //fprintf(stderr, "\n\nSCHED_TIMER_START ins %p, pid %d, self %u, tid %d, turnCount %u, function %s\n", (void *)ins, getpid(), (unsigned)pthread_self(), _S::self(), _S::turnCount, __FUNCTION__);
+  //if (_S::self() != 1)
+    //fprintf(stderr, "\n\nSCHED_TIMER_START ins %p, pid %d, self %u, tid %d, turnCount %u, function %s\n", (void *)ins, getpid(), (unsigned)pthread_self(), _S::self(), _S::turnCount, __FUNCTION__);
 
 #define SCHED_TIMER_END_COMMON(syncop, ...) \
   int backup_errno = errno; \
@@ -318,7 +321,8 @@ void RecorderRT<RecordSerializer>::idle_sleep(void) {
   SCHED_TIMER_END_COMMON(syncop, __VA_ARGS__); \
   _S::putTurn();\
   errno = backup_errno;
-  //fprintf(stderr, "\n\nSCHED_TIMER_END ins %p, pid %d, self %u, tid %d, turnCount %u, function %s\n", (void *)ins, getpid(), (unsigned)pthread_self(), _S::self(), _S::turnCount, __FUNCTION__);
+  //if (_S::self() != 1)
+    //fprintf(stderr, "\n\nSCHED_TIMER_END ins %p, pid %d, self %u, tid %d, turnCount %u, function %s\n", (void *)ins, getpid(), (unsigned)pthread_self(), _S::self(), _S::turnCount, __FUNCTION__);
 
 #define SCHED_TIMER_THREAD_END(syncop, ...) \
   SCHED_TIMER_END_COMMON(syncop, __VA_ARGS__); \

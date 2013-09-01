@@ -80,19 +80,6 @@ void Runtime::initDbug() {
   resolveDbugFunc("pthread_create");
 }
 
-void Runtime::__attach_self_to_dbug() {
-  dprintf("\nxtern::Runtime::__attach_self_to_mc pid %d thread self %u to dbug\n\n", getpid(), (unsigned)pthread_self());
-  //errno = error;
-  assert(!attachedToDbug);
-  attachedToDbug = true;
-  //dbug_on();
-  typedef void (*orig_func_type)();
-  static orig_func_type orig_func;
-  if (!orig_func)
-    orig_func = (orig_func_type)resolveDbugFunc("dbug_on");
-  orig_func();
-}
-
 void Runtime::__thread_detach() {
   dprintf("\nxtern::Runtime::__thread_detach pid %d thread self %u from dbug\n\n", getpid(), (unsigned)pthread_self());
   //assert(attachedToDbug);
@@ -116,19 +103,6 @@ void Runtime::__detach_barrier_end(int bar_id, int cnt) {
   orig_func(bar_id, cnt);
 }
 
-void Runtime::__detach_self_from_dbug() { 
-  dprintf("\nxtern::Runtime::__detach_self_from_mc pid %d thread self %u from dbug\n\n", getpid(), (unsigned)pthread_self());
-  //errno = error;
-  assert(attachedToDbug);
-  attachedToDbug = false;
-  //dbug_off();
-  typedef void (*orig_func_type)();
-  static orig_func_type orig_func;
-  if (!orig_func)
-    orig_func = (orig_func_type)resolveDbugFunc("dbug_off");
-  orig_func();
-}
-
 void Runtime::__thread_waiting() {
   typedef void (*orig_func_type)();
   static orig_func_type orig_func;
@@ -144,9 +118,9 @@ void Runtime::__thread_active() {
   static orig_func_type orig_func;
   if (!orig_func)
     orig_func = (orig_func_type)resolveDbugFunc("dbug_thread_active");
-  fprintf(stderr, "\n\ndbug_thread_active start.\n\n");
+  fprintf(stderr, "\n\nPid %d self %u dbug_thread_active start.\n\n", getpid(), (unsigned)pthread_self());
   orig_func();
-  fprintf(stderr, "\n\ndbug_thread_active end.\n\n");
+  fprintf(stderr, "\n\nPid %d self %u dbug_thread_active end.\n\n", getpid(), (unsigned)pthread_self());
 }
 
 #else
@@ -160,6 +134,36 @@ static bool sock_nonblock (int fd)
 #endif
 }
 #endif
+
+void Runtime::__attach_self_to_dbug() {
+#ifdef XTERN_PLUS_DBUG
+  fprintf(stderr, "\nxtern::Runtime::__attach_self_to_mc pid %d thread self %u to dbug\n\n", getpid(), (unsigned)pthread_self());
+  //errno = error;
+  assert(!attachedToDbug);
+  attachedToDbug = true;
+  //dbug_on();
+  typedef void (*orig_func_type)();
+  static orig_func_type orig_func;
+  if (!orig_func)
+    orig_func = (orig_func_type)resolveDbugFunc("dbug_on");
+  orig_func();
+#endif
+}
+
+void Runtime::__detach_self_from_dbug() {
+#ifdef XTERN_PLUS_DBUG
+  fprintf(stderr, "\nxtern::Runtime::__detach_self_from_mc pid %d thread self %u from dbug\n\n", getpid(), (unsigned)pthread_self());
+  //errno = error;
+  assert(attachedToDbug);
+  attachedToDbug = false;
+  //dbug_off();
+  typedef void (*orig_func_type)();
+  static orig_func_type orig_func;
+  if (!orig_func)
+    orig_func = (orig_func_type)resolveDbugFunc("dbug_off");
+  orig_func();
+#endif
+}
 
 Runtime::Runtime() {
 #ifdef XTERN_PLUS_DBUG
@@ -736,7 +740,7 @@ int Runtime::__epoll_wait(unsigned ins, int &error, int epfd, struct epoll_event
 unsigned int Runtime::sleep(unsigned ins, int &error, unsigned int seconds)
 {
   errno = error;
-  unsigned ret = ::sleep(seconds);
+  unsigned int ret = ::sleep(seconds);
   error = errno;
   return ret;
 }
