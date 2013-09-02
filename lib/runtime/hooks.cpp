@@ -807,6 +807,17 @@ pid_t tern_fork(unsigned ins)
   return ret;
 }
 
+int tern_execv(unsigned ins, const char *path, char *const argv[])
+{
+  int error = errno;
+  int ret;
+  Space::enterSys();
+  ret = Runtime::the->__execv(ins, error, path, argv);
+  Space::exitSys();
+  errno = error;
+  return ret;
+}
+
 pid_t tern_wait(unsigned ins, int *status)
 {
   int error = errno;

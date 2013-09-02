@@ -12,7 +12,7 @@ cd redis-$VER
 
 # Uncomment below redis-time.patch for experiment with dbug.
 # Comment it out for experiment with xtern only.
-#patch -p1 < ../redis-time.patch
+patch -p1 < ../redis-time.patch
 
 # compile
 if [ "$JOBS" = "" ]; then

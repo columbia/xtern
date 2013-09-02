@@ -2129,6 +2129,21 @@ pid_t RecorderRT<_S>::__fork(unsigned ins, int &error)
 }
 
 template <typename _S>
+int RecorderRT<_S>::__execv(unsigned ins, int &error, const char *path, char *const argv[])
+{
+  if (options::log_sync)
+    Logger::the->flush(); // so child process won't write it again
+    
+  int ret = 0;
+  SCHED_TIMER_START;
+  nturn = 0; // Just avoid compiler warning.
+  ret = Runtime::__execv(ins, error, path, argv);
+  assert(false && "execv failed.");
+
+  return ret;
+}
+
+template <typename _S>
 pid_t RecorderRT<_S>::__wait(unsigned ins, int &error, int *status)
 {
   BLOCK_TIMER_START(wait, ins, error, status);

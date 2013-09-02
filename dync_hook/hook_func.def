@@ -533,6 +533,18 @@ fork
 ()
 END_SHORT_DEFINE
 
+STARTDEF
+int
+execv
+/libc.so.6
+const char *, char *const []
+SECTION
+const char * path, char * const argv[]
+SECTION
+path, argv
+SECTION
+ENDDEF
+
 START_SHORT_DEFINE
 /libc.so.6
 pid_t

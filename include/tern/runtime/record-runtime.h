@@ -129,6 +129,7 @@ struct RecorderRT: public Runtime, public _Scheduler {
   int __sigwait(unsigned insid, int &error, const sigset_t *set, int *sig); 
   char *__fgets(unsigned insid, int &error, char *s, int size, FILE *stream);
   pid_t __fork(unsigned insid, int &error);
+  int __execv(unsigned ins, int &error, const char *path, char *const argv[]);
   pid_t __wait(unsigned insid, int &error, int *status);
   pid_t __waitpid(unsigned insid, int &error, pid_t pid, int *status, int options);
   time_t __time(unsigned ins, int &error, time_t *t);

@@ -796,6 +796,22 @@ pid_t Runtime::__fork(unsigned ins, int &error)
   return ret;
 }
 
+int Runtime::__execv(unsigned ins, int &error, const char *path, char *const argv[]) {
+  errno = error;
+  int ret;
+#ifdef XTERN_PLUS_DBUG
+  typedef pid_t (*orig_func_type)(const char *path, char *const argv[]);
+  static orig_func_type orig_func;
+  if (!orig_func)
+    orig_func = (orig_func_type)resolveDbugFunc("execv");
+  ret = orig_func(path, argv);
+#else
+  ret = ::execv(path, argv);
+#endif
+  error = errno;
+  return ret;
+}
+
 pid_t Runtime::__wait(unsigned ins, int &error, int *status)
 {
   errno = error;
