@@ -108,9 +108,9 @@ void Runtime::__thread_waiting() {
   static orig_func_type orig_func;
   if (!orig_func)
     orig_func = (orig_func_type)resolveDbugFunc("dbug_thread_waiting");
-  fprintf(stderr, "\n\nPid %d self %u dbug_thread_waiting start.\n\n", getpid(), (unsigned)pthread_self());
+  dprintf("\n\nPid %d self %u dbug_thread_waiting start.\n\n", getpid(), (unsigned)pthread_self());
   orig_func();
-  fprintf(stderr, "\n\nPid %d self %u dbug_thread_waiting end.\n\n", getpid(), (unsigned)pthread_self());
+  dprintf("\n\nPid %d self %u dbug_thread_waiting end.\n\n", getpid(), (unsigned)pthread_self());
 }
 
 void Runtime::__thread_active() {
@@ -118,9 +118,9 @@ void Runtime::__thread_active() {
   static orig_func_type orig_func;
   if (!orig_func)
     orig_func = (orig_func_type)resolveDbugFunc("dbug_thread_active");
-  fprintf(stderr, "\n\nPid %d self %u dbug_thread_active start.\n\n", getpid(), (unsigned)pthread_self());
+  dprintf("\n\nPid %d self %u dbug_thread_active start.\n\n", getpid(), (unsigned)pthread_self());
   orig_func();
-  fprintf(stderr, "\n\nPid %d self %u dbug_thread_active end.\n\n", getpid(), (unsigned)pthread_self());
+  dprintf("\n\nPid %d self %u dbug_thread_active end.\n\n", getpid(), (unsigned)pthread_self());
 }
 
 #else
@@ -137,9 +137,9 @@ static bool sock_nonblock (int fd)
 
 void Runtime::__attach_self_to_dbug() {
 #ifdef XTERN_PLUS_DBUG
-  fprintf(stderr, "\nxtern::Runtime::__attach_self_to_mc pid %d thread self %u to dbug\n\n", getpid(), (unsigned)pthread_self());
+  dprintf("\nxtern::Runtime::__attach_self_to_mc pid %d thread self %u to dbug\n\n", getpid(), (unsigned)pthread_self());
   //errno = error;
-  assert(!attachedToDbug);
+  //assert(!attachedToDbug);
   attachedToDbug = true;
   //dbug_on();
   typedef void (*orig_func_type)();
@@ -152,9 +152,9 @@ void Runtime::__attach_self_to_dbug() {
 
 void Runtime::__detach_self_from_dbug() {
 #ifdef XTERN_PLUS_DBUG
-  fprintf(stderr, "\nxtern::Runtime::__detach_self_from_mc pid %d thread self %u from dbug\n\n", getpid(), (unsigned)pthread_self());
+  dprintf("\nxtern::Runtime::__detach_self_from_mc pid %d thread self %u from dbug\n\n", getpid(), (unsigned)pthread_self());
   //errno = error;
-  assert(attachedToDbug);
+  //assert(attachedToDbug);
   attachedToDbug = false;
   //dbug_off();
   typedef void (*orig_func_type)();
@@ -327,9 +327,9 @@ int Runtime::__connect(unsigned ins, int &error, int sockfd, const struct sockad
   static orig_func_type orig_func;
   if (!orig_func)
     orig_func = (orig_func_type)resolveDbugFunc("connect");
-  fprintf(stderr, "Self %u: Runtime::__connect before\n", (unsigned)pthread_self());
+  dprintf("Self %u: Runtime::__connect before\n", (unsigned)pthread_self());
   ret = orig_func(sockfd, serv_addr, addrlen);
-  fprintf(stderr, "Self %u: Runtime::__connect returns %d\n", (unsigned)pthread_self(), ret);
+  dprintf("Self %u: Runtime::__connect returns %d\n", (unsigned)pthread_self(), ret);
 #else
   ret = connect(sockfd, serv_addr, addrlen);
   if (options::non_block_recv)
@@ -416,9 +416,9 @@ ssize_t Runtime::__send(unsigned ins, int &error, int sockfd, const void *buf, s
   static orig_func_type orig_func;
   if (!orig_func)
     orig_func = (orig_func_type)resolveDbugFunc("send");
-  fprintf(stderr, "Runtime::__send begin\n");
+  dprintf("Runtime::__send begin\n");
   ret = orig_func(sockfd, buf, len, flags);
-  fprintf(stderr, "Runtime::__send end\n");
+  dprintf("Runtime::__send end\n");
 #else
   ret = send(sockfd, buf, len, flags);
 #endif
@@ -737,10 +737,19 @@ int Runtime::__epoll_wait(unsigned ins, int &error, int epfd, struct epoll_event
   return ret;
 }
 
-unsigned int Runtime::sleep(unsigned ins, int &error, unsigned int seconds)
+unsigned int Runtime::__sleep(unsigned ins, int &error, unsigned int seconds)
 {
   errno = error;
-  unsigned int ret = ::sleep(seconds);
+  unsigned int ret;
+#ifdef XTERN_PLUS_DBUG
+  typedef unsigned int (*orig_func_type)(unsigned int);
+  static orig_func_type orig_func;
+  if (!orig_func)
+    orig_func = (orig_func_type)resolveDbugFunc("sleep");
+  ret = orig_func(seconds);
+#else
+  ret = ::sleep(seconds);
+#endif
   error = errno;
   return ret;
 }

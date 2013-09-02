@@ -2166,8 +2166,14 @@ int RecorderRT<_S>::schedYield(unsigned ins, int &error)
 // TODO: right now we treat sleep functions just as a turn; should convert
 // real time to logical time
 template <typename _S>
-unsigned int RecorderRT<_S>::sleep(unsigned ins, int &error, unsigned int seconds)
+unsigned int RecorderRT<_S>::__sleep(unsigned ins, int &error, unsigned int seconds)
 {
+#ifdef XTERN_PLUS_DBUG
+  BLOCK_TIMER_START(sleep, ins, error, seconds);
+  unsigned int ret = Runtime::__sleep(ins, error, seconds);
+  BLOCK_TIMER_END(syncfunc::sleep, (uint64_t)ret);
+  return ret;
+#else
   struct timespec ts = {seconds, 0};
   SCHED_TIMER_START;
   // must call _S::getTurnCount with turn held
@@ -2177,6 +2183,7 @@ unsigned int RecorderRT<_S>::sleep(unsigned ins, int &error, unsigned int second
   if (options::exec_sleep)
     ::sleep(seconds);
   return 0;
+#endif
 }
 
 template <typename _S>
@@ -2269,10 +2276,10 @@ int RecorderRT<_S>::__close(unsigned ins, int &error, int fd)
 }
 
 template <>
-unsigned int RecorderRT<RecordSerializer>::sleep(unsigned ins, int &error, unsigned int seconds)
+unsigned int RecorderRT<RecordSerializer>::__sleep(unsigned ins, int &error, unsigned int seconds)
 {
   typedef Runtime _P;
-  return _P::sleep(ins, error, seconds);
+  return _P::__sleep(ins, error, seconds);
 }
 
 template <>

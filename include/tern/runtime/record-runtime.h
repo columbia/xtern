@@ -140,7 +140,7 @@ struct RecorderRT: public Runtime, public _Scheduler {
 
   // sleep
   int schedYield(unsigned ins, int &error);
-  unsigned int sleep(unsigned insid, int &error, unsigned int seconds);
+  unsigned int __sleep(unsigned insid, int &error, unsigned int seconds);
   int usleep(unsigned insid, int &error, useconds_t usec);
   int nanosleep(unsigned insid, int &error, const struct timespec *req, struct timespec *rem);
   int __pthread_rwlock_rdlock(unsigned ins, int &error, pthread_rwlock_t *rwlock);

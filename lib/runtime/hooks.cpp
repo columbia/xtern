@@ -743,7 +743,7 @@ unsigned int tern_sleep(unsigned ins, unsigned int seconds)
   int error = errno;
   unsigned int ret;
   Space::enterSys();
-  ret = Runtime::the->sleep(ins, error, seconds);
+  ret = Runtime::the->__sleep(ins, error, seconds);
   Space::exitSys();
   errno = error;
   return ret;

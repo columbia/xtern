@@ -137,11 +137,23 @@ void __tern_prog_begin(void) {
 
 //  SYS -> SYS
 void __tern_prog_end (void) {
+#ifdef XTERN_PLUS_DBUG
+  fprintf(stderr, "\n\nPid %d self %u __tern_prog_end.\n\n", getpid(), (unsigned)pthread_self());
+#endif
+
   assert(prog_began && "__tern_prog_begin() not called "\
          "or __tern_prog_end() already called!");
 
   prog_began = false;
+#ifndef XTERN_PLUS_DBUG
   assert(Space::isApp() && "__tern_prog_end must start in app space");
+#else
+  if (!Space::isApp()) {
+    fprintf(stderr, "\n\nProcess exits suddenly. Pid %d self %u. Attach process to dbug.\n\n", getpid(), (unsigned)pthread_self());
+    Runtime::__attach_self_to_dbug();
+    return;
+  }
+#endif
 
   tern_print_runtime_stat();
 
