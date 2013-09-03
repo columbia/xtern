@@ -754,7 +754,7 @@ int tern_usleep(unsigned ins, useconds_t usec)
   int error = errno;
   int ret;
   Space::enterSys();
-  ret = Runtime::the->usleep(ins, error, usec);
+  ret = Runtime::the->__usleep(ins, error, usec);
   Space::exitSys();
   errno = error;
   return ret;
@@ -765,7 +765,7 @@ int tern_nanosleep(unsigned ins, const struct timespec *req, struct timespec *re
   int error = errno;
   int ret;
   Space::enterSys();
-  ret = Runtime::the->nanosleep(ins, error, req, rem);
+  ret = Runtime::the->__nanosleep(ins, error, req, rem);
   Space::exitSys();
   errno = error;
   return ret;

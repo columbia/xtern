@@ -352,6 +352,7 @@ std::list<int> RRScheduler::signal(void *chan, bool all)
     assert(tid >=0 && tid < Scheduler::nthread);
     if(waits[tid].chan == chan) {
 #ifdef XTERN_PLUS_DBUG
+      fprintf(stderr, "signals push back tid %d\n", tid);
       signal_list.push_back(tid);
 #endif
       dprintf("RRScheduler: %d signals %d(%p)\n", self(), tid, chan);

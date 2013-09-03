@@ -205,8 +205,8 @@ struct Runtime {
   // sleep
   virtual int schedYield(unsigned ins, int &error) = 0;
   virtual unsigned int __sleep(unsigned insid, int &error, unsigned int seconds);
-  virtual int usleep(unsigned insid, int &error, useconds_t usec);
-  virtual int nanosleep(unsigned insid, int &error, const struct timespec *req, struct timespec *rem);
+  virtual int __usleep(unsigned insid, int &error, useconds_t usec);
+  virtual int __nanosleep(unsigned insid, int &error, const struct timespec *req, struct timespec *rem);
   virtual int __sched_yield(unsigned ins, int &error);
 
 #define XDEF(op, sync, ret_type, args...)  \

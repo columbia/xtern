@@ -754,10 +754,19 @@ unsigned int Runtime::__sleep(unsigned ins, int &error, unsigned int seconds)
   return ret;
 }
 
-int Runtime::usleep(unsigned ins, int &error, useconds_t usec)
+int Runtime::__usleep(unsigned ins, int &error, useconds_t usec)
 {
   errno = error;
-  int ret = ::usleep(usec);
+  int ret;
+#ifdef XTERN_PLUS_DBUG
+  typedef int (*orig_func_type)(useconds_t);
+  static orig_func_type orig_func;
+  if (!orig_func)
+    orig_func = (orig_func_type)resolveDbugFunc("usleep");
+  ret = orig_func(usec);
+#else
+  ret = ::usleep(usec);
+#endif
   error = errno;
   return ret;
 }
@@ -866,10 +875,19 @@ int Runtime::__sched_yield(unsigned ins, int &error) {
   return ret;
 }
 
-int Runtime::nanosleep(unsigned ins, int &error, const struct timespec *req, struct timespec *rem)
+int Runtime::__nanosleep(unsigned ins, int &error, const struct timespec *req, struct timespec *rem)
 {
   errno = error;
-  int ret = ::nanosleep(req, rem);
+  int ret;
+#ifdef XTERN_PLUS_DBUG
+  typedef int (*orig_func_type)(const struct timespec *, struct timespec *);
+  static orig_func_type orig_func;
+  if (!orig_func)
+    orig_func = (orig_func_type)resolveDbugFunc("nanosleep");
+  ret = orig_func(req, rem);
+#else
+  ret = ::nanosleep(req, rem);
+#endif
   error = errno;
   return ret;
 }

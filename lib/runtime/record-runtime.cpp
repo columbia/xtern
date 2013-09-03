@@ -2209,8 +2209,15 @@ unsigned int RecorderRT<_S>::__sleep(unsigned ins, int &error, unsigned int seco
 }
 
 template <typename _S>
-int RecorderRT<_S>::usleep(unsigned ins, int &error, useconds_t usec)
+int RecorderRT<_S>::__usleep(unsigned ins, int &error, useconds_t usec)
 {
+#ifdef XTERN_PLUS_DBUG
+  BLOCK_TIMER_START(usleep, ins, error, usec);
+  fprintf(stderr, "dbug usleep...\n");
+  unsigned int ret = Runtime::__usleep(ins, error, usec);
+  BLOCK_TIMER_END(syncfunc::usleep, (uint64_t)ret);
+  return ret;
+#else
   struct timespec ts = {0, 1000*usec};
   SCHED_TIMER_START;
   // must call _S::getTurnCount with turn held
@@ -2220,13 +2227,21 @@ int RecorderRT<_S>::usleep(unsigned ins, int &error, useconds_t usec)
   if (options::exec_sleep)
     ::usleep(usec);
   return 0;
+#endif
 }
 
 template <typename _S>
-int RecorderRT<_S>::nanosleep(unsigned ins, int &error, 
+int RecorderRT<_S>::__nanosleep(unsigned ins, int &error, 
                               const struct timespec *req,
                               struct timespec *rem)
 {
+#ifdef XTERN_PLUS_DBUG
+  BLOCK_TIMER_START(nanosleep, ins, error, req, rem);
+  fprintf(stderr, "dbug nanosleep...\n");
+  unsigned int ret = Runtime::__nanosleep(ins, error, req, rem);
+  BLOCK_TIMER_END(syncfunc::nanosleep, (uint64_t)ret);
+  return ret;
+#else
  SCHED_TIMER_START;
    // must call _S::getTurnCount with turn held
   unsigned timeout = _S::getTurnCount() + relTimeToTurn(req);
@@ -2236,6 +2251,7 @@ int RecorderRT<_S>::nanosleep(unsigned ins, int &error,
   if (options::exec_sleep)
     ::nanosleep(req, rem);
   return 0;
+#endif
 }
 
 template <typename _S>
@@ -2305,19 +2321,19 @@ unsigned int RecorderRT<RecordSerializer>::__sleep(unsigned ins, int &error, uns
 }
 
 template <>
-int RecorderRT<RecordSerializer>::usleep(unsigned ins, int &error, useconds_t usec)
+int RecorderRT<RecordSerializer>::__usleep(unsigned ins, int &error, useconds_t usec)
 {
   typedef Runtime _P;
-  return _P::usleep(ins, error, usec);
+  return _P::__usleep(ins, error, usec);
 }
 
 template <>
-int RecorderRT<RecordSerializer>::nanosleep(unsigned ins, int &error, 
+int RecorderRT<RecordSerializer>::__nanosleep(unsigned ins, int &error, 
                                             const struct timespec *req,
                                             struct timespec *rem)
 {
   typedef Runtime _P;
-  return _P::nanosleep(ins, error, req, rem);
+  return _P::__nanosleep(ins, error, req, rem);
 }
 
 template <typename _S>
