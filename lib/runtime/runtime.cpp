@@ -139,7 +139,10 @@ void Runtime::__attach_self_to_dbug() {
 #ifdef XTERN_PLUS_DBUG
   dprintf("\nxtern::Runtime::__attach_self_to_mc pid %d thread self %u to dbug\n\n", getpid(), (unsigned)pthread_self());
   //errno = error;
-  assert(!attachedToDbug);
+  if (attachedToDbug) {
+    fprintf(stderr, "\nxtern::Runtime::__attach_self_to_mc pid %d thread self %u to dbug failure\n\n", getpid(), (unsigned)pthread_self());
+    assert(false);
+  }
   attachedToDbug = true;
   //dbug_on();
   typedef void (*orig_func_type)();
@@ -797,6 +800,7 @@ void Runtime::___exit(int status) {
     orig_func = (orig_func_type)resolveDbugFunc("_exit");
   fprintf(stderr, "Calling Runtime::___exit into dbug\n");
   orig_func(status);
+  fprintf(stderr, "Calling Runtime::___exit from dbug\n");
 #else
   _exit(status);
 #endif

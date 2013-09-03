@@ -149,10 +149,11 @@ void __tern_prog_end (void) {
 #ifndef XTERN_PLUS_DBUG
   assert(Space::isApp() && "__tern_prog_end must start in app space");
 #else
-  fprintf(stderr, "\n\nPid %d self %u. Attach process to dbug %d.\n\n", getpid(), (unsigned)pthread_self(), attachedToDbug);
-  if (!attachedToDbug) {
-    Runtime::__attach_self_to_dbug();
-  }
+  fprintf(stderr, "\n\nPid %d self %u exits. Attach process to dbug %d.\n\n", getpid(), (unsigned)pthread_self(), attachedToDbug);
+  if (Space::isApp())
+    Space::enterSys(); /* Avoid reentrant and capturing socket calls incorrectly 
+                                   within the _exit() handling logic of dbug. */
+  Runtime::__attach_self_to_dbug();
   Runtime::___exit(0);
 #endif
 
