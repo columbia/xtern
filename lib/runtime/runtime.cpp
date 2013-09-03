@@ -113,13 +113,13 @@ void Runtime::__thread_waiting() {
   dprintf("\n\nPid %d self %u dbug_thread_waiting end.\n\n", getpid(), (unsigned)pthread_self());
 }
 
-void Runtime::__thread_active() {
-  typedef void (*orig_func_type)();
+void Runtime::__thread_active(pthread_t wakenUpTid) {
+  typedef void (*orig_func_type)(pthread_t);
   static orig_func_type orig_func;
   if (!orig_func)
     orig_func = (orig_func_type)resolveDbugFunc("dbug_thread_active");
   dprintf("\n\nPid %d self %u dbug_thread_active start.\n\n", getpid(), (unsigned)pthread_self());
-  orig_func();
+  orig_func(wakenUpTid);
   dprintf("\n\nPid %d self %u dbug_thread_active end.\n\n", getpid(), (unsigned)pthread_self());
 }
 

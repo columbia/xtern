@@ -168,8 +168,11 @@ struct RecorderRT: public Runtime, public _Scheduler {
 
 protected:
 
-  int wait(void *chan, unsigned timeout = Scheduler::FOREVER);
-  void signal(void *chan, bool all=false);
+  /* These two sync wait/signal operations also contain logic for dbug+parrot, so name them separately.
+  These two operations should only involve "sync" objects from applications or soft barrier hints. */
+  int syncWait(void *chan, unsigned timeout = Scheduler::FOREVER);
+  void syncSignal(void *chan, bool all=false);
+
   int absTimeToTurn(const struct timespec *abstime);
   int relTimeToTurn(const struct timespec *reltime);
 

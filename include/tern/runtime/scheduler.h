@@ -70,6 +70,14 @@ struct TidMap {
     return InvalidTid;
   }
 
+  /// return pthread id given a parrot tid.
+  pthread_t getPthreadTid(int tid) {
+    tern_to_pthread_map::iterator it = t_p_map.find(tid);
+    if(it!=t_p_map.end())
+      return it->second;
+    return (pthread_t)InvalidTid;
+  }
+
   /// return if thread @pthread_th is in the zombie set
   bool zombie(pthread_t pthread_th) {
     pthread_tid_set::iterator it = zombies.find(pthread_th);
@@ -138,7 +146,7 @@ struct Serializer: public TidMap {
   /// wake up one thread (@all = false) or all threads (@all = true)
   /// waiting on @chan; must call with turn held.  @chan has the same
   /// requirement as wait()
-  virtual void signal(void *chan, bool all = false) { }
+  virtual std::list<int> signal(void *chan, bool all = false) { std::list<int> l; return l; }
 
   /// get the turn so that other threads trying to get the turn must wait
   virtual void getTurn() { }
@@ -228,7 +236,7 @@ struct Scheduler: public Serializer {
   /// wake up one thread (@all = false) or all threads (@all = true)
   /// waiting on @chan; must call with turn held.  @chan has the same
   /// requirement as wait()
-  void signal(void *chan, bool all = false) { }
+  std::list<int> signal(void *chan, bool all = false) {std::list<int> l; return l; }
 
   void create(pthread_t new_th) {
     assert(self() == runq.front());

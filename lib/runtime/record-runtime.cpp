@@ -166,20 +166,25 @@ void InstallRuntime() {
 }
 
 template <typename _S>
-int RecorderRT<_S>::wait(void *chan, unsigned timeout) {
+int RecorderRT<_S>::syncWait(void *chan, unsigned timeout) {
 #ifdef XTERN_PLUS_DBUG
   Runtime::__thread_waiting();
 #endif
-  int ret = _S::wait(chan, timeout);
-#ifdef XTERN_PLUS_DBUG
-  Runtime::__thread_active();
-#endif
-  return ret;
+  return _S::wait(chan, timeout);
 }
 
 template <typename _S>
-void RecorderRT<_S>::signal(void *chan, bool all) {
-  _S::signal(chan, all);
+void RecorderRT<_S>::syncSignal(void *chan, bool all) {
+  std::list<int> signal_list = _S::signal(chan, all);
+#ifdef XTERN_PLUS_DBUG
+  std::list<int>::iterator itr;
+  for (itr = signal_list.begin(); itr != signal_list.end(); itr++) {
+    pthread_t tid = _S::getPthreadTid(*itr);
+    Runtime::__thread_active(tid);
+    fprintf(stderr, "Parrot pid %d self %u tid %d signals tid %d self %u\n", 
+      getpid(), (unsigned)pthread_self(), _S::self(), *itr, (unsigned)tid);
+  }
+#endif
 }
 
 template <typename _S>
@@ -486,8 +491,11 @@ int RecorderRT<_S>::pthreadJoin(unsigned ins, int &error, pthread_t th, void **r
   SCHED_TIMER_START;
   // NOTE: can actually use if(!_S::zombie(th)) for DMT schedulers because
   // their wait() won't return until some thread signal().
-  while(!_S::zombie(th))
-    wait((void*)th);
+  while(!_S::zombie(th)) {
+    /* Don't call syncWait here, but this scheduler wait, because there is a pairwise 
+      signal() in putTurn with thread_end. */
+    _S::wait((void*)th);
+  }
   errno = error;
 
   ret = pthread_join(th, rv);
@@ -561,7 +569,7 @@ int RecorderRT<_S>::pthreadMutexLockHelper(pthread_mutex_t *mu, unsigned timeout
   int ret;
   while((ret=pthread_mutex_trylock(mu))) {
     assert(ret==EBUSY && "failed sync calls are not yet supported!");
-    ret = wait(mu, timeout);
+    ret = syncWait(mu, timeout);
     if(ret == ETIMEDOUT)
       return ETIMEDOUT;
   }
@@ -573,7 +581,7 @@ int RecorderRT<_S>::pthreadRWLockWrLockHelper(pthread_rwlock_t *rwlock, unsigned
   int ret;
   while((ret=pthread_rwlock_trywrlock(rwlock))) {
     assert(ret==EBUSY && "failed sync calls are not yet supported!");
-    ret = wait(rwlock, timeout);
+    ret = syncWait(rwlock, timeout);
     if(ret == ETIMEDOUT)
       return ETIMEDOUT;
   }
@@ -585,7 +593,7 @@ int RecorderRT<_S>::pthreadRWLockRdLockHelper(pthread_rwlock_t *rwlock, unsigned
   int ret;
   while((ret=pthread_rwlock_tryrdlock(rwlock))) {
     assert(ret==EBUSY && "failed sync calls are not yet supported!");
-    ret = wait(rwlock, timeout);
+    ret = syncWait(rwlock, timeout);
     if(ret == ETIMEDOUT)
       return ETIMEDOUT;
   }
@@ -692,7 +700,7 @@ int RecorderRT<_S>::__pthread_rwlock_unlock(unsigned ins, int &error, pthread_rw
   errno = error;
   ret = pthread_rwlock_unlock(rwlock);
   error = errno;
-  signal(rwlock);
+  syncSignal(rwlock);
  
   SCHED_TIMER_END(syncfunc::pthread_rwlock_unlock, (uint64_t)rwlock, (uint64_t) ret);
 
@@ -804,7 +812,7 @@ int RecorderRT<_S>::pthreadMutexUnlock(unsigned ins, int &error, pthread_mutex_t
   error = errno;
   //fprintf(stderr, "pthreadMutexUnlock3\n");
   assert(!ret && "failed sync calls are not yet supported!");
-  signal(mu);
+  syncSignal(mu);
   //fprintf(stderr, "pthreadMutexUnlock4\n");
   SCHED_TIMER_END(syncfunc::pthread_mutex_unlock, (uint64_t)mu, (uint64_t) ret);
 
@@ -837,7 +845,7 @@ int RecorderRT<_S>::pthreadBarrierInit(unsigned ins, int &error, pthread_barrier
 }
 
 /// barrier_wait has a similar problem to pthread_cond_wait (see below).
-/// we want to avoid the head of queue block, so must call wait(ba) and
+/// we want to avoid the head of queue block, so must call syncWait(ba) and
 /// give up turn before calling pthread_barrier_wait.  However, when the
 /// last thread arrives, we must wake up the waiting threads.
 ///
@@ -848,22 +856,22 @@ int RecorderRT<_S>::pthreadBarrierInit(unsigned ins, int &error, pthread_barrier
 template <typename _S>
 int RecorderRT<_S>::pthreadBarrierWait(unsigned ins, int &error, 
                                        pthread_barrier_t *barrier) {
-  /// Note: the signal() operation has to be done while the thread has the
-  /// turn; otherwise two independent signal() operations on two
+  /// Note: the syncSignal() operation has to be done while the thread has the
+  /// turn; otherwise two independent syncSignal() operations on two
   /// independent barriers can be nondeterministic.  e.g., suppose two
   /// barriers ba1 and ba2 each has count 1.
   ///
   ///       t0                        t1
   ///
   /// getTurn()
-  /// wait(ba1);
+  /// syncWait(ba1);
   ///                         getTurn()
-  ///                         wait(ba1);
+  ///                         syncWait(ba1);
   /// barrier_wait(ba1)
   ///                         barrier_wait(ba2)
-  /// signal(ba1)             signal(ba2)
+  /// syncSignal(ba1)             syncSignal(ba2)
   ///
-  /// these two signal() ops can be nondeterministic, causing threads to be
+  /// these two syncSignal() ops can be nondeterministic, causing threads to be
   /// added to the activeq in different orders
   ///
   
@@ -895,7 +903,7 @@ int RecorderRT<_S>::pthreadBarrierWait(unsigned ins, int &error,
   assert(b.narrived <= b.count && "barrier overflow!");
   if(b.count == b.narrived) {
     b.narrived = 0; // barrier may be reused
-    _S::signal(barrier, /*all=*/true);
+    syncSignal(barrier, /*all=*/true);
     // according to the man page of pthread_barrier_wait, one of the
     // waiters should return PTHREAD_BARRIER_SERIAL_THREAD, instead of 0
     ret = PTHREAD_BARRIER_SERIAL_THREAD;
@@ -909,8 +917,7 @@ int RecorderRT<_S>::pthreadBarrierWait(unsigned ins, int &error,
     _S::getTurn();
   } else {
     ret = 0;
-    //--_S::turnCount;  //  in _S::wait will increase it again. Heming 2012-Dec-17: do not decrement turnCount, dangerous and not necessary.
-    wait(barrier);
+    syncWait(barrier);
   }
   sched_time = update_time();
 #ifdef xxx
@@ -998,7 +1005,7 @@ int RecorderRT<_S>::pthreadBarrierDestroy(unsigned ins, int &error,
 ///
 ///   getTurn();
 ///   pthread_mutex_unlock(&mu);
-///   signal(&mu);
+///   syncSignal(&mu);
 ///   waitFirstHalf(&cv); // put self() to waitq for &cv, but don't wait on
 ///                       // any internal sync obj or release scheduler lock
 ///                       // because we'll wait on the cond var in user
@@ -1079,7 +1086,7 @@ int RecorderRT<_S>::pthreadBarrierDestroy(unsigned ins, int &error,
 ///
 ///   getTurn();
 ///   pthread_mutex_unlock(&mu);
-///   signal(&mu);
+///   syncSignal(&mu);
 ///   waitFirstHalf(&cv);
 ///   putTurnLN();
 ///   pthread_cond_wait(&waitcv[self()], &schedulerLock);
@@ -1125,7 +1132,7 @@ int RecorderRT<_S>::pthreadBarrierDestroy(unsigned ins, int &error,
 /// pthread_cond_wait(&cv, &mu):
 ///   getTurn();
 ///   pthread_mutex_unlock(&mu);
-///   signal(&mu);
+///   syncSignal(&mu);
 ///   wait(&cv);
 ///   putTurn();
 ///
@@ -1135,7 +1142,7 @@ int RecorderRT<_S>::pthreadBarrierDestroy(unsigned ins, int &error,
 ///
 /// pthread_cond_signal(&cv):
 ///   getTurn();
-///   signal(&cv);
+///   syncSignal(&cv);
 ///   putTurn();
 ///
 /// One additional optimization we can do for programs that do sync
@@ -1186,10 +1193,10 @@ int RecorderRT<_S>::pthreadCondWait(unsigned ins, int &error,
   }
   SCHED_TIMER_START;
   pthread_mutex_unlock(mu);
-  _S::signal(mu);
+  syncSignal(mu);
 
   SCHED_TIMER_FAKE_END(syncfunc::pthread_cond_wait, (uint64_t)cv, (uint64_t)mu);
-  wait(cv);
+  syncWait(cv);
   sched_time = update_time();
   errno = error;
   pthreadMutexLockHelper(mu);
@@ -1232,12 +1239,12 @@ int RecorderRT<_S>::pthreadCondTimedWait(unsigned ins, int &error,
 
   SCHED_TIMER_FAKE_END(syncfunc::pthread_cond_timedwait, (uint64_t)cv, (uint64_t)mu, (uint64_t) 0);
 
-  _S::signal(mu);
+  syncSignal(mu);
   unsigned nTurns = relTimeToTurn(&rel_time);
   dprintf("Tid %d pthreadCondTimedWait physical time interval %ld.%ld, logical turns %u\n",
     _S::self(), (long)rel_time.tv_sec, (long)rel_time.tv_nsec, nTurns);
   unsigned timeout = _S::getTurnCount() + nTurns;
-  saved_ret = ret = wait(cv, timeout);
+  saved_ret = ret = syncWait(cv, timeout);
   dprintf("timedwait return = %d, after %d turns\n", ret, _S::getTurnCount() - nturn);
 
   sched_time = update_time();
@@ -1260,7 +1267,7 @@ int RecorderRT<_S>::pthreadCondSignal(unsigned ins, int &error, pthread_cond_t *
   //fprintf(stderr, "pthreadCondSignal start...\n");
   SCHED_TIMER_START;
   //fprintf(stderr, "pthreadCondSignal start got turn...\n");
-  _S::signal(cv);
+  syncSignal(cv);
   //fprintf(stderr, "pthreadCondSignal start got turn2...\n");
   SCHED_TIMER_END(syncfunc::pthread_cond_signal, (uint64_t)cv);
   //fprintf(stderr, "pthreadCondSignal start put turn...\n");
@@ -1276,7 +1283,7 @@ int RecorderRT<_S>::pthreadCondBroadcast(unsigned ins, int &error, pthread_cond_
     return pthread_cond_broadcast(cv);
   }
   SCHED_TIMER_START;
-  _S::signal(cv, /*all=*/true);
+  syncSignal(cv, /*all=*/true);
   SCHED_TIMER_END(syncfunc::pthread_cond_broadcast, (uint64_t)cv);
   return 0;
 }
@@ -1297,7 +1304,7 @@ int RecorderRT<_S>::semWait(unsigned ins, int &error, sem_t *sem) {
     // sem_trywait returns -1 and sets errno to EAGAIN if semaphore is not
     // available
     assert(errno==EAGAIN && "failed sync calls are not yet supported!");
-    wait(sem);
+    syncWait(sem);
   }
   SCHED_TIMER_END(syncfunc::sem_wait, (uint64_t)sem);
 
@@ -1354,7 +1361,7 @@ int RecorderRT<_S>::semTimedWait(unsigned ins, int &error, sem_t *sem,
   unsigned timeout = _S::getTurnCount() + relTimeToTurn(&rel_time);
   while((ret=sem_trywait(sem))) {
     assert(errno==EAGAIN && "failed sync calls are not yet supported!");
-    ret = wait(sem, timeout);
+    ret = syncWait(sem, timeout);
     if(ret == ETIMEDOUT) {
       ret = -1;
       saved_err = ETIMEDOUT;
@@ -1380,7 +1387,7 @@ int RecorderRT<_S>::semPost(unsigned ins, int &error, sem_t *sem){
   SCHED_TIMER_START;
   ret = sem_post(sem);
   assert(!ret && "failed sync calls are not yet supported!");
-  signal(sem);
+  syncSignal(sem);
   SCHED_TIMER_END(syncfunc::sem_post, (uint64_t)sem, (uint64_t)ret);
  
   return 0;
@@ -1477,14 +1484,14 @@ void RecorderRT<_S>::lineupStart(long opaque_type) {
       if (options::record_runtime_stat)
         stat.nLineupSucc++;
       b.setLeaving();
-      _S::signal(&b, true); // Signal all threads blocking on this barrier.
+      syncSignal(&b, true); // Signal all threads blocking on this barrier.
     } else {
       // NOP. There could be a case that after timeout happens,
       // all threads arrive, then we just let them do NOP, and deterministic.
     } 
   } else {
     if (b.isArriving()) {
-      wait(&b, _S::getTurnCount() + b.timeout);
+      syncWait(&b, _S::getTurnCount() + b.timeout);
      
       // Handle timeout here, since the wait() would call getTurn and still grab the turn.
       if (b.nactive < b.count && b.isArriving()) {
@@ -1494,7 +1501,7 @@ void RecorderRT<_S>::lineupStart(long opaque_type) {
         if (options::record_runtime_stat)
           stat.nLineupTimeout++;
         b.setLeaving();
-        _S::signal(&b, true); // Signal all threads blocking on this barrier.
+        syncSignal(&b, true); // Signal all threads blocking on this barrier.
       }
     } else {
       // proceed. NOP.
@@ -1794,7 +1801,7 @@ int RecorderRT<RecordSerializer>::pthreadCondWait(unsigned ins, int &error,
 
   while((ret=pthread_mutex_trylock(mu))) {
     assert(ret==EBUSY && "failed sync calls are not yet supported!");
-    wait(mu);
+    syncWait(mu);
   }
   nturn = RecordSerializer::incTurnCount();
   SCHED_TIMER_END(syncfunc::pthread_cond_wait, (uint64_t)cv, (uint64_t)mu);
@@ -2193,7 +2200,7 @@ unsigned int RecorderRT<_S>::__sleep(unsigned ins, int &error, unsigned int seco
   SCHED_TIMER_START;
   // must call _S::getTurnCount with turn held
   unsigned timeout = _S::getTurnCount() + relTimeToTurn(&ts);
-  wait(NULL, timeout);
+  _S::wait(NULL, timeout);
   SCHED_TIMER_END(syncfunc::sleep, (uint64_t) seconds * 1000000000);
   if (options::exec_sleep)
     ::sleep(seconds);
@@ -2208,7 +2215,7 @@ int RecorderRT<_S>::usleep(unsigned ins, int &error, useconds_t usec)
   SCHED_TIMER_START;
   // must call _S::getTurnCount with turn held
   unsigned timeout = _S::getTurnCount() + relTimeToTurn(&ts);
-  wait(NULL, timeout);
+  _S::wait(NULL, timeout);
   SCHED_TIMER_END(syncfunc::usleep, (uint64_t) usec * 1000);
   if (options::exec_sleep)
     ::usleep(usec);
@@ -2223,7 +2230,7 @@ int RecorderRT<_S>::nanosleep(unsigned ins, int &error,
  SCHED_TIMER_START;
    // must call _S::getTurnCount with turn held
   unsigned timeout = _S::getTurnCount() + relTimeToTurn(req);
-  wait(NULL, timeout);
+  _S::wait(NULL, timeout);
   uint64_t nsec = !req ? 0 : (req->tv_sec * 1000000000 + req->tv_nsec); 
   SCHED_TIMER_END(syncfunc::nanosleep, (uint64_t) nsec);
   if (options::exec_sleep)

@@ -102,7 +102,7 @@ struct RRScheduler: public Scheduler {
   virtual void getTurn();
   virtual void putTurn(bool at_thread_end = false);
   virtual int  wait(void *chan, unsigned timeout = Scheduler::FOREVER);
-  virtual void signal(void *chan, bool all=false);
+  virtual std::list<int> signal(void *chan, bool all=false);
 
   virtual int block(); 
   virtual bool interProStart();

@@ -86,7 +86,7 @@ struct Runtime {
   static void __detach_barrier_end(int bar_id, int cnt); // dbug_barrier_off
 
   static void __thread_waiting();
-  static void __thread_active();
+  static void __thread_active(pthread_t wakenUpTid);
 #endif
   /* Thes two functions must be constantly declared because BLOCK_TIMER_START/END in record-runtime.cpp need them. */
   static void __attach_self_to_dbug(); // dbug_on

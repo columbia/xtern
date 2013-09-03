@@ -335,10 +335,10 @@ int RRScheduler::wait(void *chan, unsigned nturn)
 
 //@before with turn
 //@after with turn
-void RRScheduler::signal(void *chan, bool all)
+std::list<int> RRScheduler::signal(void *chan, bool all)
 {
   list<int>::iterator prv, cur;
-
+  std::list<int> signal_list;
   assert(chan && "can't signal/broadcast NULL");
   assert(self() == runq.front());
   dprintf("RRScheduler: %d: %s %p\n",
@@ -351,6 +351,9 @@ void RRScheduler::signal(void *chan, bool all)
     int tid = *prv;
     assert(tid >=0 && tid < Scheduler::nthread);
     if(waits[tid].chan == chan) {
+#ifdef XTERN_PLUS_DBUG
+      signal_list.push_back(tid);
+#endif
       dprintf("RRScheduler: %d signals %d(%p)\n", self(), tid, chan);
       waits[tid].reset();
       waitq.erase(prv);
@@ -360,6 +363,7 @@ void RRScheduler::signal(void *chan, bool all)
     }
   }
   SELFCHECK;
+  return signal_list;
 }
 
 //@before with turn
