@@ -135,12 +135,12 @@ static bool sock_nonblock (int fd)
 }
 #endif
 
-void Runtime::__attach_self_to_dbug() {
+void Runtime::__attach_self_to_dbug(const char *caller) {
 #ifdef XTERN_PLUS_DBUG
   dprintf("\nxtern::Runtime::__attach_self_to_mc pid %d thread self %u to dbug\n\n", getpid(), (unsigned)pthread_self());
   //errno = error;
   if (attachedToDbug) {
-    fprintf(stderr, "\nxtern::Runtime::__attach_self_to_mc pid %d thread self %u to dbug failure\n\n", getpid(), (unsigned)pthread_self());
+    fprintf(stderr, "\nxtern::Runtime::__attach_self_to_mc pid %d thread self %u to dbug failure, caller (%s)\n\n", getpid(), (unsigned)pthread_self(), caller);
     assert(false);
   }
   attachedToDbug = true;
@@ -153,7 +153,7 @@ void Runtime::__attach_self_to_dbug() {
 #endif
 }
 
-void Runtime::__detach_self_from_dbug() {
+void Runtime::__detach_self_from_dbug(const char *caller) {
 #ifdef XTERN_PLUS_DBUG
   dprintf("\nxtern::Runtime::__detach_self_from_mc pid %d thread self %u from dbug\n\n", getpid(), (unsigned)pthread_self());
   //errno = error;
@@ -204,13 +204,13 @@ int Runtime::__pthread_create(pthread_t *th, const pthread_attr_t *a, void *(*fu
 //#if 0
 #ifdef XTERN_PLUS_DBUG
   if (th != &idle_th) { // Idle thread is xtern an internal thread, we must not register it in dbug.
-    __attach_self_to_dbug();
+    __attach_self_to_dbug(__FUNCTION__);
     typedef int (*orig_func_type)(pthread_t *,const pthread_attr_t *,void *(*)(void*),void *);
     static orig_func_type orig_func;
     if (!orig_func)
       orig_func = (orig_func_type)resolveDbugFunc("pthread_create");
     ret = orig_func(th, a, func, arg);
-     __detach_self_from_dbug();
+     __detach_self_from_dbug(__FUNCTION__);
   } else {
     fprintf(stderr, "Created idle thread in Runtime.\n");
     ret = pthread_create(th, a, func, arg);
@@ -238,13 +238,13 @@ void Runtime::__pthread_exit(void *value_ptr) {
 int Runtime::__pthread_join(pthread_t th, void **retval) {
   int ret;
 #ifdef XTERN_PLUS_DBUG
-  __attach_self_to_dbug();
+  __attach_self_to_dbug(__FUNCTION__);
   typedef int (*orig_func_type)(pthread_t, void **);
   static orig_func_type orig_func;
   if (!orig_func)
     orig_func = (orig_func_type)resolveDbugFunc("pthread_join");
   ret = orig_func(th, retval);
-  __detach_self_from_dbug();
+  __detach_self_from_dbug(__FUNCTION__);
 #else
   ret = pthread_join(th, retval);
 #endif
@@ -812,13 +812,13 @@ pid_t Runtime::__fork(unsigned ins, int &error)
   errno = error;
   pid_t ret;
 #ifdef XTERN_PLUS_DBUG
-  Runtime::__attach_self_to_dbug();
+  Runtime::__attach_self_to_dbug(__FUNCTION__);
   typedef pid_t (*orig_func_type)();
   static orig_func_type orig_func;
   if (!orig_func)
     orig_func = (orig_func_type)resolveDbugFunc("fork");
   ret = orig_func();
-  Runtime::__detach_self_from_dbug();
+  Runtime::__detach_self_from_dbug(__FUNCTION__);
 #else
   ret = fork();
 #endif
@@ -830,7 +830,7 @@ int Runtime::__execv(unsigned ins, int &error, const char *path, char *const arg
   errno = error;
   int ret;
 #ifdef XTERN_PLUS_DBUG
-  Runtime::__attach_self_to_dbug();
+  Runtime::__attach_self_to_dbug(__FUNCTION__);
   typedef pid_t (*orig_func_type)(const char *path, char *const argv[]);
   static orig_func_type orig_func;
   if (!orig_func)

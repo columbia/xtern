@@ -287,14 +287,14 @@ void RecorderRT<RecordSerializer>::idle_sleep(void) {
   if (_S::interProStart()) { \
     _S::block(); \
   } \
-  Runtime::__attach_self_to_dbug();
+  Runtime::__attach_self_to_dbug(__FUNCTION__);
   //fprintf(stderr, "\n\nBLOCK_TIMER_START ins %p, pid %d, self %u, tid %d, turnCount %u, function %s\n", (void *)ins, getpid(), (unsigned)pthread_self(), _S::self(), _S::turnCount, __FUNCTION__);
 // At this moment, since self-thread is ahead of the run queue, so this block() should be very fast.
 // TBD: do we need logging here? We can, but not sure whether we need to do this.
 
 
 #define BLOCK_TIMER_END(syncop, ...) \
-  Runtime::__detach_self_from_dbug(); \
+  Runtime::__detach_self_from_dbug(__FUNCTION__); \
   int backup_errno = errno; \
   if (_S::interProEnd()) { \
     _S::wakeup(); \
@@ -1549,7 +1549,7 @@ void RecorderRT<_S>::nonDetStart() {
   should be blocked (so that dbug can explore the upper bound of non-determinism for these
   non-det regions). **/
 #ifdef XTERN_PLUS_DBUG
-  Runtime::__attach_self_to_dbug();
+  Runtime::__attach_self_to_dbug(__FUNCTION__);
 #endif
 
   /** All non-det operations are blocked on this fake var until runq is empty, 
@@ -1582,7 +1582,7 @@ void RecorderRT<_S>::nonDetEnd() {
   in other threads' non-det regions, so we do not need to call the wait(NON_DET_BLOCKED)
   as in non_det_start(). **/
 #ifdef XTERN_PLUS_DBUG
-  Runtime::__detach_self_from_dbug();
+  Runtime::__detach_self_from_dbug(__FUNCTION__);
 #endif
 
   _S::wakeup(); /** Reuse existing xtern API. Put myself to wake-up queue, 

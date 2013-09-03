@@ -403,7 +403,7 @@ void tern_pthread_exit(unsigned ins, void *retval) {
   assert(Space::isSys());
   if (Scheduler::self() != Scheduler::IdleThreadTid) {
 #ifdef XTERN_PLUS_DBUG
-    Runtime::__attach_self_to_dbug();
+    Runtime::__attach_self_to_dbug(__FUNCTION__);
 #endif
     Runtime::__pthread_exit(retval);
   } else
