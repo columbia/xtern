@@ -44,7 +44,7 @@ extern pthread_t idle_th;
 #ifdef XTERN_PLUS_DBUG
 
 #include <dlfcn.h>
-static bool __thread attachedToDbug = true;
+bool __thread attachedToDbug = true;
 using namespace std;
 
 void *Runtime::resolveDbugFunc(const char *func_name) {
@@ -139,7 +139,7 @@ void Runtime::__attach_self_to_dbug() {
 #ifdef XTERN_PLUS_DBUG
   dprintf("\nxtern::Runtime::__attach_self_to_mc pid %d thread self %u to dbug\n\n", getpid(), (unsigned)pthread_self());
   //errno = error;
-  //assert(!attachedToDbug);
+  assert(!attachedToDbug);
   attachedToDbug = true;
   //dbug_on();
   typedef void (*orig_func_type)();
@@ -154,7 +154,7 @@ void Runtime::__detach_self_from_dbug() {
 #ifdef XTERN_PLUS_DBUG
   dprintf("\nxtern::Runtime::__detach_self_from_mc pid %d thread self %u from dbug\n\n", getpid(), (unsigned)pthread_self());
   //errno = error;
-  //assert(attachedToDbug);
+  assert(attachedToDbug);
   attachedToDbug = false;
   //dbug_off();
   typedef void (*orig_func_type)();
@@ -291,6 +291,7 @@ int Runtime::__accept(unsigned ins, int &error, int sockfd, struct sockaddr *cli
   static orig_func_type orig_func;
   if (!orig_func)
     orig_func = (orig_func_type)resolveDbugFunc("accept");
+  fprintf(stderr, "Parrot pid %d self %u calls dbug accept...\n", getpid(), (unsigned)pthread_self());
   ret = orig_func(sockfd, cliaddr, addrlen);
 #else
   ret = accept(sockfd, cliaddr, addrlen);
@@ -327,7 +328,7 @@ int Runtime::__connect(unsigned ins, int &error, int sockfd, const struct sockad
   static orig_func_type orig_func;
   if (!orig_func)
     orig_func = (orig_func_type)resolveDbugFunc("connect");
-  dprintf("Self %u: Runtime::__connect before\n", (unsigned)pthread_self());
+  fprintf(stderr, "Parrot pid %d self %u calls dbug connect...\n", getpid(), (unsigned)pthread_self());
   ret = orig_func(sockfd, serv_addr, addrlen);
   dprintf("Self %u: Runtime::__connect returns %d\n", (unsigned)pthread_self(), ret);
 #else

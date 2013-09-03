@@ -168,6 +168,7 @@ void InstallRuntime() {
 template <typename _S>
 int RecorderRT<_S>::syncWait(void *chan, unsigned timeout) {
 #ifdef XTERN_PLUS_DBUG
+    fprintf(stderr, "Parrot pid %d, tid %d self %u dbug waiting...\n", getpid(), _S::self(), (unsigned)pthread_self());
   Runtime::__thread_waiting();
 #endif
   return _S::wait(chan, timeout);
@@ -181,7 +182,7 @@ void RecorderRT<_S>::syncSignal(void *chan, bool all) {
   for (itr = signal_list.begin(); itr != signal_list.end(); itr++) {
     pthread_t tid = _S::getPthreadTid(*itr);
     Runtime::__thread_active(tid);
-    fprintf(stderr, "Parrot pid %d self %u tid %d signals tid %d self %u\n", 
+    fprintf(stderr, "Parrot pid %d self %u tid %d signals tid %d self %u dbug active\n", 
       getpid(), (unsigned)pthread_self(), _S::self(), *itr, (unsigned)tid);
   }
 #endif

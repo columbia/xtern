@@ -37,6 +37,7 @@ volatile int idle_done = 0;
 pthread_t idle_th;
 pthread_mutex_t idle_mutex;
 pthread_cond_t idle_cond;
+extern bool __thread attachedToDbug;
 
 typedef void * (*thread_func_t)(void*);
 static void *__tern_thread_func(void *arg) {
@@ -148,11 +149,11 @@ void __tern_prog_end (void) {
 #ifndef XTERN_PLUS_DBUG
   assert(Space::isApp() && "__tern_prog_end must start in app space");
 #else
-  if (!Space::isApp()) {
-    fprintf(stderr, "\n\nProcess exits suddenly. Pid %d self %u. Attach process to dbug.\n\n", getpid(), (unsigned)pthread_self());
+  fprintf(stderr, "\n\nPid %d self %u. Attach process to dbug %d.\n\n", getpid(), (unsigned)pthread_self(), attachedToDbug);
+  if (!attachedToDbug) {
     Runtime::__attach_self_to_dbug();
-    return;
   }
+  _exit(0);
 #endif
 
   tern_print_runtime_stat();
