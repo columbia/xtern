@@ -7,6 +7,11 @@
 > ./run
 
 3. How to run the model checking experiments (dBug-only and Parrot+dBug) with aget+mongoose.
+> cd $SMT_MC_ROOT/mc-tools/dbug
+> git checkout aget
+> git pull
+> cd $SMT_MC_ROOT/mc-tools
+> ./mk-dbug
 > cd $XTERN_ROOT/apps/mongoose
 > cd ./mk
 > cd $XTERN_ROOT/apps/aget
