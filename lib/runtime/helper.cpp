@@ -153,7 +153,7 @@ void __tern_prog_end (void) {
   if (!attachedToDbug) {
     Runtime::__attach_self_to_dbug();
   }
-  _exit(0);
+  Runtime::___exit(0);
 #endif
 
   tern_print_runtime_stat();

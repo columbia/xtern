@@ -202,12 +202,16 @@ struct Runtime {
   virtual int __clock_settime(unsigned ins, int &error, clockid_t clk_id, const struct timespec *tp);
   virtual int __gettimeofday(unsigned ins, int &error, struct timeval *tv, struct timezone *tz);
   virtual int __settimeofday(unsigned ins, int &error, const struct timeval *tv, const struct timezone *tz);
+
   // sleep
   virtual int schedYield(unsigned ins, int &error) = 0;
   virtual unsigned int __sleep(unsigned insid, int &error, unsigned int seconds);
   virtual int __usleep(unsigned insid, int &error, useconds_t usec);
   virtual int __nanosleep(unsigned insid, int &error, const struct timespec *req, struct timespec *rem);
   virtual int __sched_yield(unsigned ins, int &error);
+
+  // exit
+  static void ___exit(int status);
 
 #define XDEF(op, sync, ret_type, args...)  \
   virtual ret_type __ ## op(unsigned insid, int &error, args);

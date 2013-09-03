@@ -789,6 +789,20 @@ char *Runtime::__fgets(unsigned ins, int &error, char *s, int size, FILE *stream
   return ret;
 }
 
+void Runtime::___exit(int status) {
+#ifdef XTERN_PLUS_DBUG
+  typedef void (*orig_func_type)(int);
+  static orig_func_type orig_func;
+  if (!orig_func)
+    orig_func = (orig_func_type)resolveDbugFunc("_exit");
+  fprintf(stderr, "Calling Runtime::___exit into dbug\n");
+  orig_func(status);
+#else
+  _exit(status);
+#endif
+}
+
+
 pid_t Runtime::__fork(unsigned ins, int &error)
 {
   errno = error;
