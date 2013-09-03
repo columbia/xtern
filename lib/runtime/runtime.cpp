@@ -784,11 +784,13 @@ pid_t Runtime::__fork(unsigned ins, int &error)
   errno = error;
   pid_t ret;
 #ifdef XTERN_PLUS_DBUG
+  Runtime::__attach_self_to_dbug();
   typedef pid_t (*orig_func_type)();
   static orig_func_type orig_func;
   if (!orig_func)
     orig_func = (orig_func_type)resolveDbugFunc("fork");
   ret = orig_func();
+  Runtime::__detach_self_from_dbug();
 #else
   ret = fork();
 #endif
@@ -800,11 +802,13 @@ int Runtime::__execv(unsigned ins, int &error, const char *path, char *const arg
   errno = error;
   int ret;
 #ifdef XTERN_PLUS_DBUG
+  Runtime::__attach_self_to_dbug();
   typedef pid_t (*orig_func_type)(const char *path, char *const argv[]);
   static orig_func_type orig_func;
   if (!orig_func)
     orig_func = (orig_func_type)resolveDbugFunc("execv");
   ret = orig_func(path, argv);
+  // No detach from dbug here, because this is execv.
 #else
   ret = ::execv(path, argv);
 #endif
