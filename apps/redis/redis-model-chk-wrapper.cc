@@ -7,7 +7,7 @@ int main() {
   int client_pid = fork();
   if (client_pid == 0) {
     //char *argv[] = { "/home/heming/rcs/smt+mc/xtern/apps/redis/redis-benchmark", "-n", "2", "-c", "2", "-t", "get" , NULL };
-    char *argv[] = { "/home/jsimsa/smt+mc/xtern/apps/redis/redis-benchmark", "-n", "2", "-t", "get" , NULL };
+    char *argv[] = { "/home/jsimsa/smt+mc/xtern/apps/redis/redis-benchmark", "-n", "2", "-t", "lrange_100" , NULL };
     execv("/home/heming/rcs/smt+mc/xtern/apps/redis/redis-benchmark", argv);
   }
   sleep(0);
