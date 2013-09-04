@@ -53,6 +53,7 @@ struct RecorderRT: public Runtime, public _Scheduler {
   int pthreadCreate(unsigned insid, int &error, pthread_t *thread,  pthread_attr_t *attr,
                     void *(*thread_func)(void*), void *arg);
   int pthreadJoin(unsigned insid, int &error, pthread_t th, void **thread_return);
+  int __pthread_detach(unsigned insid, int &error, pthread_t th);
 
   // mutex
   int pthreadMutexInit(unsigned insid, int &error, pthread_mutex_t *mutex, const  pthread_mutexattr_t *mutexattr);

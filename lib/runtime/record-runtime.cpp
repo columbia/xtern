@@ -529,6 +529,14 @@ int RecorderRT<_S>::pthreadJoin(unsigned ins, int &error, pthread_t th, void **r
 }
 
 template <typename _S>
+int RecorderRT<_S>::__pthread_detach(unsigned insid, int &error, pthread_t th) {
+  BLOCK_TIMER_START(pthread_detach, insid, error, th);
+  int ret = Runtime::__pthread_detach(insid, error, th);
+  BLOCK_TIMER_END(syncfunc::pthread_detach, (uint64_t)ret);
+  return ret;
+}
+
+template <typename _S>
 int RecorderRT<_S>::pthreadMutexInit(unsigned ins, int &error, pthread_mutex_t *mutex, const  pthread_mutexattr_t *mutexattr)
 {
   int ret;

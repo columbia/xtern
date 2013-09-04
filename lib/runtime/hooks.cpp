@@ -111,6 +111,16 @@ int tern_pthread_join(unsigned ins, pthread_t th, void **retval) {
   return ret;
 }
 
+int tern_pthread_detach(unsigned ins, pthread_t th) {
+  int error = errno;
+  int ret;
+  Space::enterSys();
+  ret = Runtime::the->__pthread_detach(ins, error, th);
+  Space::exitSys();
+  errno = error;
+  return ret;
+}
+
 int tern_pthread_mutex_init(unsigned ins, pthread_mutex_t *mutex, const pthread_mutexattr_t *mutexattr) {
   int error = errno;
   int ret;

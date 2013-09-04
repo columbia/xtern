@@ -251,6 +251,24 @@ int Runtime::__pthread_join(pthread_t th, void **retval) {
   return ret;
 }
 
+int Runtime::__pthread_detach(unsigned ins, int &error, pthread_t th) {
+  int ret;
+  errno = error;
+#ifdef XTERN_PLUS_DBUG
+  typedef int (*orig_func_type)(pthread_t);
+  static orig_func_type orig_func;
+  if (!orig_func)
+    orig_func = (orig_func_type)resolveDbugFunc("pthread_detach");
+  fprintf(stderr, "Calling Runtime::___pthread_detach into dbug\n");
+  ret = orig_func(th);
+#else
+  ret = ::pthread_detach(th);
+#endif
+  error = errno;
+  return ret;
+}
+
+
 int Runtime::__socket(unsigned ins, int &error, int domain, int type, int protocol)
 {
   errno = error;

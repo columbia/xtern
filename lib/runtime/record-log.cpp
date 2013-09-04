@@ -137,6 +137,7 @@ void TxtLogger::logSync(unsigned insid, unsigned short sync,
   case syncfunc::sem_init:
   case syncfunc::sem_post:
   case syncfunc::pthread_join:
+  case syncfunc::pthread_detach:
   case syncfunc::sleep:
   case syncfunc::usleep:
   case syncfunc::nanosleep:
@@ -532,6 +533,7 @@ void TestLogger::logSync(unsigned insid, unsigned short sync,
   case syncfunc::sem_init:
   case syncfunc::sem_post:
   case syncfunc::pthread_join:
+  case syncfunc::pthread_detach:
   case syncfunc::sleep:
   case syncfunc::usleep:
   case syncfunc::nanosleep:

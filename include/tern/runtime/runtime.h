@@ -160,6 +160,7 @@ struct Runtime {
   static int __pthread_create(pthread_t *th, const pthread_attr_t *a, void *(*func)(void*), void *arg);
   static void __pthread_exit(void *value_ptr);
   static int __pthread_join(pthread_t th, void **retval);
+  virtual int __pthread_detach(unsigned insid, int &error, pthread_t th);
 
   // socket and files
   virtual int __socket(unsigned insid, int &error, int domain, int type, int protocol);

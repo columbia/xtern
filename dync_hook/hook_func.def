@@ -103,6 +103,18 @@ ENDDEF
 
 STARTDEF
 int 
+pthread_detach
+/libpthread.so.0
+pthread_t
+SECTION
+pthread_t thread
+SECTION
+thread
+SECTION
+ENDDEF
+
+STARTDEF
+int 
 socket
 /libc.so.6
 int, int, int
