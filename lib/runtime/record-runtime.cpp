@@ -2053,6 +2053,24 @@ int RecorderRT<_S>::__epoll_wait(unsigned ins, int &error, int epfd, struct epol
 }
 
 template <typename _S>
+int RecorderRT<_S>::__epoll_create(unsigned ins, int &error, int size)
+{  
+  BLOCK_TIMER_START(epoll_create, ins, error, size);
+  int ret = Runtime::__epoll_create(ins, error, size);
+  BLOCK_TIMER_END(syncfunc::epoll_create, (uint64_t) ret);
+  return ret;
+}
+
+template <typename _S>
+int RecorderRT<_S>::__epoll_ctl(unsigned ins, int &error, int epfd, int op, int fd, struct epoll_event *event)
+{  
+  BLOCK_TIMER_START(epoll_ctl, ins, error, epfd, op, fd, event);
+  int ret = Runtime::__epoll_ctl(ins, error, epfd, op, fd, event);
+  BLOCK_TIMER_END(syncfunc::epoll_ctl, (uint64_t) ret);
+  return ret;
+}
+
+template <typename _S>
 int RecorderRT<_S>::__poll(unsigned ins, int &error, struct pollfd *fds, nfds_t nfds, int timeout)
 {
   BLOCK_TIMER_START(poll, ins, error, fds, nfds, timeout);

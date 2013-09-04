@@ -117,6 +117,8 @@ DEF(nanosleep,              BlockingSyscall, int, const struct timespec *req, st
 //socket DEF(accept,                 BlockingSyscall, int, int sockfd, struct sockaddr *addr, socklen_t *addrlen)
 //socket DEF(select,                 BlockingSyscall, int, int nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds, struct timeval *timeout)
 DEF(epoll_wait,             BlockingSyscall, int, int epfd, struct epoll_event *events, int maxevents, int timeout)
+DEF(epoll_create,             Synchronization, int, int size)
+DEF(epoll_ctl, Synchronization, int, int epfd, int op, int fd, struct epoll_event *event)
 DEF(sigwait,                BlockingSyscall, int, const sigset_t *set, int *sig)
 DEF(fgets,                  BlockingSyscall, char*, char* s, int size, FILE *stream)
 /* should include sched_yield */

@@ -126,6 +126,8 @@ struct RecorderRT: public Runtime, public _Scheduler {
   int __poll(unsigned insid, int &error, struct pollfd *fds, nfds_t nfds, int timeout);
   int __bind(unsigned insid, int &error, int socket, const struct sockaddr *address, socklen_t address_len);
   int __epoll_wait(unsigned insid, int &error, int epfd, struct epoll_event *events, int maxevents, int timeout);
+  int __epoll_create(unsigned insid, int &error, int size);
+  int __epoll_ctl(unsigned insid, int &error, int epfd, int op, int fd, struct epoll_event *event);
   int __sigwait(unsigned insid, int &error, const sigset_t *set, int *sig); 
   char *__fgets(unsigned insid, int &error, char *s, int size, FILE *stream);
   pid_t __fork(unsigned insid, int &error);

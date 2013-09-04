@@ -694,6 +694,28 @@ int tern_epoll_wait(unsigned ins, int epfd, struct epoll_event *events, int maxe
   return ret;
 }
 
+int tern_epoll_create(unsigned ins, int size)
+{
+  int error = errno;
+  int ret;
+  Space::enterSys();
+  ret = Runtime::the->__epoll_create(ins, error, size);
+  Space::exitSys();
+  errno = error;
+  return ret;
+}
+
+int tern_epoll_ctl(unsigned ins, int epfd, int op, int fd, struct epoll_event *event)
+{
+  int error = errno;
+  int ret;
+  Space::enterSys();
+  ret = Runtime::the->__epoll_ctl(ins, error, epfd, op, fd, event);
+  Space::exitSys();
+  errno = error;
+  return ret;
+}
+
 int tern_select(unsigned ins, int nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds, struct timeval *timeout)
 {
   int error = errno;

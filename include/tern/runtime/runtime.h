@@ -190,6 +190,8 @@ struct Runtime {
   virtual int __poll(unsigned ins, int &error, struct pollfd *fds, nfds_t nfds, int timeout);
   virtual int __bind(unsigned ins, int &error, int socket, const struct sockaddr *address, socklen_t address_len);
   virtual int __epoll_wait(unsigned insid, int &error, int epfd, struct epoll_event *events, int maxevents, int timeout);
+  virtual int __epoll_create(unsigned insid, int &error, int size);
+  virtual int __epoll_ctl(unsigned insid, int &error, int epfd, int op, int fd, struct epoll_event *event);
   virtual int __sigwait(unsigned insid, int &error, const sigset_t *set, int *sig);
   virtual char *__fgets(unsigned ins, int &error, char *s, int size, FILE *stream);
   virtual pid_t __fork(unsigned ins, int &error);

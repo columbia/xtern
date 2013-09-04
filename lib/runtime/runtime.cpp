@@ -735,7 +735,43 @@ int Runtime::__epoll_wait(unsigned ins, int &error, int epfd, struct epoll_event
     orig_func = (orig_func_type)resolveDbugFunc("epoll_wait");
   ret = orig_func(epfd,events,maxevents,timeout);
 #else
-  ret = epoll_wait(epfd,events,maxevents,timeout);
+  ret = ::epoll_wait(epfd,events,maxevents,timeout);
+#endif
+  error = errno;
+  return ret;
+}
+
+int Runtime::__epoll_create(unsigned ins, int &error, int size)
+{
+  errno = error;
+  int ret;
+#ifdef XTERN_PLUS_DBUG
+  typedef int (*orig_func_type)(int);
+  static orig_func_type orig_func;
+  if (!orig_func)
+    orig_func = (orig_func_type)resolveDbugFunc("epoll_create");
+  fprintf(stderr, "Runtime::__epoll_create calls into dbug.\n");
+  ret = orig_func(size);
+#else
+  ret = ::epoll_create(size);
+#endif
+  error = errno;
+  return ret;
+}
+
+int Runtime::__epoll_ctl(unsigned ins, int &error, int epfd, int op, int fd, struct epoll_event *event)
+{
+  errno = error;
+  int ret;
+#ifdef XTERN_PLUS_DBUG
+  typedef int (*orig_func_type)(int , int , int , struct epoll_event *);
+  static orig_func_type orig_func;
+  if (!orig_func)
+    orig_func = (orig_func_type)resolveDbugFunc("epoll_ctl");
+  fprintf(stderr, "Runtime::__epoll_ctl calls into dbug.\n");
+  ret = orig_func(epfd,op,fd,event);
+#else
+  ret = ::epoll_ctl(epfd,op,fd,event);
 #endif
   error = errno;
   return ret;

@@ -144,6 +144,8 @@ static inline int NumRecordsForSync(short sync) {
   case syncfunc::read:
   case syncfunc::select:
   case syncfunc::epoll_wait:
+  case syncfunc::epoll_create:
+  case syncfunc::epoll_ctl:
   case syncfunc::sigwait:
   case syncfunc::fgets:
   case syncfunc::wait:
