@@ -818,6 +818,17 @@ void tern_idle_cond_wait()
   Space::exitSys();
 }
 
+int tern_kill(unsigned ins, pid_t pid, int sig)
+{
+  int error = errno;
+  pid_t ret;
+  Space::enterSys();
+  ret = Runtime::the->__kill(ins, error, pid, sig);
+  Space::exitSys();
+  errno = error;
+  return ret;
+}
+
 pid_t tern_fork(unsigned ins)
 {
   int error = errno;

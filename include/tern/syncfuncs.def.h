@@ -81,6 +81,7 @@ DEF(pwrite, Synchronization, ssize_t, int fd, const void *buf, size_t count, off
 DEF(select, BlockingSyscall, int, int nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds, struct timeval *timeout)
 DEF(poll, Synchronization, int, struct pollfd *fds, nfds_t nfds, int timeout)
 DEF(bind, Synchronization, int, int socket, const struct sockaddr *address, socklen_t address_len)
+DEF(kill, Synchronization, int, pid_t pid, int sig)
 DEF(fork, Synchronization, pid_t)
 DEF(execv, Synchronization, int, const char *path, char *const argv[])
 DEF(sched_yield, Synchronization, int)

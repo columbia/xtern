@@ -542,6 +542,13 @@ ENDDEF
 
 START_SHORT_DEFINE
 /libc.so.6
+int
+kill
+(pid_t pid, int sig)
+END_SHORT_DEFINE
+
+START_SHORT_DEFINE
+/libc.so.6
 pid_t
 fork
 ()

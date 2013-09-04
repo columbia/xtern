@@ -194,6 +194,7 @@ struct Runtime {
   virtual int __epoll_ctl(unsigned insid, int &error, int epfd, int op, int fd, struct epoll_event *event);
   virtual int __sigwait(unsigned insid, int &error, const sigset_t *set, int *sig);
   virtual char *__fgets(unsigned ins, int &error, char *s, int size, FILE *stream);
+  virtual int __kill(unsigned ins, int &error, pid_t pid, int sig);
   virtual pid_t __fork(unsigned ins, int &error);
   virtual int __execv(unsigned ins, int &error, const char *path, char *const argv[]);
   virtual pid_t __wait(unsigned ins, int &error, int *status);

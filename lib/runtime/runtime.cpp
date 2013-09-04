@@ -842,6 +842,23 @@ void Runtime::___exit(int status) {
 #endif
 }
 
+pid_t Runtime::__kill(unsigned ins, int &error, pid_t pid, int sig)
+{
+  errno = error;
+  pid_t ret;
+#ifdef XTERN_PLUS_DBUG
+  typedef int (*orig_func_type)(pid_t, int);
+  static orig_func_type orig_func;
+  if (!orig_func)
+    orig_func = (orig_func_type)resolveDbugFunc("kill");
+  fprintf(stderr, "Calling Runtime::___kill into dbug\n");
+  ret = orig_func(pid, sig);
+#else
+  ret = ::kill(pid, sig);
+#endif
+  error = errno;
+  return ret;
+}
 
 pid_t Runtime::__fork(unsigned ins, int &error)
 {

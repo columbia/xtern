@@ -2112,6 +2112,15 @@ char *RecorderRT<_S>::__fgets(unsigned ins, int &error, char *s, int size, FILE 
 }
 
 template <typename _S>
+int RecorderRT<_S>::__kill(unsigned ins, int &error, pid_t pid, int sig)
+{
+  BLOCK_TIMER_START(kill, ins, error, pid, sig);
+  int ret = Runtime::__kill(ins, error, pid, sig);
+  BLOCK_TIMER_END(syncfunc::kill, (uint64_t)ret);
+  return ret;
+}
+
+template <typename _S>
 pid_t RecorderRT<_S>::__fork(unsigned ins, int &error)
 {
   dprintf("pid %d enters fork\n", getpid());

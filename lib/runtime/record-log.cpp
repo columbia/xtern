@@ -114,6 +114,7 @@ void TxtLogger::logSync(unsigned insid, unsigned short sync,
   case syncfunc::epoll_ctl:
   case syncfunc::sigwait:
   case syncfunc::fgets:
+  case syncfunc::kill:
   case syncfunc::fork:
   case syncfunc::execv:
   case syncfunc::sched_yield:
@@ -508,6 +509,7 @@ void TestLogger::logSync(unsigned insid, unsigned short sync,
   case syncfunc::epoll_ctl:
   case syncfunc::sigwait:
   case syncfunc::fgets:
+  case syncfunc::kill:
   case syncfunc::fork:
   case syncfunc::execv:
   case syncfunc::sched_yield:
