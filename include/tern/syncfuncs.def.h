@@ -75,6 +75,7 @@ DEF(getpeername, Synchronization, int, int sockfd, struct sockaddr *addr, sockle
 DEF(getsockopt, Synchronization, int, int sockfd, int level, int optname, void *optval, socklen_t *optlen)
 DEF(setsockopt, Synchronization, int, int sockfd, int level, int optname, const void *optval, socklen_t optlen)
 DEF(pipe, BlockingSyscall, int, int pipefd[2])
+DEF(fcntl, Synchronization, int, int fd, int cmd, va_list arg_list)
 
 DEF(close, Synchronization, int, int fd)
 DEF(read, BlockingSyscall, ssize_t, int fd, void *buf, size_t count)

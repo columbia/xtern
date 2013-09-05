@@ -2353,6 +2353,16 @@ int RecorderRT<_S>::__pipe(unsigned ins, int &error, int pipefd[2])
 }
 
 template <typename _S>
+int RecorderRT<_S>::__fcntl(unsigned ins, int &error, int fd, int cmd, va_list arg_list)
+{
+  BLOCK_TIMER_START(fcntl, ins, error, fd, cmd, arg_list);
+  int ret = Runtime::__fcntl(ins, error, fd, cmd, arg_list);
+  BLOCK_TIMER_END(syncfunc::fcntl, (uint64_t)ret);
+  return ret;
+}
+
+
+template <typename _S>
 int RecorderRT<_S>::__close(unsigned ins, int &error, int fd)
 {
   // First, handle regular IO.

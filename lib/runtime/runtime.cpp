@@ -6,6 +6,7 @@
 #include <fcntl.h>
 #include <string>
 #include <poll.h>
+#include <stdarg.h>
 
 #include "tern/config.h"
 #include "tern/hooks.h"
@@ -334,6 +335,24 @@ int Runtime::__pipe(unsigned ins, int &error, int pipefd[2])
   ret = orig_func(pipefd);
 #else
   ret = ::pipe(pipefd);
+#endif
+  error = errno;
+  return ret;
+}
+
+int Runtime::__fcntl(unsigned ins, int &error, int fd, int cmd, va_list arg_list)
+{
+  errno = error;
+  int ret;
+#ifdef XTERN_PLUS_DBUG
+  typedef int (*orig_func_type)(int, int, ...);
+  static orig_func_type orig_func;
+  if (!orig_func)
+    orig_func = (orig_func_type)resolveDbugFunc("fcntl");
+  fprintf(stderr, "Parrot pid %d self %u calls dbug fcntl()...\n", getpid(), (unsigned)pthread_self());
+  ret = orig_func(fd, cmd, arg_list);
+#else
+  ret = ::fcntl(fd, cmd, arg_list);
 #endif
   error = errno;
   return ret;
