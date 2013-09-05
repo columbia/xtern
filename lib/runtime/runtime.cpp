@@ -278,7 +278,9 @@ int Runtime::__socket(unsigned ins, int &error, int domain, int type, int protoc
   static orig_func_type orig_func;
   if (!orig_func)
     orig_func = (orig_func_type)resolveDbugFunc("socket");
+  fprintf(stderr, "Parrot pid %d self %u calls dbug socket(%d, %d, %d)...\n", getpid(), (unsigned)pthread_self(), domain, type, protocol);
   ret = orig_func(domain, type, protocol);
+  fprintf(stderr, "Parrot pid %d self %u calls dbug socket() return...\n", getpid(), (unsigned)pthread_self());
 #else
   ret = socket(domain, type, protocol);
 #endif
@@ -295,7 +297,9 @@ int Runtime::__listen(unsigned ins, int &error, int sockfd, int backlog)
   static orig_func_type orig_func;
   if (!orig_func)
     orig_func = (orig_func_type)resolveDbugFunc("listen");
+  fprintf(stderr, "Parrot pid %d self %u calls dbug listen()...\n", getpid(), (unsigned)pthread_self());
   ret = orig_func(sockfd, backlog);
+  fprintf(stderr, "Parrot pid %d self %u calls dbug listen() return...\n", getpid(), (unsigned)pthread_self());
 #else
   ret = listen(sockfd, backlog);
 #endif

@@ -25,6 +25,7 @@ extern "C" void FUNC_NAME(ARGS_WITH_NAME){
 #ifdef __USE_TERN_RUNTIME
   if (Space::isApp()) {
     if (options::DMT) {
+      //fprintf(stderr, "Parrot hook: pid %d self %u calls %s\n", getpid(), (unsigned)pthread_self(), "FUNC_NAME");
 #ifdef __NEED_INPUT_INSID
       if (options::dync_geteip) {
         Space::enterSys();
