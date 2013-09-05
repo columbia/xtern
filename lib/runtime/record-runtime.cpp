@@ -2311,7 +2311,10 @@ int RecorderRT<_S>::__listen(unsigned ins, int &error, int sockfd, int backlog)
 template <typename _S>
 int RecorderRT<_S>::__shutdown(unsigned ins, int &error, int sockfd, int how)
 {
-  return Runtime::__shutdown(ins, error, sockfd, how);
+  BLOCK_TIMER_START(shutdown, ins, error, sockfd, how);
+  int ret = Runtime::__shutdown(ins, error, sockfd, how);
+  BLOCK_TIMER_END(syncfunc::shutdown, (uint64_t)ret);
+  return ret;
 }
 
 template <typename _S>
@@ -2321,15 +2324,23 @@ int RecorderRT<_S>::__getpeername(unsigned ins, int &error, int sockfd, struct s
 }
 
 template <typename _S>
-int RecorderRT<_S>::__getsockopt(unsigned ins, int &error, int sockfd, int level, int optname, void *optval, socklen_t *optlen)
+int RecorderRT<_S>::__getsockopt(unsigned ins, int &error, int sockfd, int level, int optname,
+                      void *optval, socklen_t *optlen)
 {
-  return Runtime::__getsockopt(ins, error, sockfd, level, optname, optval, optlen);
+  BLOCK_TIMER_START(getsockopt, ins, error, sockfd, level, optname, optval, optlen);
+  int ret = Runtime::__getsockopt(ins, error, sockfd, level, optname, optval, optlen);
+  BLOCK_TIMER_END(syncfunc::getsockopt, (uint64_t)ret);
+  return ret;
 }
 
 template <typename _S>
-int RecorderRT<_S>::__setsockopt(unsigned ins, int &error, int sockfd, int level, int optname, const void *optval, socklen_t optlen)
+int RecorderRT<_S>::__setsockopt(unsigned ins, int &error, int sockfd, int level, int optname,
+                      const void *optval, socklen_t optlen)
 {
-  return Runtime::__setsockopt(ins, error, sockfd, level, optname, optval, optlen);
+  BLOCK_TIMER_START(setsockopt, ins, error, sockfd, level, optname, optval, optlen);
+  int ret = Runtime::__setsockopt(ins, error, sockfd, level, optname, optval, optlen);
+  BLOCK_TIMER_END(syncfunc::setsockopt, (uint64_t)ret);
+  return ret;
 }
 
 template <typename _S>

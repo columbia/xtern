@@ -288,6 +288,40 @@ int Runtime::__socket(unsigned ins, int &error, int domain, int type, int protoc
   return ret;
 }
 
+int Runtime::__getsockopt(unsigned ins, int &error, int sockfd, int level, int optname, void *optval, socklen_t *optlen)
+{
+  errno = error;
+  int ret;
+#ifdef XTERN_PLUS_DBUG
+  typedef int (*orig_func_type)(int, int, int, void *, socklen_t *);
+  static orig_func_type orig_func;
+  if (!orig_func)
+    orig_func = (orig_func_type)resolveDbugFunc("getsockopt");
+  ret = orig_func(sockfd, level, optname, optval, optlen);
+#else
+  ret = ::getsockopt(sockfd, level, optname, optval, optlen);
+#endif
+  error = errno;
+  return ret;
+}
+
+int Runtime::__setsockopt(unsigned ins, int &error, int sockfd, int level, int optname, const void *optval, socklen_t optlen)
+{
+  errno = error;
+  int ret;
+#ifdef XTERN_PLUS_DBUG
+  typedef int (*orig_func_type)(int, int, int, const void *, socklen_t);
+  static orig_func_type orig_func;
+  if (!orig_func)
+    orig_func = (orig_func_type)resolveDbugFunc("setsockopt");
+  ret = orig_func(sockfd, level, optname, optval, optlen);
+#else
+  ret = ::setsockopt(sockfd, level, optname, optval, optlen);
+#endif
+  error = errno;
+  return ret;
+}
+
 int Runtime::__listen(unsigned ins, int &error, int sockfd, int backlog)
 {
   errno = error;
@@ -564,7 +598,16 @@ ssize_t Runtime::__recvmsg(unsigned ins, int &error, int sockfd, struct msghdr *
 int Runtime::__shutdown(unsigned ins, int &error, int sockfd, int how)
 {
   errno = error;
-  int ret = shutdown(sockfd,how);
+  ssize_t ret;
+#ifdef XTERN_PLUS_DBUG
+  typedef ssize_t (*orig_func_type)(int, int );
+  static orig_func_type orig_func;
+  if (!orig_func)
+    orig_func = (orig_func_type)resolveDbugFunc("shutdown");
+  ret = orig_func(sockfd,how);
+#else
+  ret = ::shutdown(sockfd,how);
+#endif
   error = errno;
   return ret;
 }
@@ -573,22 +616,6 @@ int Runtime::__getpeername(unsigned ins, int &error, int sockfd, struct sockaddr
 {
   errno = error;
   int ret = getpeername(sockfd, addr, addrlen);
-  error = errno;
-  return ret;
-}
-
-int Runtime::__getsockopt(unsigned ins, int &error, int sockfd, int level, int optname, void *optval, socklen_t *optlen)
-{
-  errno = error;
-  int ret = getsockopt(sockfd, level, optname, optval, optlen);
-  error = errno;
-  return ret;
-}
-
-int Runtime::__setsockopt(unsigned ins, int &error, int sockfd, int level, int optname, const void *optval, socklen_t optlen)
-{
-  errno = error;
-  int ret = setsockopt(sockfd, level, optname, optval, optlen);
   error = errno;
   return ret;
 }

@@ -246,6 +246,30 @@ SECTION
 ENDDEF
 
 STARTDEF
+int
+getsockopt
+/libc.so.6
+int, int, int, void *, socklen_t *
+SECTION
+int sockfd, int level, int optname, void *optval, socklen_t *optlen
+SECTION
+sockfd, level, optname, optval, optlen
+SECTION
+ENDDEF
+
+STARTDEF
+int
+setsockopt
+/libc.so.6
+int, int, int, const void *, socklen_t
+SECTION
+int sockfd, int level, int optname, const void *optval, socklen_t optlen
+SECTION
+sockfd, level, optname, optval, optlen
+SECTION
+ENDDEF
+
+STARTDEF
 ssize_t
 read
 /libc.so.6
