@@ -497,6 +497,18 @@ struct hostent *tern_gethostbyname(unsigned ins, const char *name)
   return ret;
 }
 
+int tern_gethostbyname_r(unsigned ins, const char *name, struct hostent *ret, char *buf, size_t buflen,
+  struct hostent **result, int *h_errnop)
+{
+  int error = errno;
+  int ret2;
+  Space::enterSys();
+  ret2 = Runtime::the->__gethostbyname_r(ins, error, name, ret, buf, buflen, result, h_errnop);
+  Space::exitSys();
+  errno = error;
+  return ret2;
+}
+
 struct hostent *tern_gethostbyaddr(unsigned ins, const void *addr, int len, int type)
 {
   int error = errno;
@@ -633,6 +645,17 @@ int tern_setsockopt(unsigned ins, int sockfd, int level, int optname, const void
   int ret;
   Space::enterSys();
   ret = Runtime::the->__setsockopt(ins, error, sockfd, level, optname, optval, optlen);
+  Space::exitSys();
+  errno = error;
+  return ret;
+}
+
+int tern_pipe(unsigned ins, int pipefd[2])
+{
+  int error = errno;
+  int ret;
+  Space::enterSys();
+  ret = Runtime::the->__pipe(ins, error, pipefd);
   Space::exitSys();
   errno = error;
   return ret;

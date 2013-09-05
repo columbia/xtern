@@ -107,8 +107,10 @@ void TxtLogger::logSync(unsigned insid, unsigned short sync,
   case syncfunc::listen:
   case syncfunc::getsockopt:
   case syncfunc::setsockopt:
+  case syncfunc::pipe:
   case syncfunc::shutdown:
   case syncfunc::gethostbyname:
+  case syncfunc::gethostbyname_r:
   case syncfunc::gethostbyaddr:
   case syncfunc::inet_ntoa:
   case syncfunc::strtok:
@@ -506,8 +508,10 @@ void TestLogger::logSync(unsigned insid, unsigned short sync,
   case syncfunc::listen:
   case syncfunc::getsockopt:
   case syncfunc::setsockopt:
+  case syncfunc::pipe:
   case syncfunc::shutdown:
   case syncfunc::gethostbyname:
+  case syncfunc::gethostbyname_r:
   case syncfunc::gethostbyaddr:
   case syncfunc::inet_ntoa:
   case syncfunc::strtok:

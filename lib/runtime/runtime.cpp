@@ -322,6 +322,23 @@ int Runtime::__setsockopt(unsigned ins, int &error, int sockfd, int level, int o
   return ret;
 }
 
+int Runtime::__pipe(unsigned ins, int &error, int pipefd[2])
+{
+  errno = error;
+  int ret;
+#ifdef XTERN_PLUS_DBUG
+  typedef int (*orig_func_type)(int pipefd[2]);
+  static orig_func_type orig_func;
+  if (!orig_func)
+    orig_func = (orig_func_type)resolveDbugFunc("pipe");
+  ret = orig_func(pipefd);
+#else
+  ret = ::pipe(pipefd);
+#endif
+  error = errno;
+  return ret;
+}
+
 int Runtime::__listen(unsigned ins, int &error, int sockfd, int backlog)
 {
   errno = error;
@@ -414,6 +431,24 @@ struct hostent *Runtime::__gethostbyname(unsigned ins, int &error, const char *n
 #endif
   error = errno;
   return ret;
+}
+
+int Runtime::__gethostbyname_r(unsigned ins, int &error, const char *name,
+  struct hostent *ret, char *buf, size_t buflen, struct hostent **result, int *h_errnop)
+{
+  errno = error;
+  int ret2;
+#ifdef XTERN_PLUS_DBUG
+  typedef int (*orig_func_type)(const char *, struct hostent *, char *, size_t , struct hostent **, int *);
+  static orig_func_type orig_func;
+  if (!orig_func)
+    orig_func = (orig_func_type)resolveDbugFunc("gethostbyname_r");
+  ret2 = orig_func(name, ret, buf, buflen, result, h_errnop);
+#else
+  ret2 = gethostbyname_r(name, ret, buf, buflen, result, h_errnop);
+#endif
+  error = errno;
+  return ret2;
 }
 
 struct hostent *Runtime::__gethostbyaddr(unsigned ins, int &error, const void *addr, int len, int type)

@@ -174,6 +174,18 @@ SECTION
 ENDDEF
 
 STARTDEF
+int
+gethostbyname_r
+/libc.so.6
+const char *, struct hostent *, char *, size_t , struct hostent **, int *
+SECTION
+const char *name, struct hostent *ret2, char *buf, size_t buflen, struct hostent **result, int *h_errnop
+SECTION
+name, ret2, buf, buflen, result, h_errnop
+SECTION
+ENDDEF
+
+STARTDEF
 struct hostent *
 gethostbyaddr
 /libc.so.6
@@ -266,6 +278,18 @@ SECTION
 int sockfd, int level, int optname, const void *optval, socklen_t optlen
 SECTION
 sockfd, level, optname, optval, optlen
+SECTION
+ENDDEF
+
+STARTDEF
+int
+pipe
+/libc.so.6
+int [2]
+SECTION
+int pipefd[2]
+SECTION
+pipefd
 SECTION
 ENDDEF
 

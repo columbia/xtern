@@ -2344,6 +2344,15 @@ int RecorderRT<_S>::__setsockopt(unsigned ins, int &error, int sockfd, int level
 }
 
 template <typename _S>
+int RecorderRT<_S>::__pipe(unsigned ins, int &error, int pipefd[2])
+{
+  BLOCK_TIMER_START(pipe, ins, error, pipefd);
+  int ret = Runtime::__pipe(ins, error, pipefd);
+  BLOCK_TIMER_END(syncfunc::pipe, (uint64_t)ret);
+  return ret;
+}
+
+template <typename _S>
 int RecorderRT<_S>::__close(unsigned ins, int &error, int fd)
 {
   // First, handle regular IO.
@@ -2426,6 +2435,16 @@ struct hostent *RecorderRT<_S>::__gethostbyname(unsigned ins, int &error, const 
   struct hostent *ret = Runtime::__gethostbyname(ins, error, name);
   BLOCK_TIMER_END(syncfunc::gethostbyname, (uint64_t)ret);
   return ret;
+}
+
+template <typename _S>
+int RecorderRT<_S>::__gethostbyname_r(unsigned ins, int &error, const char *name, struct hostent *ret,
+  char *buf, size_t buflen, struct hostent **result, int *h_errnop)
+{
+  BLOCK_TIMER_START(gethostbyname_r, ins, error, name, ret, buf, buflen, result, h_errnop);
+  int ret2 = Runtime::__gethostbyname_r(ins, error, name, ret, buf, buflen, result, h_errnop);
+  BLOCK_TIMER_END(syncfunc::gethostbyname_r, (uint64_t)ret2);
+  return ret2;
 }
 
 template <typename _S>

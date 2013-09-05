@@ -169,6 +169,7 @@ struct Runtime {
   virtual int __accept4(unsigned insid, int &error, int sockfd, struct sockaddr *cliaddr, socklen_t *addrlen, int flags);
   virtual int __connect(unsigned insid, int &error, int sockfd, const struct sockaddr *serv_addr, socklen_t addrlen);
   virtual struct hostent *__gethostbyname(unsigned insid, int &error, const char *name);
+  virtual int __gethostbyname_r(unsigned insid, int &error, const char *name, struct hostent *ret, char *buf, size_t buflen, struct hostent **result, int *h_errnop);
   virtual struct hostent *__gethostbyaddr(unsigned insid, int &error, const void *addr, int len, int type);
   virtual char *__inet_ntoa(unsigned ins, int &error, struct in_addr in);
   virtual char *__strtok(unsigned ins, int &error, char * str, const char * delimiters);
@@ -182,6 +183,7 @@ struct Runtime {
   virtual int __getpeername(unsigned insid, int &error, int sockfd, struct sockaddr *addr, socklen_t *addrlen);  
   virtual int __getsockopt(unsigned insid, int &error, int sockfd, int level, int optname, void *optval, socklen_t *optlen);
   virtual int __setsockopt(unsigned insid, int &error, int sockfd, int level, int optname, const void *optval, socklen_t optlen);
+  virtual int __pipe(unsigned insid, int &error, int pipefd[2]);
   virtual int __close(unsigned insid, int &error, int fd);
   virtual ssize_t __read(unsigned insid, int &error, int fd, void *buf, size_t count);
   virtual ssize_t __write(unsigned insid, int &error, int fd, const void *buf, size_t count);
