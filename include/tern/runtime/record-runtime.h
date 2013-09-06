@@ -120,7 +120,7 @@ struct RecorderRT: public Runtime, public _Scheduler {
   int __getsockopt(unsigned insid, int &error, int sockfd, int level, int optname, void *optval, socklen_t *optlen);
   int __setsockopt(unsigned insid, int &error, int sockfd, int level, int optname, const void *optval, socklen_t optlen);
   int __pipe(unsigned insid, int &error, int pipefd[2]);
-  int __fcntl(unsigned insid, int &error, int fd, int cmd, va_list arg_list);
+  int __fcntl(unsigned insid, int &error, int fd, int cmd, void *arg);
   int __close(unsigned insid, int &error, int fd);
   ssize_t __read(unsigned insid, int &error, int fd, void *buf, size_t count);
   ssize_t __write(unsigned insid, int &error, int fd, const void *buf, size_t count);

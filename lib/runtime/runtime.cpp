@@ -340,7 +340,7 @@ int Runtime::__pipe(unsigned ins, int &error, int pipefd[2])
   return ret;
 }
 
-int Runtime::__fcntl(unsigned ins, int &error, int fd, int cmd, va_list arg_list)
+int Runtime::__fcntl(unsigned ins, int &error, int fd, int cmd, void *arg)
 {
   errno = error;
   int ret;
@@ -349,10 +349,11 @@ int Runtime::__fcntl(unsigned ins, int &error, int fd, int cmd, va_list arg_list
   static orig_func_type orig_func;
   if (!orig_func)
     orig_func = (orig_func_type)resolveDbugFunc("fcntl");
-  fprintf(stderr, "Parrot pid %d self %u calls dbug fcntl()...\n", getpid(), (unsigned)pthread_self());
-  ret = orig_func(fd, cmd, arg_list);
+  fprintf(stderr, "Parrot pid %d self %u calls dbug fcntl(%d, %d, %p)...\n", getpid(),
+    (unsigned)pthread_self(), fd, cmd, arg);
+  ret = orig_func(fd, cmd, arg);
 #else
-  ret = ::fcntl(fd, cmd, arg_list);
+  ret = ::fcntl(fd, cmd, arg);
 #endif
   error = errno;
   return ret;

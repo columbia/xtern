@@ -185,7 +185,7 @@ struct Runtime {
   virtual int __getsockopt(unsigned insid, int &error, int sockfd, int level, int optname, void *optval, socklen_t *optlen);
   virtual int __setsockopt(unsigned insid, int &error, int sockfd, int level, int optname, const void *optval, socklen_t optlen);
   virtual int __pipe(unsigned insid, int &error, int pipefd[2]);
-  virtual int __fcntl(unsigned insid, int &error, int fd, int cmd, va_list arg_list);
+  virtual int __fcntl(unsigned insid, int &error, int fd, int cmd, void *arg);
   virtual int __close(unsigned insid, int &error, int fd);
   virtual ssize_t __read(unsigned insid, int &error, int fd, void *buf, size_t count);
   virtual ssize_t __write(unsigned insid, int &error, int fd, const void *buf, size_t count);

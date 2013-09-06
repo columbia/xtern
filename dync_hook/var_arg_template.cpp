@@ -4,8 +4,10 @@ extern "C" int fcntl(int fd, int cmd, ...){
   static orig_func_type orig_func;
 
   va_list arg_list;
-  va_start(arg_list, cmd);
-  void *arg;
+  va_start (arg_list, cmd);
+  void *arg = va_arg (arg_list, void *);
+  va_end (arg_list);
+
   void * handle;
   int ret;
   void *eip = 0;
@@ -39,11 +41,10 @@ extern "C" int fcntl(int fd, int cmd, ...){
         Space::exitSys();
       }
       record_rdtsc_op("fcntl", "START", 0, eip);
-      ret = tern_fcntl((unsigned)(uint64_t) eip, fd, cmd, arg_list);
+      ret = tern_fcntl((unsigned)(uint64_t) eip, fd, cmd, arg);
 #else
-      ret = tern_fcntl(fd, cmd, arg_list);
+      ret = tern_fcntl(fd, cmd, arg);
 #endif
-      va_end(arg_list);
       record_rdtsc_op("fcntl", "END", 0, eip);
       return ret;
     } else {// For performance debugging, by doing this, we are still able to get the sync wait time for non-det mode.
@@ -54,9 +55,7 @@ extern "C" int fcntl(int fd, int cmd, ...){
       }
       record_rdtsc_op("fcntl", "START", 0, eip);
       Space::enterSys();
-      arg = va_arg (arg_list, void *);
-      ret = orig_func(fd, cmd, arg); // Pass arg instead of arg_list.
-      va_end(arg_list);
+      ret = orig_func(fd, cmd, arg);
       Space::exitSys();
       record_rdtsc_op("fcntl", "END", 0, eip);
       return ret;
@@ -64,9 +63,7 @@ extern "C" int fcntl(int fd, int cmd, ...){
   } 
 #endif
 
-  arg = va_arg (arg_list, void *);
-  ret = orig_func(fd, cmd, arg); // Pass arg instead of arg_list.
-  va_end(arg_list);
+  ret = orig_func(fd, cmd, arg);
 
   return ret;
 }
