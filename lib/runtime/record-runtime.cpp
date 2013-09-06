@@ -2208,17 +2208,25 @@ pid_t RecorderRT<_S>::__waitpid(unsigned ins, int &error, pid_t pid, int *status
 template <typename _S>
 int RecorderRT<_S>::schedYield(unsigned ins, int &error)
 {
+  int ret;
   if (options::enforce_non_det_annotations && inNonDet) {
     // Do not need to count nNonDetPthreadSync for this op.
     //fprintf(stderr, "non-det yield start tid %d...\n", _S::self());  
-    int ret = Runtime::__sched_yield(ins, error);
+    ret = Runtime::__sched_yield(ins, error);
     //fprintf(stderr, "non-det yield end tid %d...\n", _S::self());  
     return ret;
   }
+#ifdef XTERN_PLUS_DBUG
+  BLOCK_TIMER_START(sched_yield, ins, error);
+  ret = Runtime::__sched_yield(ins, error);
+  BLOCK_TIMER_END(syncfunc::sched_yield, (uint64_t)ret);
+  return ret;
+#else
   SCHED_TIMER_START;
-  int ret = sched_yield();
+  ret = sched_yield();
   SCHED_TIMER_END(syncfunc::sched_yield, (uint64_t)ret);
   return ret;
+#endif
 }
 
 // TODO: right now we treat sleep functions just as a turn; should convert
