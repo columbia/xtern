@@ -2216,17 +2216,10 @@ int RecorderRT<_S>::schedYield(unsigned ins, int &error)
     //fprintf(stderr, "non-det yield end tid %d...\n", _S::self());  
     return ret;
   }
-#ifdef XTERN_PLUS_DBUG
-  BLOCK_TIMER_START(sched_yield, ins, error);
-  ret = Runtime::__sched_yield(ins, error);
-  BLOCK_TIMER_END(syncfunc::sched_yield, (uint64_t)ret);
-  return ret;
-#else
   SCHED_TIMER_START;
   ret = sched_yield();
   SCHED_TIMER_END(syncfunc::sched_yield, (uint64_t)ret);
   return ret;
-#endif
 }
 
 // TODO: right now we treat sleep functions just as a turn; should convert

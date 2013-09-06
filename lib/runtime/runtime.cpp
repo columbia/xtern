@@ -1072,7 +1072,6 @@ int Runtime::__sched_yield(unsigned ins, int &error) {
   typedef pid_t (*orig_func_type)();
   static orig_func_type orig_func;
   if (!orig_func)
-    fprintf(stderr, "Calling Runtime::__sched_yield into dbug\n");
     orig_func = (orig_func_type)resolveDbugFunc("sched_yield");
   ret = orig_func();
 #else
