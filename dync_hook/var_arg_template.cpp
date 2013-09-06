@@ -37,12 +37,12 @@ extern "C" int fcntl(int fd, int cmd, ...){
       }
       record_rdtsc_op("fcntl", "START", 0, eip);
       va_list arg_list;
-      va_start( arg_list, cmd );
+      va_start(arg_list, cmd);
       ret = tern_fcntl((unsigned)(uint64_t) eip, fd, cmd, arg_list);
       va_end(arg_list);
 #else
       va_list arg_list;
-      va_start( arg_list, cmd );
+      va_start(arg_list, cmd);
       ret = tern_fcntl(fd, cmd, arg_list);
       va_end(arg_list);
 #endif
@@ -57,7 +57,7 @@ extern "C" int fcntl(int fd, int cmd, ...){
       record_rdtsc_op("fcntl", "START", 0, eip);
       Space::enterSys();
       va_list arg_list;
-      va_start( arg_list, cmd );
+      va_start(arg_list, cmd);
       ret = orig_func(fd, cmd, arg_list);
       va_end(arg_list);
       Space::exitSys();
@@ -68,7 +68,7 @@ extern "C" int fcntl(int fd, int cmd, ...){
 #endif
 
   va_list arg_list;
-  va_start( arg_list, cmd );
+  va_start(arg_list, cmd);
   ret = orig_func(fd, cmd, arg_list);
   va_end(arg_list);
 
