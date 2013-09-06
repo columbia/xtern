@@ -661,6 +661,17 @@ int tern_pipe(unsigned ins, int pipefd[2])
   return ret;
 }
 
+int tern_fcntl(unsigned ins, int fd, int cmd, va_list va)
+{
+  int error = errno;
+  int ret;
+  Space::enterSys();
+  ret = Runtime::the->__fcntl(ins, error, fd, cmd, va);
+  Space::exitSys();
+  errno = error;
+  return ret;
+}
+
 int tern_close(unsigned ins, int fd)
 {
   int error = errno;
