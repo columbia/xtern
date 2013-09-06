@@ -471,6 +471,36 @@ int Runtime::__gethostbyname_r(unsigned ins, int &error, const char *name,
   return ret2;
 }
 
+int Runtime::__getaddrinfo(unsigned insid, int &error, const char *node, const char *service, const struct addrinfo *hints, struct addrinfo **res) {
+  errno = error;
+  int ret;
+#ifdef XTERN_PLUS_DBUG
+  typedef int (*orig_func_type)(const char *, const char *, const struct addrinfo *, struct addrinfo **);
+  static orig_func_type orig_func;
+  if (!orig_func)
+    orig_func = (orig_func_type)resolveDbugFunc("getaddrinfo");
+  ret = orig_func(node, service, hints, res);
+#else
+  ret = getaddrinfo(node, service, hints, res);
+#endif
+  error = errno;
+  return ret;
+}
+
+void  Runtime::__freeaddrinfo(unsigned insid, int &error, struct addrinfo *res) {
+  errno = error;
+#ifdef XTERN_PLUS_DBUG
+  typedef void (*orig_func_type)(struct addrinfo *);
+  static orig_func_type orig_func;
+  if (!orig_func)
+    orig_func = (orig_func_type)resolveDbugFunc("freeaddrinfo");
+  orig_func(res);
+#else
+  freeaddrinfo(res);
+#endif
+  error = errno;
+}
+
 struct hostent *Runtime::__gethostbyaddr(unsigned ins, int &error, const void *addr, int len, int type)
 {
   errno = error;

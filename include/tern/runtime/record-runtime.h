@@ -106,6 +106,8 @@ struct RecorderRT: public Runtime, public _Scheduler {
   int __connect(unsigned insid, int &error, int sockfd, const struct sockaddr *serv_addr, socklen_t addrlen);
   struct hostent *__gethostbyname(unsigned insid, int &error, const char *name);
   int __gethostbyname_r(unsigned insid, int &error, const char *name, struct hostent *ret, char *buf, size_t buflen, struct hostent **result, int *h_errnop);
+  int __getaddrinfo(unsigned insid, int &error, const char *node, const char *service, const struct addrinfo *hints, struct addrinfo **res);
+  void __freeaddrinfo(unsigned insid, int &error, struct addrinfo *res);
   struct hostent *__gethostbyaddr(unsigned insid, int &error, const void *addr, int len, int type);
   char *__inet_ntoa(unsigned ins, int &error, struct in_addr in);
   char *__strtok(unsigned ins, int &error, char * str, const char * delimiters);

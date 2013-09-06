@@ -61,6 +61,8 @@ DEF(accept4, BlockingSyscall, int, int sockfd, struct sockaddr *cliaddr, socklen
 DEF(connect, BlockingSyscall, int, int sockfd, const struct sockaddr *serv_addr, socklen_t addrlen)
 DEF(gethostbyname, Synchronization, struct hostent*, const char *name)
 DEF(gethostbyname_r, Synchronization, int, const char *name, struct hostent *ret, char *buf, size_t buflen, struct hostent **result, int *h_errnop)
+DEF(getaddrinfo, Synchronization, int, const char *node, const char *service, const struct addrinfo *hints, struct addrinfo **res)
+DEF(freeaddrinfo, Synchronization, void, struct addrinfo *res)
 DEF(gethostbyaddr, Synchronization, struct hostent*, const void *addr, int len, int type)
 DEF(inet_ntoa, Synchronization, char *, struct in_addr in)
 DEF(strtok, Synchronization, char *, char * str, const char * delimiters)

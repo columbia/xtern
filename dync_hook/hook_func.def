@@ -186,6 +186,30 @@ SECTION
 ENDDEF
 
 STARTDEF
+int
+getaddrinfo
+/libc.so.6
+const char *, const char *, const struct addrinfo *, struct addrinfo **
+SECTION
+const char *node, const char *service, const struct addrinfo *hints, struct addrinfo **res
+SECTION
+node, service, hints, res
+SECTION
+ENDDEF
+
+STARTDEF
+void
+freeaddrinfo
+/libc.so.6
+struct addrinfo *
+SECTION
+struct addrinfo *res
+SECTION
+res
+SECTION
+ENDDEF
+
+STARTDEF
 struct hostent *
 gethostbyaddr
 /libc.so.6

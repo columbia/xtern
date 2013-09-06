@@ -2458,6 +2458,24 @@ int RecorderRT<_S>::__gethostbyname_r(unsigned ins, int &error, const char *name
 }
 
 template <typename _S>
+int RecorderRT<_S>::__getaddrinfo(unsigned ins, int &error, const char *node, const char *service, const struct addrinfo *hints,
+struct addrinfo **res)
+{
+  BLOCK_TIMER_START(getaddrinfo, ins, error, node, service, hints, res);
+  int ret2 = Runtime::__getaddrinfo(ins, error, node, service, hints, res);
+  BLOCK_TIMER_END(syncfunc::getaddrinfo, (uint64_t)ret2);
+  return ret2;
+}
+
+template <typename _S>
+void RecorderRT<_S>::__freeaddrinfo(unsigned ins, int &error, struct addrinfo *res)
+{
+  BLOCK_TIMER_START(freeaddrinfo, ins, error, res);
+  Runtime::__freeaddrinfo(ins, error, res);
+  BLOCK_TIMER_END(syncfunc::freeaddrinfo, (uint64_t)ret2);
+}
+
+template <typename _S>
 struct hostent *RecorderRT<_S>::__gethostbyaddr(unsigned ins, int &error, const void *addr, int len, int type)
 {
   BLOCK_TIMER_START(gethostbyaddr, ins, error, addr, len, type);

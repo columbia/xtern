@@ -171,6 +171,8 @@ struct Runtime {
   virtual struct hostent *__gethostbyname(unsigned insid, int &error, const char *name);
   // Heming: weird and hack, remove virtual here currently.
   int __gethostbyname_r(unsigned insid, int &error, const char *name, struct hostent *ret, char *buf, size_t buflen, struct hostent **result, int *h_errnop);
+  virtual int __getaddrinfo(unsigned insid, int &error, const char *node, const char *service, const struct addrinfo *hints, struct addrinfo **res);
+  virtual void __freeaddrinfo(unsigned insid, int &error, struct addrinfo *res);
   virtual struct hostent *__gethostbyaddr(unsigned insid, int &error, const void *addr, int len, int type);
   virtual char *__inet_ntoa(unsigned ins, int &error, struct in_addr in);
   virtual char *__strtok(unsigned ins, int &error, char * str, const char * delimiters);

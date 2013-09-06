@@ -509,6 +509,26 @@ int tern_gethostbyname_r(unsigned ins, const char *name, struct hostent *ret, ch
   return ret2;
 }
 
+int tern_getaddrinfo(unsigned ins, const char *node, const char *service, const struct addrinfo *hints, struct addrinfo **res)
+{
+  int error = errno;
+  int ret2;
+  Space::enterSys();
+  ret2 = Runtime::the->__getaddrinfo(ins, error, node, service, hints, res);
+  Space::exitSys();
+  errno = error;
+  return ret2;
+}
+
+void tern_freeaddrinfo(unsigned ins, addrinfo *res)
+{
+  int error = errno;
+  Space::enterSys();
+  Runtime::the->__freeaddrinfo(ins, error, res);
+  Space::exitSys();
+  errno = error;
+}
+
 struct hostent *tern_gethostbyaddr(unsigned ins, const void *addr, int len, int type)
 {
   int error = errno;
