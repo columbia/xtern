@@ -13,6 +13,8 @@ tar zxvf openldap-$VER.tgz
 # Build.
 cd openldap-$VER
 patch -p1 < ../add-resp-to-mtread.patch
+# This patch is only used in model checking evaluation, not necessary for performance evaluation.
+patch -p1 < ../adapt-model-chk-interface.patch
 mkdir obj
 cd obj
 CFLAGS="-g -O0" CXXFLAGS="-g -O0" ../configure --prefix=$XTERN_ROOT/apps/ldap/install
