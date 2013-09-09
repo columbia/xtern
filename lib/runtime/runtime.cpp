@@ -279,9 +279,9 @@ int Runtime::__socket(unsigned ins, int &error, int domain, int type, int protoc
   static orig_func_type orig_func;
   if (!orig_func)
     orig_func = (orig_func_type)resolveDbugFunc("socket");
-  fprintf(stderr, "Parrot pid %d self %u calls dbug socket(%d, %d, %d)...\n", getpid(), (unsigned)pthread_self(), domain, type, protocol);
+  dprintf("Parrot pid %d self %u calls dbug socket(%d, %d, %d)...\n", getpid(), (unsigned)pthread_self(), domain, type, protocol);
   ret = orig_func(domain, type, protocol);
-  fprintf(stderr, "Parrot pid %d self %u calls dbug socket() return...\n", getpid(), (unsigned)pthread_self());
+  dprintf("Parrot pid %d self %u calls dbug socket() return...\n", getpid(), (unsigned)pthread_self());
 #else
   ret = socket(domain, type, protocol);
 #endif
@@ -349,7 +349,7 @@ int Runtime::__fcntl(unsigned ins, int &error, int fd, int cmd, void *arg)
   static orig_func_type orig_func;
   if (!orig_func)
     orig_func = (orig_func_type)resolveDbugFunc("fcntl");
-  fprintf(stderr, "Parrot pid %d self %u calls dbug fcntl(%d, %d, %p)...\n", getpid(),
+  dprintf("Parrot pid %d self %u calls dbug fcntl(%d, %d, %p)...\n", getpid(),
     (unsigned)pthread_self(), fd, cmd, arg);
   ret = orig_func(fd, cmd, arg);
 #else
@@ -368,9 +368,9 @@ int Runtime::__listen(unsigned ins, int &error, int sockfd, int backlog)
   static orig_func_type orig_func;
   if (!orig_func)
     orig_func = (orig_func_type)resolveDbugFunc("listen");
-  fprintf(stderr, "Parrot pid %d self %u calls dbug listen()...\n", getpid(), (unsigned)pthread_self());
+  dprintf("Parrot pid %d self %u calls dbug listen()...\n", getpid(), (unsigned)pthread_self());
   ret = orig_func(sockfd, backlog);
-  fprintf(stderr, "Parrot pid %d self %u calls dbug listen() return...\n", getpid(), (unsigned)pthread_self());
+  dprintf("Parrot pid %d self %u calls dbug listen() return...\n", getpid(), (unsigned)pthread_self());
 #else
   ret = listen(sockfd, backlog);
 #endif
@@ -387,7 +387,7 @@ int Runtime::__accept(unsigned ins, int &error, int sockfd, struct sockaddr *cli
   static orig_func_type orig_func;
   if (!orig_func)
     orig_func = (orig_func_type)resolveDbugFunc("accept");
-  fprintf(stderr, "Parrot pid %d self %u calls dbug accept...\n", getpid(), (unsigned)pthread_self());
+  dprintf("Parrot pid %d self %u calls dbug accept...\n", getpid(), (unsigned)pthread_self());
   ret = orig_func(sockfd, cliaddr, addrlen);
 #else
   ret = accept(sockfd, cliaddr, addrlen);
@@ -424,7 +424,7 @@ int Runtime::__connect(unsigned ins, int &error, int sockfd, const struct sockad
   static orig_func_type orig_func;
   if (!orig_func)
     orig_func = (orig_func_type)resolveDbugFunc("connect");
-  fprintf(stderr, "Parrot pid %d self %u calls dbug connect...\n", getpid(), (unsigned)pthread_self());
+  dprintf("Parrot pid %d self %u calls dbug connect...\n", getpid(), (unsigned)pthread_self());
   ret = orig_func(sockfd, serv_addr, addrlen);
   dprintf("Self %u: Runtime::__connect returns %d\n", (unsigned)pthread_self(), ret);
 #else
@@ -884,7 +884,7 @@ int Runtime::__epoll_create(unsigned ins, int &error, int size)
   static orig_func_type orig_func;
   if (!orig_func)
     orig_func = (orig_func_type)resolveDbugFunc("epoll_create");
-  fprintf(stderr, "Runtime::__epoll_create calls into dbug.\n");
+  dprintf("Runtime::__epoll_create calls into dbug.\n");
   ret = orig_func(size);
 #else
   ret = ::epoll_create(size);
@@ -902,7 +902,7 @@ int Runtime::__epoll_ctl(unsigned ins, int &error, int epfd, int op, int fd, str
   static orig_func_type orig_func;
   if (!orig_func)
     orig_func = (orig_func_type)resolveDbugFunc("epoll_ctl");
-  fprintf(stderr, "Runtime::__epoll_ctl calls into dbug.\n");
+  dprintf("Runtime::__epoll_ctl calls into dbug.\n");
   ret = orig_func(epfd,op,fd,event);
 #else
   ret = ::epoll_ctl(epfd,op,fd,event);
@@ -985,7 +985,7 @@ pid_t Runtime::__kill(unsigned ins, int &error, pid_t pid, int sig)
   static orig_func_type orig_func;
   if (!orig_func)
     orig_func = (orig_func_type)resolveDbugFunc("kill");
-  fprintf(stderr, "Calling Runtime::___kill into dbug\n");
+  dprintf("Calling Runtime::___kill into dbug\n");
   ret = orig_func(pid, sig);
 #else
   ret = ::kill(pid, sig);
