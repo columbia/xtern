@@ -10,7 +10,7 @@
 
 int nwait = 0;
 int nexit = 0;
-long long sum;
+volatile long long sum;
 long loops = 6e3;
 pthread_mutex_t mutex;
 pthread_cond_t cond;
