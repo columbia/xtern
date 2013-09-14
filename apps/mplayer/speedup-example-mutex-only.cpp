@@ -29,7 +29,7 @@ void* thread_func(void *arg) {
     pthread_mutex_unlock(&mutex);
     for (long i = 0; i < loops; i++)
       sum += i*i*i*i*i*i;
-    //fprintf(stderr, "compute thread %u %d\n", (unsigned)thread, sched_getcpu());
+    //fprintf(stderr, "compute thread %u %d\n", (unsigned)pthread_self(), sched_getcpu());
   }
 }
 
