@@ -13,7 +13,7 @@
    bar->total = count;
    bar->arrived = 0;
    bar->generation = 0;
-+  soba_init((long)bar, count, 100);
++  soba_init((long)bar, count, 20*omp_get_max_threads());
  }
  
  void

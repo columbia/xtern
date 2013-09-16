@@ -111,6 +111,16 @@ int tern_pthread_join(unsigned ins, pthread_t th, void **retval) {
   return ret;
 }
 
+int tern_pthread_detach(unsigned ins, pthread_t th) {
+  int error = errno;
+  int ret;
+  Space::enterSys();
+  ret = Runtime::the->__pthread_detach(ins, error, th);
+  Space::exitSys();
+  errno = error;
+  return ret;
+}
+
 int tern_pthread_mutex_init(unsigned ins, pthread_mutex_t *mutex, const pthread_mutexattr_t *mutexattr) {
   int error = errno;
   int ret;
@@ -403,7 +413,7 @@ void tern_pthread_exit(unsigned ins, void *retval) {
   assert(Space::isSys());
   if (Scheduler::self() != Scheduler::IdleThreadTid) {
 #ifdef XTERN_PLUS_DBUG
-    Runtime::__attach_self_to_dbug();
+    Runtime::__attach_self_to_dbug(__FUNCTION__);
 #endif
     Runtime::__pthread_exit(retval);
   } else
@@ -485,6 +495,38 @@ struct hostent *tern_gethostbyname(unsigned ins, const char *name)
   Space::exitSys();
   errno = error;
   return ret;
+}
+
+int tern_gethostbyname_r(unsigned ins, const char *name, struct hostent *ret, char *buf, size_t buflen,
+  struct hostent **result, int *h_errnop)
+{
+  int error = errno;
+  int ret2;
+  Space::enterSys();
+  ret2 = Runtime::the->__gethostbyname_r(ins, error, name, ret, buf, buflen, result, h_errnop);
+  Space::exitSys();
+  errno = error;
+  return ret2;
+}
+
+int tern_getaddrinfo(unsigned ins, const char *node, const char *service, const struct addrinfo *hints, struct addrinfo **res)
+{
+  int error = errno;
+  int ret2;
+  Space::enterSys();
+  ret2 = Runtime::the->__getaddrinfo(ins, error, node, service, hints, res);
+  Space::exitSys();
+  errno = error;
+  return ret2;
+}
+
+void tern_freeaddrinfo(unsigned ins, addrinfo *res)
+{
+  int error = errno;
+  Space::enterSys();
+  Runtime::the->__freeaddrinfo(ins, error, res);
+  Space::exitSys();
+  errno = error;
 }
 
 struct hostent *tern_gethostbyaddr(unsigned ins, const void *addr, int len, int type)
@@ -628,6 +670,28 @@ int tern_setsockopt(unsigned ins, int sockfd, int level, int optname, const void
   return ret;
 }
 
+int tern_pipe(unsigned ins, int pipefd[2])
+{
+  int error = errno;
+  int ret;
+  Space::enterSys();
+  ret = Runtime::the->__pipe(ins, error, pipefd);
+  Space::exitSys();
+  errno = error;
+  return ret;
+}
+
+int tern_fcntl(unsigned ins, int fd, int cmd, void *arg)
+{
+  int error = errno;
+  int ret;
+  Space::enterSys();
+  ret = Runtime::the->__fcntl(ins, error, fd, cmd, arg);
+  Space::exitSys();
+  errno = error;
+  return ret;
+}
+
 int tern_close(unsigned ins, int fd)
 {
   int error = errno;
@@ -694,6 +758,28 @@ int tern_epoll_wait(unsigned ins, int epfd, struct epoll_event *events, int maxe
   return ret;
 }
 
+int tern_epoll_create(unsigned ins, int size)
+{
+  int error = errno;
+  int ret;
+  Space::enterSys();
+  ret = Runtime::the->__epoll_create(ins, error, size);
+  Space::exitSys();
+  errno = error;
+  return ret;
+}
+
+int tern_epoll_ctl(unsigned ins, int epfd, int op, int fd, struct epoll_event *event)
+{
+  int error = errno;
+  int ret;
+  Space::enterSys();
+  ret = Runtime::the->__epoll_ctl(ins, error, epfd, op, fd, event);
+  Space::exitSys();
+  errno = error;
+  return ret;
+}
+
 int tern_select(unsigned ins, int nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds, struct timeval *timeout)
 {
   int error = errno;
@@ -743,7 +829,7 @@ unsigned int tern_sleep(unsigned ins, unsigned int seconds)
   int error = errno;
   unsigned int ret;
   Space::enterSys();
-  ret = Runtime::the->sleep(ins, error, seconds);
+  ret = Runtime::the->__sleep(ins, error, seconds);
   Space::exitSys();
   errno = error;
   return ret;
@@ -754,7 +840,7 @@ int tern_usleep(unsigned ins, useconds_t usec)
   int error = errno;
   int ret;
   Space::enterSys();
-  ret = Runtime::the->usleep(ins, error, usec);
+  ret = Runtime::the->__usleep(ins, error, usec);
   Space::exitSys();
   errno = error;
   return ret;
@@ -765,7 +851,7 @@ int tern_nanosleep(unsigned ins, const struct timespec *req, struct timespec *re
   int error = errno;
   int ret;
   Space::enterSys();
-  ret = Runtime::the->nanosleep(ins, error, req, rem);
+  ret = Runtime::the->__nanosleep(ins, error, req, rem);
   Space::exitSys();
   errno = error;
   return ret;
@@ -796,12 +882,34 @@ void tern_idle_cond_wait()
   Space::exitSys();
 }
 
+int tern_kill(unsigned ins, pid_t pid, int sig)
+{
+  int error = errno;
+  pid_t ret;
+  Space::enterSys();
+  ret = Runtime::the->__kill(ins, error, pid, sig);
+  Space::exitSys();
+  errno = error;
+  return ret;
+}
+
 pid_t tern_fork(unsigned ins)
 {
   int error = errno;
   pid_t ret;
   Space::enterSys();
   ret = Runtime::the->__fork(ins, error);
+  Space::exitSys();
+  errno = error;
+  return ret;
+}
+
+int tern_execv(unsigned ins, const char *path, char *const argv[])
+{
+  int error = errno;
+  int ret;
+  Space::enterSys();
+  ret = Runtime::the->__execv(ins, error, path, argv);
   Space::exitSys();
   errno = error;
   return ret;

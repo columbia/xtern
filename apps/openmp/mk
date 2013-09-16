@@ -22,13 +22,21 @@ mkdir obj
 cd obj
 CFLAGS+="$XTERN_ANNOT_LIB" ../configure \
 --prefix=$XTERN_ROOT/apps/openmp/install --disable-linux-futex --enable-languages=c,c++,fortran --disable-multilib
+SYS_LIB_PATH=""
 if [ "$ARCH" == "x86_64" ]; then
-  LIBRARY_PATH=/usr/lib/x86_64-linux-gnu make -j64
+  SYS_LIB_PATH=/usr/lib/x86_64-linux-gnu
 else
-  LIBRARY_PATH=/usr/lib/i386-linux-gnu make -j64
+  SYS_LIB_PATH=/usr/lib/i386-linux-gnu
 fi
+LIBRARY_PATH=$SYS_LIB_PATH make -j64
 make -j64 install
 
+# Copy *.o files from system gcc libraries to our installed library, in order to avoid "missing crti*.o" compilation errors.
+if [ "$ARCH" == "x86_64" ]; then
+  cp $SYS_LIB_PATH/*.o $XTERN_ROOT/apps/openmp/install/lib64/
+else
+  cp $SYS_LIB_PATH/*.o $XTERN_ROOT/apps/openmp/install/lib/
+fi
 
 # Build the random shuffle benchmark.
 cd $XTERN_ROOT/apps/openmp
@@ -59,4 +67,4 @@ fi
 make
 cd ..
 
-# TBD.
+

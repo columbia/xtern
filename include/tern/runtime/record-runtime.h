@@ -53,6 +53,7 @@ struct RecorderRT: public Runtime, public _Scheduler {
   int pthreadCreate(unsigned insid, int &error, pthread_t *thread,  pthread_attr_t *attr,
                     void *(*thread_func)(void*), void *arg);
   int pthreadJoin(unsigned insid, int &error, pthread_t th, void **thread_return);
+  int __pthread_detach(unsigned insid, int &error, pthread_t th);
 
   // mutex
   int pthreadMutexInit(unsigned insid, int &error, pthread_mutex_t *mutex, const  pthread_mutexattr_t *mutexattr);
@@ -104,6 +105,9 @@ struct RecorderRT: public Runtime, public _Scheduler {
   int __accept4(unsigned insid, int &error, int sockfd, struct sockaddr *cliaddr, socklen_t *addrlen, int flags);
   int __connect(unsigned insid, int &error, int sockfd, const struct sockaddr *serv_addr, socklen_t addrlen);
   struct hostent *__gethostbyname(unsigned insid, int &error, const char *name);
+  int __gethostbyname_r(unsigned insid, int &error, const char *name, struct hostent *ret, char *buf, size_t buflen, struct hostent **result, int *h_errnop);
+  int __getaddrinfo(unsigned insid, int &error, const char *node, const char *service, const struct addrinfo *hints, struct addrinfo **res);
+  void __freeaddrinfo(unsigned insid, int &error, struct addrinfo *res);
   struct hostent *__gethostbyaddr(unsigned insid, int &error, const void *addr, int len, int type);
   char *__inet_ntoa(unsigned ins, int &error, struct in_addr in);
   char *__strtok(unsigned ins, int &error, char * str, const char * delimiters);
@@ -117,6 +121,8 @@ struct RecorderRT: public Runtime, public _Scheduler {
   int __getpeername(unsigned insid, int &error, int sockfd, struct sockaddr *addr, socklen_t *addrlen);  
   int __getsockopt(unsigned insid, int &error, int sockfd, int level, int optname, void *optval, socklen_t *optlen);
   int __setsockopt(unsigned insid, int &error, int sockfd, int level, int optname, const void *optval, socklen_t optlen);
+  int __pipe(unsigned insid, int &error, int pipefd[2]);
+  int __fcntl(unsigned insid, int &error, int fd, int cmd, void *arg);
   int __close(unsigned insid, int &error, int fd);
   ssize_t __read(unsigned insid, int &error, int fd, void *buf, size_t count);
   ssize_t __write(unsigned insid, int &error, int fd, const void *buf, size_t count);
@@ -126,9 +132,13 @@ struct RecorderRT: public Runtime, public _Scheduler {
   int __poll(unsigned insid, int &error, struct pollfd *fds, nfds_t nfds, int timeout);
   int __bind(unsigned insid, int &error, int socket, const struct sockaddr *address, socklen_t address_len);
   int __epoll_wait(unsigned insid, int &error, int epfd, struct epoll_event *events, int maxevents, int timeout);
+  int __epoll_create(unsigned insid, int &error, int size);
+  int __epoll_ctl(unsigned insid, int &error, int epfd, int op, int fd, struct epoll_event *event);
   int __sigwait(unsigned insid, int &error, const sigset_t *set, int *sig); 
   char *__fgets(unsigned insid, int &error, char *s, int size, FILE *stream);
+  int __kill(unsigned ins, int &error, pid_t pid, int sig);
   pid_t __fork(unsigned insid, int &error);
+  int __execv(unsigned ins, int &error, const char *path, char *const argv[]);
   pid_t __wait(unsigned insid, int &error, int *status);
   pid_t __waitpid(unsigned insid, int &error, pid_t pid, int *status, int options);
   time_t __time(unsigned ins, int &error, time_t *t);
@@ -140,9 +150,9 @@ struct RecorderRT: public Runtime, public _Scheduler {
 
   // sleep
   int schedYield(unsigned ins, int &error);
-  unsigned int sleep(unsigned insid, int &error, unsigned int seconds);
-  int usleep(unsigned insid, int &error, useconds_t usec);
-  int nanosleep(unsigned insid, int &error, const struct timespec *req, struct timespec *rem);
+  unsigned int __sleep(unsigned insid, int &error, unsigned int seconds);
+  int __usleep(unsigned insid, int &error, useconds_t usec);
+  int __nanosleep(unsigned insid, int &error, const struct timespec *req, struct timespec *rem);
   int __pthread_rwlock_rdlock(unsigned ins, int &error, pthread_rwlock_t *rwlock);
   int __pthread_rwlock_wrlock(unsigned ins, int &error, pthread_rwlock_t *rwlock);
   int __pthread_rwlock_tryrdlock(unsigned ins, int &error, pthread_rwlock_t *rwlock);
@@ -167,8 +177,11 @@ struct RecorderRT: public Runtime, public _Scheduler {
 
 protected:
 
-  int wait(void *chan, unsigned timeout = Scheduler::FOREVER);
-  void signal(void *chan, bool all=false);
+  /* These two sync wait/signal operations also contain logic for dbug+parrot, so name them separately.
+  These two operations should only involve "sync" objects from applications or soft barrier hints. */
+  int syncWait(void *chan, unsigned timeout = Scheduler::FOREVER);
+  void syncSignal(void *chan, bool all=false);
+
   int absTimeToTurn(const struct timespec *abstime);
   int relTimeToTurn(const struct timespec *reltime);
 

@@ -10,6 +10,7 @@
 #include <unistd.h>
 #include <signal.h>
 #include <semaphore.h>
+#include <stdarg.h>
 
 
 #ifdef __cplusplus

@@ -39,6 +39,11 @@ def model_checking(configs, benchmark, args):
     if not eval.checkExist(EXPLORER):
         logging.error("%s does not exist" % EXPLORER)
 
+    # check wrapper
+    WRAPPER = "%s/xtern/eval/model-chk-wrapper/wrapper" % SMT_MC_ROOT
+    if not eval.checkExist(WRAPPER):
+        logging.error("%s does not exist, please go there and make" % WRAPPER)
+
     # generate run.xml
     client = configs.get(benchmark, 'DBUG_CLIENT')
     client_inputs = configs.get(benchmark, 'DBUG_CLIENT_INPUTS')
@@ -48,6 +53,7 @@ def model_checking(configs, benchmark, args):
     program_input = configs.get(benchmark, 'DBUG_INPUT')
     program_output = configs.get(benchmark, 'DBUG_OUTPUT')
     prefix = configs.get(benchmark, "DBUG_PREFIX")
+    dpor = configs.get(benchmark, "DBUG_DPOR")
     inputs = configs.get(benchmark, "INPUTS")
     export = configs.get(benchmark, "EXPORT")
 
@@ -67,14 +73,16 @@ def model_checking(configs, benchmark, args):
         program2 = etree.SubElement(dbug_config, "program")
 
     arbiter.set("port", arbiter_port)
-    if client:
-        arbiter.set("command", "%s -l -b 2 -e 3" % ARBITER)
-    else:
-        arbiter.set("command", "%s -l" % ARBITER)
-    explorer.set("log_dir", ".")
+    #if client:
+    #    arbiter.set("command", "%s -l -b 2 -e 3" % ARBITER)
+    #else:
+    #    arbiter.set("command", "%s -l" % ARBITER)
+    explorer.set("strategy", "random")
+    explorer.set("dpor", dpor)
     explorer.set("port", explorer_port)
+    explorer.set("log_dir", ".")
     explorer.set("timeout", dbug_timeout)
-    interposition.set("path", "%s/mc-tools/dbug/install/lib/libdbug.so" % SMT_MC_ROOT)
+    interposition.set("command", WRAPPER)
     command = ' '.join([exec_file] + inputs.split())
     program.set("command", command)
     if program_input:
@@ -86,14 +94,14 @@ def model_checking(configs, benchmark, args):
         command2= ' '.join([exec_file2] + client_inputs.split())
         program2.set("command", command2)
 
-    with open("run.xml", "w") as run_xml:
-        run_xml.write(etree.tostring(dbug_config, pretty_print=True))
-
-    # generate run_xtern.xml
-    interposition.set("path", "%s/xtern/dync_hook/interpose_mc.so" % SMT_MC_ROOT)
-
     with open("run_xtern.xml", "w") as run_xtern_xml:
         run_xtern_xml.write(etree.tostring(dbug_config, pretty_print=True))
+
+    # strip the interposition element since the dbug-only mode does not need it.
+    etree.strip_elements(dbug_config, "interposition")
+
+    with open("run.xml", "w") as run_xml:
+        run_xml.write(etree.tostring(dbug_config, pretty_print=True))
 
     init_env_cmd = configs.get(benchmark, "INIT_ENV_CMD")
     if init_env_cmd:

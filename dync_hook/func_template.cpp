@@ -6,6 +6,7 @@ extern "C" FUNC_RET_TYPE FUNC_NAME(ARGS_WITH_NAME){
 
   void * handle;
   FUNC_RET_TYPE ret;
+  void *eip = 0;
 
   if (!orig_func) {
     if(!(handle=dlopen("LIB_PATH", RTLD_LAZY))) {
@@ -26,37 +27,38 @@ extern "C" FUNC_RET_TYPE FUNC_NAME(ARGS_WITH_NAME){
   }
 
 #ifdef __USE_TERN_RUNTIME
-  if (Space::isApp() && options::DMT) {
-#ifdef PRINT_DEBUG
-    fprintf(stdout, "%04d: FUNC_NAME is hooked.\n", (int) pthread_self());
-    print_stack();
-    fflush(stdout);
-#endif
-
+  if (Space::isApp()) {
+    if (options::DMT) {
+      //fprintf(stderr, "Parrot hook: pid %d self %u calls %s\n", getpid(), (unsigned)pthread_self(), "FUNC_NAME");
 #ifdef __NEED_INPUT_INSID
-    void *eip = 0;
-    if (options::dync_geteip) {
-      Space::enterSys();
-      eip = get_eip();
-      Space::exitSys();
-    }
-    ret = tern_FUNC_NAME((unsigned)(uint64_t) eip, ARGS_ONLY_NAME);
+      if (options::dync_geteip) {
+        Space::enterSys();
+        eip = get_eip();
+        Space::exitSys();
+      }
+      record_rdtsc_op("FUNC_NAME", "START", 0, eip);
+      ret = tern_FUNC_NAME((unsigned)(uint64_t) eip, ARGS_ONLY_NAME);
 #else
-    ret = tern_FUNC_NAME(ARGS_ONLY_NAME);
+      ret = tern_FUNC_NAME(ARGS_ONLY_NAME);
 #endif
-
-#ifdef PRINT_DEBUG
-    fprintf(stdout, "%04d: FUNC_NAME returned.\n", (int) pthread_self());
-    fflush(stdout);
-#endif
-    return ret;
+      record_rdtsc_op("FUNC_NAME", "END", 0, eip);
+      return ret;
+    } else {// For performance debugging, by doing this, we are still able to get the sync wait time for non-det mode.
+      if (options::dync_geteip) {
+        Space::enterSys();
+        eip = get_eip();
+        Space::exitSys();
+      }
+      record_rdtsc_op("FUNC_NAME", "START", 0, eip);
+      Space::enterSys();
+      ret = orig_func(ARGS_ONLY_NAME);
+      Space::exitSys();
+      record_rdtsc_op("FUNC_NAME", "END", 0, eip);
+      return ret;
+    }
   } 
 #endif
 
-#ifdef PRINT_DEBUG
-  fprintf(stdout, "%04d: FUNC_NAME is called.\n", (int) pthread_self());
-  fflush(stdout);
-#endif
   ret = orig_func(ARGS_ONLY_NAME);
 
   return ret;

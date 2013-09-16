@@ -17,7 +17,6 @@ if [ "$ARCH" == "x86_64" ]; then
 else
   GCCLIB="$XTERN_ROOT/apps/openmp/install/lib"
 fi
-
 ln -s $GCCLIB/libgomp.a . &> /dev/null
 ln -s $GCCLIB/libstdc++.a . &> /dev/null
 

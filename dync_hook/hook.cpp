@@ -96,6 +96,8 @@ void *get_eip()
 }
 
 #include "spec_hooks.cpp"
+#include "tern/runtime/rdtsc.h"
 #include "template.cpp"
+#include "var_arg_template.cpp"
 #include "annotation_hooks.cpp"
 

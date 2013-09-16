@@ -6,6 +6,7 @@
 #include <fcntl.h>
 #include <string>
 #include <poll.h>
+#include <stdarg.h>
 
 #include "tern/config.h"
 #include "tern/hooks.h"
@@ -44,7 +45,7 @@ extern pthread_t idle_th;
 #ifdef XTERN_PLUS_DBUG
 
 #include <dlfcn.h>
-static bool __thread attachedToDbug = true;
+bool __thread attachedToDbug = true;
 using namespace std;
 
 void *Runtime::resolveDbugFunc(const char *func_name) {
@@ -80,19 +81,6 @@ void Runtime::initDbug() {
   resolveDbugFunc("pthread_create");
 }
 
-void Runtime::__attach_self_to_dbug() {
-  dprintf("\nxtern::Runtime::__attach_self_to_mc pid %d thread self %u to dbug\n\n", getpid(), (unsigned)pthread_self());
-  //errno = error;
-  assert(!attachedToDbug);
-  attachedToDbug = true;
-  //dbug_on();
-  typedef void (*orig_func_type)();
-  static orig_func_type orig_func;
-  if (!orig_func)
-    orig_func = (orig_func_type)resolveDbugFunc("dbug_on");
-  orig_func();
-}
-
 void Runtime::__thread_detach() {
   dprintf("\nxtern::Runtime::__thread_detach pid %d thread self %u from dbug\n\n", getpid(), (unsigned)pthread_self());
   //assert(attachedToDbug);
@@ -116,18 +104,26 @@ void Runtime::__detach_barrier_end(int bar_id, int cnt) {
   orig_func(bar_id, cnt);
 }
 
-void Runtime::__detach_self_from_dbug() { 
-  dprintf("\nxtern::Runtime::__detach_self_from_mc pid %d thread self %u from dbug\n\n", getpid(), (unsigned)pthread_self());
-  //errno = error;
-  assert(attachedToDbug);
-  attachedToDbug = false;
-  //dbug_off();
+void Runtime::__thread_waiting() {
   typedef void (*orig_func_type)();
   static orig_func_type orig_func;
   if (!orig_func)
-    orig_func = (orig_func_type)resolveDbugFunc("dbug_off");
+    orig_func = (orig_func_type)resolveDbugFunc("dbug_thread_waiting");
+  dprintf("\n\nPid %d self %u dbug_thread_waiting start.\n\n", getpid(), (unsigned)pthread_self());
   orig_func();
+  dprintf("\n\nPid %d self %u dbug_thread_waiting end.\n\n", getpid(), (unsigned)pthread_self());
 }
+
+void Runtime::__thread_active(pthread_t wakenUpTid) {
+  typedef void (*orig_func_type)(pthread_t);
+  static orig_func_type orig_func;
+  if (!orig_func)
+    orig_func = (orig_func_type)resolveDbugFunc("dbug_thread_active");
+  dprintf("\n\nPid %d self %u dbug_thread_active start.\n\n", getpid(), (unsigned)pthread_self());
+  orig_func(wakenUpTid);
+  dprintf("\n\nPid %d self %u dbug_thread_active end.\n\n", getpid(), (unsigned)pthread_self());
+}
+
 #else
 static bool sock_nonblock (int fd)
 {
@@ -139,6 +135,39 @@ static bool sock_nonblock (int fd)
 #endif
 }
 #endif
+
+void Runtime::__attach_self_to_dbug(const char *caller) {
+#ifdef XTERN_PLUS_DBUG
+  dprintf("\nxtern::Runtime::__attach_self_to_mc pid %d thread self %u to dbug\n\n", getpid(), (unsigned)pthread_self());
+  //errno = error;
+  if (attachedToDbug) {
+    fprintf(stderr, "\nxtern::Runtime::__attach_self_to_mc pid %d thread self %u to dbug failure, caller (%s)\n\n", getpid(), (unsigned)pthread_self(), caller);
+    assert(false);
+  }
+  attachedToDbug = true;
+  //dbug_on();
+  typedef void (*orig_func_type)();
+  static orig_func_type orig_func;
+  if (!orig_func)
+    orig_func = (orig_func_type)resolveDbugFunc("dbug_on");
+  orig_func();
+#endif
+}
+
+void Runtime::__detach_self_from_dbug(const char *caller) {
+#ifdef XTERN_PLUS_DBUG
+  dprintf("\nxtern::Runtime::__detach_self_from_mc pid %d thread self %u from dbug\n\n", getpid(), (unsigned)pthread_self());
+  //errno = error;
+  assert(attachedToDbug);
+  attachedToDbug = false;
+  //dbug_off();
+  typedef void (*orig_func_type)();
+  static orig_func_type orig_func;
+  if (!orig_func)
+    orig_func = (orig_func_type)resolveDbugFunc("dbug_off");
+  orig_func();
+#endif
+}
 
 Runtime::Runtime() {
 #ifdef XTERN_PLUS_DBUG
@@ -176,13 +205,13 @@ int Runtime::__pthread_create(pthread_t *th, const pthread_attr_t *a, void *(*fu
 //#if 0
 #ifdef XTERN_PLUS_DBUG
   if (th != &idle_th) { // Idle thread is xtern an internal thread, we must not register it in dbug.
-    __attach_self_to_dbug();
+    __attach_self_to_dbug(__FUNCTION__);
     typedef int (*orig_func_type)(pthread_t *,const pthread_attr_t *,void *(*)(void*),void *);
     static orig_func_type orig_func;
     if (!orig_func)
       orig_func = (orig_func_type)resolveDbugFunc("pthread_create");
     ret = orig_func(th, a, func, arg);
-     __detach_self_from_dbug();
+     __detach_self_from_dbug(__FUNCTION__);
   } else {
     fprintf(stderr, "Created idle thread in Runtime.\n");
     ret = pthread_create(th, a, func, arg);
@@ -210,18 +239,36 @@ void Runtime::__pthread_exit(void *value_ptr) {
 int Runtime::__pthread_join(pthread_t th, void **retval) {
   int ret;
 #ifdef XTERN_PLUS_DBUG
-  __attach_self_to_dbug();
+  __attach_self_to_dbug(__FUNCTION__);
   typedef int (*orig_func_type)(pthread_t, void **);
   static orig_func_type orig_func;
   if (!orig_func)
     orig_func = (orig_func_type)resolveDbugFunc("pthread_join");
   ret = orig_func(th, retval);
-  __detach_self_from_dbug();
+  __detach_self_from_dbug(__FUNCTION__);
 #else
   ret = pthread_join(th, retval);
 #endif
   return ret;
 }
+
+int Runtime::__pthread_detach(unsigned ins, int &error, pthread_t th) {
+  int ret;
+  errno = error;
+#ifdef XTERN_PLUS_DBUG
+  typedef int (*orig_func_type)(pthread_t);
+  static orig_func_type orig_func;
+  if (!orig_func)
+    orig_func = (orig_func_type)resolveDbugFunc("pthread_detach");
+  fprintf(stderr, "Calling Runtime::___pthread_detach into dbug\n");
+  ret = orig_func(th);
+#else
+  ret = ::pthread_detach(th);
+#endif
+  error = errno;
+  return ret;
+}
+
 
 int Runtime::__socket(unsigned ins, int &error, int domain, int type, int protocol)
 {
@@ -232,9 +279,81 @@ int Runtime::__socket(unsigned ins, int &error, int domain, int type, int protoc
   static orig_func_type orig_func;
   if (!orig_func)
     orig_func = (orig_func_type)resolveDbugFunc("socket");
+  dprintf("Parrot pid %d self %u calls dbug socket(%d, %d, %d)...\n", getpid(), (unsigned)pthread_self(), domain, type, protocol);
   ret = orig_func(domain, type, protocol);
+  dprintf("Parrot pid %d self %u calls dbug socket() return...\n", getpid(), (unsigned)pthread_self());
 #else
   ret = socket(domain, type, protocol);
+#endif
+  error = errno;
+  return ret;
+}
+
+int Runtime::__getsockopt(unsigned ins, int &error, int sockfd, int level, int optname, void *optval, socklen_t *optlen)
+{
+  errno = error;
+  int ret;
+#ifdef XTERN_PLUS_DBUG
+  typedef int (*orig_func_type)(int, int, int, void *, socklen_t *);
+  static orig_func_type orig_func;
+  if (!orig_func)
+    orig_func = (orig_func_type)resolveDbugFunc("getsockopt");
+  ret = orig_func(sockfd, level, optname, optval, optlen);
+#else
+  ret = ::getsockopt(sockfd, level, optname, optval, optlen);
+#endif
+  error = errno;
+  return ret;
+}
+
+int Runtime::__setsockopt(unsigned ins, int &error, int sockfd, int level, int optname, const void *optval, socklen_t optlen)
+{
+  errno = error;
+  int ret;
+#ifdef XTERN_PLUS_DBUG
+  typedef int (*orig_func_type)(int, int, int, const void *, socklen_t);
+  static orig_func_type orig_func;
+  if (!orig_func)
+    orig_func = (orig_func_type)resolveDbugFunc("setsockopt");
+  ret = orig_func(sockfd, level, optname, optval, optlen);
+#else
+  ret = ::setsockopt(sockfd, level, optname, optval, optlen);
+#endif
+  error = errno;
+  return ret;
+}
+
+int Runtime::__pipe(unsigned ins, int &error, int pipefd[2])
+{
+  errno = error;
+  int ret;
+#ifdef XTERN_PLUS_DBUG
+  typedef int (*orig_func_type)(int pipefd[2]);
+  static orig_func_type orig_func;
+  if (!orig_func)
+    orig_func = (orig_func_type)resolveDbugFunc("pipe");
+  ret = orig_func(pipefd);
+#else
+  ret = ::pipe(pipefd);
+#endif
+  error = errno;
+  return ret;
+}
+
+int Runtime::__fcntl(unsigned ins, int &error, int fd, int cmd, void *arg)
+{
+  errno = error;
+  int ret;
+#ifdef XTERN_PLUS_DBUG
+  typedef int (*orig_func_type)(int, int, ...);
+  static orig_func_type orig_func;
+  if (!orig_func)
+    orig_func = (orig_func_type)resolveDbugFunc("fcntl");
+  dprintf("Parrot pid %d self %u calls dbug fcntl(%d, %d, %p)...\n", getpid(),
+    (unsigned)pthread_self(), fd, cmd, arg);
+  ret = orig_func(fd, cmd, arg);
+#else
+  ret = ::fcntl(fd, cmd, arg);
 #endif
   error = errno;
   return ret;
@@ -249,7 +368,9 @@ int Runtime::__listen(unsigned ins, int &error, int sockfd, int backlog)
   static orig_func_type orig_func;
   if (!orig_func)
     orig_func = (orig_func_type)resolveDbugFunc("listen");
+  dprintf("Parrot pid %d self %u calls dbug listen()...\n", getpid(), (unsigned)pthread_self());
   ret = orig_func(sockfd, backlog);
+  dprintf("Parrot pid %d self %u calls dbug listen() return...\n", getpid(), (unsigned)pthread_self());
 #else
   ret = listen(sockfd, backlog);
 #endif
@@ -266,6 +387,7 @@ int Runtime::__accept(unsigned ins, int &error, int sockfd, struct sockaddr *cli
   static orig_func_type orig_func;
   if (!orig_func)
     orig_func = (orig_func_type)resolveDbugFunc("accept");
+  dprintf("Parrot pid %d self %u calls dbug accept...\n", getpid(), (unsigned)pthread_self());
   ret = orig_func(sockfd, cliaddr, addrlen);
 #else
   ret = accept(sockfd, cliaddr, addrlen);
@@ -302,9 +424,9 @@ int Runtime::__connect(unsigned ins, int &error, int sockfd, const struct sockad
   static orig_func_type orig_func;
   if (!orig_func)
     orig_func = (orig_func_type)resolveDbugFunc("connect");
-  fprintf(stderr, "Self %u: Runtime::__connect before\n", (unsigned)pthread_self());
+  dprintf("Parrot pid %d self %u calls dbug connect...\n", getpid(), (unsigned)pthread_self());
   ret = orig_func(sockfd, serv_addr, addrlen);
-  fprintf(stderr, "Self %u: Runtime::__connect returns %d\n", (unsigned)pthread_self(), ret);
+  dprintf("Self %u: Runtime::__connect returns %d\n", (unsigned)pthread_self(), ret);
 #else
   ret = connect(sockfd, serv_addr, addrlen);
   if (options::non_block_recv)
@@ -329,6 +451,54 @@ struct hostent *Runtime::__gethostbyname(unsigned ins, int &error, const char *n
 #endif
   error = errno;
   return ret;
+}
+
+int Runtime::__gethostbyname_r(unsigned ins, int &error, const char *name,
+  struct hostent *ret, char *buf, size_t buflen, struct hostent **result, int *h_errnop)
+{
+  errno = error;
+  int ret2;
+#ifdef XTERN_PLUS_DBUG
+  typedef int (*orig_func_type)(const char *, struct hostent *, char *, size_t , struct hostent **, int *);
+  static orig_func_type orig_func;
+  if (!orig_func)
+    orig_func = (orig_func_type)resolveDbugFunc("gethostbyname_r");
+  ret2 = orig_func(name, ret, buf, buflen, result, h_errnop);
+#else
+  ret2 = gethostbyname_r(name, ret, buf, buflen, result, h_errnop);
+#endif
+  error = errno;
+  return ret2;
+}
+
+int Runtime::__getaddrinfo(unsigned insid, int &error, const char *node, const char *service, const struct addrinfo *hints, struct addrinfo **res) {
+  errno = error;
+  int ret;
+#ifdef XTERN_PLUS_DBUG
+  typedef int (*orig_func_type)(const char *, const char *, const struct addrinfo *, struct addrinfo **);
+  static orig_func_type orig_func;
+  if (!orig_func)
+    orig_func = (orig_func_type)resolveDbugFunc("getaddrinfo");
+  ret = orig_func(node, service, hints, res);
+#else
+  ret = getaddrinfo(node, service, hints, res);
+#endif
+  error = errno;
+  return ret;
+}
+
+void  Runtime::__freeaddrinfo(unsigned insid, int &error, struct addrinfo *res) {
+  errno = error;
+#ifdef XTERN_PLUS_DBUG
+  typedef void (*orig_func_type)(struct addrinfo *);
+  static orig_func_type orig_func;
+  if (!orig_func)
+    orig_func = (orig_func_type)resolveDbugFunc("freeaddrinfo");
+  orig_func(res);
+#else
+  freeaddrinfo(res);
+#endif
+  error = errno;
 }
 
 struct hostent *Runtime::__gethostbyaddr(unsigned ins, int &error, const void *addr, int len, int type)
@@ -391,9 +561,9 @@ ssize_t Runtime::__send(unsigned ins, int &error, int sockfd, const void *buf, s
   static orig_func_type orig_func;
   if (!orig_func)
     orig_func = (orig_func_type)resolveDbugFunc("send");
-  fprintf(stderr, "Runtime::__send begin\n");
+  dprintf("Runtime::__send begin\n");
   ret = orig_func(sockfd, buf, len, flags);
-  fprintf(stderr, "Runtime::__send end\n");
+  dprintf("Runtime::__send end\n");
 #else
   ret = send(sockfd, buf, len, flags);
 #endif
@@ -513,7 +683,16 @@ ssize_t Runtime::__recvmsg(unsigned ins, int &error, int sockfd, struct msghdr *
 int Runtime::__shutdown(unsigned ins, int &error, int sockfd, int how)
 {
   errno = error;
-  int ret = shutdown(sockfd,how);
+  ssize_t ret;
+#ifdef XTERN_PLUS_DBUG
+  typedef ssize_t (*orig_func_type)(int, int );
+  static orig_func_type orig_func;
+  if (!orig_func)
+    orig_func = (orig_func_type)resolveDbugFunc("shutdown");
+  ret = orig_func(sockfd,how);
+#else
+  ret = ::shutdown(sockfd,how);
+#endif
   error = errno;
   return ret;
 }
@@ -522,22 +701,6 @@ int Runtime::__getpeername(unsigned ins, int &error, int sockfd, struct sockaddr
 {
   errno = error;
   int ret = getpeername(sockfd, addr, addrlen);
-  error = errno;
-  return ret;
-}
-
-int Runtime::__getsockopt(unsigned ins, int &error, int sockfd, int level, int optname, void *optval, socklen_t *optlen)
-{
-  errno = error;
-  int ret = getsockopt(sockfd, level, optname, optval, optlen);
-  error = errno;
-  return ret;
-}
-
-int Runtime::__setsockopt(unsigned ins, int &error, int sockfd, int level, int optname, const void *optval, socklen_t optlen)
-{
-  errno = error;
-  int ret = setsockopt(sockfd, level, optname, optval, optlen);
   error = errno;
   return ret;
 }
@@ -706,24 +869,78 @@ int Runtime::__epoll_wait(unsigned ins, int &error, int epfd, struct epoll_event
     orig_func = (orig_func_type)resolveDbugFunc("epoll_wait");
   ret = orig_func(epfd,events,maxevents,timeout);
 #else
-  ret = epoll_wait(epfd,events,maxevents,timeout);
+  ret = ::epoll_wait(epfd,events,maxevents,timeout);
 #endif
   error = errno;
   return ret;
 }
 
-unsigned int Runtime::sleep(unsigned ins, int &error, unsigned int seconds)
+int Runtime::__epoll_create(unsigned ins, int &error, int size)
 {
   errno = error;
-  unsigned ret = ::sleep(seconds);
+  int ret;
+#ifdef XTERN_PLUS_DBUG
+  typedef int (*orig_func_type)(int);
+  static orig_func_type orig_func;
+  if (!orig_func)
+    orig_func = (orig_func_type)resolveDbugFunc("epoll_create");
+  dprintf("Runtime::__epoll_create calls into dbug.\n");
+  ret = orig_func(size);
+#else
+  ret = ::epoll_create(size);
+#endif
   error = errno;
   return ret;
 }
 
-int Runtime::usleep(unsigned ins, int &error, useconds_t usec)
+int Runtime::__epoll_ctl(unsigned ins, int &error, int epfd, int op, int fd, struct epoll_event *event)
 {
   errno = error;
-  int ret = ::usleep(usec);
+  int ret;
+#ifdef XTERN_PLUS_DBUG
+  typedef int (*orig_func_type)(int , int , int , struct epoll_event *);
+  static orig_func_type orig_func;
+  if (!orig_func)
+    orig_func = (orig_func_type)resolveDbugFunc("epoll_ctl");
+  dprintf("Runtime::__epoll_ctl calls into dbug.\n");
+  ret = orig_func(epfd,op,fd,event);
+#else
+  ret = ::epoll_ctl(epfd,op,fd,event);
+#endif
+  error = errno;
+  return ret;
+}
+
+unsigned int Runtime::__sleep(unsigned ins, int &error, unsigned int seconds)
+{
+  errno = error;
+  unsigned int ret;
+#ifdef XTERN_PLUS_DBUG
+  typedef unsigned int (*orig_func_type)(unsigned int);
+  static orig_func_type orig_func;
+  if (!orig_func)
+    orig_func = (orig_func_type)resolveDbugFunc("sleep");
+  ret = orig_func(seconds);
+#else
+  ret = ::sleep(seconds);
+#endif
+  error = errno;
+  return ret;
+}
+
+int Runtime::__usleep(unsigned ins, int &error, useconds_t usec)
+{
+  errno = error;
+  int ret;
+#ifdef XTERN_PLUS_DBUG
+  typedef int (*orig_func_type)(useconds_t);
+  static orig_func_type orig_func;
+  if (!orig_func)
+    orig_func = (orig_func_type)resolveDbugFunc("usleep");
+  ret = orig_func(usec);
+#else
+  ret = ::usleep(usec);
+#endif
   error = errno;
   return ret;
 }
@@ -745,18 +962,70 @@ char *Runtime::__fgets(unsigned ins, int &error, char *s, int size, FILE *stream
   return ret;
 }
 
+void Runtime::___exit(int status) {
+#ifdef XTERN_PLUS_DBUG
+  typedef void (*orig_func_type)(int);
+  static orig_func_type orig_func;
+  if (!orig_func)
+    orig_func = (orig_func_type)resolveDbugFunc("_exit");
+  fprintf(stderr, "Calling Runtime::___exit into dbug\n");
+  orig_func(status);
+  fprintf(stderr, "Calling Runtime::___exit from dbug\n");
+#else
+  _exit(status);
+#endif
+}
+
+pid_t Runtime::__kill(unsigned ins, int &error, pid_t pid, int sig)
+{
+  errno = error;
+  pid_t ret;
+#ifdef XTERN_PLUS_DBUG
+  typedef int (*orig_func_type)(pid_t, int);
+  static orig_func_type orig_func;
+  if (!orig_func)
+    orig_func = (orig_func_type)resolveDbugFunc("kill");
+  dprintf("Calling Runtime::___kill into dbug\n");
+  ret = orig_func(pid, sig);
+#else
+  ret = ::kill(pid, sig);
+#endif
+  error = errno;
+  return ret;
+}
+
 pid_t Runtime::__fork(unsigned ins, int &error)
 {
   errno = error;
   pid_t ret;
 #ifdef XTERN_PLUS_DBUG
+  Runtime::__attach_self_to_dbug(__FUNCTION__);
   typedef pid_t (*orig_func_type)();
   static orig_func_type orig_func;
   if (!orig_func)
     orig_func = (orig_func_type)resolveDbugFunc("fork");
   ret = orig_func();
+  Runtime::__detach_self_from_dbug(__FUNCTION__);
 #else
   ret = fork();
+#endif
+  error = errno;
+  return ret;
+}
+
+int Runtime::__execv(unsigned ins, int &error, const char *path, char *const argv[]) {
+  errno = error;
+  int ret;
+#ifdef XTERN_PLUS_DBUG
+  Runtime::__attach_self_to_dbug(__FUNCTION__);
+  typedef pid_t (*orig_func_type)(const char *path, char *const argv[]);
+  static orig_func_type orig_func;
+  if (!orig_func)
+    orig_func = (orig_func_type)resolveDbugFunc("execv");
+  ret = orig_func(path, argv);
+  // No detach from dbug here, because this is execv.
+#else
+  ret = ::execv(path, argv);
 #endif
   error = errno;
   return ret;
@@ -812,10 +1081,19 @@ int Runtime::__sched_yield(unsigned ins, int &error) {
   return ret;
 }
 
-int Runtime::nanosleep(unsigned ins, int &error, const struct timespec *req, struct timespec *rem)
+int Runtime::__nanosleep(unsigned ins, int &error, const struct timespec *req, struct timespec *rem)
 {
   errno = error;
-  int ret = ::nanosleep(req, rem);
+  int ret;
+#ifdef XTERN_PLUS_DBUG
+  typedef int (*orig_func_type)(const struct timespec *, struct timespec *);
+  static orig_func_type orig_func;
+  if (!orig_func)
+    orig_func = (orig_func_type)resolveDbugFunc("nanosleep");
+  ret = orig_func(req, rem);
+#else
+  ret = ::nanosleep(req, rem);
+#endif
   error = errno;
   return ret;
 }
@@ -879,6 +1157,10 @@ int Runtime::__sem_init(unsigned insid, int &error, sem_t *sem, int pshared, uns
   dprintf("Runtime::%s pid %d, self %u start %p\n", __FUNCTION__, getpid(), (unsigned)pthread_self(), (void *)sem);
   ret = orig_func(sem, pshared, value);
   dprintf("Runtime::%s pid %d, self %u end\n", __FUNCTION__, getpid(), (unsigned)pthread_self());
+  ret = sem_init(sem, pshared, value); // Heming: do the "real" action here, since the latest dbug does not do 
+  // this. And this may cause problem for some programs (use pthread barriers 
+  // to enforce strong isolation safely, so some sync vars may be used in the 
+  // deterministic regions).
 #else
   ret = sem_init(sem, pshared, value);
 #endif
@@ -933,6 +1215,10 @@ int Runtime::__pthread_mutex_init(unsigned insid, int &error, pthread_mutex_t *m
   dprintf("Runtime::%s pid %d, self %u start %p\n", __FUNCTION__, getpid(), (unsigned)pthread_self(), (void *)mutex);
   ret = orig_func(mutex, mutexattr);
   dprintf("Runtime::%s pid %d, self %u end\n", __FUNCTION__, getpid(), (unsigned)pthread_self());
+  ret = pthread_mutex_init(mutex, mutexattr); // Heming: init the "real" mutex here, since the latest dbug does not do 
+  // this. And this may cause problem for some programs (use pthread barriers 
+  // to enforce strong isolation safely, so some sync vars may be used in the 
+  // deterministic regions).
 #else
   ret = pthread_mutex_init(mutex, mutexattr);
 #endif
@@ -951,6 +1237,10 @@ int Runtime::__pthread_mutex_destroy(unsigned insid, int &error, pthread_mutex_t
   dprintf("Runtime::%s pid %d, self %u start\n", __FUNCTION__, getpid(), (unsigned)pthread_self());
   ret = orig_func(mutex);
   dprintf("Runtime::%s pid %d, self %u end\n", __FUNCTION__, getpid(), (unsigned)pthread_self());
+  ret = pthread_mutex_destroy(mutex); // Heming: do the "real" action here, since the latest dbug does not do 
+  // this. And this may cause problem for some programs (use pthread barriers 
+  // to enforce strong isolation safely, so some sync vars may be used in the 
+  // deterministic regions).
 #else
   ret = pthread_mutex_destroy(mutex);
 #endif

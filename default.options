@@ -51,6 +51,10 @@ non_block_recv = 0
 # If turned on, enforce the non-deterministic primitive at runtime.
 enforce_non_det_annotations = 0
 
+# Specify the bound of non-determinism (the window of logical clocks that allows the pcs_exit() to return).
+enforce_non_det_clock_bound = 0
+non_det_clock_bound = 1000
+
 # if turned on, sync operations will be logged.
 log_sync = 0
 
@@ -65,4 +69,8 @@ enforce_annotations = 1
 
 # if turned on, record runtime stat such as # of sync operations called.
 record_runtime_stat = 0
+
+# if turned on, record the runtime rdtsc value at begin and end of sync operations.
+record_rdtsc = 0
+rdtsc_output_dir = ./rdtsc_out 
 

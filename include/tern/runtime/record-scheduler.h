@@ -102,7 +102,7 @@ struct RRScheduler: public Scheduler {
   virtual void getTurn();
   virtual void putTurn(bool at_thread_end = false);
   virtual int  wait(void *chan, unsigned timeout = Scheduler::FOREVER);
-  virtual void signal(void *chan, bool all=false);
+  virtual std::list<int> signal(void *chan, bool all=false);
 
   virtual int block(); 
   virtual bool interProStart();
@@ -158,6 +158,16 @@ protected:
   // For idle thread.
   void wakeUpIdleThread();
   void idleThreadCondWait();
+
+  /** Check the current logical clock with threads in the non-det thread set,
+  if current logical clock exceeds a bound with the thread with minimal logical clock in this set, block 
+  the deterministic part of the system by adding this thread back to run queue.
+  This function must be called by the run queue head thread while holding the global token.
+  Precisely, this function is called within putTurn(). The reason I don't put it in next() or
+  check_wakeup() is because the block() function will also call next(), and in block(), one thread
+  may be just put into the non-det regions, and then immediately we check the non-det regions and
+  try to put it back, which may be slow (only for performance consideration so far). **/
+  void checkNonDetBound(); 
 };
 
 /// adapted from an example in POSIX.1-2001

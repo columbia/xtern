@@ -9,6 +9,7 @@
 #include <tr1/unordered_map>
 #include <tr1/unordered_set>
 #include "run-queue.h"
+#include "non-det-thread-set.h"
 
 extern "C" {
 extern int idle_done;
@@ -67,6 +68,14 @@ struct TidMap {
     if(it!=p_t_map.end())
       return it->second;
     return InvalidTid;
+  }
+
+  /// return pthread id given a parrot tid.
+  pthread_t getPthreadTid(int tid) {
+    tern_to_pthread_map::iterator it = t_p_map.find(tid);
+    if(it!=t_p_map.end())
+      return it->second;
+    return (pthread_t)InvalidTid;
   }
 
   /// return if thread @pthread_th is in the zombie set
@@ -137,7 +146,7 @@ struct Serializer: public TidMap {
   /// wake up one thread (@all = false) or all threads (@all = true)
   /// waiting on @chan; must call with turn held.  @chan has the same
   /// requirement as wait()
-  virtual void signal(void *chan, bool all = false) { }
+  virtual std::list<int> signal(void *chan, bool all = false) { std::list<int> l; return l; }
 
   /// get the turn so that other threads trying to get the turn must wait
   virtual void getTurn() { }
@@ -227,7 +236,7 @@ struct Scheduler: public Serializer {
   /// wake up one thread (@all = false) or all threads (@all = true)
   /// waiting on @chan; must call with turn held.  @chan has the same
   /// requirement as wait()
-  void signal(void *chan, bool all = false) { }
+  std::list<int> signal(void *chan, bool all = false) {std::list<int> l; return l; }
 
   void create(pthread_t new_th) {
     assert(self() == runq.front());
@@ -244,10 +253,12 @@ struct Scheduler: public Serializer {
     struct run_queue::runq_elem *elem = runq.create_thd_elem(MainThreadTid);
     elem->status = run_queue::RUNNING_REG; // Pass the first token to the main thread after fork.
     runq.push_back(MainThreadTid);
+    // Note: no need to clean up non_det_thds here, because they are only thread integer ids, not pointers in runq.
   }
 
   run_queue runq;
   std::list<int>  waitq;
+  non_det_thread_set non_det_thds;
 };
 
 

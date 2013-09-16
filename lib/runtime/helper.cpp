@@ -37,12 +37,13 @@ volatile int idle_done = 0;
 pthread_t idle_th;
 pthread_mutex_t idle_mutex;
 pthread_cond_t idle_cond;
+extern bool __thread attachedToDbug;
 
 typedef void * (*thread_func_t)(void*);
 static void *__tern_thread_func(void *arg) {
 #ifdef XTERN_PLUS_DBUG
   if (idle_th != pthread_self())
-    Runtime::__detach_self_from_dbug();
+    Runtime::__detach_self_from_dbug(__FUNCTION__);
 #endif
   void **args;
   void *ret_val;
@@ -103,7 +104,7 @@ static bool prog_began = false; // sanity
 //  must be called by the main thread
 void __tern_prog_begin(void) {
 #ifdef XTERN_PLUS_DBUG
-  Runtime::__detach_self_from_dbug();
+  Runtime::__detach_self_from_dbug(__FUNCTION__);
 #endif
   assert(!prog_began && "__tern_prog_begin() already called!");
   prog_began = true;
@@ -137,11 +138,23 @@ void __tern_prog_begin(void) {
 
 //  SYS -> SYS
 void __tern_prog_end (void) {
+#ifdef XTERN_PLUS_DBUG
+  fprintf(stderr, "\n\nPid %d self %u __tern_prog_end.\n\n", getpid(), (unsigned)pthread_self());
+#endif
+
   assert(prog_began && "__tern_prog_begin() not called "\
          "or __tern_prog_end() already called!");
 
   prog_began = false;
+#ifndef XTERN_PLUS_DBUG
   assert(Space::isApp() && "__tern_prog_end must start in app space");
+#else
+  fprintf(stderr, "\n\nPid %d self %u exits. Attach process to dbug %d.\n\n", getpid(), (unsigned)pthread_self(), attachedToDbug);
+  Space::enterSys(); /* Avoid reentrant and capturing socket calls incorrectly 
+                                   within the _exit() handling logic of dbug. */
+  Runtime::__attach_self_to_dbug(__FUNCTION__);
+  Runtime::___exit(0);
+#endif
 
   tern_print_runtime_stat();
 
@@ -174,7 +187,7 @@ void __tern_prog_end (void) {
   //delete tern::Runtime::the;
   //tern::Runtime::the = NULL;
 #ifdef XTERN_PLUS_DBUG
-  Runtime::__attach_self_to_dbug();
+  Runtime::__attach_self_to_dbug(__FUNCTION__);
   //_exit(0);// a temp hack for Hao to get stl results. If Jiri fixed this, we can remove this.
 #endif
   assert(Space::isSys() && "__tern_prog_end must end in system space");

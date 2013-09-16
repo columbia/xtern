@@ -105,14 +105,26 @@ void TxtLogger::logSync(unsigned insid, unsigned short sync,
   case syncfunc::poll:
   case syncfunc::bind:
   case syncfunc::listen:
+  case syncfunc::getsockopt:
+  case syncfunc::setsockopt:
+  case syncfunc::pipe:
+  case syncfunc::fcntl:
+  case syncfunc::shutdown:
   case syncfunc::gethostbyname:
+  case syncfunc::gethostbyname_r:
+  case syncfunc::getaddrinfo:
+  case syncfunc::freeaddrinfo:
   case syncfunc::gethostbyaddr:
   case syncfunc::inet_ntoa:
   case syncfunc::strtok:
   case syncfunc::epoll_wait:
+  case syncfunc::epoll_create:
+  case syncfunc::epoll_ctl:
   case syncfunc::sigwait:
   case syncfunc::fgets:
+  case syncfunc::kill:
   case syncfunc::fork:
+  case syncfunc::execv:
   case syncfunc::sched_yield:
   case syncfunc::wait:
   case syncfunc::waitpid:
@@ -133,6 +145,7 @@ void TxtLogger::logSync(unsigned insid, unsigned short sync,
   case syncfunc::sem_init:
   case syncfunc::sem_post:
   case syncfunc::pthread_join:
+  case syncfunc::pthread_detach:
   case syncfunc::sleep:
   case syncfunc::usleep:
   case syncfunc::nanosleep:
@@ -496,14 +509,26 @@ void TestLogger::logSync(unsigned insid, unsigned short sync,
   case syncfunc::poll:
   case syncfunc::bind:
   case syncfunc::listen:
+  case syncfunc::getsockopt:
+  case syncfunc::setsockopt:
+  case syncfunc::pipe:
+  case syncfunc::fcntl:
+  case syncfunc::shutdown:
   case syncfunc::gethostbyname:
+  case syncfunc::gethostbyname_r:
+  case syncfunc::getaddrinfo:
+  case syncfunc::freeaddrinfo:
   case syncfunc::gethostbyaddr:
   case syncfunc::inet_ntoa:
   case syncfunc::strtok:
   case syncfunc::epoll_wait:
+  case syncfunc::epoll_create:
+  case syncfunc::epoll_ctl:
   case syncfunc::sigwait:
   case syncfunc::fgets:
+  case syncfunc::kill:
   case syncfunc::fork:
+  case syncfunc::execv:
   case syncfunc::sched_yield:
   case syncfunc::wait:
   case syncfunc::waitpid:
@@ -524,6 +549,7 @@ void TestLogger::logSync(unsigned insid, unsigned short sync,
   case syncfunc::sem_init:
   case syncfunc::sem_post:
   case syncfunc::pthread_join:
+  case syncfunc::pthread_detach:
   case syncfunc::sleep:
   case syncfunc::usleep:
   case syncfunc::nanosleep:

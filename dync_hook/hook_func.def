@@ -103,6 +103,18 @@ ENDDEF
 
 STARTDEF
 int 
+pthread_detach
+/libpthread.so.0
+pthread_t
+SECTION
+pthread_t thread
+SECTION
+thread
+SECTION
+ENDDEF
+
+STARTDEF
+int 
 socket
 /libc.so.6
 int, int, int
@@ -158,6 +170,42 @@ SECTION
 const char *name
 SECTION
 name
+SECTION
+ENDDEF
+
+STARTDEF
+int
+gethostbyname_r
+/libc.so.6
+const char *, struct hostent *, char *, size_t , struct hostent **, int *
+SECTION
+const char *name, struct hostent *ret2, char *buf, size_t buflen, struct hostent **result, int *h_errnop
+SECTION
+name, ret2, buf, buflen, result, h_errnop
+SECTION
+ENDDEF
+
+STARTDEF
+int
+getaddrinfo
+/libc.so.6
+const char *, const char *, const struct addrinfo *, struct addrinfo **
+SECTION
+const char *node, const char *service, const struct addrinfo *hints, struct addrinfo **res
+SECTION
+node, service, hints, res
+SECTION
+ENDDEF
+
+STARTDEF
+void
+freeaddrinfo
+/libc.so.6
+struct addrinfo *
+SECTION
+struct addrinfo *res
+SECTION
+res
 SECTION
 ENDDEF
 
@@ -230,6 +278,42 @@ SECTION
 int sockfd, int backlog
 SECTION
 sockfd, backlog
+SECTION
+ENDDEF
+
+STARTDEF
+int
+getsockopt
+/libc.so.6
+int, int, int, void *, socklen_t *
+SECTION
+int sockfd, int level, int optname, void *optval, socklen_t *optlen
+SECTION
+sockfd, level, optname, optval, optlen
+SECTION
+ENDDEF
+
+STARTDEF
+int
+setsockopt
+/libc.so.6
+int, int, int, const void *, socklen_t
+SECTION
+int sockfd, int level, int optname, const void *optval, socklen_t optlen
+SECTION
+sockfd, level, optname, optval, optlen
+SECTION
+ENDDEF
+
+STARTDEF
+int
+pipe
+/libc.so.6
+int [2]
+SECTION
+int pipefd[2]
+SECTION
+pipefd
 SECTION
 ENDDEF
 
@@ -510,6 +594,20 @@ epoll_wait
 (int epfd, struct epoll_event *events, int maxevents, int timeout)
 END_SHORT_DEFINE
 
+START_SHORT_DEFINE
+/libc.so.6
+int
+epoll_create
+(int size)
+END_SHORT_DEFINE
+
+START_SHORT_DEFINE
+/libc.so.6
+int
+epoll_ctl
+(int epfd, int op, int fd, struct epoll_event *event)
+END_SHORT_DEFINE
+
 STARTDEF
 char*
 fgets
@@ -528,10 +626,29 @@ ENDDEF
 
 START_SHORT_DEFINE
 /libc.so.6
+int
+kill
+(pid_t pid, int sig)
+END_SHORT_DEFINE
+
+START_SHORT_DEFINE
+/libc.so.6
 pid_t
 fork
 ()
 END_SHORT_DEFINE
+
+STARTDEF
+int
+execv
+/libc.so.6
+const char *, char *const []
+SECTION
+const char * path, char * const argv[]
+SECTION
+path, argv
+SECTION
+ENDDEF
 
 START_SHORT_DEFINE
 /libc.so.6

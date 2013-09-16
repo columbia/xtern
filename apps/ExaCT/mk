@@ -1,0 +1,49 @@
+#!/bin/bash
+cd $XTERN_ROOT/apps/ExaCT
+SOFTWARE="ExaCT_Proxy_Apps_20120322"
+rm -rf $SOFTWARE
+rm exp_cns_nospec* multigrid_c* vodeDriver *.fab
+if [ ! -f $SOFTWARE.tgz ]; then
+	echo "Source file missing, please register and download it at http://exactcodesign.org/proxy-app-software/"
+	exit 1
+fi
+tar -xvzf $SOFTWARE.tgz 
+patch -p0 < makefile_and_fix.patch
+
+cd $SOFTWARE/BoxLib
+export BOXLIB_HOME=`pwd`
+
+ARCH=`uname -m`
+GCCLIB=""
+if [ "$ARCH" == "x86_64" ]; then
+  GCCLIB="$XTERN_ROOT/apps/openmp/install/lib64"
+else
+  GCCLIB="$XTERN_ROOT/apps/openmp/install/lib"
+fi
+
+ln -s $GCCLIB/libgomp.a  &> /dev/null
+ln -s $GCCLIB/libgfortran.a  &> /dev/null
+ln -s $GCCLIB/libstdc++.a &> /dev/null
+
+export PATH=$XTERN_ROOT/apps/openmp/install/bin:$PATH
+cd Tutorials
+pushd WaveEquation_C
+make -j5 -f GNUmakefile
+popd
+pushd MultiGrid_C
+make -j5 -f GNUmakefile
+popd
+pushd Exp_CNS_NoSpec
+make -j5 -f GNUmakefile
+popd
+
+cd $BOXLIB_HOME/../Combustion/Chemistry/bin/vodeDriver
+make -j5 -f GNUmakefile
+cd $XTERN_ROOT/apps/ExaCT
+ln -s $SOFTWARE/BoxLib/Tutorials/MultiGrid_C/main3d.Linux.gcc.gfortran.OMP.ex multigrid_c
+ln -s $SOFTWARE/BoxLib/Tutorials/MultiGrid_C/inputs.3d multigrid_c_inputs.3d
+ln -s $SOFTWARE/BoxLib/Tutorials/Exp_CNS_NoSpec/main.Linux.gfortran.omp.exe exp_cns_nospec
+ln -s $SOFTWARE/BoxLib/Tutorials/Exp_CNS_NoSpec/inputs_3d exp_cns_nospec_inputs.3d
+ln -s $SOFTWARE/Combustion/Chemistry/bin/vodeDriver/cdvode2d.Linux.g++.gfortran.OMP.ex vodeDriver
+ln -s $SOFTWARE/Combustion/Chemistry/bin/vodeDriver/drm19_0700.fab .
+echo "done!!"

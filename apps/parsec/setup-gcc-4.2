@@ -43,14 +43,14 @@ inst_set=`uname -m`
 if [[ "$inst_set" == 'x86_64' ]]; then
     ln -s $INSTALL/lib64/libgomp.spec $INSTALL/lib/gcc/x86_64-unknown-linux-gnu/4.2.4/
     mv $INSTALL/lib64/libstdc++.so $INSTALL/lib64/libstdc++.so.bak
-    mv $INSTALL/lib64/libstdc++.so.6 $INSTALL/lib64/libstdc++.so.bak
-    ln -s $XTERN_ROOT/apps/openmp/install/lib64/libstdc++.so $INSTALL/lib64/libstdc++.so
-    ln -s $XTERN_ROOT/apps/openmp/install/lib64/libstdc++.so.6 $INSTALL/lib64/libstdc++.so.6
+    mv $INSTALL/lib64/libstdc++.so.6 $INSTALL/lib64/libstdc++.so.6.bak
+    ln -s /usr/lib/x86_64-linux-gnu/libstdc++.so.6 $INSTALL/lib64/libstdc++.so
+    ln -s /usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.16 $INSTALL/lib64/libstdc++.so.6
 elif [[ "$inst_set" == 'i686' ]]; then
     mv $INSTALL/lib/libstdc++.so $INSTALL/lib/libstdc++.so.bak
-    mv $INSTALL/lib/libstdc++.so.6 $INSTALL/lib/libstdc++.so.bak
-    ln -s $XTERN_ROOT/apps/openmp/install/lib/libstdc++.so $INSTALL/lib/libstdc++.so
-    ln -s $XTERN_ROOT/apps/openmp/install/lib/libstdc++.so.6 $INSTALL/lib/libstdc++.so.6
+    mv $INSTALL/lib/libstdc++.so.6 $INSTALL/lib/libstdc++.so.6.bak
+    ln -s /usr/lib/i686-linux-gnu/libstdc++.so.6 $INSTALL/lib/libstdc++.so
+    ln -s /usr/lib/i686-linux-gnu/libstdc++.so.6.0.16 $INSTALL/lib/libstdc++.so.6
 else
     echo "This machine has instruction set '$inst_set'... which is never tested.."
     exit 1

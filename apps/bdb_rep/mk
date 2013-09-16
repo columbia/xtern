@@ -11,6 +11,12 @@ if [ ! -f db-$VER.tar.gz ]; then
 fi
 tar zxvf db-$VER.tar.gz
 
+# Uncomment below for experiment with dbug.
+# Comment them out for experiment with xtern only.
+#cd db-$VER
+#patch -p1 < ../divergence.patch
+#cd ..
+
 # Build bdb.
 cd db-$VER/build_unix
 # The "--with-mutex=POSIX/pthreads" is a must, otherwise the __db_pthread_mutex_lock() will not be compiled into the library and few mutexes will be invoked.
