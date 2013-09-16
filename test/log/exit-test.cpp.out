@@ -1,7 +1,0 @@
-CHECK: P ins=58  br i1 %22, label %bb6, label %bb8, !dbg !75, !ins_id !90
-CHECK: L idx=38 ins=59 call exit(0) noreturn call void @exit(i32 0) noreturn nounwind, !dbg !91, !ins_id !92
-CHECK: L idx=39 ins=n/a sync tern_thread_end() turn = 9
-
-
-
-

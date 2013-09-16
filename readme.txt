@@ -26,36 +26,22 @@ file is the generic performance hints that benefit all OpenMP programs in
 our benchmarks.
 
 
-3. Build llvm. Go to directory $XTERN_ROOT, and run:
-> cd $XTERN_ROOT
-> sudo apt-get install dejagnu flex bison
-> ./llvm/build-llvm.sh --optimized
-The "--optimized" flag above is optional, if you are getting performance results,
-then you need this flag; if you are developing and need debug symbols,
-then you don't need this flag. If you have specified this "--optimized" flag,
-you need to specify "ENABLE_OPTIMIZED=1" in the following steps, otherwise 
-specify "ENABLE_OPTIMIZED=0". This LLVM compilation is only one way work,
-later if you check out a newer version of xtern, you do not need to rerun this,
-you only need to redo the Step 5 below.
-
-
-4. Config. that's because xtern uses LLVM makefile.common:
+3. Configure:
 > cd $XTERN_ROOT
 > mkdir -p obj
 > cd obj
-> ./../configure --with-llvmsrc=$XTERN_ROOT/llvm/llvm-2.7/ \
-  --with-llvmobj=$XTERN_ROOT/llvm/llvm-obj/ \
-  --with-llvmgccdir=$XTERN_ROOT/llvm/install/bin/ \
-  --prefix=$XTERN_ROOT/install
+> ./../configure
 
-
-5. Make. Every time after you 'git pull' xtern, you should go to this directory and make it.
-Always run "make clean" first, and then "make", and then "make install", as show below.
+4. Make. Every time after you 'git pull' xtern, you should go to this directory and make it.
+Always run "make clean" first, and then "make", and then "sudo make install", as show below.
 > cd $XTERN_ROOT/obj
-> make ENABLE_OPTIMIZED=0/1 clean && make ENABLE_OPTIMIZED=0/1 && make ENABLE_OPTIMIZED=0/1 install
+> make clean 
+> make 
+> sudo make install
 
 
-6. Test. It may take a few minutes. If it all passes, then everything has been installed correctly.
+****Testing is no longer accurate, as LLVM has been removed
+5. Test. It may take a few minutes. If it all passes, then everything has been installed correctly.
 This step may take a few minutes, depending on hardware speed.
 > cd $XTERN_ROOT/obj
 > make ENABLE_OPTIMIZED=0/1 -C test check
@@ -119,7 +105,7 @@ into account.
 
 
 
-
+****Again, without LLVM, testing no longer functions properly
 Testsuite (xtern/test)
 ======================
 
