@@ -56,21 +56,21 @@ def race_detection(configs,benchmark,args,inputs):
 # helgrind
 	if args.race_detection == "helgrind":
 		LOG_FILENAME="helgrind.log"
-		rd_nondet_cmd = ' '.join([VALGRIND,"--trace-children=yes","--read-var-info=yes","--log-file="+LOG_FILENAME,"--suppressions="+DATA_RACE_DETECTION_ROOT+"/thread-sanitizer/libc.supp","--tool=helgrind","./run-nondet.sh"])
+		rd_nondet_cmd = ' '.join([VALGRIND,"--gen-suppressions=yes","--trace-children=yes","--read-var-info=yes","--log-file="+LOG_FILENAME,"--suppressions="+DATA_RACE_DETECTION_ROOT+"/thread-sanitizer/libc.supp","--tool=helgrind","./run-nondet.sh"])
 		PARROT_LOG_FILENAME="parrot-helgrind.log"
-		rd_det_cmd = ' '.join([VALGRIND,"--trace-children=yes","--read-var-info=yes","--log-file="+PARROT_LOG_FILENAME,"--suppressions="+DATA_RACE_DETECTION_ROOT+"/thread-sanitizer/libc.supp","--suppressions="+DATA_RACE_DETECTION_ROOT+"/thread-sanitizer/parrot-helgrind.supp","--tool=helgrind","./run-det.sh"])
+		rd_det_cmd = ' '.join([VALGRIND,"--gen-suppressions=yes","--trace-children=yes","--read-var-info=yes","--log-file="+PARROT_LOG_FILENAME,"--suppressions="+DATA_RACE_DETECTION_ROOT+"/thread-sanitizer/libc.supp","--suppressions="+DATA_RACE_DETECTION_ROOT+"/thread-sanitizer/parrot-helgrind.supp","--tool=helgrind","./run-det.sh"])
 # tsan
 	if args.race_detection == "tsan":
 		LOG_FILENAME="tsan.log"
-		rd_nondet_cmd = ' '.join([VALGRIND,"--trace-children=yes","--read-var-info=yes","--log-file="+LOG_FILENAME,"--suppressions="+DATA_RACE_DETECTION_ROOT+"/thread-sanitizer/libc.supp","--tool=tsan","./run-nondet.sh"])
+		rd_nondet_cmd = ' '.join([VALGRIND,"--gen-suppressions=yes","--trace-children=yes","--read-var-info=yes","--log-file="+LOG_FILENAME,"--suppressions="+DATA_RACE_DETECTION_ROOT+"/thread-sanitizer/libc.supp","--tool=tsan","./run-nondet.sh"])
 		PARROT_LOG_FILENAME="parrot-tsan.log"
-		rd_det_cmd = ' '.join([VALGRIND,"--trace-children=yes","--read-var-info=yes","--log-file="+PARROT_LOG_FILENAME,"--suppressions="+DATA_RACE_DETECTION_ROOT+"/thread-sanitizer/libc.supp","--suppressions="+DATA_RACE_DETECTION_ROOT+"/thread-sanitizer/parrot-tsan.supp","--tool=tsan","./run-det.sh"])
+		rd_det_cmd = ' '.join([VALGRIND,"--gen-suppressions=yes","--trace-children=yes","--read-var-info=yes","--log-file="+PARROT_LOG_FILENAME,"--suppressions="+DATA_RACE_DETECTION_ROOT+"/thread-sanitizer/libc.supp","--suppressions="+DATA_RACE_DETECTION_ROOT+"/thread-sanitizer/parrot-tsan.supp","--tool=tsan","./run-det.sh"])
 # tsan-hybrid
 	if args.race_detection == "tsan-hybrid":
 		LOG_FILENAME="tsan-hybrid.log"
-		rd_nondet_cmd = ' '.join([VALGRIND,"--trace-children=yes","--read-var-info=yes","--log-file="+LOG_FILENAME,"--suppressions="+DATA_RACE_DETECTION_ROOT+"/thread-sanitizer/libc.supp","--tool=tsan","--hybrid=yes","./run-nondet.sh"])
+		rd_nondet_cmd = ' '.join([VALGRIND,"--gen-suppressions=yes","--trace-children=yes","--read-var-info=yes","--log-file="+LOG_FILENAME,"--suppressions="+DATA_RACE_DETECTION_ROOT+"/thread-sanitizer/libc.supp","--tool=tsan","--hybrid=yes","./run-nondet.sh"])
 		PARROT_LOG_FILENAME="parrot-tsan-hybrid.log"
-		rd_det_cmd = ' '.join([VALGRIND,"--trace-children=yes","--read-var-info=yes","--log-file="+PARROT_LOG_FILENAME,"--suppressions="+DATA_RACE_DETECTION_ROOT+"/thread-sanitizer/libc.supp","--suppressions="+DATA_RACE_DETECTION_ROOT+"/thread-sanitizer/parrot-tsan.supp","--suppressions="+DATA_RACE_DETECTION_ROOT+"/thread-sanitizer/parrot-tsan-hybrid.supp","--tool=tsan","--hybrid=yes","./run-det.sh"])
+		rd_det_cmd = ' '.join([VALGRIND,"--gen-suppressions=yes","--trace-children=yes","--read-var-info=yes","--log-file="+PARROT_LOG_FILENAME,"--suppressions="+DATA_RACE_DETECTION_ROOT+"/thread-sanitizer/libc.supp","--suppressions="+DATA_RACE_DETECTION_ROOT+"/thread-sanitizer/parrot-tsan.supp","--suppressions="+DATA_RACE_DETECTION_ROOT+"/thread-sanitizer/parrot-tsan-hybrid.supp","--tool=tsan","--hybrid=yes","./run-det.sh"])
 # executing
 	FNULL = open(os.devnull, 'w')
 	logging.info(rd_nondet_cmd)
