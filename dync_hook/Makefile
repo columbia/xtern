@@ -23,11 +23,11 @@
 LEVEL := ..
 include $(LEVEL)/Makefile.common
 
-INC_DIRS=-I$(SRC_ROOT)/include/ -I$(OBJ_ROOT)/include -I.
+INC_DIRS=-I$(SRC_ROOT)/include/ -I$(OBJ_ROOT)include -I.
 STD_LIBS=-lsupc++ -lpthread -lstdc++ -lrt
 TERN_LIBS=-L$(OBJ_ROOT)/$(BuildMode)/lib/ -lruntime -lcommon
-CFLAGS += $(INC_DIRS)
-CXXFLAGS += $(INC_DIRS)
+CFLAGS= -g $(INC_DIRS)
+CXXFLAGS= -g $(INC_DIRS)
 SRC_DIR=$(LEVEL)/../dync_hook
 ifndef $(XTERN_PLUS_DBUG)
 	XTERN_PLUS_DBUG=0

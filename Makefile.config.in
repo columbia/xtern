@@ -34,6 +34,19 @@ SRC_DIR := $(shell cd $(SRC_ROOT)/$(patsubst $(OBJ_ROOT)%,%,$(OBJ_DIR)); pwd)
 # Set the root directory of this project's install prefix
 PROJ_INSTALL_ROOT = @prefix@
 
+# Include LLVM's Master Makefile config
+# include $(LLVM_OBJ_ROOT)/Makefile.config
+
+# Override LLVM's Make.config
+# Full pathnames of LLVM C/C++ binaries:
+LLVMGCC     := @LLVMGCC@
+LLVMGXX     := @LLVMGXX@
+LOPT        := @LOPT@
+LLVMLD      := @LLVMLD@
+LLVMCC_OPTION := @LLVMCC_OPTION@
+
+NO_PEDANTIC := 1
+
 # When ENABLE_ATEXIT is enabled, tern runtime will use atexit() to install
 # its teardown code; otherwise, tern instrumentor will instrument exits of
 # main() or insert a static destructor to the program
