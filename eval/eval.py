@@ -1,24 +1,5 @@
 #!/usr/bin/env python
 
-#
-# Copyright (c) 2013,  Regents of the Columbia University 
-# All rights reserved.
-#
-# Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
-#
-# 1. Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.
-#
-# 2. Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the documentation and/or other 
-# materials provided with the distribution.
-#
-# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
-# THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR 
-# CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
-# PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
-# LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
-# IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-#
-
 import ConfigParser
 import argparse
 import os
@@ -375,7 +356,7 @@ def execBench(cmd, repeats, out_dir,
 
 def processBench(config, bench):
     # slient the output in parallel model-checking
-    if args.model_checking or args.race_detection and args.parallel > 1:
+    if args.model_checking and args.parallel > 1:
         logger.setLevel(logging.INFO)
 
     # for each bench, generate running directory
@@ -415,11 +396,6 @@ def processBench(config, bench):
     if args.model_checking:
         import dbug
         dbug.model_checking(config, bench, args)
-        os.chdir("..")
-        return
-    if args.race_detection:
-        import race
-        race.race_detection(config,bench,args,inputs)
         os.chdir("..")
         return
 
@@ -629,8 +605,6 @@ if __name__ == "__main__":
         type=str,
         default = ["xtern.cfg"],
         help = "list of configuration files (default: xtern.cfg)")
-    parser.add_argument("-rd", "--race-detection", choices=["helgrind","tsan","tsan-hybrid"],
-						help="run race detection tools only")
     parser.add_argument("-mc", "--model-checking",
                         action="store_true", 
                         help="run model-checking tools only")
@@ -638,7 +612,7 @@ if __name__ == "__main__":
                         default=1,
                         type=int,
                         metavar='NUM',
-                        help = "number of processes (model checking and race detection only)")
+                        help = "number of processes (model checking only)")
     parser.add_argument("--check-all",
                         action="store_true",
                         help="run model-checking on all configs. (By default, only check those with 'DBUG' id in configs)")
@@ -666,16 +640,6 @@ if __name__ == "__main__":
         logging.debug('config file: ' + ''.join(args.filename))
     else:
         logging.debug('config files: ' + ', '.join(args.filename))
-	
-    if args.race_detection:
-        if args.model_checking:
-            logging.error("Race detection and Model checking are exclusive!")
-            sys.exit(1)
-        if args.parallel < 1:
-            logging.error("# of processes is %d", args.parallel)
-            sys.exit(1)
-        logging.info("# of processes is %d", args.parallel)
-        logging.info("We are going to do race detection")
 
     if args.model_checking:
         if args.parallel < 1:
@@ -684,7 +648,7 @@ if __name__ == "__main__":
         logging.info("# of processes is %d", args.parallel)
     
     # check xtern files
-    if not checkExist("%s/dync_hook/interpose.so" % XTERN_ROOT, os.R_OK) and not args.model_checking:
+    if not checkExist("%s/dync_hook/interpose.so" % XTERN_ROOT, os.R_OK):
         logging.error('thre is no "$XTERN_ROOT/dync_hook/interpose.so"')
         sys.exit(1)
     if not checkExist("%s/eval/rand-intercept/rand-intercept.so" % XTERN_ROOT, os.R_OK):
@@ -738,17 +702,16 @@ if __name__ == "__main__":
         
         benchmarks = local_config.sections()
         all_threads = []
-        semaphore = threading.BoundedSemaphore(args.parallel if args.model_checking or args.race_detection else 1)
+        semaphore = threading.BoundedSemaphore(args.parallel if args.model_checking else 1)
         log_lock = threading.Lock()
         for benchmark in benchmarks:
             if benchmark == "default" or benchmark == "example":
                 continue
-            if args.model_checking or args.race_detection:
+            if args.model_checking:
                 if not args.check_all:
                     if local_config.getint(benchmark, 'DBUG') < 0:
                         logging.debug("Skip '%s'. Use '--check-all' option to check all configs." % benchmark)
-                        if args.model_checking:
-                            continue
+                        continue
                 if args.parallel > 1:
                     t = threading.Thread(target=workers, args=(semaphore, log_lock, local_config, benchmark))
                     t.start()
@@ -758,7 +721,7 @@ if __name__ == "__main__":
             else:
                 processBench(local_config, benchmark)
 
-        if args.model_checking or args.race_detection:
+        if args.model_checking:
             for t in all_threads:
                 t.join()
 

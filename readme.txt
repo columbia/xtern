@@ -43,7 +43,6 @@ our benchmarks.
 
 3. Build llvm. Go to directory $XTERN_ROOT, and run:
 > cd $XTERN_ROOT
-> sudo apt-get install dejagnu flex bison
 > ./llvm/build-llvm.sh --optimized
 The "--optimized" flag above is optional, if you are getting performance results,
 then you need this flag; if you are developing and need debug symbols,
@@ -62,6 +61,7 @@ you only need to redo the Step 5 below.
   --with-llvmobj=$XTERN_ROOT/llvm/llvm-obj/ \
   --with-llvmgccdir=$XTERN_ROOT/llvm/install/bin/ \
   --prefix=$XTERN_ROOT/install
+
 
 5. Make. Every time after you 'git pull' xtern, you should go to this directory and make it.
 Always run "make clean" first, and then "make", and then "make install", as show below.
