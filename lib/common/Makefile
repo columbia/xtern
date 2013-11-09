@@ -29,6 +29,6 @@ BUILD_ARCHIVE := 1
 
 include $(LEVEL)/Makefile.common
 
-options.cpp: $(SRC_DIR)/gen-opt.pl $(SRC_ROOT)/default.options
-	$(SRC_DIR)/gen-opt.pl $(SRC_ROOT)/default.options \
-	$(OBJ_ROOT)/include/tern $(OBJ_DIR)
+options.cpp: $(PROJ_SRC_DIR)/gen-opt.pl $(PROJ_SRC_ROOT)/default.options
+	$(PROJ_SRC_DIR)/gen-opt.pl $(PROJ_SRC_ROOT)/default.options \
+	$(PROJ_OBJ_ROOT)/include/tern $(PROJ_OBJ_DIR)

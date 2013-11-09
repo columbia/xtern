@@ -1,3 +1,4 @@
+
 /* Copyright (c) 2013,  Regents of the Columbia University 
  * All rights reserved.
  *
@@ -29,9 +30,6 @@
 
 /* Define to the one symbol short name of this package. */
 #undef PACKAGE_TARNAME
-
-/* Define to the home page for this package. */
-#undef PACKAGE_URL
 
 /* Define to the version of this package. */
 #undef PACKAGE_VERSION
